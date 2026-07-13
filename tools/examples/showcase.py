@@ -6,8 +6,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import to_hex
 
-from raygeo.cnc.machining.plan import Workplan
-from raygeo.cnc.machining.wavefront import build_wavefront_workplan
 from raygeo.geo import Geometry
 from raygeo.geo.algo import hull
 from raygeo.geo.algo.cylindrical import transform_to_cylinder
@@ -23,6 +21,7 @@ from raygeo.geo.shape.polygon3d import fillet_polyline_3d, offset_polyline_3d
 from raygeo.image.scan import ScanMode
 from raygeo.ops import Ops
 from raygeo.ops.assembly.adaptive import adaptive_clearing
+from raygeo.ops.assembly.wavefront import adaptive_wavefronts
 from raygeo.ops.part import Part
 from raygeo.ops.types import CommandType
 from tools.plot import make_pattern, plot_geometry, plot_ops_2d
@@ -538,17 +537,14 @@ def _plot_adaptive_wavefronts(ax):
         ],
         [(130, 80), (160, 80), (160, 105), (130, 105)],
     ]
-    steps = build_wavefront_workplan(
-        pocket_boundary=boundary,
-        islands=islands,
-        tool_radius=3.0,
+
+    part = Part.from_polygons(boundary, islands)
+    result = adaptive_wavefronts(
+        part,
         step_over=2.0,
-        target_z=-5.0,
+        z=-5.0,
         area_tolerance=1.0,
     )
-    wp = Workplan(boundary, islands=islands, safe_z=2.0)
-    wp.extend(steps)
-    result = wp.execute()
 
     bx = [p[0] for p in boundary] + [boundary[0][0]]
     by = [p[1] for p in boundary] + [boundary[0][1]]
@@ -566,38 +562,15 @@ def _plot_adaptive_wavefronts(ax):
             linewidth=1,
         )
 
-    # Seed disk from the FlatSpiral step (the cleared core the
-    # wavefronts expand from).
-    seed = next(s for s in steps if s["kind"] == "FlatSpiral")
-    scx, scy = seed["center"]
-    sr = seed["end_radius"]
-    stheta = np.linspace(0, 2 * np.pi, 65)
-    ax.fill(
-        scx + sr * np.cos(stheta),
-        scy + sr * np.sin(stheta),
-        "white",
-        zorder=2,
-    )
-    ax.plot(
-        scx + sr * np.cos(stheta),
-        scy + sr * np.sin(stheta),
-        "steelblue",
-        linewidth=1,
-        alpha=0.4,
-        zorder=2,
-    )
-
-    # Wavefront rings: subpaths after the FlatSpiral seed path.
     subpaths = result.ops.split_into_subpaths()
-    ring_subpaths = subpaths[1:] if len(subpaths) > 1 else subpaths
-    n_wf = len(ring_subpaths)
-    for i, sub in enumerate(ring_subpaths):
+    n_wf = len(subpaths)
+    for i, sub in enumerate(subpaths):
         t = i / max(n_wf - 1, 1)
         color = (0.9 - 0.6 * t, 0.2 + 0.5 * t, 0.2)
         pts = []
         for j in range(sub.len()):
-            if sub.is_cutting(j):
-                ep = sub.endpoint(j)
+            ep = sub.endpoint(j)
+            if sub.is_cutting(j) or sub.is_travel(j):
                 pts.append((ep[0], ep[1]))
         if len(pts) >= 2:
             xs, ys = zip(*pts)

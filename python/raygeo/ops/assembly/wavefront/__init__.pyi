@@ -8,24 +8,22 @@ __all__ = [
     "adaptive_wavefronts_multi_pocket",
 ]
 
-def adaptive_wavefronts(part: raygeo.ops.part.Part, tool_radius: float = 3, step_over: float = 2, z: float = 0, area_tolerance: float = 1, precision: float = 0, cut_feed_rate: int = 1200, cut_power: float = 1) -> raygeo.ops.assembly.AssemblyResult:
+def adaptive_wavefronts(part: raygeo.ops.part.Part, step_over: float = 2, z: float = 0, area_tolerance: float = 1, precision: float = 0, cut_feed_rate: int = 1200, cut_power: float = 1) -> raygeo.ops.assembly.AssemblyResult:
     r"""
     Inside-out adaptive wavefronts.
     
-    Starting from the cleared state inside *part*, each iteration
-    expands the cleared boundary outward by *step_over*, clips to
-    the valid tool area (pocket boundary offset inward by
-    *tool_radius*, with islands excluded), and adds the result
-    back to the part's cleared state.  The loop terminates when
-    the newly added area drops below *area_tolerance*.
+    Finds the largest inscribed circle inside *part*'s boundary,
+    seeds the cleared area with concentric rings spaced
+    *step_over* apart, then iteratively expands the frontier
+    outward by *step_over*, clipping to the boundary.  The loop
+    terminates when the newly added area drops below
+    *area_tolerance*.
     
     Each ring fragment is emitted as ``MoveTo`` + ``LineTo`` at
     height *z* with *cut_feed_rate* applied.
     
-    :param part: The part whose ``cleared`` field tracks accumulated
-                 workpiece state and whose geometry defines the
+    :param part: The part whose ``stock_region`` defines the
                  pocket boundary and islands.
-    :param tool_radius: Tool radius in mm (default 3.0).
     :param step_over: Radial expansion per iteration (default 2.0).
     :param z: Z height for generated commands (default 0.0).
     :param area_tolerance: Minimum area increase to continue (default 1.0).
@@ -37,7 +35,7 @@ def adaptive_wavefronts(part: raygeo.ops.part.Part, tool_radius: float = 3, step
     :returns: An :class:`AssemblyResult` with wavefront cutting commands.
     """
 
-def adaptive_wavefronts_multi_pocket(part: raygeo.ops.part.Part, tool_radius: float = 3, step_over: float = 2, offset_mm: float = 0, area_tolerance: float = 0.01, precision: float = 0, cut_feed_rate: int = 1200, cut_power: float = 1, profile: bool = False) -> raygeo.ops.assembly.AssemblyResult:
+def adaptive_wavefronts_multi_pocket(part: raygeo.ops.part.Part, step_over: float = 2, offset_mm: float = 0, area_tolerance: float = 0.01, precision: float = 0, cut_feed_rate: int = 1200, cut_power: float = 1, profile: bool = False) -> raygeo.ops.assembly.AssemblyResult:
     r"""
     Multi-pocket adaptive wavefronts.
     
@@ -47,7 +45,6 @@ def adaptive_wavefronts_multi_pocket(part: raygeo.ops.part.Part, tool_radius: fl
     expansion inside each pocket.  Returns the combined result.
     
     :param part: The part whose geometry defines the pockets.
-    :param tool_radius: Tool radius in mm (default 3.0).
     :param step_over: Radial expansion per iteration (default 2.0).
     :param offset_mm: Inward offset applied to all contours (default 0.0).
     :param area_tolerance: Minimum area increase to continue (default 0.01).

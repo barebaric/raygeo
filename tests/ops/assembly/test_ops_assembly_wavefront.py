@@ -39,7 +39,6 @@ def test_adaptive_wavefronts_with_islands():
     part = Part.from_polygons(boundary, islands, initial=initial)
     result_wf = adaptive_wavefronts(
         part,
-        tool_radius=3.0,
         step_over=2.0,
         z=-8.0,
         area_tolerance=1.0,
@@ -104,7 +103,6 @@ def test_adaptive_wavefronts_precision_with_islands():
     part = Part.from_polygons(boundary, islands, initial=initial)
     result_wf = adaptive_wavefronts(
         part,
-        tool_radius=3.0,
         step_over=2.0,
         z=-8.0,
         area_tolerance=1.0,

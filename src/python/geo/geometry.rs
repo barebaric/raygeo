@@ -1580,29 +1580,7 @@ impl Geometry {
     /// :complexity: O(n) time, O(n) space
     #[pyo3(signature = (tolerance=0.01))]
     fn to_polygons(&self, tolerance: f64) -> Vec<Vec<(f64, f64)>> {
-        let mut linearized = self.inner.copy();
-        if !linearized.data.is_empty() {
-            let lin = linearize_data(&linearized.data, tolerance);
-            linearized.data = lin;
-        }
-        let segs = linearized.segments();
-        let mut result = Vec::new();
-        for seg in &segs {
-            if seg.len() < 3 {
-                continue;
-            }
-            let poly: Vec<Point> =
-                seg.iter().map(|p| Point::new(p.x, p.y)).collect();
-            if let Some(cleaned) = crate::geo::shape::polygon::clean_polygon(
-                &poly,
-                0.01 * tolerance,
-            ) {
-                result.push(cleaned);
-            } else if poly.len() >= 3 {
-                result.push(poly);
-            }
-        }
-        polygons_to_tuples(result)
+        polygons_to_tuples(self.inner.to_polygons(tolerance))
     }
 
     /// Reverse the winding direction of all contours.

@@ -8,9 +8,12 @@
 
 use glam::DMat4;
 
-use crate::geo::algo::fitting::convert_arc_to_beziers_from_array;
+use crate::geo::algo::fitting::{
+    convert_arc_to_beziers_from_array, linearize_data,
+};
 use crate::geo::query::get_positions_at_distances_from_array;
-use crate::types::{Command, Point, Point3D, Rect};
+use crate::geo::shape::polygon::clean_polygon;
+use crate::types::{Command, Point, Point3D, Polygon, Rect};
 
 /// A geometric path consisting of move, line, arc, and bezier commands.
 ///
@@ -428,6 +431,32 @@ impl Geometry {
         }
 
         all_segments
+    }
+
+    /// Convert the geometry to a list of polygons.
+    ///
+    /// Linearises arcs/beziers, decomposes into continuous segments,
+    /// and returns each segment with 3+ vertices as a cleaned polygon.
+    pub fn to_polygons(&self, tolerance: f64) -> Vec<Polygon> {
+        let mut linearized = self.copy();
+        if !linearized.data.is_empty() {
+            linearized.data = linearize_data(&linearized.data, tolerance);
+        }
+        let segs = linearized.segments();
+        let mut result = Vec::new();
+        for seg in &segs {
+            if seg.len() < 3 {
+                continue;
+            }
+            let poly: Polygon =
+                seg.iter().map(|p| Point::new(p.x, p.y)).collect();
+            if let Some(cleaned) = clean_polygon(&poly, 0.01 * tolerance) {
+                result.push(cleaned);
+            } else if poly.len() >= 3 {
+                result.push(poly);
+            }
+        }
+        result
     }
 
     /// Returns a reference to the command at the given index, if it exists.

@@ -29,7 +29,6 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 
     def adaptive_wavefronts(
         part: raygeo.ops.part.Part,
-        tool_radius: float = 3.0,
         step_over: float = 2.0,
         z: float = 0.0,
         area_tolerance: float = 1.0,
@@ -39,20 +38,18 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     ) -> raygeo.ops.assembly.AssemblyResult:
         """Inside-out adaptive wavefronts.
 
-        Starting from the cleared state inside *part*, each iteration
-        expands the cleared boundary outward by *step_over*, clips to
-        the valid tool area (pocket boundary offset inward by
-        *tool_radius*, with islands excluded), and adds the result
-        back to the part's cleared state.  The loop terminates when
-        the newly added area drops below *area_tolerance*.
+        Finds the largest inscribed circle inside *part*'s boundary,
+        seeds the cleared area with concentric rings spaced
+        *step_over* apart, then iteratively expands the frontier
+        outward by *step_over*, clipping to the boundary.  The loop
+        terminates when the newly added area drops below
+        *area_tolerance*.
 
         Each ring fragment is emitted as ``MoveTo`` + ``LineTo`` at
         height *z* with *cut_feed_rate* applied.
 
-        :param part: The part whose ``cleared`` field tracks accumulated
-                     workpiece state and whose geometry defines the
+        :param part: The part whose ``stock_region`` defines the
                      pocket boundary and islands.
-        :param tool_radius: Tool radius in mm (default 3.0).
         :param step_over: Radial expansion per iteration (default 2.0).
         :param z: Z height for generated commands (default 0.0).
         :param area_tolerance: Minimum area increase to continue (default 1.0).
@@ -69,7 +66,6 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 #[pyfunction(name = "adaptive_wavefronts")]
 #[pyo3(signature = (
     part,
-    tool_radius = 3.0,
     step_over = 2.0,
     z = 0.0,
     area_tolerance = 1.0,
@@ -80,7 +76,6 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 #[allow(clippy::too_many_arguments)]
 fn adaptive_wavefronts_py(
     part: &mut crate::python::ops::part::part::PyPart,
-    tool_radius: f64,
     step_over: f64,
     z: f64,
     area_tolerance: f64,
@@ -89,7 +84,6 @@ fn adaptive_wavefronts_py(
     cut_power: f64,
 ) -> PyResult<PyAssemblyResult> {
     let opts = wavefront::AdaptiveWavefrontOptions {
-        tool_radius,
         step_over,
         z,
         area_tolerance,
@@ -108,7 +102,6 @@ fn adaptive_wavefronts_py(
         &mut trace,
         &opts,
         &cut_state,
-        &[],
     )?;
     let events = trace.drain();
     let attrs = trace.attrs().cloned();
@@ -122,7 +115,6 @@ fn adaptive_wavefronts_py(
 
     def adaptive_wavefronts_multi_pocket(
         part: raygeo.ops.part.Part,
-        tool_radius: float = 3.0,
         step_over: float = 2.0,
         offset_mm: float = 0.0,
         area_tolerance: float = 0.01,
@@ -139,7 +131,6 @@ fn adaptive_wavefronts_py(
         expansion inside each pocket.  Returns the combined result.
 
         :param part: The part whose geometry defines the pockets.
-        :param tool_radius: Tool radius in mm (default 3.0).
         :param step_over: Radial expansion per iteration (default 2.0).
         :param offset_mm: Inward offset applied to all contours (default 0.0).
         :param area_tolerance: Minimum area increase to continue (default 0.01).
@@ -156,7 +147,6 @@ fn adaptive_wavefronts_py(
 #[pyfunction(name = "adaptive_wavefronts_multi_pocket")]
 #[pyo3(signature = (
     part,
-    tool_radius = 3.0,
     step_over = 2.0,
     offset_mm = 0.0,
     area_tolerance = 0.01,
@@ -168,7 +158,6 @@ fn adaptive_wavefronts_py(
 #[allow(clippy::too_many_arguments)]
 fn adaptive_wavefronts_multi_pocket_py(
     part: &crate::python::ops::part::part::PyPart,
-    tool_radius: f64,
     step_over: f64,
     offset_mm: f64,
     area_tolerance: f64,
@@ -179,7 +168,6 @@ fn adaptive_wavefronts_multi_pocket_py(
 ) -> PyResult<PyAssemblyResult> {
     let (ops, meta) = wavefront::adaptive_wavefronts_multi_pocket(
         &part.inner,
-        tool_radius,
         step_over,
         offset_mm,
         area_tolerance,

@@ -5,11 +5,9 @@ import math
 import matplotlib.pyplot as plt
 import numpy as np
 
-from raygeo.cnc.machining.wavefront import build_wavefront_workplan
 from raygeo.geo.algo.medial_axis import MedialAxis
-from raygeo.ops.assembly.spiral import generate_spiral
-from raygeo.ops.part import Part, StockRegion
-from raygeo.ops.part.cleared_area import ClearedArea
+from raygeo.geo.algo.polylabel import find_largest_circle
+from raygeo.geo.shape.polygon import get_circle_polygon, get_polygon_centroid
 
 
 def _plot_ma_2d(nodes, edges, root, boundary, islands, ax, title):
@@ -209,48 +207,20 @@ def generate_mat_trimming():
         ],
         [(130, 80), (160, 80), (160, 105), (130, 105)],
     ]
-    tool_radius = 3.0
-    step_over = 2.0
+    min_clearance = 3.0
+    sampling_spacing = 1.0
 
-    steps = build_wavefront_workplan(
-        pocket_boundary=boundary,
-        islands=islands,
-        tool_radius=tool_radius,
-        step_over=step_over,
-        target_z=-5.0,
-        area_tolerance=1.0,
+    center, _r_max = find_largest_circle(boundary, islands, 0.1) or (
+        get_polygon_centroid(boundary),
+        0.0,
     )
-    # Seed the cleared area from the FlatSpiral step only; the manual
-    # bites/cut_fast loop below takes the place of the Wavefront step.
-    seed_steps = [s for s in steps if s["kind"] == "FlatSpiral"]
-    seed_step = seed_steps[0]
-    part = Part.from_polygons(boundary, islands)
-    generate_spiral(
-        part,
-        center=seed_step["center"],
-        z=seed_step["z"],
-        start_radius=seed_step["start_radius"],
-        end_radius=seed_step["end_radius"],
-        revolutions=seed_step["revolutions"],
-        direction=seed_step["direction"],
-        angular_step=seed_step["angular_step"],
-    )
-    region = StockRegion(boundary=boundary, islands=islands)
-    ca = ClearedArea(
-        initial=part.cleared.fragments(),
-    )
-    for _ in range(10):
-        bites = ca.bites(region, step_over, tool_radius, 0.01)
-        if not bites:
-            break
-        ca.cut_fast(bites)
-    frags = ca.fragments()
+    seed = get_circle_polygon(center, 40, 64)
 
     holes = [list(h) for h in islands]
-    axis = MedialAxis.compute(boundary, holes, tool_radius, step_over * 0.5)
+    axis = MedialAxis.compute(boundary, holes, min_clearance, sampling_spacing)
     trimmed_axis = MedialAxis.compute(
-        boundary, holes, tool_radius, step_over * 0.5
-    ).trim_to_polygons(frags)
+        boundary, holes, min_clearance, sampling_spacing
+    ).trim_to_polygons([seed])
 
     fig, ax = plt.subplots(figsize=(7, 6))
     ax.set_aspect("equal")
@@ -268,7 +238,7 @@ def generate_mat_trimming():
             linewidth=1,
         )
 
-    for i, frag in enumerate(frags):
+    for i, frag in enumerate([seed]):
         fa = np.array(frag + [frag[0]])
         ax.fill(
             fa[:, 0],

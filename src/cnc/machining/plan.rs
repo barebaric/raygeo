@@ -110,7 +110,6 @@ pub enum WorkplanStep {
     /// Inside-out wavefront expansion from the current cleared area.
     Wavefront {
         part: Part,
-        tool_radius: f64,
         step_over: f64,
         z: f64,
         area_tolerance: f64,
@@ -320,7 +319,6 @@ impl WorkplanStep {
             }
             WorkplanStep::Wavefront {
                 part: step_part,
-                tool_radius,
                 step_over,
                 z,
                 area_tolerance,
@@ -329,7 +327,6 @@ impl WorkplanStep {
                 let (boundary, islands) = step_part.extract_boundary();
                 let boundary = boundary.unwrap_or_default();
                 let opts = AdaptiveWavefrontOptions {
-                    tool_radius: *tool_radius,
                     step_over: *step_over,
                     z: *z,
                     area_tolerance: *area_tolerance,
@@ -338,11 +335,7 @@ impl WorkplanStep {
                 let saved_region = part
                     .replace_stock_region(boundary.clone(), islands.clone());
                 let result = wavefront::adaptive_wavefronts(
-                    part,
-                    trace,
-                    &opts,
-                    cut_state,
-                    &[],
+                    part, trace, &opts, cut_state,
                 );
                 part.stock_region = saved_region;
                 result

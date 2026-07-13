@@ -40,7 +40,7 @@ def adaptive_clearing(part: raygeo.ops.part.Part, tool_radius: float = 3, step_o
     
     The caller is responsible for populating the part's cleared
     area with the entry polygons (e.g. via a workplan built by
-    :func:`raygeo.cnc.machining.wavefront.build_wavefront_workplan`
+    :func:`raygeo.cnc.machining.entry.build_entry_workplan`
     and executed by
     :class:`raygeo.cnc.machining.plan.Workplan`) and
     prepending the entry Ops to the result.

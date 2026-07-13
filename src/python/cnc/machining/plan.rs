@@ -277,7 +277,6 @@ pub(crate) fn step_to_dict<'a>(
         }
         WorkplanStep::Wavefront {
             part,
-            tool_radius,
             step_over,
             z,
             area_tolerance,
@@ -288,7 +287,6 @@ pub(crate) fn step_to_dict<'a>(
             d.set_item("kind", "Wavefront")?;
             d.set_item("pocket_boundary", polygon_to_py(&boundary))?;
             d.set_item("islands", islands_to_py(&islands))?;
-            d.set_item("tool_radius", *tool_radius)?;
             d.set_item("step_over", *step_over)?;
             d.set_item("z", *z)?;
             d.set_item("area_tolerance", *area_tolerance)?;
@@ -402,7 +400,6 @@ pub(crate) fn dict_to_step(d: &Bound<'_, PyDict>) -> PyResult<WorkplanStep> {
             let islands = get_islands(d, "islands")?;
             Ok(WorkplanStep::Wavefront {
                 part: Part::from_polygons(&boundary, &islands, (0.0, 0.0)),
-                tool_radius: get_f64(d, "tool_radius")?,
                 step_over: get_f64(d, "step_over")?,
                 z: get_f64(d, "z")?,
                 area_tolerance: get_f64(d, "area_tolerance")?,
@@ -435,7 +432,7 @@ pub(crate) fn register(machining_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 ///
 /// Captures the pocket boundary, islands, and safe-Z at construction
 /// time.  After extending with steps from a builder (e.g.
-/// :func:`raygeo.cnc.machining.wavefront.build_wavefront_workplan`
+///     :func:`raygeo.cnc.machining.entry.build_entry_workplan`
 /// or :func:`raygeo.cnc.machining.entry.build_entry_workplan`),
 /// call :meth:`execute` to produce a combined :class:`AssemblyResult`.
 #[gen_stub_pyclass(module = "raygeo.cnc.machining.plan")]

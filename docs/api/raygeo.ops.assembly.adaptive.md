@@ -45,7 +45,7 @@ Starting from the pre-populated cleared area inside *part*, uses a constant-enga
 solver to generate a continuous spiral toolpath from the seed clearing to the pocket wall.
 
 The caller is responsible for populating the part's cleared area with the entry polygons (e.g. via a
-workplan built by **raygeo.cnc.machining.wavefront.build_wavefront_workplan** and executed by
+workplan built by **raygeo.cnc.machining.entry.build_entry_workplan** and executed by
 **raygeo.cnc.machining.plan.Workplan**) and prepending the entry Ops to the result.
 
 | Parameter              | Type                                        | Description                                                                                                                       |
