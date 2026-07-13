@@ -5,6 +5,7 @@ use pyo3_stub_gen::derive::gen_stub_pyfunction;
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::container::Ops;
 use crate::ops::convert::image::ScanMode;
+use crate::ops::enums::{RasterMode, SectionType};
 use crate::ops::types::ToolPose;
 use crate::python::ops::assembly::result::PyAssemblyResult;
 use crate::python::ops::part::part::PyPart;
@@ -186,6 +187,13 @@ fn raster_py(
         angles.push(angle + 90.0);
     }
 
+    let raster_mode = match mode {
+        "power_modulated" => Some(RasterMode::VariablePower),
+        "mask_scan" | "dither" => Some(RasterMode::ConstantPower),
+        "multi_pass" => Some(RasterMode::DepthMap),
+        _ => None,
+    };
+
     let mut combined = Ops::new();
 
     for &a in &angles {
@@ -253,7 +261,25 @@ fn raster_py(
                 )));
             }
         };
-        combined.extend(&pass);
+
+        // Wrap each pass in OpsSectionStart/End with the appropriate raster mode
+        if let Some(rm) = raster_mode {
+            let mut wrapped = Ops::new();
+            wrapped
+                .ops_section_start_with_mode(
+                    SectionType::RasterFill,
+                    "raster",
+                    Some(rm),
+                )
+                .expect("valid section params");
+            wrapped.extend(&pass);
+            wrapped
+                .ops_section_end_with_mode(SectionType::RasterFill, Some(rm))
+                .expect("valid section params");
+            combined.extend(&wrapped);
+        } else {
+            combined.extend(&pass);
+        }
     }
 
     Ok(PyAssemblyResult::from_parts(

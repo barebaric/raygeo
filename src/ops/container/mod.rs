@@ -2,9 +2,10 @@ pub(crate) mod structure;
 pub(crate) mod time;
 
 use crate::constants::EPSILON_COLLINEAR;
+use crate::error::RaygeoError;
 
 use super::axis::Axis;
-use super::enums::{CommandCategory, CommandType, SectionType};
+use super::enums::{CommandCategory, CommandType, RasterMode, SectionType};
 use super::state::{AirAssistMode, CoolantMode, HeadCoolantMode, State};
 use super::types::{MarkerCmd, MoveCmd, OpCategory, OpNode, StateCmd};
 use crate::types::{Point, Point3D, Rect};
@@ -394,9 +395,47 @@ impl Ops {
         self.invalidate_time_cache();
     }
 
+    pub fn ops_section_start_with_mode(
+        &mut self,
+        section_type: SectionType,
+        workpiece_uid: &str,
+        raster_mode: Option<RasterMode>,
+    ) -> Result<(), RaygeoError> {
+        self.commands.push(OpNode::ops_section_start_with_mode(
+            section_type,
+            workpiece_uid,
+            raster_mode,
+        )?);
+        self.invalidate_time_cache();
+        Ok(())
+    }
+
     pub fn ops_section_end(&mut self, section_type: SectionType) {
         self.commands.push(OpNode::ops_section_end(section_type));
         self.invalidate_time_cache();
+    }
+
+    pub fn state_block_start(&mut self, name: Option<&str>) {
+        self.commands.push(OpNode::state_block_start(name));
+        self.invalidate_time_cache();
+    }
+
+    pub fn state_block_end(&mut self) {
+        self.commands.push(OpNode::state_block_end());
+        self.invalidate_time_cache();
+    }
+
+    pub fn ops_section_end_with_mode(
+        &mut self,
+        section_type: SectionType,
+        raster_mode: Option<RasterMode>,
+    ) -> Result<(), RaygeoError> {
+        self.commands.push(OpNode::ops_section_end_with_mode(
+            section_type,
+            raster_mode,
+        )?);
+        self.invalidate_time_cache();
+        Ok(())
     }
 
     // --- Copy / Transfer ---

@@ -108,6 +108,28 @@ pub fn generate_material_test_grid(
 
     let mut ops = Ops::new();
 
+    let is_engrave = params.mode.eq_ignore_ascii_case("engrave");
+    let section_type = if is_engrave {
+        crate::ops::enums::SectionType::RasterFill
+    } else {
+        crate::ops::enums::SectionType::VectorOutline
+    };
+    ops.ops_section_start(section_type, "material_test_grid");
+
+    // Wrap labels in a state block
+    if params.include_labels {
+        ops.state_block_start(Some("labels"));
+        generate_labels(
+            &mut ops,
+            params,
+            scale_x,
+            scale_y,
+            margin_left,
+            margin_top,
+        );
+        ops.state_block_end();
+    }
+
     // Build grid cells sorted by risk: highest speed first, then lowest power
     let mut cells: Vec<GridCell> = Vec::new();
     for r in 0..rows {
@@ -154,10 +176,15 @@ pub fn generate_material_test_grid(
             .then(a.passes.cmp(&b.passes).reverse())
     });
 
-    let is_engrave = params.mode.eq_ignore_ascii_case("engrave");
     let line_spacing = params.line_interval_mm;
 
-    for cell in &cells {
+    for (idx, cell) in cells.iter().enumerate() {
+        let cell_name = format!(
+            "cell-r{}-c{}",
+            idx / params.cols as usize,
+            idx % params.cols as usize
+        );
+        ops.state_block_start(Some(&cell_name));
         ops.set_power(0.0);
         ops.set_power(cell.power / 100.0);
         ops.set_feed_rate(cell.speed as i32);
@@ -183,6 +210,8 @@ pub fn generate_material_test_grid(
             }
         }
 
+        ops.state_block_end();
+
         if first_point.is_none() {
             first_point = Some(Point::new(cell.x, cell.y));
         }
@@ -190,17 +219,7 @@ pub fn generate_material_test_grid(
             Some(Point::new(cell.x + cell.width, cell.y + cell.height));
     }
 
-    // Generate text labels before the grid (machined first, lower power)
-    if params.include_labels {
-        generate_labels(
-            &mut ops,
-            params,
-            scale_x,
-            scale_y,
-            margin_left,
-            margin_top,
-        );
-    }
+    ops.ops_section_end(section_type);
 
     if !ops.is_empty() {
         ops.scale(1.0, -1.0, 1.0).translate(0.0, target_height, 0.0);

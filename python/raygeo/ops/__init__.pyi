@@ -509,12 +509,12 @@ class Ops:
         :raises TypeError: If the command is not a Workpiece command.
         :complexity: O(1) time, O(1) space
         """
-    def section_params(self, idx: builtins.int) -> tuple[types.SectionType, typing.Optional[builtins.str]]:
+    def section_params(self, idx: builtins.int) -> tuple[types.SectionType, typing.Optional[builtins.str], typing.Optional[types.RasterMode]]:
         r"""
-        Get the section type and optional workpiece UID from an OpsSection command.
+        Get the section type, optional workpiece UID, and optional raster mode from an OpsSection command.
         
         :param idx: Command index.
-        :returns: ``(SectionType, Optional[workpiece_uid])``.
+        :returns: ``(SectionType, Optional[str], Optional[RasterMode])``.
         :raises TypeError: If the command is not an OpsSectionStart or OpsSectionEnd.
         :complexity: O(1) time, O(1) space
         """
@@ -739,11 +739,41 @@ class Ops:
         :param workpiece_uid: The workpiece identifier.
         :complexity: O(1) time, O(1) space
         """
+    def ops_section_start_with_mode(self, section_type: types.SectionType, workpiece_uid: builtins.str, *, raster_mode: typing.Optional[types.RasterMode] = None) -> None:
+        r"""
+        Mark the start of an ops section with a raster mode.
+        
+        :param section_type: The type of section.
+        :param workpiece_uid: The workpiece identifier.
+        :param raster_mode: Optional raster mode.
+        :complexity: O(1) time, O(1) space
+        """
     def ops_section_end(self, section_type: types.SectionType) -> None:
         r"""
         Mark the end of an ops section.
         
         :param section_type: The type of section.
+        :complexity: O(1) time, O(1) space
+        """
+    def ops_section_end_with_mode(self, section_type: types.SectionType, *, raster_mode: typing.Optional[types.RasterMode] = None) -> None:
+        r"""
+        Mark the end of an ops section with a raster mode.
+        
+        :param section_type: The type of section.
+        :param raster_mode: Optional raster mode.
+        :complexity: O(1) time, O(1) space
+        """
+    def state_block_start(self, name: typing.Optional[builtins.str]) -> None:
+        r"""
+        Mark the start of a state block.
+        
+        :param name: Optional block name.
+        :complexity: O(1) time, O(1) space
+        """
+    def state_block_end(self) -> None:
+        r"""
+        Mark the end of a state block.
+        
         :complexity: O(1) time, O(1) space
         """
     def copy(self) -> Ops:
@@ -1099,6 +1129,38 @@ class Ops:
         :returns: List of OpsSectionRange objects.
         :complexity: O(n) time, O(n) space
         """
+    def section_content(self, section: OpsSection) -> Ops:
+        r"""
+        Extract the commands belonging to a section.
+        
+        :param section: The OpsSection to extract.
+        :returns: A new Ops containing only the content of that section.
+        :complexity: O(n) time, O(n) space
+        """
+    def sections_by_type(self, section_type: types.SectionType) -> builtins.list[OpsSection]:
+        r"""
+        Return sections matching a given section type.
+        
+        :param section_type: The SectionType to filter by.
+        :returns: List of matching OpsSection objects.
+        :complexity: O(n) time, O(n) space
+        """
+    def sections_by_mode(self, raster_mode: types.RasterMode) -> builtins.list[OpsSection]:
+        r"""
+        Return sections matching a given raster mode.
+        
+        :param raster_mode: The RasterMode to filter by.
+        :returns: List of matching OpsSection objects.
+        :complexity: O(n) time, O(n) space
+        """
+    def state_blocks(self) -> builtins.list[types.StateBlock]:
+        r"""
+        Return all state blocks across all sections.
+        
+        :returns: List of StateBlock objects.
+        :raises RuntimeError: If state block nesting is invalid.
+        :complexity: O(n) time, O(n) space
+        """
     def rect(self, include_travel: builtins.bool = False) -> tuple[builtins.float, builtins.float, builtins.float, builtins.float]:
         r"""
         Compute the bounding rectangle of all commands.
@@ -1377,6 +1439,11 @@ class OpsSection:
         The type of this section (VectorOutline or RasterFill), if any.
         """
     @property
+    def raster_mode(self) -> typing.Optional[types.RasterMode]:
+        r"""
+        The raster mode of this section, if any.
+        """
+    @property
     def marker_indices(self) -> builtins.list[builtins.int]:
         r"""
         Indices of the section-marker commands (start/end) for this section.
@@ -1385,6 +1452,42 @@ class OpsSection:
     def content_indices(self) -> builtins.list[builtins.int]:
         r"""
         Indices of the content commands belonging to this section.
+        """
+    def content(self, ops: Ops) -> Ops:
+        r"""
+        Extract the content commands of this section from an Ops sequence.
+        
+        :param ops: The Ops sequence containing this section.
+        :returns: A new Ops containing only the content of this section.
+        :complexity: O(n) time, O(n) space
+        """
+    def state_blocks(self, ops: Ops) -> builtins.list[types.StateBlock]:
+        r"""
+        Return the state blocks within this section.
+        
+        :param ops: The parent Ops sequence.
+        :returns: List of StateBlock objects.
+        :raises RuntimeError: If state block nesting is invalid.
+        :complexity: O(n) time, O(n) space
+        """
+    def state_block_content(self, ops: Ops, block: types.StateBlock) -> Ops:
+        r"""
+        Extract a specific state block's content as Ops.
+        
+        :param ops: The parent Ops sequence.
+        :param block: The StateBlock to extract.
+        :returns: A new Ops containing only the block's content.
+        :complexity: O(n) time, O(n) space
+        """
+    def state_blocks_by_name(self, ops: Ops, pattern: builtins.str) -> builtins.list[types.StateBlock]:
+        r"""
+        Find state blocks by name pattern (``*`` prefix match or exact).
+        
+        :param ops: The parent Ops sequence.
+        :param pattern: Name pattern (``"cell-*"`` for prefix, ``"labels"`` for exact).
+        :returns: List of matching StateBlock objects.
+        :raises RuntimeError: If state block nesting is invalid.
+        :complexity: O(n) time, O(n) space
         """
     def __repr__(self) -> builtins.str: ...
 
@@ -1402,6 +1505,11 @@ class OpsSectionRange:
         The type of this section range (VectorOutline or RasterFill), if any.
         """
     @property
+    def raster_mode(self) -> typing.Optional[types.RasterMode]:
+        r"""
+        The raster mode of this section range, if any.
+        """
+    @property
     def marker_indices(self) -> builtins.list[builtins.int]:
         r"""
         Indices of the section-marker commands that bracket this range.
@@ -1410,6 +1518,19 @@ class OpsSectionRange:
     def content_indices(self) -> builtins.list[builtins.int]:
         r"""
         Starting index of the content within this section range.
+        """
+    def content(self, ops: Ops) -> Ops:
+        r"""
+        Extract the content commands of this section range from an Ops sequence.
+        
+        :param ops: The Ops sequence containing this section.
+        :returns: A new Ops containing only the content of this section range.
+        :complexity: O(n) time, O(n) space
+        Extract the content commands of this section range from an Ops sequence.
+        
+        :param ops: The Ops sequence containing this section.
+        :returns: A new Ops containing only the content of this section range.
+        :complexity: O(n) time, O(n) space
         """
     def __repr__(self) -> builtins.str: ...
 

@@ -3,7 +3,7 @@ use pyo3::types::{PyDict, PyList};
 
 use crate::ops::{
     AirAssistMode, Axis, CommandCategory, CommandType, CoolantMode,
-    HeadCoolantMode, MarkerCmd, MoveCmd, OpCategory, StateCmd,
+    HeadCoolantMode, MarkerCmd, MoveCmd, OpCategory, RasterMode, StateCmd,
 };
 
 use crate::python::ops::axis::PyAxis;
@@ -124,15 +124,31 @@ pub(crate) fn cmd_to_dict<'a>(
             MarkerCmd::OpsSectionStart {
                 section_type,
                 workpiece_uid,
+                raster_mode,
             } => {
                 d.set_item("section_type", section_type.name())?;
                 if let Some(wp) = workpiece_uid {
                     d.set_item("workpiece_uid", wp.to_string())?;
                 }
+                if let Some(rm) = raster_mode {
+                    d.set_item("raster_mode", rm.name())?;
+                }
             }
-            MarkerCmd::OpsSectionEnd { section_type, .. } => {
+            MarkerCmd::OpsSectionEnd {
+                section_type,
+                raster_mode,
+                ..
+            } => {
                 d.set_item("section_type", section_type.name())?;
+                if let Some(rm) = raster_mode {
+                    d.set_item("raster_mode", rm.name())?;
+                }
             }
+            MarkerCmd::StateBlockStart { name: Some(n) } => {
+                d.set_item("name", n.to_string())?;
+            }
+            MarkerCmd::StateBlockStart { name: None } => {}
+            MarkerCmd::StateBlockEnd => {}
             _ => {}
         },
     }
@@ -401,7 +417,17 @@ pub fn create_and_append_command(
         let wp_uid: Option<String> = cmd_data
             .get_item("workpiece_uid")?
             .and_then(|v| v.extract().ok());
-        ops.ops_section_start(st, wp_uid.as_deref().unwrap_or(""));
+        let raster_mode: Option<RasterMode> = cmd_data
+            .get_item("raster_mode")?
+            .and_then(|v| v.extract::<String>().ok())
+            .and_then(|s| RasterMode::from_name(&s));
+        let wp = wp_uid.as_deref().unwrap_or("");
+        if let Some(rm) = raster_mode {
+            ops.ops_section_start_with_mode(st, wp, Some(rm))
+                .expect("valid section params");
+        } else {
+            ops.ops_section_start(st, wp);
+        }
     } else if ct == CommandType::OpsSectionEnd {
         let st_str: String = cmd_data
             .get_item("section_type")?
@@ -416,11 +442,26 @@ pub fn create_and_append_command(
                     st_str
                 ))
             })?;
-        ops.ops_section_end(st);
+        let raster_mode: Option<RasterMode> = cmd_data
+            .get_item("raster_mode")?
+            .and_then(|v| v.extract::<String>().ok())
+            .and_then(|s| RasterMode::from_name(&s));
+        if let Some(rm) = raster_mode {
+            ops.ops_section_end_with_mode(st, Some(rm))
+                .expect("valid section params");
+        } else {
+            ops.ops_section_end(st);
+        }
     } else if ct == CommandType::JobStart {
         ops.job_start();
     } else if ct == CommandType::JobEnd {
         ops.job_end();
+    } else if ct == CommandType::StateBlockStart {
+        let name: Option<String> =
+            cmd_data.get_item("name")?.and_then(|v| v.extract().ok());
+        ops.state_block_start(name.as_deref());
+    } else if ct == CommandType::StateBlockEnd {
+        ops.state_block_end();
     }
 
     Ok(())

@@ -2,9 +2,25 @@ from raygeo.ops.state import AirAssistMode, CoolantMode, HeadCoolantMode
 from raygeo.ops.types import (
     CommandCategory,
     CommandType,
+    RasterMode,
     SectionType,
     category,
 )
+
+
+def test_state_block_command_type_values():
+    assert CommandType.STATE_BLOCK_START.value == 108
+    assert CommandType.STATE_BLOCK_END.value == 109
+
+
+def test_state_block_category():
+    assert category(CommandType.STATE_BLOCK_START) == CommandCategory.MARKER
+    assert category(CommandType.STATE_BLOCK_END) == CommandCategory.MARKER
+
+
+def test_state_block_command_type_names():
+    assert CommandType.STATE_BLOCK_START.name == "STATE_BLOCK_START"
+    assert CommandType.STATE_BLOCK_END.name == "STATE_BLOCK_END"
 
 
 def test_command_type_values():
@@ -135,3 +151,21 @@ def test_head_coolant_mode_constants():
 def test_head_coolant_mode_repr():
     assert repr(HeadCoolantMode.OFF) == "HeadCoolantMode.OFF"
     assert repr(HeadCoolantMode.ON) == "HeadCoolantMode.ON"
+
+
+def test_raster_mode_values():
+    assert RasterMode.VARIABLE_POWER.value == 1
+    assert RasterMode.CONSTANT_POWER.value == 2
+    assert RasterMode.DEPTH_MAP.value == 3
+
+
+def test_raster_mode_names():
+    assert RasterMode.VARIABLE_POWER.name == "VARIABLE_POWER"
+    assert RasterMode.CONSTANT_POWER.name == "CONSTANT_POWER"
+    assert RasterMode.DEPTH_MAP.name == "DEPTH_MAP"
+
+
+def test_raster_mode_repr():
+    assert repr(RasterMode.VARIABLE_POWER) == "RasterMode.VARIABLE_POWER"
+    assert repr(RasterMode.CONSTANT_POWER) == "RasterMode.CONSTANT_POWER"
+    assert repr(RasterMode.DEPTH_MAP) == "RasterMode.DEPTH_MAP"

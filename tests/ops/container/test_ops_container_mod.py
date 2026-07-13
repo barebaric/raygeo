@@ -645,17 +645,19 @@ def test_head_uid_wrong_type():
 def test_section_params_start():
     ops = Ops()
     ops.ops_section_start(SectionType.RASTER_FILL, "wp1")
-    st, uid = ops.section_params(0)
+    st, uid, mode = ops.section_params(0)
     assert st == SectionType.RASTER_FILL
     assert uid == "wp1"
+    assert mode is None
 
 
 def test_section_params_end():
     ops = Ops()
     ops.ops_section_end(SectionType.RASTER_FILL)
-    st, uid = ops.section_params(0)
+    st, uid, mode = ops.section_params(0)
     assert st == SectionType.RASTER_FILL
     assert uid is None
+    assert mode is None
 
 
 def test_section_params_wrong_type():

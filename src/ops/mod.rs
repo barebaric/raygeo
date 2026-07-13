@@ -19,7 +19,7 @@ pub use assembly::result::AssemblyMeta;
 pub use axis::Axis;
 pub use container::structure::{OpsSection, OpsSectionRange};
 pub use container::Ops;
-pub use enums::{CommandCategory, CommandType, SectionType};
+pub use enums::{CommandCategory, CommandType, RasterMode, SectionType};
 pub use state::{AirAssistMode, CoolantMode, HeadCoolantMode, State};
 pub use transform::{
     apply_lead_in_out, apply_overscan, apply_tab_gaps, apply_tab_power,
