@@ -60,8 +60,8 @@ def run(args):
     )
     t1 = time.perf_counter()
 
-    cut = sum(1 for i in range(result.ops.len()) if result.ops.is_cutting(i))
-    travel = sum(1 for i in range(result.ops.len()) if result.ops.is_travel(i))
+    cut = result.ops.count_cutting()
+    travel = result.ops.count_travel()
 
     print(f"\n--- adaptive_clearing profile ({scenario.name}) ---")
     print(f"Wall clock:  {t1 - t0:.2f}s")

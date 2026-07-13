@@ -513,7 +513,7 @@ impl Ops {
                 matches!(
                     c.category,
                     OpCategory::Moving {
-                        cmd: MoveCmd::LineTo { .. }
+                        cmd: MoveCmd::LineTo
                             | MoveCmd::ArcTo { .. }
                             | MoveCmd::BezierTo { .. }
                             | MoveCmd::QuadraticBezierTo { .. }

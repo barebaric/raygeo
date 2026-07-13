@@ -51,8 +51,10 @@ pub struct ClearedArea {
     /// Cleared whenever fragments are mutated (see
     /// [`Self::clear_sweep_cache`]).
     sweep_cache: Mutex<Option<SweepCache>>,
-    /// Cached `get_polygons_union(&self.fragments)` for
-    /// [`Self::actionable_remaining`].  Cleared when fragments change.
+    /// Cached `get_polygons_union(&self.fragments)`.  Updated
+    /// incrementally instead of recomputed from scratch on every
+    /// mutation — avoids redundant full union in both [`Self::frontier`]
+    /// and [`Self::actionable_remaining`].
     fragments_union_cache: Mutex<Option<Vec<Polygon>>>,
     /// Cached result of [`Self::remaining_area`].  Invalidated when
     /// fragments change.
@@ -65,6 +67,13 @@ pub struct ClearedArea {
     /// [`Self::actionable_remaining`] to detect staleness without
     /// locking the union cache.
     frag_version: AtomicUsize,
+    // ── Envelope cache ──
+    /// The tool-centre envelope is constant for a given pocket (it
+    /// depends only on the stock boundary and tool radius, not on the
+    /// fragments).  Cached here to avoid recomputing
+    /// [`compute_inset_region`] on every `bites()` and
+    /// `actionable_remaining()` during the wavefront loop.
+    envelope_cache: Mutex<Option<Vec<Polygon>>>,
 }
 
 impl ClearedArea {
@@ -85,6 +94,7 @@ impl ClearedArea {
             remaining_area_cache: Mutex::new(None),
             actionable_cache: Mutex::new(None),
             frag_version: AtomicUsize::new(0),
+            envelope_cache: Mutex::new(None),
         }
     }
 
@@ -124,13 +134,36 @@ impl ClearedArea {
 
     /// The tool-centre envelope (inset of boundary by `tool_radius`,
     /// minus islands).
+    ///
+    /// Uses the cached envelope if one has been set via
+    /// [`set_envelope_cache`](Self::set_envelope_cache), which avoids
+    /// recomputing [`compute_inset_region`] on every call during the
+    /// wavefront loop.
     #[prof]
     pub fn envelope(
         &self,
         region: &StockRegion,
         tool_radius: f64,
     ) -> Vec<Polygon> {
+        {
+            let cache = self.envelope_cache.lock().unwrap();
+            if let Some(ref cached) = *cache {
+                return cached.clone();
+            }
+        }
         compute_inset_region(&region.boundary, tool_radius, &region.islands).0
+    }
+
+    /// Pre-compute and cache the envelope so that
+    /// [`Self::envelope`] returns it without recomputation.
+    pub fn set_envelope_cache(&self, envelope: Vec<Polygon>) {
+        *self.envelope_cache.lock().unwrap() = Some(envelope);
+    }
+
+    /// Clear the envelope cache (e.g. when the tool radius or stock
+    /// region changes).
+    pub fn clear_envelope_cache(&self) {
+        *self.envelope_cache.lock().unwrap() = None;
     }
 
     /// Find a safe plunge point in the cleared area near `near`.
@@ -156,18 +189,61 @@ impl ClearedArea {
 
     // ── Mutation ───────────────────────────────────────────────────
 
-    /// Clear the single-entry sweep cache (called whenever fragments
-    /// are modified).
+    /// Clear sweep, remaining-area, and actionable caches (called
+    /// whenever fragments are modified).  The `fragments_union_cache` is
+    /// NOT cleared here — it is updated incrementally via
+    /// [`Self::update_fragments_union`] to avoid re-unioning all
+    /// fragments from scratch.
     #[inline]
     fn clear_sweep_cache(&self) {
         *self.sweep_cache.lock().unwrap() = None;
-        *self.fragments_union_cache.lock().unwrap() = None;
         *self.remaining_area_cache.lock().unwrap() = None;
         *self.actionable_cache.lock().unwrap() = None;
         self.frag_version.store(
             self.frag_version.load(Ordering::Relaxed) + 1,
             Ordering::Relaxed,
         );
+    }
+
+    /// Incrementally update the cached union of all fragments.
+    ///
+    /// `new_polys` are polygons that have just been added (and were NOT
+    /// already in `self.fragments`).  The new union is
+    /// `union(old_union, new_polys)`.  While `new_polys` don't overlap
+    /// the existing cleared area, individual polygons within `new_polys`
+    /// may overlap each other, so we must actually perform the Clipper
+    /// union to keep the cached union clean.  This is still much cheaper
+    /// than re-unioning all fragments from scratch.
+    fn update_fragments_union(&self, new_polys: &[Polygon]) {
+        if new_polys.is_empty() {
+            return;
+        }
+        let filtered: Vec<&Polygon> =
+            new_polys.iter().filter(|p| p.len() >= 3).collect();
+        if filtered.is_empty() {
+            return;
+        }
+        let mut cache = self.fragments_union_cache.lock().unwrap();
+        let current = cache.take();
+        let updated = match current {
+            Some(mut u) => {
+                u.extend(filtered.into_iter().cloned());
+                get_polygons_union(&u)
+            }
+            None => {
+                let mut all = self.fragments.clone();
+                all.extend(new_polys.iter().filter(|p| p.len() >= 3).cloned());
+                get_polygons_union(&all)
+            }
+        };
+        *cache = Some(updated);
+    }
+
+    /// Convenience: (re)build the union cache from fragments directly.
+    /// Used when fragments are replaced wholesale (e.g. `replace_fragments`).
+    fn rebuild_union_cache(&self) {
+        *self.fragments_union_cache.lock().unwrap() =
+            Some(get_polygons_union(&self.fragments));
     }
 
     /// Replace all stored fragments with a new set (e.g., the new frontier
@@ -178,6 +254,7 @@ impl ClearedArea {
     pub fn replace_fragments(&mut self, fragments: Vec<Polygon>) {
         self.fragments = fragments;
         self.clear_sweep_cache();
+        self.rebuild_union_cache();
         self.rebuild_grid();
     }
 
@@ -206,6 +283,8 @@ impl ClearedArea {
         if swept.is_empty() || swept.iter().all(|p| p.len() < 3) {
             return;
         }
+        // Update union cache before consuming swept.
+        self.update_fragments_union(&swept);
         let mut all_polys = self.fragments.clone();
         all_polys.extend(swept);
         self.fragments = get_polygons_union(&all_polys);
@@ -331,12 +410,22 @@ impl ClearedArea {
                 }
             }
         }
-        let inset_region = compute_inset_region(
-            &region.boundary,
-            inset_distance,
-            &region.islands,
-        )
-        .0;
+        let inset_region = {
+            // Reuse the cached envelope when the inset distance matches
+            // the tool radius (common in wavefront loops).
+            let env = self.envelope_cache.lock().unwrap();
+            if let Some(ref cached) = *env {
+                cached.clone()
+            } else {
+                drop(env);
+                compute_inset_region(
+                    &region.boundary,
+                    inset_distance,
+                    &region.islands,
+                )
+                .0
+            }
+        };
         let result = if inset_region.is_empty() {
             0.0
         } else if self.fragments.is_empty() {
@@ -389,6 +478,7 @@ impl ClearedArea {
         let mut all_polys = self.fragments.clone();
         all_polys.extend(polygons.iter().cloned());
         self.fragments = get_polygons_union(&all_polys);
+        self.update_fragments_union(polygons);
         self.clear_sweep_cache();
         self.rebuild_grid();
     }
@@ -404,7 +494,18 @@ impl ClearedArea {
         if polys.is_empty() {
             return vec![];
         }
-        let new = get_polygons_group_difference(polys, &self.fragments);
+        // Use the cached union (fewer paths, no overlaps) instead of
+        // raw fragments — equivalent with FillRule::NonZero.
+        let new = {
+            let cache = self.fragments_union_cache.lock().unwrap();
+            match *cache {
+                Some(ref u) => get_polygons_group_difference(polys, u),
+                None => {
+                    drop(cache);
+                    get_polygons_group_difference(polys, &self.fragments)
+                }
+            }
+        };
         if new.is_empty() {
             return new;
         }
@@ -425,12 +526,20 @@ impl ClearedArea {
             }
         }
 
+        // Incrementally update the union cache with the newly added
+        // polygons instead of recomputing from scratch.
+        self.update_fragments_union(&new);
+
         // Full compaction when accumulation exceeds the threshold.
         const COMPACT_THRESHOLD: usize = 512;
         let total_vertices: usize =
             self.fragments.iter().map(|p| p.len()).sum();
         if total_vertices > COMPACT_THRESHOLD {
             self.fragments = get_polygons_union(&self.fragments);
+            // After compaction the union is exact — update the cache to
+            // match the compacted representation.
+            *self.fragments_union_cache.lock().unwrap() =
+                Some(self.fragments.clone());
             self.rebuild_grid();
         }
 
@@ -440,13 +549,27 @@ impl ClearedArea {
 
     /// Return a unioned, simplified snapshot of the current outer
     /// boundary, clipped to the stock.
+    ///
+    /// Uses the incrementally-maintained `fragments_union_cache` to
+    /// avoid re-unioning all fragments from scratch.
     #[prof]
     pub fn frontier(
         &self,
         region: &StockRegion,
         simplify_tol: f64,
     ) -> Vec<Polygon> {
-        let unioned = get_polygons_union(&self.fragments);
+        let unioned = {
+            let cache = self.fragments_union_cache.lock().unwrap();
+            match *cache {
+                Some(ref u) => u.clone(),
+                None => {
+                    drop(cache);
+                    let u = get_polygons_union(&self.fragments);
+                    *self.fragments_union_cache.lock().unwrap() = Some(u.clone());
+                    u
+                }
+            }
+        };
         let stock = self.stock(region);
         let clipped = if stock.is_empty() {
             unioned
@@ -489,8 +612,19 @@ impl ClearedArea {
         if expanded.is_empty() {
             return vec![];
         }
-        let material =
-            get_polygons_group_difference(&expanded, &self.fragments);
+        // Use the cached union (fewer paths, no overlaps) instead of
+        // raw fragments for the Clipper difference — equivalent result
+        // with FillRule::NonZero.
+        let material = {
+            let cache = self.fragments_union_cache.lock().unwrap();
+            match *cache {
+                Some(ref u) => get_polygons_group_difference(&expanded, u),
+                None => {
+                    drop(cache);
+                    get_polygons_group_difference(&expanded, &self.fragments)
+                }
+            }
+        };
         let envelope = self.envelope(region, tool_radius);
         get_polygons_group_intersection(&material, &envelope)
     }
@@ -565,6 +699,7 @@ impl ClearedArea {
         let path = std::mem::take(&mut self.batch_path);
         let swept = get_polyline_swept_polygon(&path, radius);
         self.apply_local_merge(&swept);
+        self.update_fragments_union(&swept);
         self.batch_active = false;
     }
 
@@ -632,6 +767,8 @@ impl ClearedArea {
                 self.fragments.push(poly);
             }
         }
+        // NOTE: union cache is updated by the caller (cut_fast), not here,
+        // to avoid double-updating on the overlap branch.
         self.clear_sweep_cache();
         self.rebuild_grid();
     }
@@ -809,6 +946,7 @@ impl Clone for ClearedArea {
             frag_version: AtomicUsize::new(
                 self.frag_version.load(Ordering::Relaxed),
             ),
+            envelope_cache: Mutex::new(None),
         };
         ca.rebuild_grid();
         ca

@@ -6,7 +6,6 @@ from raygeo.cli.scenarios import (
     build_scenario,
 )
 from raygeo.geo import Geometry
-from raygeo.geo.shape.polygon import get_polygon_signed_area
 from raygeo.ops.assembly.wavefront import (
     adaptive_wavefronts_multi_pocket,
 )
@@ -62,8 +61,6 @@ def _build_geometry(args):
         all_polys = []
         for p in all_polys_raw:
             all_polys.append([(x, y_min + y_max - y) for x, y in p])
-        outer = [p for p in all_polys if get_polygon_signed_area(p) < -0.01]
-        inner = [p for p in all_polys if get_polygon_signed_area(p) >= 0.01]
         all_geo = Geometry()
         for poly in all_polys:
             all_geo.move_to(poly[0][0], poly[0][1], 0.0)

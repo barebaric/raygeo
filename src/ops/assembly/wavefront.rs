@@ -56,6 +56,14 @@ pub fn adaptive_wavefronts(
     let mut first_point: Option<Point> = None;
     let mut last_point: Option<Point> = None;
 
+    // Pre-compute the envelope once and cache it on the ClearedArea.
+    // The envelope (tool-centre valid area) depends only on the stock
+    // region and tool radius, which are constant throughout the loop.
+    // This avoids recomputing compute_inset_region in every bites()
+    // and actionable_remaining() call.
+    let envelope = part.cleared.envelope(&part.stock_region, opts.tool_radius);
+    part.cleared.set_envelope_cache(envelope);
+
     for _ in 0..MAX_WAVEFRONT_ITERATIONS {
         let bounded = part.cleared.bites(
             &part.stock_region,
