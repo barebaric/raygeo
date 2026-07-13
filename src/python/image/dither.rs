@@ -21,7 +21,7 @@ use crate::image::dither;
         :complexity: O(w*h)
         """
 "#,
-    module = "raygeo.image"
+    module = "raygeo.image.dither"
 )]
 #[pyfunction(name = "apply_floyd_steinberg_dither")]
 fn py_apply_floyd_steinberg_dither(
@@ -70,7 +70,7 @@ fn py_apply_floyd_steinberg_dither(
         :complexity: O(w*h)
         """
 "#,
-    module = "raygeo.image"
+    module = "raygeo.image.dither"
 )]
 #[pyfunction(name = "apply_minimum_run_length")]
 fn py_apply_minimum_run_length(
@@ -116,7 +116,7 @@ fn py_apply_minimum_run_length(
         :complexity: O(w*h)
         """
 "#,
-    module = "raygeo.image"
+    module = "raygeo.image.dither"
 )]
 #[pyfunction(name = "apply_bayer_dither")]
 #[pyo3(signature = (grayscale, bayer_matrix, invert, cell_size=1))]
@@ -165,11 +165,21 @@ fn py_apply_bayer_dither(
 }
 
 pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(
+    let sub_mod = PyModule::new(m.py(), "dither")?;
+    sub_mod.add_function(wrap_pyfunction!(
         py_apply_floyd_steinberg_dither,
-        m.clone()
+        sub_mod.clone()
     )?)?;
-    m.add_function(wrap_pyfunction!(py_apply_minimum_run_length, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(py_apply_bayer_dither, m.clone())?)?;
+    sub_mod.add_function(wrap_pyfunction!(
+        py_apply_minimum_run_length,
+        sub_mod.clone()
+    )?)?;
+    sub_mod.add_function(wrap_pyfunction!(
+        py_apply_bayer_dither,
+        sub_mod.clone()
+    )?)?;
+    m.add_submodule(&sub_mod)?;
+    let sys_modules = m.py().import("sys")?.getattr("modules")?;
+    sys_modules.set_item("raygeo.image.dither", &sub_mod)?;
     Ok(())
 }

@@ -9,191 +9,25 @@ Provides sRGB/linear color space conversions, RGBA-to-grayscale/binary conversio
 import numpy
 import numpy.typing
 from raygeo import ops
+from . import convert
+from . import dither
+from . import grayscale
+from . import preprocess
 from . import render
 from . import scan
+from . import srgb
+from . import transparency
 __all__ = [
-    "apply_bayer_dither",
-    "apply_floyd_steinberg_dither",
-    "apply_minimum_run_length",
-    "compute_adaptive_threshold",
-    "compute_auto_levels",
-    "denoise_binary",
-    "filter_components",
-    "get_component_areas",
-    "grayscale_to_binary",
-    "linear_to_srgb",
-    "make_transparent_by_brightness",
-    "make_transparent_except_color",
-    "normalize_grayscale",
+    "convert",
+    "dither",
+    "grayscale",
+    "preprocess",
     "rasterize_scanlines",
     "render",
-    "rgba_to_binary",
-    "rgba_to_grayscale",
-    "rgba_to_grayscale_inplace",
     "scan",
-    "srgb_to_linear",
+    "srgb",
+    "transparency",
 ]
-
-def apply_bayer_dither(grayscale: numpy.typing.NDArray[numpy.uint8], bayer_matrix: numpy.typing.NDArray[numpy.float32], invert: bool, cell_size: int = 1) -> numpy.typing.NDArray[numpy.uint8]:
-    r"""
-    Apply ordered (Bayer) dithering using a threshold matrix.
-    
-    :param grayscale: 2D grayscale image as uint8 array.
-    :param bayer_matrix: 2D Bayer threshold matrix as float32.
-    :param invert: If True, invert the output.
-    :param cell_size: Pixel grouping size for the threshold.
-    :returns: 2D binary uint8 array (values 0 or 1).
-    :complexity: O(w*h)
-    """
-
-def apply_floyd_steinberg_dither(grayscale: numpy.typing.NDArray[numpy.uint8], invert: bool) -> numpy.typing.NDArray[numpy.uint8]:
-    r"""
-    Apply Floyd-Steinberg error-diffusion dithering.
-    
-    :param grayscale: 2D grayscale image as uint8 array.
-    :param invert: If True, invert the output (swap black/white).
-    :returns: 2D binary uint8 array (values 0 or 1).
-    :complexity: O(w*h)
-    """
-
-def apply_minimum_run_length(binary: numpy.typing.NDArray[numpy.uint8], min_run_length: int) -> numpy.typing.NDArray[numpy.uint8]:
-    r"""
-    Remove binary runs shorter than the given minimum.
-    
-    :param binary: 2D binary uint8 array (values 0 or 1).
-    :param min_run_length: Minimum run length to keep.
-    :returns: 2D binary uint8 array with short runs removed.
-    :complexity: O(w*h)
-    """
-
-def compute_adaptive_threshold(areas: list[int]) -> int:
-    r"""
-    Compute an adaptive area threshold to separate noise from content.
-    
-    Analyses the distribution of connected component areas and finds the
-    largest gap to determine a threshold that separates noise (small
-    components) from meaningful content.
-    
-    :param areas: Sorted list of component pixel areas.
-    :returns: Adaptive threshold value (minimum area to keep).
-    :complexity: O(n) where n = number of unique area values
-    """
-
-def compute_auto_levels(gray_image: numpy.typing.NDArray[numpy.uint8], clip_percent: float = 1) -> tuple[int, int]:
-    r"""
-    Compute auto black/white levels from a grayscale image histogram.
-    
-    :param gray_image: Grayscale image as uint8 array.
-    :param clip_percent: Percentage of pixels to clip from each end.
-    :returns: Tuple of (black_point, white_point).
-    :complexity: O(n) where n = number of pixels
-    """
-
-def denoise_binary(binary: numpy.typing.NDArray[numpy.uint8]) -> numpy.typing.NDArray[numpy.uint8]:
-    r"""
-    Remove small noise components from a binary image using adaptive thresholding.
-    
-    Computes connected components, finds the largest gap in component area
-    distribution to separate noise from content, and removes small components.
-    Uses the same algorithm as the legacy Python ``_find_adaptive_area_threshold``.
-    
-    :param binary: 2D binary uint8 array (values 0 or 1).
-    :returns: 2D binary uint8 array with noise removed.
-    :complexity: O(w*h)
-    """
-
-def filter_components(binary: numpy.typing.NDArray[numpy.uint8], min_area: int) -> numpy.typing.NDArray[numpy.uint8]:
-    r"""
-    Remove connected components smaller than min_area.
-    
-    Uses 8-connectivity for component detection.
-    
-    :param binary: 2D binary uint8 array (values 0 or 1).
-    :param min_area: Minimum pixel count to keep a component.
-    :returns: 2D binary uint8 array (values 0 or 1).
-    :complexity: O(w*h)
-    """
-
-def get_component_areas(binary: numpy.typing.NDArray[numpy.uint8]) -> list[int]:
-    r"""
-    Compute the pixel area of each connected component.
-    
-    Uses 8-connectivity. Areas are returned sorted ascending.
-    Background (0-valued pixels) is excluded.
-    
-    :param binary: 2D binary uint8 array (values 0 or 1).
-    :returns: Sorted list of component pixel areas.
-    :complexity: O(w*h)
-    """
-
-def grayscale_to_binary(gray: numpy.typing.NDArray[numpy.uint8], threshold: float = 0.5, invert: bool = False, auto_threshold: bool = True) -> numpy.typing.NDArray[numpy.uint8]:
-    r"""
-    Convert grayscale image to binary using Otsu or fixed threshold.
-    
-    Pixels at or below the threshold become foreground (1).
-    Uses Otsu's method when auto_threshold is True.
-    
-    :param gray: 2D grayscale uint8 image.
-    :param threshold: Fixed threshold (0.0-1.0), used only if auto_threshold is False.
-    :param invert: If True, pixels above threshold become foreground.
-    :param auto_threshold: If True, compute threshold via Otsu's method.
-    :returns: 2D binary uint8 array (values 0 or 1).
-    :complexity: O(w*h)
-    """
-
-def linear_to_srgb(array: numpy.typing.NDArray[numpy.float32], dither: bool = False) -> numpy.typing.NDArray[numpy.uint8]:
-    r"""
-    Convert linear light values to sRGB pixel values.
-    
-    :param array: Input array of linear float32 values in [0, 1].
-    :param dither: Apply dithering to reduce banding artifacts.
-    :returns: Array of sRGB uint8 values with the same shape.
-    :complexity: O(n) where n = number of pixels
-    """
-
-def make_transparent_by_brightness(rgba: numpy.typing.NDArray[numpy.uint8], width: int, height: int, stride: int, threshold: int = 250) -> None:
-    r"""
-    Clear alpha for bright pixels in an ARGB32 buffer (in-place).
-    
-    Pixels with BT.601-weighted brightness >= threshold have their
-    alpha channel set to 0.
-    
-    :param rgba: Flattened uint8 buffer of shape (stride * height * 4,).
-    :param width: Image width in pixels.
-    :param height: Image height in pixels.
-    :param stride: Row stride in pixels (may be larger than width).
-    :param threshold: Brightness threshold (0-255).
-    :complexity: O(w*h)
-    """
-
-def make_transparent_except_color(rgba: numpy.typing.NDArray[numpy.uint8], width: int, height: int, stride: int, target_r: int, target_g: int, target_b: int) -> None:
-    r"""
-    Clear alpha for non-matching pixels in an ARGB32 buffer (in-place).
-    
-    Pixels that do not match the target RGB color have their alpha
-    channel set to 0.
-    
-    :param rgba: Flattened uint8 buffer of shape (stride * height * 4,).
-    :param width: Image width in pixels.
-    :param height: Image height in pixels.
-    :param stride: Row stride in pixels.
-    :param target_r: Target red channel value (0-255).
-    :param target_g: Target green channel value (0-255).
-    :param target_b: Target blue channel value (0-255).
-    :complexity: O(w*h)
-    """
-
-def normalize_grayscale(gray_image: numpy.typing.NDArray[numpy.uint8], black_point: int = 0, white_point: int = 255) -> numpy.typing.NDArray[numpy.uint8]:
-    r"""
-    Normalize a grayscale image by stretching the dynamic range.
-    
-    :param gray_image: Input grayscale image as uint8 array.
-    :param black_point: Black point for normalization.
-    :param white_point: White point for normalization.
-    :returns: Normalized grayscale image with the same shape.
-    :raises ValueError: If black_point >= white_point.
-    :complexity: O(n) where n = number of pixels
-    """
 
 def rasterize_scanlines(ops: ops.Ops, width_px: int, height_px: int, px_per_mm: tuple[float, float], origin_mm: tuple[float, float] = (0, 0)) -> numpy.typing.NDArray[numpy.uint8]:
     r"""
@@ -210,59 +44,5 @@ def rasterize_scanlines(ops: ops.Ops, width_px: int, height_px: int, px_per_mm: 
     :param origin_mm: (x, y) origin offset in mm (default ``(0.0, 0.0)``).
     :returns: 2D uint8 array of shape (height_px, width_px).
     :complexity: O(scanline_pixels)
-    """
-
-def rgba_to_binary(rgba: numpy.typing.NDArray[numpy.uint8], width: int, height: int, stride: int, threshold: int = 128, invert: bool = False) -> numpy.typing.NDArray[numpy.uint8]:
-    r"""
-    Convert raw BGRA pixel buffer to binary image using thresholding.
-    
-    Transparent pixels (alpha == 0) are always treated as white (0).
-    
-    :param rgba: Flattened uint8 buffer of shape (stride * height * 4,).
-    :param width: Image width in pixels.
-    :param height: Image height in pixels.
-    :param stride: Row stride in pixels.
-    :param threshold: Brightness value (0-255) for binarization.
-    :param invert: If True, pixels above threshold become black (1).
-    :returns: 2D binary uint8 array (values 0 or 1) with shape (height, width).
-    :complexity: O(w*h)
-    """
-
-def rgba_to_grayscale(rgba: numpy.typing.NDArray[numpy.uint8], width: int, height: int, stride: int) -> tuple[numpy.typing.NDArray[numpy.uint8], numpy.typing.NDArray[numpy.float32]]:
-    r"""
-    Convert raw BGRA pixel buffer to grayscale with alpha unpremultiplication.
-    
-    Performs proper unpremultiplication of alpha and blends to white
-    background for grayscale calculation using BT.601 luminance weights.
-    
-    :param rgba: Flattened uint8 buffer of shape (stride * height * 4,).
-    :param width: Image width in pixels.
-    :param height: Image height in pixels.
-    :param stride: Row stride in pixels (may be larger than width).
-    :returns: Tuple of (grayscale_uint8, alpha_float32) arrays, each (height, width).
-    :complexity: O(w*h)
-    """
-
-def rgba_to_grayscale_inplace(rgba: numpy.typing.NDArray[numpy.uint8], width: int, height: int, stride: int) -> None:
-    r"""
-    Convert raw BGRA pixel buffer to grayscale in place.
-    
-    Modifies the buffer directly, converting BGR channels to grayscale
-    while preserving the alpha channel.
-    
-    :param rgba: Flattened uint8 buffer of shape (stride * height * 4,).
-    :param width: Image width in pixels.
-    :param height: Image height in pixels.
-    :param stride: Row stride in pixels.
-    :complexity: O(w*h)
-    """
-
-def srgb_to_linear(array: numpy.typing.NDArray[numpy.uint8]) -> numpy.typing.NDArray[numpy.float32]:
-    r"""
-    Convert sRGB pixel values to linear light values.
-    
-    :param array: Input array of sRGB uint8 values.
-    :returns: Array of linear float32 values with the same shape.
-    :complexity: O(n) where n = number of pixels
     """
 

@@ -1,7 +1,7 @@
 import cairo
 import numpy as np
 
-from raygeo.image import (
+from raygeo.image.convert import (
     rgba_to_binary,
     rgba_to_grayscale,
     rgba_to_grayscale_inplace,

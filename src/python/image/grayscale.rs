@@ -21,7 +21,7 @@ use crate::image::grayscale;
         :complexity: O(n) where n = number of pixels
         """
 "#,
-    module = "raygeo.image"
+    module = "raygeo.image.grayscale"
 )]
 #[pyfunction(name = "compute_auto_levels")]
 #[pyo3(signature = (gray_image, clip_percent=1.0))]
@@ -59,7 +59,7 @@ fn py_compute_auto_levels(
         :complexity: O(n) where n = number of pixels
         """
 "#,
-    module = "raygeo.image"
+    module = "raygeo.image.grayscale"
 )]
 #[pyfunction(name = "normalize_grayscale")]
 #[pyo3(signature = (gray_image, black_point=0, white_point=255))]
@@ -96,7 +96,17 @@ fn py_normalize_grayscale(
 }
 
 pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(py_compute_auto_levels, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(py_normalize_grayscale, m.clone())?)?;
+    let sub_mod = PyModule::new(m.py(), "grayscale")?;
+    sub_mod.add_function(wrap_pyfunction!(
+        py_compute_auto_levels,
+        sub_mod.clone()
+    )?)?;
+    sub_mod.add_function(wrap_pyfunction!(
+        py_normalize_grayscale,
+        sub_mod.clone()
+    )?)?;
+    m.add_submodule(&sub_mod)?;
+    let sys_modules = m.py().import("sys")?.getattr("modules")?;
+    sys_modules.set_item("raygeo.image.grayscale", &sub_mod)?;
     Ok(())
 }

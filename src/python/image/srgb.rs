@@ -19,7 +19,7 @@ use crate::image::srgb;
         :complexity: O(n) where n = number of pixels
         """
 "#,
-    module = "raygeo.image"
+    module = "raygeo.image.srgb"
 )]
 #[pyfunction(name = "srgb_to_linear")]
 fn py_srgb_to_linear(
@@ -59,7 +59,7 @@ fn py_srgb_to_linear(
         :complexity: O(n) where n = number of pixels
         """
 "#,
-    module = "raygeo.image"
+    module = "raygeo.image.srgb"
 )]
 #[pyfunction(name = "linear_to_srgb")]
 #[pyo3(signature = (array, dither=false))]
@@ -95,7 +95,13 @@ fn py_linear_to_srgb(
 }
 
 pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(py_srgb_to_linear, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(py_linear_to_srgb, m.clone())?)?;
+    let sub_mod = PyModule::new(m.py(), "srgb")?;
+    sub_mod
+        .add_function(wrap_pyfunction!(py_srgb_to_linear, sub_mod.clone())?)?;
+    sub_mod
+        .add_function(wrap_pyfunction!(py_linear_to_srgb, sub_mod.clone())?)?;
+    m.add_submodule(&sub_mod)?;
+    let sys_modules = m.py().import("sys")?.getattr("modules")?;
+    sys_modules.set_item("raygeo.image.srgb", &sub_mod)?;
     Ok(())
 }

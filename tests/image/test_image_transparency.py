@@ -1,7 +1,7 @@
 import cairo
 import numpy as np
 
-from raygeo.image import (
+from raygeo.image.transparency import (
     make_transparent_by_brightness,
     make_transparent_except_color,
 )

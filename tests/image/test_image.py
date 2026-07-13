@@ -1,15 +1,13 @@
 import numpy as np
 import pytest
 
-from raygeo.image import (
+from raygeo.image.dither import (
     apply_bayer_dither,
     apply_floyd_steinberg_dither,
     apply_minimum_run_length,
-    compute_auto_levels,
-    linear_to_srgb,
-    normalize_grayscale,
-    srgb_to_linear,
 )
+from raygeo.image.grayscale import compute_auto_levels, normalize_grayscale
+from raygeo.image.srgb import linear_to_srgb, srgb_to_linear
 
 # ---------------------------------------------------------------------------
 # srgb_to_linear

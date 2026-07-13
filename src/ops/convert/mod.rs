@@ -12,6 +12,3 @@ pub mod image;
 pub mod polyline;
 pub mod texture;
 pub mod vertex_arrays;
-
-pub use image::ScanMode;
-pub use vertex_arrays::VertexArrays;
