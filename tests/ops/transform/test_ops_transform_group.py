@@ -101,34 +101,34 @@ def _create_ops_with_head_coolant_states(states_config: List[bool]) -> Ops:
     return ops
 
 
-def test_group_by_state_continuity():
+def test_group_by_auxiliary_state():
     """Test splitting commands by non-reorderable state changes."""
     # All same coolant state -> 1 segment
     ops1 = _create_ops_with_states([True, True, True])
-    groups = ops1.group_by_state_continuity()
+    groups = ops1.group_by_auxiliary_state()
     assert len(groups) == 1
     assert groups[0].len() == 3
 
     # Coolant state change -> 2 segments
     ops2 = _create_ops_with_states([True, True, False])
-    groups = ops2.group_by_state_continuity()
+    groups = ops2.group_by_auxiliary_state()
     assert len(groups) == 2
     assert groups[0].len() == 2
     assert groups[1].len() == 1
 
     # Multiple coolant state changes
     ops3 = _create_ops_with_states([False, True, True, False, False, True])
-    groups = ops3.group_by_state_continuity()
+    groups = ops3.group_by_auxiliary_state()
     assert len(groups) == 4
     assert [g.len() for g in groups] == [1, 2, 2, 1]
 
     # Empty
     ops_empty = Ops()
-    assert ops_empty.group_by_state_continuity() == []
+    assert ops_empty.group_by_auxiliary_state() == []
 
     # Single command
     ops4 = _create_ops_with_states([True])
-    assert len(ops4.group_by_state_continuity()) == 1
+    assert len(ops4.group_by_auxiliary_state()) == 1
 
     # Test with marker commands
     ops_marker = Ops()
@@ -149,37 +149,37 @@ def test_group_by_state_continuity():
             coolant=CoolantMode.FLOOD,
         ),
     )
-    groups_m = ops_marker.group_by_state_continuity()
+    groups_m = ops_marker.group_by_auxiliary_state()
     assert len(groups_m) == 3
     assert [g.len() for g in groups_m] == [1, 1, 1]
     assert groups_m[1].is_marker(0)
 
 
-def test_group_by_state_continuity_air_assist():
+def test_group_by_auxiliary_state_air_assist():
     """Test splitting by air assist state changes."""
     # All same air assist -> 1 segment
     ops1 = _create_ops_with_air_assist_states([True, True, True])
-    groups = ops1.group_by_state_continuity()
+    groups = ops1.group_by_auxiliary_state()
     assert len(groups) == 1
 
     # Air assist change -> 2 segments
     ops2 = _create_ops_with_air_assist_states([True, True, False])
-    groups = ops2.group_by_state_continuity()
+    groups = ops2.group_by_auxiliary_state()
     assert len(groups) == 2
     assert groups[0].len() == 2
     assert groups[1].len() == 1
 
 
-def test_group_by_state_continuity_head_coolant():
+def test_group_by_auxiliary_state_head_coolant():
     """Test splitting by head coolant state changes."""
     # All same head coolant -> 1 segment
     ops1 = _create_ops_with_head_coolant_states([True, True, True])
-    groups = ops1.group_by_state_continuity()
+    groups = ops1.group_by_auxiliary_state()
     assert len(groups) == 1
 
     # Head coolant change -> 2 segments
     ops2 = _create_ops_with_head_coolant_states([True, True, False])
-    groups = ops2.group_by_state_continuity()
+    groups = ops2.group_by_auxiliary_state()
     assert len(groups) == 2
     assert groups[0].len() == 2
     assert groups[1].len() == 1

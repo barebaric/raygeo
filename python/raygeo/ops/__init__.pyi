@@ -1101,11 +1101,15 @@ class Ops:
         :returns: A list of index lists, one per segment.
         :complexity: O(n) time, O(n) space
         """
-    def group_by_state_continuity(self) -> builtins.list[Ops]:
+    def group_by_auxiliary_state(self) -> builtins.list[Ops]:
         r"""
-        Group contiguous commands with the same state into separate Ops sequences.
+        Group contiguous commands with the same auxiliary state into separate Ops sequences.
         
-        :returns: A list of Ops sequences grouped by state continuity.
+        Groups by continuity of auxiliary state (coolant, air_assist,
+        head_coolant) only. For full parameter-regime grouping, use
+        :meth:`OpsSection.state_blocks` with ``StateBlockStart``/``StateBlockEnd`` markers.
+        
+        :returns: A list of Ops sequences grouped by auxiliary state continuity.
         :complexity: O(n) time, O(n) space
         """
     def sections(self) -> builtins.list[OpsSection]:

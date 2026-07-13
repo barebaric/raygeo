@@ -1078,18 +1078,22 @@ Extract a frame (first and last endpoints) from the sequence.
 | _Returns_    | `Ops`                    | A new Ops containing only the frame endpoints.   |
 | _Complexity_ |                          | O(n) time, O(n) space                            |
 
-### `group_by_state_continuity()`
+### `group_by_auxiliary_state()`
 
 ```python
-group_by_state_continuity() -> list[Ops]
+group_by_auxiliary_state() -> list[Ops]
 ```
 
-Group contiguous commands with the same state into separate Ops sequences.
+Group contiguous commands with the same auxiliary state into separate Ops sequences.
 
-| Parameter    | Type        | Description                                          |
-| ------------ | ----------- | ---------------------------------------------------- |
-| _Returns_    | `list[Ops]` | A list of Ops sequences grouped by state continuity. |
-| _Complexity_ |             | O(n) time, O(n) space                                |
+Groups by continuity of auxiliary state (coolant, air_assist, head_coolant) only. For full
+parameter-regime grouping, use **OpsSection.state_blocks** with `StateBlockStart`/`StateBlockEnd`
+markers.
+
+| Parameter    | Type        | Description                                                    |
+| ------------ | ----------- | -------------------------------------------------------------- |
+| _Returns_    | `list[Ops]` | A list of Ops sequences grouped by auxiliary state continuity. |
+| _Complexity_ |             | O(n) time, O(n) space                                          |
 
 ### `head_coolant()`
 
@@ -1452,6 +1456,25 @@ Mark the end of an ops section.
 | _Returns_      | `None`              |                       |
 | _Complexity_   |                     | O(1) time, O(1) space |
 
+### `ops_section_end_with_mode()`
+
+```python
+ops_section_end_with_mode(
+    section_type: types.SectionType,
+    *,
+    raster_mode: Optional[types.RasterMode] = None,
+) -> None
+```
+
+Mark the end of an ops section with a raster mode.
+
+| Parameter      | Type                         | Description           |
+| -------------- | ---------------------------- | --------------------- |
+| `section_type` | `types.SectionType`          | The type of section.  |
+| `raster_mode`  | `Optional[types.RasterMode]` | Optional raster mode. |
+| _Returns_      | `None`                       |                       |
+| _Complexity_   |                              | O(1) time, O(1) space |
+
 ### `ops_section_start()`
 
 ```python
@@ -1466,6 +1489,27 @@ Mark the start of an ops section.
 | `workpiece_uid` | `str`               | The workpiece identifier. |
 | _Returns_       | `None`              |                           |
 | _Complexity_    |                     | O(1) time, O(1) space     |
+
+### `ops_section_start_with_mode()`
+
+```python
+ops_section_start_with_mode(
+    section_type: types.SectionType,
+    workpiece_uid: str,
+    *,
+    raster_mode: Optional[types.RasterMode] = None,
+) -> None
+```
+
+Mark the start of an ops section with a raster mode.
+
+| Parameter       | Type                         | Description               |
+| --------------- | ---------------------------- | ------------------------- |
+| `section_type`  | `types.SectionType`          | The type of section.      |
+| `workpiece_uid` | `str`                        | The workpiece identifier. |
+| `raster_mode`   | `Optional[types.RasterMode]` | Optional raster mode.     |
+| _Returns_       | `None`                       |                           |
+| _Complexity_    |                              | O(1) time, O(1) space     |
 
 ### `optimize_travel()`
 
@@ -1705,21 +1749,37 @@ Get the raw scanline power data for a scanline command.
 | _Returns_    | `bytes` | Raw bytes of scanline power data. |
 | _Complexity_ |         | O(1) time, O(1) space             |
 
+### `section_content()`
+
+```python
+section_content(section: OpsSection) -> Ops
+```
+
+Extract the commands belonging to a section.
+
+| Parameter    | Type         | Description                                            |
+| ------------ | ------------ | ------------------------------------------------------ |
+| `section`    | `OpsSection` | The OpsSection to extract.                             |
+| _Returns_    | `Ops`        | A new Ops containing only the content of that section. |
+| _Complexity_ |              | O(n) time, O(n) space                                  |
+
 ### `section_params()`
 
 ```python
-section_params(idx: int) -> tuple[types.SectionType, Optional[str]]
+section_params(
+    idx: int,
+) -> tuple[types.SectionType, Optional[str], Optional[types.RasterMode]]
 ```
 
-Get the section type and optional workpiece UID from an OpsSection command.
+Get the section type, optional workpiece UID, and optional raster mode from an OpsSection command.
 
 **Raises:** `TypeError` — If the command is not an OpsSectionStart or OpsSectionEnd.
 
-| Parameter    | Type                                      | Description                               |
-| ------------ | ----------------------------------------- | ----------------------------------------- |
-| `idx`        | `int`                                     | Command index.                            |
-| _Returns_    | `tuple[types.SectionType, Optional[str]]` | `(SectionType, Optional[workpiece_uid])`. |
-| _Complexity_ |                                           | O(1) time, O(1) space                     |
+| Parameter    | Type                                                                  | Description                                           |
+| ------------ | --------------------------------------------------------------------- | ----------------------------------------------------- |
+| `idx`        | `int`                                                                 | Command index.                                        |
+| _Returns_    | `tuple[types.SectionType, Optional[str], Optional[types.RasterMode]]` | `(SectionType, Optional[str], Optional[RasterMode])`. |
+| _Complexity_ |                                                                       | O(1) time, O(1) space                                 |
 
 ### `section_ranges()`
 
@@ -1751,6 +1811,34 @@ vector-outline and raster-fill portions.
 | ------------ | ------------------ | --------------------------- |
 | _Returns_    | `list[OpsSection]` | List of OpsSection objects. |
 | _Complexity_ |                    | O(n) time, O(n) space       |
+
+### `sections_by_mode()`
+
+```python
+sections_by_mode(raster_mode: types.RasterMode) -> list[OpsSection]
+```
+
+Return sections matching a given raster mode.
+
+| Parameter     | Type               | Description                          |
+| ------------- | ------------------ | ------------------------------------ |
+| `raster_mode` | `types.RasterMode` | The RasterMode to filter by.         |
+| _Returns_     | `list[OpsSection]` | List of matching OpsSection objects. |
+| _Complexity_  |                    | O(n) time, O(n) space                |
+
+### `sections_by_type()`
+
+```python
+sections_by_type(section_type: types.SectionType) -> list[OpsSection]
+```
+
+Return sections matching a given section type.
+
+| Parameter      | Type                | Description                          |
+| -------------- | ------------------- | ------------------------------------ |
+| `section_type` | `types.SectionType` | The SectionType to filter by.        |
+| _Returns_      | `list[OpsSection]`  | List of matching OpsSection objects. |
+| _Complexity_   |                     | O(n) time, O(n) space                |
 
 ### `segment_indices()`
 
@@ -2031,6 +2119,48 @@ Return the accumulated state at a given command index.
 | _Returns_    | `state.State` | The state at that point. |
 | _Complexity_ |               | O(1) time, O(1) space    |
 
+### `state_block_end()`
+
+```python
+state_block_end() -> None
+```
+
+Mark the end of a state block.
+
+| Parameter    | Type   | Description           |
+| ------------ | ------ | --------------------- |
+| _Returns_    | `None` |                       |
+| _Complexity_ |        | O(1) time, O(1) space |
+
+### `state_block_start()`
+
+```python
+state_block_start(name: Optional[str]) -> None
+```
+
+Mark the start of a state block.
+
+| Parameter    | Type            | Description           |
+| ------------ | --------------- | --------------------- |
+| `name`       | `Optional[str]` | Optional block name.  |
+| _Returns_    | `None`          |                       |
+| _Complexity_ |                 | O(1) time, O(1) space |
+
+### `state_blocks()`
+
+```python
+state_blocks() -> list[types.StateBlock]
+```
+
+Return all state blocks across all sections.
+
+**Raises:** `RuntimeError` — If state block nesting is invalid.
+
+| Parameter    | Type                     | Description                 |
+| ------------ | ------------------------ | --------------------------- |
+| _Returns_    | `list[types.StateBlock]` | List of StateBlock objects. |
+| _Complexity_ |                          | O(n) time, O(n) space       |
+
 ### `sub_ops()`
 
 ```python
@@ -2310,6 +2440,14 @@ marker_indices: list[int]
 
 Indices of the section-marker commands (start/end) for this section.
 
+### `raster_mode`
+
+```python
+raster_mode: Optional[types.RasterMode]
+```
+
+The raster mode of this section, if any.
+
 ### `section_type`
 
 ```python
@@ -2317,6 +2455,68 @@ section_type: Optional[types.SectionType]
 ```
 
 The type of this section (VectorOutline or RasterFill), if any.
+
+### `content()`
+
+```python
+content(ops: Ops) -> Ops
+```
+
+Extract the content commands of this section from an Ops sequence.
+
+| Parameter    | Type  | Description                                            |
+| ------------ | ----- | ------------------------------------------------------ |
+| `ops`        | `Ops` | The Ops sequence containing this section.              |
+| _Returns_    | `Ops` | A new Ops containing only the content of this section. |
+| _Complexity_ |       | O(n) time, O(n) space                                  |
+
+### `state_block_content()`
+
+```python
+state_block_content(ops: Ops, block: types.StateBlock) -> Ops
+```
+
+Extract a specific state block's content as Ops.
+
+| Parameter    | Type               | Description                                    |
+| ------------ | ------------------ | ---------------------------------------------- |
+| `ops`        | `Ops`              | The parent Ops sequence.                       |
+| `block`      | `types.StateBlock` | The StateBlock to extract.                     |
+| _Returns_    | `Ops`              | A new Ops containing only the block's content. |
+| _Complexity_ |                    | O(n) time, O(n) space                          |
+
+### `state_blocks()`
+
+```python
+state_blocks(ops: Ops) -> list[types.StateBlock]
+```
+
+Return the state blocks within this section.
+
+**Raises:** `RuntimeError` — If state block nesting is invalid.
+
+| Parameter    | Type                     | Description                 |
+| ------------ | ------------------------ | --------------------------- |
+| `ops`        | `Ops`                    | The parent Ops sequence.    |
+| _Returns_    | `list[types.StateBlock]` | List of StateBlock objects. |
+| _Complexity_ |                          | O(n) time, O(n) space       |
+
+### `state_blocks_by_name()`
+
+```python
+state_blocks_by_name(ops: Ops, pattern: str) -> list[types.StateBlock]
+```
+
+Find state blocks by name pattern (`*` prefix match or exact).
+
+**Raises:** `RuntimeError` — If state block nesting is invalid.
+
+| Parameter    | Type                     | Description                                                 |
+| ------------ | ------------------------ | ----------------------------------------------------------- |
+| `ops`        | `Ops`                    | The parent Ops sequence.                                    |
+| `pattern`    | `str`                    | Name pattern (`"cell-*"` for prefix, `"labels"` for exact). |
+| _Returns_    | `list[types.StateBlock]` | List of matching StateBlock objects.                        |
+| _Complexity_ |                          | O(n) time, O(n) space                                       |
 
 ## OpsSectionRange
 
@@ -2341,6 +2541,14 @@ marker_indices: list[int]
 
 Indices of the section-marker commands that bracket this range.
 
+### `raster_mode`
+
+```python
+raster_mode: Optional[types.RasterMode]
+```
+
+The raster mode of this section range, if any.
+
 ### `section_type`
 
 ```python
@@ -2348,3 +2556,19 @@ section_type: Optional[types.SectionType]
 ```
 
 The type of this section range (VectorOutline or RasterFill), if any.
+
+### `content()`
+
+```python
+content(ops: Ops) -> Ops
+```
+
+Extract the content commands of this section range from an Ops sequence.
+
+Extract the content commands of this section range from an Ops sequence.
+
+| Parameter    | Type  | Description                                                  |
+| ------------ | ----- | ------------------------------------------------------------ |
+| `ops`        | `Ops` | The Ops sequence containing this section.                    |
+| _Returns_    | `Ops` | A new Ops containing only the content of this section range. |
+| _Complexity_ |       | O(n) time, O(n) space                                        |

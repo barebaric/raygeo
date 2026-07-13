@@ -105,7 +105,6 @@ def test_multiple_sections_with_different_raster_modes():
     assert sections[1].raster_mode == RasterMode.CONSTANT_POWER
 
 
-
 def test_validation_vector_outline_with_mode_rejected():
     with pytest.raises(ValueError):
         ops = Ops()
@@ -182,7 +181,6 @@ def test_validation_raster_fill_with_mode_accepted():
     sections = ops.sections()
     assert len(sections) == 1
     assert sections[0].raster_mode == RasterMode.DEPTH_MAP
-
 
 
 def test_state_block_markers():
@@ -297,7 +295,6 @@ def test_state_block_start_outside_section():
     ops = Ops()
     ops.state_block_start("orphan")
     assert ops.command_type(0) == CommandType.STATE_BLOCK_START
-
 
 
 def test_sections_by_mode():

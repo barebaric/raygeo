@@ -2364,13 +2364,17 @@ impl PyOps {
         self.inner.segment_indices()
     }
 
-    /// Group contiguous commands with the same state into separate Ops sequences.
+    /// Group contiguous commands with the same auxiliary state into separate Ops sequences.
     ///
-    /// :returns: A list of Ops sequences grouped by state continuity.
+    /// Groups by continuity of auxiliary state (coolant, air_assist,
+    /// head_coolant) only. For full parameter-regime grouping, use
+    /// :meth:`OpsSection.state_blocks` with ``StateBlockStart``/``StateBlockEnd`` markers.
+    ///
+    /// :returns: A list of Ops sequences grouped by auxiliary state continuity.
     /// :complexity: O(n) time, O(n) space
-    fn group_by_state_continuity(&self) -> Vec<PyOps> {
+    fn group_by_auxiliary_state(&self) -> Vec<PyOps> {
         self.inner
-            .group_by_state_continuity()
+            .group_by_auxiliary_state()
             .into_iter()
             .map(|o| PyOps { inner: o })
             .collect()

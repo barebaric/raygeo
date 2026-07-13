@@ -741,8 +741,8 @@ impl Ops {
         super::transform::group::without_state(self)
     }
 
-    pub fn group_by_state_continuity(&self) -> Vec<Ops> {
-        super::transform::group::group_by_state_continuity(self)
+    pub fn group_by_auxiliary_state(&self) -> Vec<Ops> {
+        super::transform::group::group_by_auxiliary_state(self)
     }
 }
 
