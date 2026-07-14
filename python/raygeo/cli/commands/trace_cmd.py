@@ -5,6 +5,7 @@ from raygeo.cli.scenarios import SCENARIOS, build_scenario
 from raygeo.cnc.machining.entry import build_entry_workplan
 from raygeo.cnc.machining.plan import Workplan
 from raygeo.ops.assembly.adaptive import adaptive_clearing
+from raygeo.ops.assembly.material_test_grid import generate_material_test_grid
 from raygeo.ops.assembly.profile import profile_inner, profile_outer
 from raygeo.ops.feature.region import find_regions
 from raygeo.ops.part import Part
@@ -52,9 +53,10 @@ def register(subparsers):
     p.add_argument(
         "--mode",
         default="adaptive",
-        choices=["adaptive", "profile", "entry", "workplan"],
+        choices=["adaptive", "profile", "entry", "workplan", "material"],
         help="Operation mode (default: adaptive). 'entry' traces the "
-        "entry workflow only; 'workplan' traces entry + adaptive clear.",
+        "entry workflow only; 'workplan' traces entry + adaptive clear; "
+        "'material' traces a material test grid.",
     )
     p.add_argument(
         "--inner",
@@ -69,6 +71,26 @@ def register(subparsers):
         help="Profile outer stock boundary (--mode profile only).",
     )
     _add_trace_args(p)
+    p.add_argument(
+        "--size-mm",
+        type=float,
+        nargs=2,
+        default=[200.0, 200.0],
+        metavar=("WIDTH", "HEIGHT"),
+        help="Workpiece size in mm for material grid (default: 200 200).",
+    )
+    p.add_argument(
+        "--cols", type=int, default=5, help="Grid columns (default: 5)."
+    )
+    p.add_argument(
+        "--rows", type=int, default=5, help="Grid rows (default: 5)."
+    )
+    p.add_argument(
+        "--grid-mode",
+        default="Power vs Speed",
+        choices=["Power vs Speed", "Power vs Passes", "Speed vs Passes"],
+        help="Grid mode (default: Power vs Speed).",
+    )
     p.set_defaults(func=run)
 
 
@@ -112,6 +134,8 @@ def run(args):
         return _run_entry(args, trace_path)
     if args.mode == "workplan":
         return _run_workplan(args, trace_path)
+    if args.mode == "material":
+        return _run_material(args, trace_path)
     return _run_adaptive(args, trace_path)
 
 
@@ -307,6 +331,34 @@ def _run_workplan(args, trace_path):
         trace=trace_path,
     )
     print(f"  Workplan: {result.ops.len()} ops")
+    _check_trace_written(tp, mtime_before)
+
+
+def _run_material(args, trace_path):
+    """Run material test grid generation with tracing."""
+    size_mm = tuple(args.size_mm)
+    print("Running material test grid with tracing...")
+    print(
+        f"  size_mm={size_mm}  cols={args.cols}  rows={args.rows}  "
+        f"grid_mode={args.grid_mode}"
+    )
+
+    tp = pathlib.Path(trace_path)
+    mtime_before = tp.stat().st_mtime_ns if tp.exists() else 0
+
+    try:
+        result = generate_material_test_grid(
+            size_mm=size_mm,
+            cols=args.cols,
+            rows=args.rows,
+            grid_mode=args.grid_mode,
+        )
+        result.write_trace(str(tp), "material_test_grid", "MaterialTestGrid")
+        print(f"  Material grid: {result.ops.len()} ops")
+    except RuntimeError as e:
+        print(f"  ERROR: {e}", file=sys.stderr)
+        print("  Partial trace data was written to disk.")
+
     _check_trace_written(tp, mtime_before)
 
 

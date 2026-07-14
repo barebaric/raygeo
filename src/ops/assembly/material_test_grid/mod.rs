@@ -1,8 +1,14 @@
+use std::collections::BTreeMap;
+
 use crate::geo::shape::text::{text_to_geometry, FontConfig};
 use crate::ops::assembly::result::AssemblyMeta;
+use crate::ops::assembly::tracelet::Tracelet;
 use crate::ops::container::Ops;
-use crate::ops::types::ToolPose;
+use crate::ops::types::{MoveCmd, OpCategory, ToolPose};
+use crate::trace_types::{Meta, MetaValue, MoveKind};
 use crate::types::{Point, Point3D};
+
+pub(crate) mod trace_helpers;
 
 /// Parameters for the material test grid assembler.
 #[derive(Clone, Debug)]
@@ -32,25 +38,25 @@ pub struct MaterialTestGridParams {
 /// Generate a material test grid with varying speed and power settings.
 ///
 /// Creates grid cells arranged in rows × cols, each with baked-in power,
-/// speed, and pass count. Returns the motion `Ops` for the grid cells.
-/// Labels are **not** generated here — the caller should handle text
-/// vectorization via the `post_fn` hook.
+/// speed, and pass count.  All motion is written through the provided
+/// [`Tracelet`] so that `drain()` produces the full toolpath.
 pub fn generate_material_test_grid(
     params: &MaterialTestGridParams,
     size_mm: (f64, f64),
-) -> Result<(Ops, AssemblyMeta), crate::RaygeoError> {
-    let (target_width, target_height) = size_mm;
+    trace: &mut Tracelet,
+) -> Result<AssemblyMeta, crate::RaygeoError> {
+    let (_target_width, target_height) = size_mm;
 
     // Calculate proportional base size
     let base_width = get_material_test_proportional_size(params);
     let base_height = get_material_test_proportional_height(params);
     let scale_x = if base_width > 1e-9 {
-        target_width / base_width
+        size_mm.0 / base_width
     } else {
         1.0
     };
     let scale_y = if base_height > 1e-9 {
-        target_height / base_height
+        size_mm.1 / base_height
     } else {
         1.0
     };
@@ -106,7 +112,7 @@ pub fn generate_material_test_grid(
     let mut first_point: Option<Point> = None;
     let mut last_point: Option<Point> = None;
 
-    let mut ops = Ops::new();
+    trace.set_attrs(trace_helpers::build_attrs(params));
 
     // Build grid cells sorted by risk: highest speed first, then lowest power
     let mut cells: Vec<GridCell> = Vec::new();
@@ -130,6 +136,8 @@ pub fn generate_material_test_grid(
             };
 
             cells.push(GridCell {
+                col: c,
+                row: r,
                 x: margin_left + c as f64 * (shape_w + spacing_x),
                 y: margin_top + r as f64 * (shape_h + spacing_y),
                 width: shape_w,
@@ -157,53 +165,99 @@ pub fn generate_material_test_grid(
     let is_engrave = params.mode.eq_ignore_ascii_case("engrave");
     let line_spacing = params.line_interval_mm;
 
-    for cell in &cells {
-        ops.set_power(0.0);
-        ops.set_power(cell.power / 100.0);
-        ops.set_feed_rate(cell.speed as i32);
+    let total_cells = cells.len() as u32;
+    let init_pos = cells
+        .first()
+        .map(|c| Point3D::new(c.x, target_height - c.y - c.height, 0.0))
+        .unwrap_or(Point3D::ZERO);
+    trace.init(
+        trace_helpers::tool_snapshot(init_pos, init_pos),
+        Some(trace_helpers::init_meta(total_cells)),
+    );
+
+    for (cell_idx, cell) in (0_u32..).zip(cells.iter()) {
+        trace.set_power(0.0);
+        trace.set_power(cell.power / 100.0);
+        trace.set_feed_rate(cell.speed as i32);
+
+        let cell_meta = cell_cut_meta(
+            cell_idx,
+            cell.col,
+            cell.row,
+            cell.speed,
+            cell.power,
+            cell.passes,
+        );
+
+        // Y-flip: convert from grid-Y-up to display-Y-down.
+        // Rectangle at (x, y) with height h → (x, H-y-h) with same h.
+        let fy = target_height - cell.y - cell.height;
 
         for _ in 0..cell.passes {
             if is_engrave {
                 draw_filled_box(
-                    &mut ops,
+                    trace,
                     cell.x,
-                    cell.y,
+                    fy,
                     cell.width,
                     cell.height,
                     line_spacing,
+                    &cell_meta,
                 );
             } else {
                 draw_rectangle(
-                    &mut ops,
+                    trace,
                     cell.x,
-                    cell.y,
+                    fy,
                     cell.width,
                     cell.height,
+                    &cell_meta,
                 );
             }
         }
 
         if first_point.is_none() {
-            first_point = Some(Point::new(cell.x, cell.y));
+            first_point = Some(Point::new(cell.x, fy));
         }
-        last_point =
-            Some(Point::new(cell.x + cell.width, cell.y + cell.height));
+        last_point = Some(Point::new(cell.x + cell.width, fy + cell.height));
     }
 
-    // Generate text labels before the grid (machined first, lower power)
+    // Generate text labels into a temp Ops, Y-flip, then emit events.
     if params.include_labels {
+        let mut label_ops = Ops::new();
         generate_labels(
-            &mut ops,
+            &mut label_ops,
             params,
             scale_x,
             scale_y,
             margin_left,
             margin_top,
         );
-    }
-
-    if !ops.is_empty() {
-        ops.scale(1.0, -1.0, 1.0).translate(0.0, target_height, 0.0);
+        if !label_ops.is_empty() {
+            label_ops
+                .scale(1.0, -1.0, 1.0)
+                .translate(0.0, target_height, 0.0);
+            let mut prev = Point3D::ZERO;
+            for node in label_ops.commands {
+                let (end, is_travel) = match &node.category {
+                    OpCategory::Moving {
+                        end,
+                        cmd: MoveCmd::MoveTo,
+                        ..
+                    } => (*end, true),
+                    OpCategory::Moving { end, .. } => (*end, false),
+                    _ => continue,
+                };
+                let tool = trace_helpers::tool_snapshot(end, prev);
+                prev = end;
+                trace.push_raw(node);
+                if is_travel {
+                    trace.move_event(MoveKind::Travel, tool, None);
+                } else {
+                    trace.cut(tool, None);
+                }
+            }
+        }
     }
 
     let start_pos = first_point.unwrap_or(Point::ZERO);
@@ -220,7 +274,15 @@ pub fn generate_material_test_grid(
         },
     };
 
-    Ok((ops, meta))
+    trace.exit(
+        trace_helpers::tool_snapshot(
+            Point3D::new(end_pos.x, end_pos.y, 0.0),
+            Point3D::new(start_pos.x, start_pos.y, 0.0),
+        ),
+        None,
+    );
+
+    Ok(meta)
 }
 
 /// Format a numeric column label: truncate toward zero (like Python's int()).
@@ -449,21 +511,78 @@ fn generate_labels(
     }
 }
 
-fn draw_rectangle(ops: &mut Ops, x: f64, y: f64, w: f64, h: f64) {
-    ops.move_to(x, y, 0.0, None);
-    ops.line_to(x + w, y, 0.0, None);
-    ops.line_to(x + w, y + h, 0.0, None);
-    ops.line_to(x, y + h, 0.0, None);
-    ops.line_to(x, y, 0.0, None);
+fn cell_cut_meta(
+    cell_idx: u32,
+    col: u32,
+    row: u32,
+    speed: f64,
+    power: f64,
+    passes: u32,
+) -> Meta {
+    let mut m: Meta = BTreeMap::new();
+    m.insert("cell_idx".into(), MetaValue::U32(cell_idx));
+    m.insert("col".into(), MetaValue::U32(col));
+    m.insert("row".into(), MetaValue::U32(row));
+    m.insert("speed".into(), MetaValue::F64(speed));
+    m.insert("power".into(), MetaValue::F64(power));
+    m.insert("passes".into(), MetaValue::U32(passes));
+    m
+}
+
+fn draw_rectangle(
+    trace: &mut Tracelet,
+    x: f64,
+    y: f64,
+    w: f64,
+    h: f64,
+    cell_meta: &Meta,
+) {
+    let prev =
+        trace_helpers::tool_snapshot(Point3D::new(x, y, 0.0), Point3D::ZERO);
+    trace.move_to(x, y, 0.0, None);
+    trace.move_event(MoveKind::Travel, prev, None);
+    trace.line_to(x + w, y, 0.0, None);
+    trace.cut(
+        trace_helpers::tool_snapshot(
+            Point3D::new(x + w, y, 0.0),
+            Point3D::new(x, y, 0.0),
+        ),
+        Some(cell_meta.clone()),
+    );
+    trace.line_to(x + w, y + h, 0.0, None);
+    trace.cut(
+        trace_helpers::tool_snapshot(
+            Point3D::new(x + w, y + h, 0.0),
+            Point3D::new(x + w, y, 0.0),
+        ),
+        Some(cell_meta.clone()),
+    );
+    trace.line_to(x, y + h, 0.0, None);
+    trace.cut(
+        trace_helpers::tool_snapshot(
+            Point3D::new(x, y + h, 0.0),
+            Point3D::new(x + w, y + h, 0.0),
+        ),
+        Some(cell_meta.clone()),
+    );
+    trace.line_to(x, y, 0.0, None);
+    trace.cut(
+        trace_helpers::tool_snapshot(
+            Point3D::new(x, y, 0.0),
+            Point3D::new(x, y + h, 0.0),
+        ),
+        Some(cell_meta.clone()),
+    );
 }
 
 fn draw_filled_box(
-    ops: &mut Ops,
+    trace: &mut Tracelet,
     x: f64,
     y: f64,
     w: f64,
     h: f64,
     line_spacing: f64,
+    cell_meta: &Meta,
 ) {
     if h < 1e-6 {
         return;
@@ -471,8 +590,23 @@ fn draw_filled_box(
 
     let num_lines = (h / line_spacing) as u32;
     if num_lines < 1 {
-        ops.move_to(x, y + h / 2.0, 0.0, None);
-        ops.line_to(x + w, y + h / 2.0, 0.0, None);
+        trace.move_to(x, y + h / 2.0, 0.0, None);
+        trace.move_event(
+            MoveKind::Travel,
+            trace_helpers::tool_snapshot(
+                Point3D::new(x, y + h / 2.0, 0.0),
+                Point3D::ZERO,
+            ),
+            None,
+        );
+        trace.line_to(x + w, y + h / 2.0, 0.0, None);
+        trace.cut(
+            trace_helpers::tool_snapshot(
+                Point3D::new(x + w, y + h / 2.0, 0.0),
+                Point3D::new(x, y + h / 2.0, 0.0),
+            ),
+            Some(cell_meta.clone()),
+        );
         return;
     }
 
@@ -480,11 +614,41 @@ fn draw_filled_box(
     for i in 0..=num_lines {
         let cur_y = y + i as f64 * y_step;
         if i % 2 == 0 {
-            ops.move_to(x, cur_y, 0.0, None);
-            ops.line_to(x + w, cur_y, 0.0, None);
+            trace.move_to(x, cur_y, 0.0, None);
+            trace.move_event(
+                MoveKind::Travel,
+                trace_helpers::tool_snapshot(
+                    Point3D::new(x, cur_y, 0.0),
+                    Point3D::ZERO,
+                ),
+                None,
+            );
+            trace.line_to(x + w, cur_y, 0.0, None);
+            trace.cut(
+                trace_helpers::tool_snapshot(
+                    Point3D::new(x + w, cur_y, 0.0),
+                    Point3D::new(x, cur_y, 0.0),
+                ),
+                Some(cell_meta.clone()),
+            );
         } else {
-            ops.move_to(x + w, cur_y, 0.0, None);
-            ops.line_to(x, cur_y, 0.0, None);
+            trace.move_to(x + w, cur_y, 0.0, None);
+            trace.move_event(
+                MoveKind::Travel,
+                trace_helpers::tool_snapshot(
+                    Point3D::new(x + w, cur_y, 0.0),
+                    Point3D::ZERO,
+                ),
+                None,
+            );
+            trace.line_to(x, cur_y, 0.0, None);
+            trace.cut(
+                trace_helpers::tool_snapshot(
+                    Point3D::new(x, cur_y, 0.0),
+                    Point3D::new(x + w, cur_y, 0.0),
+                ),
+                Some(cell_meta.clone()),
+            );
         }
     }
 }
@@ -515,6 +679,10 @@ pub fn get_material_test_proportional_height(
 
 #[derive(Clone, Debug)]
 struct GridCell {
+    #[allow(dead_code)]
+    col: u32,
+    #[allow(dead_code)]
+    row: u32,
     x: f64,
     y: f64,
     width: f64,

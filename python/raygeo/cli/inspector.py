@@ -83,10 +83,14 @@ def _status_name(event) -> str:
 class Inspector:
     def __init__(self, trace: TraceFile):
         self.trace = trace
-        # The assembler span (adaptive/profile) carries the geometry &
-        # MAT setup in its attrs.  Fall back to the root span.
+        # The assembler span (adaptive/profile/material_test_grid) carries
+        # the geometry & MAT setup in its attrs.  Fall back to the root span.
         self.assembler_span = next(
-            (s for s in trace.spans if s.source in ("adaptive", "profile")),
+            (
+                s
+                for s in trace.spans
+                if s.source in ("adaptive", "profile", "material_test_grid")
+            ),
             trace.root,
         )
         geo = self.assembler_span.attrs if self.assembler_span else {}
@@ -526,6 +530,16 @@ class Inspector:
             my = (by_max - by_min) * 0.05 + tool_radius
             self.ax.set_xlim(bx_min - mx, bx_max + mx)
             self.ax.set_ylim(by_min - my, by_max + my)
+        elif n_tp_moves > 0:
+            # No boundary (e.g. material grid): fit to toolpath extent.
+            xs = [self.tp[i][0] for i in range(n_tp_moves)]
+            ys = [self.tp[i][1] for i in range(n_tp_moves)]
+            tx_min, tx_max = min(xs), max(xs)
+            ty_min, ty_max = min(ys), max(ys)
+            mx = (tx_max - tx_min) * 0.05 + 1.0
+            my = (ty_max - ty_min) * 0.05 + 1.0
+            self.ax.set_xlim(tx_min - mx, tx_max + mx)
+            self.ax.set_ylim(ty_min - my, ty_max + my)
         self.ax.grid(True, alpha=0.2)
 
         # ── Right panel: parameter table ──

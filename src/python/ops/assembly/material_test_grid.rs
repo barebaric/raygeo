@@ -7,6 +7,7 @@ use crate::image::render::{geometry_to_image, RenderOptions};
 use crate::ops::assembly::material_test_grid::{
     generate_material_test_grid, MaterialTestGridParams,
 };
+use crate::ops::assembly::tracelet::Tracelet;
 use crate::python::ops::assembly::result::PyAssemblyResult;
 
 pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -140,8 +141,17 @@ fn generate_material_test_grid_py(
         include_labels,
     };
 
-    let (ops, meta) = generate_material_test_grid(&params, size_mm)?;
-    Ok(PyAssemblyResult::from_parts(ops, meta, None, vec![]))
+    let mut trace = Tracelet::new();
+    let meta = generate_material_test_grid(&params, size_mm, &mut trace)?;
+    let trace_events = trace.drain();
+    let trace_attrs = trace.attrs().cloned();
+    let ops = trace.into_ops();
+    Ok(PyAssemblyResult::from_parts(
+        ops,
+        meta,
+        trace_attrs,
+        trace_events,
+    ))
 }
 
 #[gen_stub_pyfunction(
@@ -261,13 +271,15 @@ fn generate_material_test_grid_preview_py(
     };
 
     // Use the SAME code path as the Ops: generate the full grid + labels,
-    // then rasterise the resulting geometry.  The Ops are already Y‑down
+    // then rasterise the resulting geometry.  The Ops are already Y-down
     // (generate_material_test_grid applies scale(1,-1)+translate(0,height)).
-    // geometry_to_image expects Y‑up and flips to Y‑down, so we invert
-    // twice and get Y‑up output — which matches the canvas coordinate
+    // geometry_to_image expects Y-up and flips to Y-down, so we invert
+    // twice and get Y-up output — which matches the canvas coordinate
     // system used for ops rendering.
-    let (ops, _meta) = generate_material_test_grid(&params, size_mm)
+    let mut trace = Tracelet::new();
+    let _meta = generate_material_test_grid(&params, size_mm, &mut trace)
         .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+    let ops = trace.into_ops();
     let geo = ops.to_geometry();
     let empty = Geometry::new();
     let opts = RenderOptions {
