@@ -16,7 +16,7 @@ class Workplan:
     
     Captures the pocket boundary, islands, and safe-Z at construction
     time.  After extending with steps from a builder (e.g.
-    :func:`raygeo.cnc.machining.wavefront.build_wavefront_workplan`
+        :func:`raygeo.cnc.machining.entry.build_entry_workplan`
     or :func:`raygeo.cnc.machining.entry.build_entry_workplan`),
     call :meth:`execute` to produce a combined :class:`AssemblyResult`.
     """

@@ -2,7 +2,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import streamlit as st
 
-import raygeo.image as img
+from raygeo.image.dither import (
+    apply_bayer_dither,
+    apply_floyd_steinberg_dither,
+)
+from raygeo.image.grayscale import normalize_grayscale
+from raygeo.image.srgb import linear_to_srgb, srgb_to_linear
 from tools.plot import make_pattern
 
 
@@ -31,8 +36,8 @@ def page_image():
     axes[0].imshow(arr, cmap="gray", vmin=0, vmax=255)
     axes[0].set_title("Original (uint8)")
 
-    linear = img.srgb_to_linear(arr)
-    back = img.linear_to_srgb(linear)
+    linear = srgb_to_linear(arr)
+    back = linear_to_srgb(linear)
     axes[1].imshow(back, cmap="gray", vmin=0, vmax=255)
     axes[1].set_title("Round-trip (sRGB -> linear -> sRGB)")
 
@@ -42,15 +47,15 @@ def page_image():
     dither = st.selectbox("Dither method", ["Floyd-Steinberg", "Bayer 4x4"])
     invert = st.checkbox("Invert", value=False)
 
-    gray = img.normalize_grayscale(arr).astype(np.uint8)
+    gray = normalize_grayscale(arr).astype(np.uint8)
     if dither == "Floyd-Steinberg":
-        dithered = img.apply_floyd_steinberg_dither(gray, invert)
+        dithered = apply_floyd_steinberg_dither(gray, invert)
     else:
         bayer = np.array(
             [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]],
             dtype=np.float32,
         )
-        dithered = img.apply_bayer_dither(gray, bayer, invert, cell_size=1)
+        dithered = apply_bayer_dither(gray, bayer, invert, cell_size=1)
 
     fig2, axes2 = plt.subplots(1, 2, figsize=(10, 4))
     axes2[0].imshow(arr, cmap="gray", vmin=0, vmax=255)

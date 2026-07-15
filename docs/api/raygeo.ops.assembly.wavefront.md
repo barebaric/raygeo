@@ -10,7 +10,6 @@ sidebar_label: raygeo.ops.assembly.wavefront
 ```python
 adaptive_wavefronts(
     part: ops.part.Part,
-    tool_radius: float = 3,
     step_over: float = 2,
     z: float = 0,
     area_tolerance: float = 1,
@@ -22,17 +21,16 @@ adaptive_wavefronts(
 
 Inside-out adaptive wavefronts.
 
-Starting from the cleared state inside *part*, each iteration expands the cleared boundary outward
-by *step_over*, clips to the valid tool area (pocket boundary offset inward by *tool_radius*, with
-islands excluded), and adds the result back to the part's cleared state. The loop terminates when
-the newly added area drops below *area_tolerance*.
+Finds the largest inscribed circle inside *part*'s boundary, seeds the cleared area with concentric
+rings spaced *step_over* apart, then iteratively expands the frontier outward by *step_over*,
+clipping to the boundary. The loop terminates when the newly added area drops below
+*area_tolerance*.
 
 Each ring fragment is emitted as `MoveTo` + `LineTo` at height *z* with *cut_feed_rate* applied.
 
 | Parameter        | Type                          | Description                                                                                                                                 |
 | ---------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `part`           | `ops.part.Part`               | The part whose `cleared` field tracks accumulated workpiece state and whose geometry defines the pocket boundary and islands.               |
-| `tool_radius`    | `float = 3`                   | Tool radius in mm (default 3.0).                                                                                                            |
+| `part`           | `ops.part.Part`               | The part whose `stock_region` defines the pocket boundary and islands.                                                                      |
 | `step_over`      | `float = 2`                   | Radial expansion per iteration (default 2.0).                                                                                               |
 | `z`              | `float = 0`                   | Z height for generated commands (default 0.0).                                                                                              |
 | `area_tolerance` | `float = 1`                   | Minimum area increase to continue (default 1.0).                                                                                            |
@@ -60,7 +58,6 @@ expand*
 ```python
 adaptive_wavefronts_multi_pocket(
     part: ops.part.Part,
-    tool_radius: float = 3,
     step_over: float = 2,
     offset_mm: float = 0,
     area_tolerance: float = 0.01,
@@ -82,7 +79,6 @@ inside each pocket. Returns the combined result.
 | Parameter        | Type                          | Description                                               |
 | ---------------- | ----------------------------- | --------------------------------------------------------- |
 | `part`           | `ops.part.Part`               | The part whose geometry defines the pockets.              |
-| `tool_radius`    | `float = 3`                   | Tool radius in mm (default 3.0).                          |
 | `step_over`      | `float = 2`                   | Radial expansion per iteration (default 2.0).             |
 | `offset_mm`      | `float = 0`                   | Inward offset applied to all contours (default 0.0).      |
 | `area_tolerance` | `float = 0.01`                | Minimum area increase to continue (default 0.01).         |

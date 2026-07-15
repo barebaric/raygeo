@@ -28,7 +28,7 @@ use crate::image::preprocess;
         :complexity: O(w*h)
         """
 "#,
-    module = "raygeo.image"
+    module = "raygeo.image.preprocess"
 )]
 #[pyfunction(name = "grayscale_to_binary")]
 #[pyo3(signature = (gray, threshold=0.5, invert=false, auto_threshold=true))]
@@ -83,7 +83,7 @@ fn py_grayscale_to_binary(
         :complexity: O(w*h)
         """
 "#,
-    module = "raygeo.image"
+    module = "raygeo.image.preprocess"
 )]
 #[pyfunction(name = "get_component_areas")]
 fn py_get_component_areas(
@@ -122,7 +122,7 @@ fn py_get_component_areas(
         :complexity: O(w*h)
         """
 "#,
-    module = "raygeo.image"
+    module = "raygeo.image.preprocess"
 )]
 #[pyfunction(name = "filter_components")]
 fn py_filter_components(
@@ -166,7 +166,7 @@ fn py_filter_components(
         :complexity: O(w*h)
         """
 "#,
-    module = "raygeo.image"
+    module = "raygeo.image.preprocess"
 )]
 #[pyfunction(name = "denoise_binary")]
 fn py_denoise_binary(
@@ -206,7 +206,7 @@ fn py_denoise_binary(
         :complexity: O(n) where n = number of unique area values
         """
 "#,
-    module = "raygeo.image"
+    module = "raygeo.image.preprocess"
 )]
 #[pyfunction(name = "compute_adaptive_threshold")]
 fn py_compute_adaptive_threshold(areas: Vec<u32>) -> usize {
@@ -214,13 +214,27 @@ fn py_compute_adaptive_threshold(areas: Vec<u32>) -> usize {
 }
 
 pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(py_grayscale_to_binary, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(py_get_component_areas, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(py_filter_components, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(py_denoise_binary, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(
-        py_compute_adaptive_threshold,
-        m.clone()
+    let sub_mod = PyModule::new(m.py(), "preprocess")?;
+    sub_mod.add_function(wrap_pyfunction!(
+        py_grayscale_to_binary,
+        sub_mod.clone()
     )?)?;
+    sub_mod.add_function(wrap_pyfunction!(
+        py_get_component_areas,
+        sub_mod.clone()
+    )?)?;
+    sub_mod.add_function(wrap_pyfunction!(
+        py_filter_components,
+        sub_mod.clone()
+    )?)?;
+    sub_mod
+        .add_function(wrap_pyfunction!(py_denoise_binary, sub_mod.clone())?)?;
+    sub_mod.add_function(wrap_pyfunction!(
+        py_compute_adaptive_threshold,
+        sub_mod.clone()
+    )?)?;
+    m.add_submodule(&sub_mod)?;
+    let sys_modules = m.py().import("sys")?.getattr("modules")?;
+    sys_modules.set_item("raygeo.image.preprocess", &sub_mod)?;
     Ok(())
 }

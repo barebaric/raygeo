@@ -498,7 +498,7 @@ pub fn build_smoothed_path(
         let n = current.len();
         if n >= 3 {
             let mut buf: Vec<Point3D> = Vec::with_capacity(n);
-            for _ in 0..100 {
+            for _ in 0..30 {
                 smooth_sub_segment(&current, &kernel, &mut buf);
                 let mut moved = false;
                 for i in 1..n - 1 {

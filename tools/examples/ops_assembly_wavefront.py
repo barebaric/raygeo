@@ -109,7 +109,6 @@ def generate_wavefront_rect():
     wf_seed = _seed_polygon(wf_boundary, None, 3.0)
     result = adaptive_wavefronts(
         Part.from_polygons(wf_boundary, initial=wf_seed),
-        tool_radius=3.0,
         step_over=2.0,
         z=-5.0,
         area_tolerance=1.0,
@@ -133,7 +132,6 @@ def generate_wavefront_multi():
     mi_seed = _seed_polygon(mi_boundary, mi_islands, 3.0)
     result = adaptive_wavefronts(
         Part.from_polygons(mi_boundary, mi_islands, initial=mi_seed),
-        tool_radius=3.0,
         step_over=2.0,
         z=-5.0,
         area_tolerance=1.0,
@@ -162,7 +160,6 @@ def generate_wavefront_yshape():
     ys_seed = _seed_polygon(yshape, None, 3.0)
     ys_result = adaptive_wavefronts(
         Part.from_polygons(yshape, initial=ys_seed),
-        tool_radius=3.0,
         step_over=2.0,
         z=-5.0,
         area_tolerance=1.0,
@@ -216,7 +213,6 @@ def generate_wavefront_svg():
 
     result = adaptive_wavefronts_multi_pocket(
         Part(geometry=geo, size_mm=(200, 100)),
-        tool_radius=1.5,
         step_over=0.5,
         area_tolerance=0.2,
     )

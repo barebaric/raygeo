@@ -138,19 +138,19 @@ class CommandInfo:
         Spindle RPM, if a SetSpindleRpm command.
         """
     @property
-    def coolant(self) -> typing.Optional[builtins.str]:
+    def coolant(self) -> typing.Optional[state.CoolantMode]:
         r"""
-        Coolant mode string, if a SetCoolant command.
+        Coolant mode, if a SetCoolant command.
         """
     @property
-    def air_assist(self) -> typing.Optional[builtins.str]:
+    def air_assist(self) -> typing.Optional[state.AirAssistMode]:
         r"""
-        Air assist mode string, if a SetAirAssist command.
+        Air assist mode, if a SetAirAssist command.
         """
     @property
-    def head_coolant(self) -> typing.Optional[builtins.str]:
+    def head_coolant(self) -> typing.Optional[state.HeadCoolantMode]:
         r"""
-        Head coolant mode string, if a SetHeadCoolant command.
+        Head coolant mode, if a SetHeadCoolant command.
         """
     @property
     def duration_ms(self) -> typing.Optional[builtins.float]:
@@ -168,9 +168,9 @@ class CommandInfo:
         Unique identifier of the active workpiece, if a workpiece-start command.
         """
     @property
-    def section_type(self) -> typing.Optional[builtins.str]:
+    def section_type(self) -> typing.Optional[types.SectionType]:
         r"""
-        Section type string (e.g. "VectorOutline", "RasterFill"), if a section marker.
+        Section type, if a section marker.
         """
     def __eq__(self, other: typing.Any) -> builtins.bool: ...
 
@@ -455,30 +455,30 @@ class Ops:
         :raises TypeError: If the command is not a SetSpindleRpm.
         :complexity: O(1) time, O(1) space
         """
-    def coolant(self, idx: builtins.int) -> builtins.str:
+    def coolant(self, idx: builtins.int) -> state.CoolantMode:
         r"""
         Get the coolant mode from a SetCoolant command.
         
         :param idx: Command index.
-        :returns: Coolant mode string (e.g. "Off", "Flood", "Mist").
+        :returns: The coolant mode.
         :raises TypeError: If the command is not a SetCoolant.
         :complexity: O(1) time, O(1) space
         """
-    def air_assist(self, idx: builtins.int) -> builtins.str:
+    def air_assist(self, idx: builtins.int) -> state.AirAssistMode:
         r"""
         Get the air assist mode from a SetAirAssist command.
         
         :param idx: Command index.
-        :returns: Air assist mode string (e.g. "Off", "On").
+        :returns: The air assist mode.
         :raises TypeError: If the command is not a SetAirAssist.
         :complexity: O(1) time, O(1) space
         """
-    def head_coolant(self, idx: builtins.int) -> builtins.str:
+    def head_coolant(self, idx: builtins.int) -> state.HeadCoolantMode:
         r"""
         Get the head coolant mode from a SetHeadCoolant command.
         
         :param idx: Command index.
-        :returns: Head coolant mode string (e.g. "Off", "On").
+        :returns: The head coolant mode.
         :raises TypeError: If the command is not a SetHeadCoolant.
         :complexity: O(1) time, O(1) space
         """

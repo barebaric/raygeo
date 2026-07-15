@@ -8,8 +8,13 @@ sidebar_label: raygeo.cnc.machining.plan
 Plan-time context and executor for a sequence of WorkplanSteps.
 
 Captures the pocket boundary, islands, and safe-Z at construction time. After extending with steps
-from a builder (e.g. **raygeo.cnc.machining.wavefront.build_wavefront_workplan** or
-**raygeo.cnc.machining.entry.build_entry_workplan**), call **execute** to produce a combined
+from a builder (e.g.
+
+```
+**raygeo.cnc.machining.entry.build_entry_workplan**
+```
+
+or **raygeo.cnc.machining.entry.build_entry_workplan**), call **execute** to produce a combined
 **AssemblyResult**.
 
 ### `execute()`

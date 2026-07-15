@@ -1,6 +1,6 @@
 import numpy as np
 
-from raygeo.image import (
+from raygeo.image.preprocess import (
     compute_adaptive_threshold,
     denoise_binary,
     filter_components,

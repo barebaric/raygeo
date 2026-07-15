@@ -170,7 +170,11 @@ fn svg_arc_center(
     let y1p2 = y1p * y1p;
     let num = rx2 * ry2 - rx2 * y1p2 - ry2 * x1p2;
     let den = rx2 * y1p2 + ry2 * x1p2;
-    let f = if den > 0.0 { (num / den).sqrt() } else { 0.0 };
+    let f = if den > 0.0 {
+        (num.max(0.0) / den).sqrt()
+    } else {
+        0.0
+    };
     let f = if large == sweep { -f } else { f };
     let cxp = f * rx * y1p / ry;
     let cyp = -f * ry * x1p / rx;
@@ -227,6 +231,9 @@ fn arc_seg_to_bezier(
 
 /// Split an elliptical arc into ≤90° bezier segments.
 fn elliptical_arc_to_beziers(ac: &ArcCenter) -> Vec<BezierSeg> {
+    if !ac.sweep.is_finite() || !ac.start_angle.is_finite() {
+        return vec![];
+    }
     let mut segs = Vec::new();
     let step = if ac.sweep > 0.0 { PI / 2.0 } else { -PI / 2.0 };
     let end = ac.start_angle + ac.sweep;

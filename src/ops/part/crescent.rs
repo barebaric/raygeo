@@ -441,6 +441,10 @@ fn sweep_area(cx: &SweepContext, xs: &[f64]) -> (f64, f64) {
     let mut active: Vec<SweepEdge> = Vec::new();
     let mut next_edge: usize = 0;
 
+    // Pre-allocate the per-slab `outside` flag buffer once and reuse
+    // it across all slabs to avoid per-slab heap allocation.
+    let mut outside_buf: Vec<bool> = vec![true; nshapes];
+
     for ix in 0..xs.len() - 1 {
         let x0 = xs[ix];
         let x1 = xs[ix + 1];
@@ -485,22 +489,24 @@ fn sweep_area(cx: &SweepContext, xs: &[f64]) -> (f64, f64) {
         //     Result requires frag_winding <= 0 (outside the cleared
         //     union — a point inside a CW hole has winding 0 and IS
         //     uncleared material the crescent should include).
-        let mut outside = vec![true; nshapes];
+        //
+        // `outside_buf` is pre-allocated once and reused across slabs.
+        outside_buf.fill(true);
         // Enclosing fragments start as "inside" — their edges don't
         // produce slab crossings but they contribute to the winding.
         for (i, &enc) in cx.frag_encloses.iter().enumerate() {
             if enc {
-                outside[i] = false;
+                outside_buf[i] = false;
             }
         }
         let mut outside_count: i32 = 1 + num_valid as i32;
         let mut frag_winding: i32 = cx.initial_frag_winding;
 
         for &(_y, ishape, ipart) in &ys {
-            let prev_outside = outside[ishape];
+            let prev_outside = outside_buf[ishape];
             let prev_count = outside_count;
             let prev_winding = frag_winding;
-            outside[ishape] = !outside[ishape];
+            outside_buf[ishape] = !outside_buf[ishape];
 
             let is_frag = ishape < num_frags;
             let is_c1 = ishape == total_polys + 1;

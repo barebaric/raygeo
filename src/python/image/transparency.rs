@@ -29,7 +29,7 @@ use crate::image::transparency;
         :complexity: O(w*h)
         """
 "#,
-    module = "raygeo.image"
+    module = "raygeo.image.transparency"
 )]
 #[pyfunction(name = "make_transparent_by_brightness")]
 #[pyo3(signature = (rgba, width, height, stride, threshold=250))]
@@ -87,7 +87,7 @@ fn py_make_transparent_by_brightness(
         :complexity: O(w*h)
         """
 "#,
-    module = "raygeo.image"
+    module = "raygeo.image.transparency"
 )]
 #[pyfunction(name = "make_transparent_except_color")]
 #[pyo3(signature = (rgba, width, height, stride, target_r, target_g, target_b))]
@@ -120,13 +120,17 @@ fn py_make_transparent_except_color(
 }
 
 pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(
+    let sub_mod = PyModule::new(m.py(), "transparency")?;
+    sub_mod.add_function(wrap_pyfunction!(
         py_make_transparent_by_brightness,
-        m.clone()
+        sub_mod.clone()
     )?)?;
-    m.add_function(wrap_pyfunction!(
+    sub_mod.add_function(wrap_pyfunction!(
         py_make_transparent_except_color,
-        m.clone()
+        sub_mod.clone()
     )?)?;
+    m.add_submodule(&sub_mod)?;
+    let sys_modules = m.py().import("sys")?.getattr("modules")?;
+    sys_modules.set_item("raygeo.image.transparency", &sub_mod)?;
     Ok(())
 }

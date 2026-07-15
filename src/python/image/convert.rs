@@ -29,7 +29,7 @@ use crate::image::convert;
         :complexity: O(w*h)
         """
 "#,
-    module = "raygeo.image"
+    module = "raygeo.image.convert"
 )]
 #[pyfunction(name = "rgba_to_grayscale")]
 #[pyo3(signature = (rgba, width, height, stride))]
@@ -93,7 +93,7 @@ fn py_rgba_to_grayscale(
         :complexity: O(w*h)
         """
 "#,
-    module = "raygeo.image"
+    module = "raygeo.image.convert"
 )]
 #[pyfunction(name = "rgba_to_binary")]
 #[pyo3(signature = (rgba, width, height, stride, threshold=128, invert=false))]
@@ -152,7 +152,7 @@ fn py_rgba_to_binary(
         :complexity: O(w*h)
         """
 "#,
-    module = "raygeo.image"
+    module = "raygeo.image.convert"
 )]
 #[pyfunction(name = "rgba_to_grayscale_inplace")]
 #[pyo3(signature = (rgba, width, height, stride))]
@@ -179,8 +179,19 @@ fn py_rgba_to_grayscale_inplace(
 }
 
 pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(py_rgba_to_grayscale, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(py_rgba_to_binary, m.clone())?)?;
-    m.add_function(wrap_pyfunction!(py_rgba_to_grayscale_inplace, m.clone())?)?;
+    let sub_mod = PyModule::new(m.py(), "convert")?;
+    sub_mod.add_function(wrap_pyfunction!(
+        py_rgba_to_grayscale,
+        sub_mod.clone()
+    )?)?;
+    sub_mod
+        .add_function(wrap_pyfunction!(py_rgba_to_binary, sub_mod.clone())?)?;
+    sub_mod.add_function(wrap_pyfunction!(
+        py_rgba_to_grayscale_inplace,
+        sub_mod.clone()
+    )?)?;
+    m.add_submodule(&sub_mod)?;
+    let sys_modules = m.py().import("sys")?.getattr("modules")?;
+    sys_modules.set_item("raygeo.image.convert", &sub_mod)?;
     Ok(())
 }

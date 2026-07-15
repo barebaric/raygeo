@@ -3,7 +3,6 @@
 use prof_macros::prof;
 
 use crate::error::RaygeoResult;
-use crate::geo::algo::fitting::linearize_data;
 use crate::geo::algo::offset::grow_geometry;
 use crate::geo::algo::polylabel::find_largest_circle;
 use crate::geo::algo::topology::{
@@ -11,7 +10,7 @@ use crate::geo::algo::topology::{
 };
 use crate::geo::geometry::Geometry;
 use crate::geo::shape::polygon::{
-    clean_polygon, get_circle_polygon, get_polygon_area, get_polygon_centroid,
+    get_circle_polygon, get_polygon_area, get_polygon_centroid,
     is_point_inside_polygon, resample_polygon,
 };
 use crate::ops::assembly::result::AssemblyMeta;
@@ -27,7 +26,6 @@ const MAX_WAVEFRONT_ITERATIONS: usize = 1000;
 /// Options for [`adaptive_wavefronts`].
 #[derive(Clone, Debug)]
 pub struct AdaptiveWavefrontOptions {
-    pub tool_radius: f64,
     pub step_over: f64,
     pub z: f64,
     pub area_tolerance: f64,
@@ -36,9 +34,10 @@ pub struct AdaptiveWavefrontOptions {
 
 /// Inside-out adaptive wavefronts.
 ///
-/// Starting from the cleared area, each iteration expands the frontier
-/// (outer boundary) outward by `step_over`, clips to the valid tool
-/// area, traces the wavefront, and updates the cleared state.
+/// Finds the largest inscribed circle in the stock region, seeds the
+/// cleared area with concentric rings spaced `step_over` apart, and
+/// then iteratively expands the frontier outward by `step_over`,
+/// clipping to the boundary, until the pocket is fully cleared.
 ///
 /// Each ring fragment is emitted as `MoveTo` (first point) + `LineTo`
 /// (rest), all at height `z`, with `cut_state` applied.
@@ -48,7 +47,6 @@ pub fn adaptive_wavefronts(
     trace: &mut Tracelet,
     opts: &AdaptiveWavefrontOptions,
     cut_state: &State,
-    seed: &[Polygon],
 ) -> RaygeoResult<AssemblyMeta> {
     let mut state_applied = false;
 
@@ -57,17 +55,44 @@ pub fn adaptive_wavefronts(
 
     // Pre-compute the envelope once and cache it on the ClearedArea.
     // The envelope (tool-centre valid area) depends only on the stock
-    // region and tool radius, which are constant throughout the loop.
+    // region, which is constant throughout the loop.
     // This avoids recomputing compute_inset_region in every bites()
     // and actionable_remaining() call.
-    let envelope = part.cleared.envelope(&part.stock_region, opts.tool_radius);
+    let envelope = part.cleared.envelope(&part.stock_region, 0.0);
     part.cleared.set_envelope_cache(envelope);
 
-    // Emit pre-seeded rings through the exact same code path as
-    // wavefront rings: one `move_to` + `line_to` per ring, sharing
-    // the same `state_applied` flag.  No section markers, no separate
-    // state application — structurally identical to wavefront output.
-    for frag in seed {
+    // Seed: find the largest inscribed circle and emit concentric rings.
+    let (center, r_max) = find_largest_circle(
+        &part.stock_region.boundary,
+        &part.stock_region.islands,
+        0.1,
+    )
+    .unwrap_or_else(|| {
+        (get_polygon_centroid(&part.stock_region.boundary), 0.0)
+    });
+    let seed_r = (0.01_f64).max(r_max * 0.02);
+    let spiral_max_r = r_max.max(seed_r);
+    let mut seed_polys: Vec<Polygon> = Vec::new();
+    if opts.step_over > 0.0 {
+        let mut r = seed_r;
+        while r <= spiral_max_r {
+            seed_polys.push(get_circle_polygon(center, r, 64));
+            r += opts.step_over;
+        }
+        if seed_polys.is_empty() {
+            seed_polys.push(get_circle_polygon(center, spiral_max_r, 64));
+        }
+    } else {
+        seed_polys.push(get_circle_polygon(center, seed_r, 64));
+    }
+    part.cleared = crate::ops::part::cleared_area::ClearedArea::with_fragments(
+        &seed_polys,
+    );
+
+    // Emit seed rings through the exact same code path as wavefront
+    // rings: one `move_to` + `line_to` per ring, sharing the same
+    // `state_applied` flag.
+    for frag in &seed_polys {
         let frag_area = get_polygon_area(frag);
         if frag_area < opts.area_tolerance {
             continue;
@@ -100,7 +125,7 @@ pub fn adaptive_wavefronts(
         let bounded = part.cleared.bites(
             &part.stock_region,
             opts.step_over,
-            opts.tool_radius,
+            0.0,
             if opts.precision > 0.0 {
                 opts.precision
             } else {
@@ -149,9 +174,7 @@ pub fn adaptive_wavefronts(
 
         let ring_area: f64 = new_ring.iter().map(get_polygon_area).sum();
         if ring_area < opts.area_tolerance
-            || part
-                .cleared
-                .actionable_remaining(&part.stock_region, opts.tool_radius)
+            || part.cleared.actionable_remaining(&part.stock_region, 0.0)
                 < opts.area_tolerance
         {
             break;
@@ -185,7 +208,6 @@ pub fn adaptive_wavefronts(
 #[prof]
 pub fn adaptive_wavefronts_multi_pocket(
     part: &Part,
-    tool_radius: f64,
     step_over: f64,
     offset_mm: f64,
     area_tolerance: f64,
@@ -232,7 +254,11 @@ pub fn adaptive_wavefronts_multi_pocket(
         idx.iter()
             .map(|&i| {
                 let geo = closed[i].copy();
-                let poly = geometry_to_polygon(&geo, 0.01);
+                let poly = geo
+                    .to_polygons(0.01)
+                    .into_iter()
+                    .next()
+                    .unwrap_or_default();
                 (geo, poly)
             })
             .collect()
@@ -272,48 +298,10 @@ pub fn adaptive_wavefronts_multi_pocket(
     let mut last_point: Option<Point3D> = None;
 
     for (boundary, islands) in &pockets {
-        // Find the largest inscribed circle to seed the cleared area.
-        let (center, r_max) = find_largest_circle(boundary, islands, 0.1)
-            .unwrap_or_else(|| (get_polygon_centroid(boundary), 0.0));
+        let mut pocket_part =
+            Part::from_polygons(boundary, islands, (0.0, 0.0));
 
-        // Seed with concentric rings spaced `step_over` apart so the
-        // wavefront expands smoothly from the pocket centre.  The
-        // outermost ring is the frontier; the first wavefront bite
-        // expands it by exactly `step_over`, giving an equidistant,
-        // seamless transition into the wavefront phase.
-        //
-        // The rings cover the inscribed disk up to the largest radius
-        // where the tool centre can safely travel, leaving the
-        // wavefront to fill the remaining (typically irregular) rim.
-        let seed_r = tool_radius.min(r_max * 0.8).max(0.01);
-        let spiral_max_r = (r_max - tool_radius).max(seed_r);
-
-        let mut seed_polys: Vec<Polygon> = Vec::new();
-        if step_over > 0.0 {
-            let mut r = seed_r;
-            while r <= spiral_max_r {
-                seed_polys.push(get_circle_polygon(center, r, 64));
-                r += step_over;
-            }
-            // Always include the outermost ring so the frontier sits
-            // at the maximum seed radius.
-            if seed_polys.is_empty() {
-                seed_polys.push(get_circle_polygon(center, spiral_max_r, 64));
-            }
-        } else {
-            seed_polys.push(get_circle_polygon(center, seed_r, 64));
-        }
-
-        let mut pocket_part = Part::from_polygons_initial(
-            boundary,
-            islands,
-            &seed_polys,
-            (0.0, 0.0),
-        );
-
-        // Expand with adaptive wavefronts
         let wf_opts = AdaptiveWavefrontOptions {
-            tool_radius,
             step_over,
             z,
             area_tolerance,
@@ -324,7 +312,6 @@ pub fn adaptive_wavefronts_multi_pocket(
             &mut trace,
             &wf_opts,
             &cut_state,
-            &seed_polys,
         )?;
 
         if first_point.is_none() {
@@ -351,25 +338,4 @@ pub fn adaptive_wavefronts_multi_pocket(
             },
         },
     ))
-}
-
-/// Convert a single Geometry contour to a 2D polygon.
-fn geometry_to_polygon(geo: &Geometry, tolerance: f64) -> Polygon {
-    let mut linearized = geo.copy();
-    if !linearized.data.is_empty() {
-        linearized.data = linearize_data(&linearized.data, tolerance);
-    }
-    let segs = linearized.segments();
-    for seg in &segs {
-        if seg.len() < 3 {
-            continue;
-        }
-        let poly: Polygon = seg.iter().map(|p| Point::new(p.x, p.y)).collect();
-        if let Some(cleaned) = clean_polygon(&poly, 0.01 * tolerance) {
-            return cleaned;
-        } else if poly.len() >= 3 {
-            return poly;
-        }
-    }
-    Polygon::new()
 }

@@ -26,7 +26,6 @@ def _add_scenario_args(p):
         default=None,
         help="Path to SVG file. Overrides --scenario.",
     )
-    p.add_argument("--tool-radius", type=float, default=None)
     p.add_argument("--step-over", type=float, default=None)
     p.add_argument("--area-tolerance", type=float, default=None)
     p.add_argument("--offset", type=float, default=None)
@@ -68,10 +67,9 @@ def _build_geometry(args):
                 all_geo.line_to(x, y, 0.0)
             all_geo.close_path()
         name = svg_path.stem
-        tr = args.tool_radius or 3.0
         step = args.step_over or 2.0
         tol = args.area_tolerance or 0.01
-        return all_geo, name, tr, step, tol
+        return all_geo, name, step, tol
 
     scenario, _, _ = build_scenario(args)
     boundary = list(scenario.boundary)
@@ -82,28 +80,22 @@ def _build_geometry(args):
         for x, y in poly[1:]:
             geo.line_to(x, y, 0.0)
         geo.close_path()
-    tr = (
-        args.tool_radius
-        if args.tool_radius is not None
-        else scenario.tool_radius
-    )
     step = args.step_over if args.step_over is not None else scenario.step_over
     tol = (
         args.area_tolerance
         if args.area_tolerance is not None
         else scenario.area_tolerance
     )
-    return geo, scenario.name, tr, step, tol
+    return geo, scenario.name, step, tol
 
 
 def run(args):
-    geo, name, tr, step, tol = _build_geometry(args)
+    geo, name, step, tol = _build_geometry(args)
     part = Part(geometry=geo, size_mm=(200, 100))
 
     t0 = time.perf_counter()
     result = adaptive_wavefronts_multi_pocket(
         part,
-        tool_radius=tr,
         step_over=step,
         offset_mm=args.offset or 0.0,
         area_tolerance=tol,
