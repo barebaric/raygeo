@@ -3,20 +3,24 @@
 import matplotlib.pyplot as plt
 
 from raygeo.ops import Ops
-from raygeo.ops.types import CommandType, SectionType
+from raygeo.ops.types import CommandType, RasterMode, SectionType
 
 
 def generate_overscan():
     ops5 = Ops()
     ops5.set_power(1.0)
-    ops5.ops_section_start(SectionType.RASTER_FILL, "wp1")
+    ops5.ops_section_start(
+        SectionType.RASTER_FILL, "wp1", raster_mode=RasterMode.VARIABLE_POWER
+    )
     ops5.move_to(10, 10, 0)
     ops5.line_to(90, 10, 0)
     ops5.move_to(10, 20, 0)
     ops5.line_to(90, 20, 0)
     ops5.move_to(10, 30, 0)
     ops5.line_to(90, 30, 0)
-    ops5.ops_section_end(SectionType.RASTER_FILL)
+    ops5.ops_section_end(
+        SectionType.RASTER_FILL, raster_mode=RasterMode.VARIABLE_POWER
+    )
 
     dist = 5.0
     orig5 = ops5.copy()

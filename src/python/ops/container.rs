@@ -21,7 +21,9 @@ use super::axis::PyAxis;
 use super::state::{
     PyAirAssistMode, PyCoolantMode, PyHeadCoolantMode, PyState,
 };
-use super::types::{PyCommandCategory, PyCommandType, PySectionType};
+use super::types::{
+    PyCommandCategory, PyCommandType, PyRasterMode, PySectionType, PyStateBlock,
+};
 use crate::python::geo::geometry::Geometry as PyGeometry;
 use crate::python::geo::matrix::Matrix as PyMatrix;
 use crate::python::image::scan::PyScanMode;
@@ -71,6 +73,12 @@ impl PyOpsSection {
         self.0.section_type.map(PySectionType)
     }
 
+    /// The raster mode of this section, if any.
+    #[getter]
+    fn raster_mode(&self) -> Option<PyRasterMode> {
+        self.0.raster_mode.map(PyRasterMode)
+    }
+
     /// Indices of the section-marker commands (start/end) for this section.
     #[getter]
     fn marker_indices(&self) -> Vec<usize> {
@@ -83,10 +91,89 @@ impl PyOpsSection {
         self.0.content_indices.clone()
     }
 
+    /// Extract the content commands of this section from an Ops sequence.
+    ///
+    /// :param ops: The Ops sequence containing this section.
+    /// :returns: A new Ops containing only the content of this section.
+    /// :complexity: O(n) time, O(n) space
+    fn content(&self, ops: &PyOps) -> PyOps {
+        PyOps {
+            inner: ops.inner.section_ops(&self.0),
+        }
+    }
+
+    /// Return the state blocks within this section.
+    ///
+    /// :param ops: The parent Ops sequence.
+    /// :returns: List of StateBlock objects.
+    /// :raises RuntimeError: If state block nesting is invalid.
+    /// :complexity: O(n) time, O(n) space
+    fn state_blocks(&self, ops: &PyOps) -> PyResult<Vec<PyStateBlock>> {
+        ops.inner
+            .state_blocks(&self.0)
+            .map_err(|e| {
+                pyo3::exceptions::PyRuntimeError::new_err(e.to_string())
+            })
+            .map(|blocks| {
+                blocks
+                    .into_iter()
+                    .map(|b| PyStateBlock {
+                        name: b.name.as_ref().map(|s| s.to_string()),
+                        marker_indices: b.marker_indices,
+                        content_indices: b.content_indices,
+                    })
+                    .collect()
+            })
+    }
+
+    /// Extract a specific state block's content as Ops.
+    ///
+    /// :param ops: The parent Ops sequence.
+    /// :param block: The StateBlock to extract.
+    /// :returns: A new Ops containing only the block's content.
+    /// :complexity: O(n) time, O(n) space
+    fn state_block_content(&self, ops: &PyOps, block: &PyStateBlock) -> PyOps {
+        PyOps {
+            inner: ops.inner.state_block_content_from_indices(
+                &block.marker_indices,
+                &block.content_indices,
+            ),
+        }
+    }
+
+    /// Find state blocks by name pattern (``*`` prefix match or exact).
+    ///
+    /// :param ops: The parent Ops sequence.
+    /// :param pattern: Name pattern (``"cell-*"`` for prefix, ``"labels"`` for exact).
+    /// :returns: List of matching StateBlock objects.
+    /// :raises RuntimeError: If state block nesting is invalid.
+    /// :complexity: O(n) time, O(n) space
+    fn state_blocks_by_name(
+        &self,
+        ops: &PyOps,
+        pattern: &str,
+    ) -> PyResult<Vec<PyStateBlock>> {
+        ops.inner
+            .state_blocks_by_name(&self.0, pattern)
+            .map_err(|e| {
+                pyo3::exceptions::PyRuntimeError::new_err(e.to_string())
+            })
+            .map(|blocks| {
+                blocks
+                    .into_iter()
+                    .map(|b| PyStateBlock {
+                        name: b.name.as_ref().map(|s| s.to_string()),
+                        marker_indices: b.marker_indices,
+                        content_indices: b.content_indices,
+                    })
+                    .collect()
+            })
+    }
+
     fn __repr__(&self) -> String {
         format!(
-            "OpsSection(section_type={:?}, marker_indices={:?}, content_indices={:?})",
-            self.0.section_type, self.0.marker_indices, self.0.content_indices
+            "OpsSection(section_type={:?}, raster_mode={:?}, marker_indices={:?}, content_indices={:?})",
+            self.0.section_type, self.0.raster_mode, self.0.marker_indices, self.0.content_indices
         )
     }
 }
@@ -109,6 +196,12 @@ impl PyOpsSectionRange {
         self.0.section_type.map(PySectionType)
     }
 
+    /// The raster mode of this section range, if any.
+    #[getter]
+    fn raster_mode(&self) -> Option<PyRasterMode> {
+        self.0.raster_mode.map(PyRasterMode)
+    }
+
     /// Indices of the section-marker commands that bracket this range.
     #[getter]
     fn marker_indices(&self) -> Vec<usize> {
@@ -121,10 +214,26 @@ impl PyOpsSectionRange {
         self.0.content_indices.clone()
     }
 
+    /// Extract the content commands of this section range from an Ops sequence.
+    ///
+    /// :param ops: The Ops sequence containing this section.
+    /// :returns: A new Ops containing only the content of this section range.
+    /// :complexity: O(n) time, O(n) space
+    /// Extract the content commands of this section range from an Ops sequence.
+    ///
+    /// :param ops: The Ops sequence containing this section.
+    /// :returns: A new Ops containing only the content of this section range.
+    /// :complexity: O(n) time, O(n) space
+    fn content(&self, ops: &PyOps) -> PyOps {
+        PyOps {
+            inner: ops.inner.section_range_ops(&self.0),
+        }
+    }
+
     fn __repr__(&self) -> String {
         format!(
-            "OpsSectionRange(section_type={:?}, marker_indices={:?}, content_indices={:?})",
-            self.0.section_type, self.0.marker_indices, self.0.content_indices
+            "OpsSectionRange(section_type={:?}, raster_mode={:?}, marker_indices={:?}, content_indices={:?})",
+            self.0.section_type, self.0.raster_mode, self.0.marker_indices, self.0.content_indices
         )
     }
 }
@@ -1008,16 +1117,16 @@ impl PyOps {
         }
     }
 
-    /// Get the section type and optional workpiece UID from an OpsSection command.
+    /// Get the section type, optional workpiece UID, and optional raster mode from an OpsSection command.
     ///
     /// :param idx: Command index.
-    /// :returns: ``(SectionType, Optional[workpiece_uid])``.
+    /// :returns: ``(SectionType, Optional[str], Optional[RasterMode])``.
     /// :raises TypeError: If the command is not an OpsSectionStart or OpsSectionEnd.
     /// :complexity: O(1) time, O(1) space
     fn section_params(
         &self,
         idx: usize,
-    ) -> PyResult<(PySectionType, Option<String>)> {
+    ) -> PyResult<(PySectionType, Option<String>, Option<PyRasterMode>)> {
         if idx >= self.inner.len() {
             return Err(PyErr::new::<pyo3::exceptions::PyIndexError, _>(
                 "index out of range",
@@ -1027,14 +1136,22 @@ impl PyOps {
             OpCategory::Marker(MarkerCmd::OpsSectionStart {
                 section_type,
                 workpiece_uid,
+                raster_mode,
+                ..
             }) => Ok((
                 PySectionType(*section_type),
                 workpiece_uid.as_ref().map(|s| s.to_string()),
+                raster_mode.map(PyRasterMode),
             )),
             OpCategory::Marker(MarkerCmd::OpsSectionEnd {
                 section_type,
+                raster_mode,
                 ..
-            }) => Ok((PySectionType(*section_type), None)),
+            }) => Ok((
+                PySectionType(*section_type),
+                None,
+                raster_mode.map(PyRasterMode),
+            )),
             _ => Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
                 "Not an OpsSection command",
             )),
@@ -1393,21 +1510,57 @@ impl PyOps {
     ///
     /// :param section_type: The type of section.
     /// :param workpiece_uid: The workpiece identifier.
+    /// :param raster_mode: Optional raster mode.
+    /// :raises ValueError: If section_type is RasterFill without a raster_mode,
+    ///     or VectorOutline with a raster_mode.
     /// :complexity: O(1) time, O(1) space
+    #[pyo3(signature = (section_type, workpiece_uid, *, raster_mode=None))]
     fn ops_section_start(
         &mut self,
         section_type: &PySectionType,
         workpiece_uid: &str,
-    ) {
-        self.inner.ops_section_start(section_type.0, workpiece_uid);
+        raster_mode: Option<&PyRasterMode>,
+    ) -> PyResult<()> {
+        self.inner
+            .ops_section_start(
+                section_type.0,
+                workpiece_uid,
+                raster_mode.map(|rm| rm.0),
+            )
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
     }
 
     /// Mark the end of an ops section.
     ///
     /// :param section_type: The type of section.
+    /// :param raster_mode: Optional raster mode.
+    /// :raises ValueError: If section_type is RasterFill without a raster_mode,
+    ///     or VectorOutline with a raster_mode.
     /// :complexity: O(1) time, O(1) space
-    fn ops_section_end(&mut self, section_type: &PySectionType) {
-        self.inner.ops_section_end(section_type.0);
+    #[pyo3(signature = (section_type, *, raster_mode=None))]
+    fn ops_section_end(
+        &mut self,
+        section_type: &PySectionType,
+        raster_mode: Option<&PyRasterMode>,
+    ) -> PyResult<()> {
+        self.inner
+            .ops_section_end(section_type.0, raster_mode.map(|rm| rm.0))
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
+    }
+
+    /// Mark the start of a state block.
+    ///
+    /// :param name: Optional block name.
+    /// :complexity: O(1) time, O(1) space
+    fn state_block_start(&mut self, name: Option<&str>) {
+        self.inner.state_block_start(name);
+    }
+
+    /// Mark the end of a state block.
+    ///
+    /// :complexity: O(1) time, O(1) space
+    fn state_block_end(&mut self) {
+        self.inner.state_block_end();
     }
 
     // --- Copy / Transfer ---
@@ -1800,6 +1953,7 @@ impl PyOps {
                 MarkerCmd::OpsSectionStart {
                     section_type,
                     workpiece_uid,
+                    ..
                 } => {
                     info.section_type = Some(PySectionType(*section_type));
                     if let Some(wp) = workpiece_uid {
@@ -2190,13 +2344,17 @@ impl PyOps {
         self.inner.segment_indices()
     }
 
-    /// Group contiguous commands with the same state into separate Ops sequences.
+    /// Group contiguous commands with the same auxiliary state into separate Ops sequences.
     ///
-    /// :returns: A list of Ops sequences grouped by state continuity.
+    /// Groups by continuity of auxiliary state (coolant, air_assist,
+    /// head_coolant) only. For full parameter-regime grouping, use
+    /// :meth:`OpsSection.state_blocks` with ``StateBlockStart``/``StateBlockEnd`` markers.
+    ///
+    /// :returns: A list of Ops sequences grouped by auxiliary state continuity.
     /// :complexity: O(n) time, O(n) space
-    fn group_by_state_continuity(&self) -> Vec<PyOps> {
+    fn group_by_auxiliary_state(&self) -> Vec<PyOps> {
         self.inner
-            .group_by_state_continuity()
+            .group_by_auxiliary_state()
             .into_iter()
             .map(|o| PyOps { inner: o })
             .collect()
@@ -2231,6 +2389,72 @@ impl PyOps {
             .into_iter()
             .map(PyOpsSectionRange)
             .collect()
+    }
+
+    /// Extract the commands belonging to a section.
+    ///
+    /// :param section: The OpsSection to extract.
+    /// :returns: A new Ops containing only the content of that section.
+    /// :complexity: O(n) time, O(n) space
+    fn section_content(&self, section: &PyOpsSection) -> PyOps {
+        PyOps {
+            inner: self.inner.section_ops(&section.0),
+        }
+    }
+
+    /// Return sections matching a given section type.
+    ///
+    /// :param section_type: The SectionType to filter by.
+    /// :returns: List of matching OpsSection objects.
+    /// :complexity: O(n) time, O(n) space
+    fn sections_by_type(
+        &self,
+        section_type: &PySectionType,
+    ) -> Vec<PyOpsSection> {
+        self.inner
+            .sections_by_type(section_type.0)
+            .into_iter()
+            .map(PyOpsSection)
+            .collect()
+    }
+
+    /// Return sections matching a given raster mode.
+    ///
+    /// :param raster_mode: The RasterMode to filter by.
+    /// :returns: List of matching OpsSection objects.
+    /// :complexity: O(n) time, O(n) space
+    fn sections_by_mode(
+        &self,
+        raster_mode: &PyRasterMode,
+    ) -> Vec<PyOpsSection> {
+        self.inner
+            .sections_by_mode(raster_mode.0)
+            .into_iter()
+            .map(PyOpsSection)
+            .collect()
+    }
+
+    /// Return all state blocks across all sections.
+    ///
+    /// :returns: List of StateBlock objects.
+    /// :raises RuntimeError: If state block nesting is invalid.
+    /// :complexity: O(n) time, O(n) space
+    fn state_blocks(&self) -> PyResult<Vec<PyStateBlock>> {
+        self.inner
+            .state_blocks_all()
+            .map_err(|e| {
+                pyo3::exceptions::PyRuntimeError::new_err(e.to_string())
+            })
+            .map(|blocks| {
+                blocks
+                    .into_iter()
+                    .map(|b| PyStateBlock {
+                        name: b.name.as_ref().map(|s| s.to_string()),
+                        marker_indices: b.marker_indices,
+                        content_indices: b.content_indices,
+                    })
+                    .collect()
+            })
     }
 
     /// Compute the bounding rectangle of all commands.

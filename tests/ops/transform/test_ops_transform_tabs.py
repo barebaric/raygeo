@@ -3,7 +3,12 @@
 import math
 
 from raygeo.ops import Ops
-from raygeo.ops.types import CommandCategory, CommandType, SectionType
+from raygeo.ops.types import (
+    CommandCategory,
+    CommandType,
+    RasterMode,
+    SectionType,
+)
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -180,14 +185,20 @@ class TestApplyTabGapsBasic:
     def test_non_vector_section_untouched(self):
         """Tabs should not affect RASTER_FILL sections."""
         ops = Ops()
-        ops.ops_section_start(SectionType.RASTER_FILL, "wp1")
+        ops.ops_section_start(
+            SectionType.RASTER_FILL,
+            "wp1",
+            raster_mode=RasterMode.VARIABLE_POWER,
+        )
         ops.set_power(1.0)
         ops.move_to(0, 0, 0)
         ops.line_to(10, 0, 0)
         ops.line_to(10, 10, 0)
         ops.line_to(0, 10, 0)
         ops.line_to(0, 0, 0)
-        ops.ops_section_end(SectionType.RASTER_FILL)
+        ops.ops_section_end(
+            SectionType.RASTER_FILL, raster_mode=RasterMode.VARIABLE_POWER
+        )
         orig_len = ops.len()
         ops.apply_tab_gaps([(5, 0, 2)])
         assert ops.len() == orig_len
@@ -197,11 +208,17 @@ class TestApplyTabGapsBasic:
         leaving RASTER_FILL untouched."""
         ops = Ops()
         # Raster section
-        ops.ops_section_start(SectionType.RASTER_FILL, "wp1")
+        ops.ops_section_start(
+            SectionType.RASTER_FILL,
+            "wp1",
+            raster_mode=RasterMode.VARIABLE_POWER,
+        )
         ops.set_power(1.0)
         ops.move_to(0, 0, 0)
         ops.line_to(10, 0, 0)
-        ops.ops_section_end(SectionType.RASTER_FILL)
+        ops.ops_section_end(
+            SectionType.RASTER_FILL, raster_mode=RasterMode.VARIABLE_POWER
+        )
         # Vector section
         ops.ops_section_start(SectionType.VECTOR_OUTLINE, "wp2")
         ops.set_power(1.0)

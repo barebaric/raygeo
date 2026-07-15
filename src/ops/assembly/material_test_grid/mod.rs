@@ -121,6 +121,61 @@ pub fn generate_material_test_grid(
 
     trace.set_attrs(trace_helpers::build_attrs(params));
 
+    let is_engrave = params.mode.eq_ignore_ascii_case("engrave");
+    let section_type = if is_engrave {
+        crate::ops::enums::SectionType::RasterFill
+    } else {
+        crate::ops::enums::SectionType::VectorOutline
+    };
+    let raster_mode = if is_engrave {
+        Some(crate::ops::enums::RasterMode::ConstantPower)
+    } else {
+        None
+    };
+    trace
+        .ops_section_start(section_type, "material_test_grid", raster_mode)
+        .expect("valid section params");
+
+    // Wrap labels in a state block
+    if params.include_labels {
+        trace.state_block_start(Some("labels"));
+        let mut label_ops = Ops::new();
+        generate_labels(
+            &mut label_ops,
+            params,
+            scale_x,
+            scale_y,
+            margin_left,
+            margin_top,
+        );
+        if !label_ops.is_empty() {
+            label_ops
+                .scale(1.0, -1.0, 1.0)
+                .translate(0.0, target_height, 0.0);
+            let mut prev = Point3D::ZERO;
+            for node in label_ops.commands {
+                let (end, is_travel) = match &node.category {
+                    OpCategory::Moving {
+                        end,
+                        cmd: MoveCmd::MoveTo,
+                        ..
+                    } => (*end, true),
+                    OpCategory::Moving { end, .. } => (*end, false),
+                    _ => continue,
+                };
+                let tool = trace_helpers::tool_snapshot(end, prev);
+                prev = end;
+                trace.push_raw(node);
+                if is_travel {
+                    trace.move_event(MoveKind::Travel, tool, None);
+                } else {
+                    trace.cut(tool, None);
+                }
+            }
+        }
+        trace.state_block_end();
+    }
+
     // Build grid cells sorted by risk: highest speed first, then lowest power
     let mut cells: Vec<GridCell> = Vec::new();
     for r in 0..rows {
@@ -187,7 +242,6 @@ pub fn generate_material_test_grid(
             .then(a.passes.cmp(&b.passes).reverse())
     });
 
-    let is_engrave = params.mode.eq_ignore_ascii_case("engrave");
     let line_spacing = params.line_interval_mm;
 
     let total_cells = cells.len() as u32;
@@ -201,6 +255,8 @@ pub fn generate_material_test_grid(
     );
 
     for (cell_idx, cell) in (0_u32..).zip(cells.iter()) {
+        let cell_name = format!("cell-r{}-c{}", cell.row, cell.col);
+        trace.state_block_start(Some(&cell_name));
         trace.set_power(0.0);
         trace.set_power(cell.power / 100.0);
         trace.set_feed_rate(cell.speed as i32);
@@ -242,49 +298,17 @@ pub fn generate_material_test_grid(
             }
         }
 
+        trace.state_block_end();
+
         if first_point.is_none() {
             first_point = Some(Point::new(cell.x, fy));
         }
         last_point = Some(Point::new(cell.x + cell.width, fy + cell.height));
     }
 
-    // Generate text labels into a temp Ops, Y-flip, then emit events.
-    if params.include_labels {
-        let mut label_ops = Ops::new();
-        generate_labels(
-            &mut label_ops,
-            params,
-            scale_x,
-            scale_y,
-            margin_left,
-            margin_top,
-        );
-        if !label_ops.is_empty() {
-            label_ops
-                .scale(1.0, -1.0, 1.0)
-                .translate(0.0, target_height, 0.0);
-            let mut prev = Point3D::ZERO;
-            for node in label_ops.commands {
-                let (end, is_travel) = match &node.category {
-                    OpCategory::Moving {
-                        end,
-                        cmd: MoveCmd::MoveTo,
-                        ..
-                    } => (*end, true),
-                    OpCategory::Moving { end, .. } => (*end, false),
-                    _ => continue,
-                };
-                let tool = trace_helpers::tool_snapshot(end, prev);
-                prev = end;
-                trace.push_raw(node);
-                if is_travel {
-                    trace.move_event(MoveKind::Travel, tool, None);
-                } else {
-                    trace.cut(tool, None);
-                }
-            }
-        }
-    }
+    trace
+        .ops_section_end(section_type, raster_mode)
+        .expect("valid section params");
 
     let start_pos = first_point.unwrap_or(Point::ZERO);
     let end_pos = last_point.unwrap_or(Point::ZERO);

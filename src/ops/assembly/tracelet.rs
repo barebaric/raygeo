@@ -130,6 +130,32 @@ impl Tracelet {
         self.ops.set_power(power);
     }
 
+    pub fn state_block_start(&mut self, name: Option<&str>) {
+        self.ops.state_block_start(name);
+    }
+
+    pub fn state_block_end(&mut self) {
+        self.ops.state_block_end();
+    }
+
+    pub fn ops_section_start(
+        &mut self,
+        section_type: crate::ops::enums::SectionType,
+        workpiece_uid: &str,
+        raster_mode: Option<crate::ops::enums::RasterMode>,
+    ) -> Result<(), crate::RaygeoError> {
+        self.ops
+            .ops_section_start(section_type, workpiece_uid, raster_mode)
+    }
+
+    pub fn ops_section_end(
+        &mut self,
+        section_type: crate::ops::enums::SectionType,
+        raster_mode: Option<crate::ops::enums::RasterMode>,
+    ) -> Result<(), crate::RaygeoError> {
+        self.ops.ops_section_end(section_type, raster_mode)
+    }
+
     // --- Event methods (A3) ---
 
     pub fn init(&mut self, tool: ToolSnapshot, meta: Option<Meta>) {

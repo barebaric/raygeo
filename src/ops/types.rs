@@ -1,8 +1,9 @@
 use std::sync::Arc;
 
 use super::axis::Axis;
-use super::enums::{CommandType, SectionType};
+use super::enums::{CommandType, RasterMode, SectionType};
 use super::state::{AirAssistMode, CoolantMode, HeadCoolantMode, State};
+use crate::error::RaygeoError;
 use crate::types::{Point, Point3D};
 
 /// Position and heading of the cutting tool.
@@ -101,11 +102,17 @@ pub enum MarkerCmd {
     OpsSectionStart {
         section_type: SectionType,
         workpiece_uid: Option<Arc<str>>,
+        raster_mode: Option<RasterMode>,
     },
     OpsSectionEnd {
         section_type: SectionType,
         workpiece_uid: Option<Arc<str>>,
+        raster_mode: Option<RasterMode>,
     },
+    StateBlockStart {
+        name: Option<Arc<str>>,
+    },
+    StateBlockEnd,
 }
 
 #[derive(Clone, Debug)]
@@ -385,23 +392,74 @@ impl OpNode {
     pub fn ops_section_start(
         section_type: SectionType,
         workpiece_uid: &str,
-    ) -> Self {
-        OpNode {
+        raster_mode: Option<RasterMode>,
+    ) -> Result<Self, RaygeoError> {
+        match (section_type, raster_mode) {
+            (SectionType::VectorOutline, Some(mode)) => {
+                return Err(RaygeoError::InvalidCommand(format!(
+                    "VectorOutline section with raster_mode={mode:?} is invalid"
+                )));
+            }
+            (SectionType::RasterFill, None) => {
+                return Err(RaygeoError::InvalidCommand(
+                    "RasterFill section without raster_mode is invalid".into(),
+                ));
+            }
+            _ => {}
+        }
+        Ok(OpNode {
             category: OpCategory::Marker(MarkerCmd::OpsSectionStart {
                 section_type,
                 workpiece_uid: Some(Arc::from(workpiece_uid)),
+                raster_mode,
+            }),
+            state: None,
+            extra_axes: None,
+        })
+    }
+
+    pub fn ops_section_end(
+        section_type: SectionType,
+        raster_mode: Option<RasterMode>,
+    ) -> Result<Self, RaygeoError> {
+        match (section_type, raster_mode) {
+            (SectionType::VectorOutline, Some(mode)) => {
+                return Err(RaygeoError::InvalidCommand(format!(
+                    "VectorOutline section end with raster_mode={mode:?} is invalid"
+                )));
+            }
+            (SectionType::RasterFill, None) => {
+                return Err(RaygeoError::InvalidCommand(
+                    "RasterFill section end without raster_mode is invalid"
+                        .into(),
+                ));
+            }
+            _ => {}
+        }
+        Ok(OpNode {
+            category: OpCategory::Marker(MarkerCmd::OpsSectionEnd {
+                section_type,
+                workpiece_uid: None,
+                raster_mode,
+            }),
+            state: None,
+            extra_axes: None,
+        })
+    }
+
+    pub fn state_block_start(name: Option<&str>) -> Self {
+        OpNode {
+            category: OpCategory::Marker(MarkerCmd::StateBlockStart {
+                name: name.map(Arc::from),
             }),
             state: None,
             extra_axes: None,
         }
     }
 
-    pub fn ops_section_end(section_type: SectionType) -> Self {
+    pub fn state_block_end() -> Self {
         OpNode {
-            category: OpCategory::Marker(MarkerCmd::OpsSectionEnd {
-                section_type,
-                workpiece_uid: None,
-            }),
+            category: OpCategory::Marker(MarkerCmd::StateBlockEnd),
             state: None,
             extra_axes: None,
         }
@@ -443,6 +501,10 @@ impl OpNode {
                     CommandType::OpsSectionStart
                 }
                 MarkerCmd::OpsSectionEnd { .. } => CommandType::OpsSectionEnd,
+                MarkerCmd::StateBlockStart { .. } => {
+                    CommandType::StateBlockStart
+                }
+                MarkerCmd::StateBlockEnd => CommandType::StateBlockEnd,
             },
         }
     }

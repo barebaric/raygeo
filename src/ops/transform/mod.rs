@@ -22,7 +22,7 @@ pub mod split;
 pub mod tabs;
 
 pub use flip::flip_ops;
-pub use group::{group_by_state_continuity, without_state};
+pub use group::{group_by_auxiliary_state, without_state};
 pub use lead_in_out::apply_lead_in_out;
 pub use link::{link_passes, LinkStrategy};
 pub use merge_lines::merge_overlapping_lines;

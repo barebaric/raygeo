@@ -56,6 +56,10 @@ pub enum CommandType {
     OpsSectionStart = 106,
     #[strum(serialize = "OPS_SECTION_END")]
     OpsSectionEnd = 107,
+    #[strum(serialize = "STATE_BLOCK_START")]
+    StateBlockStart = 108,
+    #[strum(serialize = "STATE_BLOCK_END")]
+    StateBlockEnd = 109,
 }
 
 impl CommandType {
@@ -89,7 +93,9 @@ impl CommandType {
             | CommandType::WorkpieceStart
             | CommandType::WorkpieceEnd
             | CommandType::OpsSectionStart
-            | CommandType::OpsSectionEnd => CommandCategory::Marker,
+            | CommandType::OpsSectionEnd
+            | CommandType::StateBlockStart
+            | CommandType::StateBlockEnd => CommandCategory::Marker,
         }
     }
 }
@@ -127,6 +133,29 @@ impl SectionType {
     }
 
     pub fn from_name(s: &str) -> Option<SectionType> {
+        s.parse().ok()
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, EnumString, Display)]
+#[repr(u8)]
+#[strum(serialize_all = "SCREAMING_SNAKE_CASE")]
+pub enum RasterMode {
+    VariablePower = 1,
+    ConstantPower = 2,
+    DepthMap = 3,
+}
+
+impl RasterMode {
+    pub fn name(&self) -> &'static str {
+        match self {
+            RasterMode::VariablePower => "VARIABLE_POWER",
+            RasterMode::ConstantPower => "CONSTANT_POWER",
+            RasterMode::DepthMap => "DEPTH_MAP",
+        }
+    }
+
+    pub fn from_name(s: &str) -> Option<RasterMode> {
         s.parse().ok()
     }
 }

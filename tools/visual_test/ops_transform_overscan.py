@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import streamlit as st
 
 from raygeo.ops import Ops
-from raygeo.ops.types import CommandType, SectionType
+from raygeo.ops.types import CommandType, RasterMode, SectionType
 
 
 def page_overscan():
@@ -28,43 +28,73 @@ def page_overscan():
     ops.set_power(1.0)
 
     if preset == "Horizontal raster lines":
-        ops.ops_section_start(SectionType.RASTER_FILL, "wp1")
+        ops.ops_section_start(
+            SectionType.RASTER_FILL,
+            "wp1",
+            raster_mode=RasterMode.VARIABLE_POWER,
+        )
         ops.move_to(10, 10, 0)
         ops.line_to(90, 10, 0)
         ops.move_to(10, 20, 0)
         ops.line_to(90, 20, 0)
         ops.move_to(10, 30, 0)
         ops.line_to(90, 30, 0)
-        ops.ops_section_end(SectionType.RASTER_FILL)
+        ops.ops_section_end(
+            SectionType.RASTER_FILL, raster_mode=RasterMode.VARIABLE_POWER
+        )
     elif preset == "Bidirectional raster":
-        ops.ops_section_start(SectionType.RASTER_FILL, "wp1")
+        ops.ops_section_start(
+            SectionType.RASTER_FILL,
+            "wp1",
+            raster_mode=RasterMode.VARIABLE_POWER,
+        )
         ops.move_to(10, 10, 0)
         ops.line_to(90, 10, 0)
         ops.move_to(90, 20, 0)
         ops.line_to(10, 20, 0)
         ops.move_to(10, 30, 0)
         ops.line_to(90, 30, 0)
-        ops.ops_section_end(SectionType.RASTER_FILL)
+        ops.ops_section_end(
+            SectionType.RASTER_FILL, raster_mode=RasterMode.VARIABLE_POWER
+        )
     elif preset == "Diagonal line":
-        ops.ops_section_start(SectionType.RASTER_FILL, "wp1")
+        ops.ops_section_start(
+            SectionType.RASTER_FILL,
+            "wp1",
+            raster_mode=RasterMode.VARIABLE_POWER,
+        )
         ops.move_to(10, 10, 0)
         ops.line_to(70, 70, 0)
-        ops.ops_section_end(SectionType.RASTER_FILL)
+        ops.ops_section_end(
+            SectionType.RASTER_FILL, raster_mode=RasterMode.VARIABLE_POWER
+        )
     elif preset == "Variable power scanline":
         pv = bytearray(range(0, 256, 4))
-        ops.ops_section_start(SectionType.RASTER_FILL, "wp1")
+        ops.ops_section_start(
+            SectionType.RASTER_FILL,
+            "wp1",
+            raster_mode=RasterMode.VARIABLE_POWER,
+        )
         ops.move_to(10, 50, 0)
         ops.scan_to(90, 50, 0, power_values=pv)
-        ops.ops_section_end(SectionType.RASTER_FILL)
+        ops.ops_section_end(
+            SectionType.RASTER_FILL, raster_mode=RasterMode.VARIABLE_POWER
+        )
     elif preset == "Mixed raster + vector":
         ops.move_to(5, 5, 0)
         ops.line_to(95, 95, 0)
-        ops.ops_section_start(SectionType.RASTER_FILL, "wp1")
+        ops.ops_section_start(
+            SectionType.RASTER_FILL,
+            "wp1",
+            raster_mode=RasterMode.VARIABLE_POWER,
+        )
         ops.move_to(10, 20, 0)
         ops.line_to(80, 20, 0)
         ops.move_to(10, 30, 0)
         ops.line_to(80, 30, 0)
-        ops.ops_section_end(SectionType.RASTER_FILL)
+        ops.ops_section_end(
+            SectionType.RASTER_FILL, raster_mode=RasterMode.VARIABLE_POWER
+        )
 
     orig = ops.copy()
     orig_lines = len(ops.indices_of(CommandType.LINE_TO))

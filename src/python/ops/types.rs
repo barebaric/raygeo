@@ -1,4 +1,6 @@
-use crate::ops::enums::{CommandCategory, CommandType, SectionType};
+use crate::ops::enums::{
+    CommandCategory, CommandType, RasterMode, SectionType,
+};
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{
     gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pymethods,
@@ -17,7 +19,62 @@ STATE (changes machine parameters), or MARKER (structural job boundaries).
 
 SectionType — distinguishes between VECTOR_OUTLINE and RASTER_FILL sections
 when an Ops sequence is split into logical portions.
+
+RasterMode — identifies the power-application strategy for raster sections:
+VARIABLE_POWER (per-pixel 8-bit), CONSTANT_POWER (uniform / dither),
+or DEPTH_MAP (stepped Z levels).
 ";
+
+/// A state block within an Ops section — delimits parameter-regime changes.
+///
+/// Produced by :meth:`OpsSection.state_blocks`.
+#[gen_stub_pyclass]
+#[pyclass(
+    frozen,
+    module = "raygeo.ops.types",
+    name = "StateBlock",
+    skip_from_py_object
+)]
+#[derive(Clone)]
+pub struct PyStateBlock {
+    /// Optional block name.
+    #[pyo3(get)]
+    pub name: Option<String>,
+    /// Indices of the marker commands (start/end) for this block.
+    #[pyo3(get)]
+    pub marker_indices: Vec<usize>,
+    /// Indices of the content commands belonging to this block.
+    #[pyo3(get)]
+    pub content_indices: Vec<usize>,
+}
+
+#[gen_stub_pymethods]
+#[pymethods]
+impl PyStateBlock {
+    /// Extract the content commands of this block from an Ops sequence.
+    ///
+    /// :param ops: The Ops sequence containing this block.
+    /// :returns: A new Ops containing only the content of this block.
+    /// :complexity: O(n) time, O(n) space
+    fn content(
+        &self,
+        ops: &super::container::PyOps,
+    ) -> super::container::PyOps {
+        super::container::PyOps {
+            inner: ops.inner.state_block_content_from_indices(
+                &self.marker_indices,
+                &self.content_indices,
+            ),
+        }
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "StateBlock(name={:?}, marker_indices={:?}, content_indices={:?})",
+            self.name, self.marker_indices, self.content_indices
+        )
+    }
+}
 
 /// Register the CommandType, CommandCategory, SectionType enums
 /// and the category() function with the Python module.
@@ -26,6 +83,8 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyCommandType>()?;
     m.add_class::<PyCommandCategory>()?;
     m.add_class::<PySectionType>()?;
+    m.add_class::<PyRasterMode>()?;
+    m.add_class::<PyStateBlock>()?;
     m.add_function(wrap_pyfunction!(py_category, m)?)?;
     Ok(())
 }
@@ -112,6 +171,12 @@ impl PyCommandType {
     #[classattr]
     pub const OPS_SECTION_END: PyCommandType =
         PyCommandType(CommandType::OpsSectionEnd);
+    #[classattr]
+    pub const STATE_BLOCK_START: PyCommandType =
+        PyCommandType(CommandType::StateBlockStart);
+    #[classattr]
+    pub const STATE_BLOCK_END: PyCommandType =
+        PyCommandType(CommandType::StateBlockEnd);
 
     /// String representation like ``CommandType.MOVE_TO``.
     ///
@@ -192,6 +257,52 @@ impl PyCommandCategory {
             CommandCategory::Marker => "MARKER",
         }
         .to_string()
+    }
+}
+
+/// Raster engrave mode: how power is applied during raster scanning.
+///
+/// - ``VARIABLE_POWER``: per-pixel 8-bit power (from power-modulated image)
+/// - ``CONSTANT_POWER``: uniform power (from mask scans / dither lines)
+/// - ``DEPTH_MAP``: stepped Z levels (from multi-pass image)
+#[gen_stub_pyclass]
+#[pyclass(
+    frozen,
+    eq,
+    skip_from_py_object,
+    module = "raygeo.ops.types",
+    name = "RasterMode"
+)]
+#[derive(Clone, PartialEq)]
+pub struct PyRasterMode(pub RasterMode);
+
+#[gen_stub_pymethods]
+#[pymethods]
+impl PyRasterMode {
+    #[classattr]
+    pub const VARIABLE_POWER: PyRasterMode =
+        PyRasterMode(RasterMode::VariablePower);
+    #[classattr]
+    pub const CONSTANT_POWER: PyRasterMode =
+        PyRasterMode(RasterMode::ConstantPower);
+    #[classattr]
+    pub const DEPTH_MAP: PyRasterMode = PyRasterMode(RasterMode::DepthMap);
+
+    /// String representation like ``RasterMode.VARIABLE_POWER``.
+    fn __repr__(&self) -> String {
+        format!("RasterMode.{}", self.name())
+    }
+
+    /// The raw integer value of this raster mode.
+    #[getter]
+    fn value(&self) -> u8 {
+        self.0 as u8
+    }
+
+    /// The uppercase name (``"VARIABLE_POWER"``, ``"CONSTANT_POWER"``, or ``"DEPTH_MAP"``).
+    #[getter]
+    fn name(&self) -> String {
+        self.0.to_string()
     }
 }
 

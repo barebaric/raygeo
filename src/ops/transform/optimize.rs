@@ -744,7 +744,7 @@ fn optimize_segments(
 
     let nons = ops.without_state();
 
-    let long_segments = nons.group_by_state_continuity();
+    let long_segments = nons.group_by_auxiliary_state();
 
     report_progress(
         progress_cb,

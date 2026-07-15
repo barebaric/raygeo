@@ -1,7 +1,7 @@
 from raygeo.ops import Ops
 from raygeo.ops.axis import Axis
 from raygeo.ops.state import AirAssistMode, HeadCoolantMode
-from raygeo.ops.types import CommandType, SectionType
+from raygeo.ops.types import CommandType, RasterMode, SectionType
 
 
 def test_serialization_deserialization_all_types():
@@ -9,7 +9,9 @@ def test_serialization_deserialization_all_types():
     ops.job_start()
     ops.layer_start("layer-1")
     ops.workpiece_start("wp-1")
-    ops.ops_section_start(SectionType.RASTER_FILL, "wp-1")
+    ops.ops_section_start(
+        SectionType.RASTER_FILL, "wp-1", raster_mode=RasterMode.VARIABLE_POWER
+    )
     ops.set_rapid_rate(5000)
     ops.set_feed_rate(1000)
     ops.set_power(0.8)
@@ -20,7 +22,9 @@ def test_serialization_deserialization_all_types():
     ops.line_to(2, 2, 2)
     ops.arc_to(3, 1, 1, 1, clockwise=False)
     ops.scan_to(12, 2, 2, bytearray([50, 150]))
-    ops.ops_section_end(SectionType.RASTER_FILL)
+    ops.ops_section_end(
+        SectionType.RASTER_FILL, raster_mode=RasterMode.VARIABLE_POWER
+    )
     ops.workpiece_end("wp-1")
     ops.layer_end("layer-1")
     ops.job_end()
@@ -93,3 +97,68 @@ def test_extra_axes_round_trip_mixed():
     assert restored.inspect(1).extra_axes == {Axis.A: 45.0}
     assert restored.inspect(2).extra_axes is None
     assert restored.inspect(3).extra_axes is None
+
+
+def test_raster_mode_dict_round_trip():
+    ops = Ops()
+    ops.ops_section_start(
+        SectionType.RASTER_FILL, "wp-1", raster_mode=RasterMode.VARIABLE_POWER
+    )
+    ops.move_to(0, 0)
+    ops.scan_to(10, 10, power_values=bytearray([255]))
+    ops.ops_section_end(
+        SectionType.RASTER_FILL, raster_mode=RasterMode.VARIABLE_POWER
+    )
+
+    data = ops.to_dict()
+    restored = Ops.from_dict(data)
+
+    assert len(ops) == len(restored)
+    sections = restored.sections()
+    assert len(sections) == 1
+    assert sections[0].raster_mode == RasterMode.VARIABLE_POWER
+
+
+def test_state_block_dict_round_trip():
+    ops = Ops()
+    ops.state_block_start("my-block")
+    ops.set_power(0.5)
+    ops.state_block_end()
+
+    data = ops.to_dict()
+    restored = Ops.from_dict(data)
+
+    assert len(ops) == len(restored)
+    assert restored.command_type(0) == CommandType.STATE_BLOCK_START
+    assert restored.command_type(2) == CommandType.STATE_BLOCK_END
+
+
+def test_state_block_dict_round_trip_no_name():
+    ops = Ops()
+    ops.state_block_start(None)
+    ops.set_power(0.5)
+    ops.state_block_end()
+
+    data = ops.to_dict()
+    restored = Ops.from_dict(data)
+
+    assert len(ops) == len(restored)
+    assert restored.command_type(0) == CommandType.STATE_BLOCK_START
+    assert restored.command_type(2) == CommandType.STATE_BLOCK_END
+
+
+def test_raster_mode_dict_round_trip_old_format():
+    data = {
+        "commands": [
+            {
+                "type": "OPS_SECTION_START",
+                "section_type": "VECTOR_OUTLINE",
+                "workpiece_uid": "wp-1",
+            },
+            {"type": "MOVE_TO", "end": [0, 0, 0]},
+            {"type": "OPS_SECTION_END", "section_type": "VECTOR_OUTLINE"},
+        ],
+        "last_move_to": [0, 0, 0],
+    }
+    ops = Ops.from_dict(data)
+    assert ops.sections()[0].raster_mode is None

@@ -11,14 +11,21 @@ STATE (changes machine parameters), or MARKER (structural job boundaries).
 
 SectionType — distinguishes between VECTOR_OUTLINE and RASTER_FILL sections
 when an Ops sequence is split into logical portions.
+
+RasterMode — identifies the power-application strategy for raster sections:
+VARIABLE_POWER (per-pixel 8-bit), CONSTANT_POWER (uniform / dither),
+or DEPTH_MAP (stepped Z levels).
 """
 
 import builtins
+from raygeo import ops
 import typing
 __all__ = [
     "CommandCategory",
     "CommandType",
+    "RasterMode",
     "SectionType",
+    "StateBlock",
     "category",
 ]
 
@@ -89,6 +96,8 @@ class CommandType:
     WORKPIECE_END: CommandType = CommandType.WORKPIECE_END
     OPS_SECTION_START: CommandType = CommandType.OPS_SECTION_START
     OPS_SECTION_END: CommandType = CommandType.OPS_SECTION_END
+    STATE_BLOCK_START: CommandType = CommandType.STATE_BLOCK_START
+    STATE_BLOCK_END: CommandType = CommandType.STATE_BLOCK_END
     @property
     def value(self) -> builtins.int:
         r"""
@@ -109,6 +118,34 @@ class CommandType:
         String representation like ``CommandType.MOVE_TO``.
         
         :complexity: O(1)
+        """
+
+@typing.final
+class RasterMode:
+    r"""
+    Raster engrave mode: how power is applied during raster scanning.
+    
+    - ``VARIABLE_POWER``: per-pixel 8-bit power (from power-modulated image)
+    - ``CONSTANT_POWER``: uniform power (from mask scans / dither lines)
+    - ``DEPTH_MAP``: stepped Z levels (from multi-pass image)
+    """
+    VARIABLE_POWER: RasterMode = RasterMode.VARIABLE_POWER
+    CONSTANT_POWER: RasterMode = RasterMode.CONSTANT_POWER
+    DEPTH_MAP: RasterMode = RasterMode.DEPTH_MAP
+    @property
+    def value(self) -> builtins.int:
+        r"""
+        The raw integer value of this raster mode.
+        """
+    @property
+    def name(self) -> builtins.str:
+        r"""
+        The uppercase name (``"VARIABLE_POWER"``, ``"CONSTANT_POWER"``, or ``"DEPTH_MAP"``).
+        """
+    def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
+    def __repr__(self) -> builtins.str:
+        r"""
+        String representation like ``RasterMode.VARIABLE_POWER``.
         """
 
 @typing.final
@@ -141,6 +178,38 @@ class SectionType:
         
         :complexity: O(1)
         """
+
+@typing.final
+class StateBlock:
+    r"""
+    A state block within an Ops section — delimits parameter-regime changes.
+    
+    Produced by :meth:`OpsSection.state_blocks`.
+    """
+    @property
+    def name(self) -> typing.Optional[builtins.str]:
+        r"""
+        Optional block name.
+        """
+    @property
+    def marker_indices(self) -> builtins.list[builtins.int]:
+        r"""
+        Indices of the marker commands (start/end) for this block.
+        """
+    @property
+    def content_indices(self) -> builtins.list[builtins.int]:
+        r"""
+        Indices of the content commands belonging to this block.
+        """
+    def content(self, ops: ops.Ops) -> ops.Ops:
+        r"""
+        Extract the content commands of this block from an Ops sequence.
+        
+        :param ops: The Ops sequence containing this block.
+        :returns: A new Ops containing only the content of this block.
+        :complexity: O(n) time, O(n) space
+        """
+    def __repr__(self) -> builtins.str: ...
 
 def category(ct: CommandType) -> CommandCategory:
     r"""

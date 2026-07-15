@@ -11,7 +11,10 @@ pub fn without_state(ops: &Ops) -> Ops {
     result
 }
 
-pub fn group_by_state_continuity(ops: &Ops) -> Vec<Ops> {
+/// Groups by continuity of auxiliary state (coolant, air_assist,
+/// head_coolant) only. For full parameter-regime grouping, use
+/// `StateBlockStart`/`StateBlockEnd` markers.
+pub fn group_by_auxiliary_state(ops: &Ops) -> Vec<Ops> {
     if ops.is_empty() {
         return Vec::new();
     }
