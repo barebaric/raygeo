@@ -2238,8 +2238,10 @@ impl PyOps {
                 *e = Point3D::new(new_end[0], new_end[1], new_end[2]);
             }
 
-            if !ea_arg.is_empty() {
-                let ea_vec = py_to_axis_map(&ea_arg)?;
+            let ea_vec = py_to_axis_map(&ea_arg)?;
+            if ea_vec.is_empty() {
+                self.inner.commands[i].clear_extra_axes();
+            } else {
                 self.inner.commands[i]
                     .set_extra_axes(std::sync::Arc::from(ea_vec));
             }

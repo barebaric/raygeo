@@ -578,4 +578,8 @@ impl OpNode {
     pub fn set_extra_axes(&mut self, ea: Arc<[(Axis, f64)]>) {
         self.extra_axes = Some(ea);
     }
+
+    pub fn clear_extra_axes(&mut self) {
+        self.extra_axes = None;
+    }
 }

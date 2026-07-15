@@ -346,6 +346,19 @@ def test_transform_moving_extra_axes():
     assert ops.inspect(1).extra_axes == {Axis.A: 40.0}
 
 
+def test_transform_moving_empties_extra_axes():
+    ops = Ops()
+    ops.move_to(0.0, 0.0, extra={Axis.Y: 10.0})
+    ops.line_to(10.0, 10.0, extra={Axis.Y: 20.0})
+
+    def consume_y(end, extra):
+        extra.pop(Axis.Y, None)
+
+    ops.transform_moving(consume_y)
+    assert ops.inspect(0).extra_axes is None
+    assert ops.inspect(1).extra_axes is None
+
+
 def test_transform_moving_arc_center():
     ops = Ops()
     ops.arc_to(5.0, 0.0, 2.0, 3.0)
