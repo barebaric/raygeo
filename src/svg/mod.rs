@@ -170,7 +170,11 @@ fn svg_arc_center(
     let y1p2 = y1p * y1p;
     let num = rx2 * ry2 - rx2 * y1p2 - ry2 * x1p2;
     let den = rx2 * y1p2 + ry2 * x1p2;
-    let f = if den > 0.0 { (num.max(0.0) / den).sqrt() } else { 0.0 };
+    let f = if den > 0.0 {
+        (num.max(0.0) / den).sqrt()
+    } else {
+        0.0
+    };
     let f = if large == sweep { -f } else { f };
     let cxp = f * rx * y1p / ry;
     let cyp = -f * ry * x1p / rx;
