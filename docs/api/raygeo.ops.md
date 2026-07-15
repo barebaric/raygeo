@@ -25,10 +25,10 @@ structured form.
 ### `air_assist`
 
 ```python
-air_assist: Optional[str]
+air_assist: Optional[state.AirAssistMode]
 ```
 
-Air assist mode string, if a SetAirAssist command.
+Air assist mode, if a SetAirAssist command.
 
 ### `center_offset`
 
@@ -73,10 +73,10 @@ Second cubic-Bezier control point, if a Bezier command.
 ### `coolant`
 
 ```python
-coolant: Optional[str]
+coolant: Optional[state.CoolantMode]
 ```
 
-Coolant mode string, if a SetCoolant command.
+Coolant mode, if a SetCoolant command.
 
 ### `duration_ms`
 
@@ -121,10 +121,10 @@ Laser frequency (Hz), if a frequency-setting command.
 ### `head_coolant`
 
 ```python
-head_coolant: Optional[str]
+head_coolant: Optional[state.HeadCoolantMode]
 ```
 
-Head coolant mode string, if a SetHeadCoolant command.
+Head coolant mode, if a SetHeadCoolant command.
 
 ### `head_uid`
 
@@ -177,10 +177,10 @@ Rapid rate setting, if a SetRapidRate command.
 ### `section_type`
 
 ```python
-section_type: Optional[str]
+section_type: Optional[types.SectionType]
 ```
 
-Section type string (e.g. "VectorOutline", "RasterFill"), if a section marker.
+Section type, if a section marker.
 
 ### `spindle_rpm`
 
@@ -243,18 +243,18 @@ Return the number of scanline commands in the sequence.
 ### `air_assist()`
 
 ```python
-air_assist(idx: int) -> str
+air_assist(idx: int) -> state.AirAssistMode
 ```
 
 Get the air assist mode from a SetAirAssist command.
 
 **Raises:** `TypeError` — If the command is not a SetAirAssist.
 
-| Parameter    | Type  | Description                                |
-| ------------ | ----- | ------------------------------------------ |
-| `idx`        | `int` | Command index.                             |
-| _Returns_    | `str` | Air assist mode string (e.g. "Off", "On"). |
-| _Complexity_ |       | O(1) time, O(1) space                      |
+| Parameter    | Type                  | Description           |
+| ------------ | --------------------- | --------------------- |
+| `idx`        | `int`                 | Command index.        |
+| _Returns_    | `state.AirAssistMode` | The air assist mode.  |
+| _Complexity_ |                       | O(1) time, O(1) space |
 
 ### `apply_lead_in_out()`
 
@@ -571,18 +571,18 @@ Get the **CommandType** at the given index.
 ### `coolant()`
 
 ```python
-coolant(idx: int) -> str
+coolant(idx: int) -> state.CoolantMode
 ```
 
 Get the coolant mode from a SetCoolant command.
 
 **Raises:** `TypeError` — If the command is not a SetCoolant.
 
-| Parameter    | Type  | Description                                        |
-| ------------ | ----- | -------------------------------------------------- |
-| `idx`        | `int` | Command index.                                     |
-| _Returns_    | `str` | Coolant mode string (e.g. "Off", "Flood", "Mist"). |
-| _Complexity_ |       | O(1) time, O(1) space                              |
+| Parameter    | Type                | Description           |
+| ------------ | ------------------- | --------------------- |
+| `idx`        | `int`               | Command index.        |
+| _Returns_    | `state.CoolantMode` | The coolant mode.     |
+| _Complexity_ |                     | O(1) time, O(1) space |
 
 ### `copy()`
 
@@ -1094,18 +1094,18 @@ Group contiguous commands with the same state into separate Ops sequences.
 ### `head_coolant()`
 
 ```python
-head_coolant(idx: int) -> str
+head_coolant(idx: int) -> state.HeadCoolantMode
 ```
 
 Get the head coolant mode from a SetHeadCoolant command.
 
 **Raises:** `TypeError` — If the command is not a SetHeadCoolant.
 
-| Parameter    | Type  | Description                                  |
-| ------------ | ----- | -------------------------------------------- |
-| `idx`        | `int` | Command index.                               |
-| _Returns_    | `str` | Head coolant mode string (e.g. "Off", "On"). |
-| _Complexity_ |       | O(1) time, O(1) space                        |
+| Parameter    | Type                    | Description            |
+| ------------ | ----------------------- | ---------------------- |
+| `idx`        | `int`                   | Command index.         |
+| _Returns_    | `state.HeadCoolantMode` | The head coolant mode. |
+| _Complexity_ |                         | O(1) time, O(1) space  |
 
 ### `head_uid()`
 

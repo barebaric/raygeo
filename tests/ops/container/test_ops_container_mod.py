@@ -252,21 +252,21 @@ def test_set_coolant():
     ops = Ops()
     ops.set_coolant(CoolantMode.FLOOD)
     assert ops.command_type(0) == CommandType.SET_COOLANT
-    assert ops.coolant(0) == "Flood"
+    assert ops.coolant(0) == CoolantMode.FLOOD
 
 
 def test_set_air_assist():
     ops = Ops()
     ops.set_air_assist(AirAssistMode.ON)
     assert ops.command_type(0) == CommandType.SET_AIR_ASSIST
-    assert ops.air_assist(0) == "On"
+    assert ops.air_assist(0) == AirAssistMode.ON
 
 
 def test_set_head_coolant():
     ops = Ops()
     ops.set_head_coolant(HeadCoolantMode.ON)
     assert ops.command_type(0) == CommandType.SET_HEAD_COOLANT
-    assert ops.head_coolant(0) == "On"
+    assert ops.head_coolant(0) == HeadCoolantMode.ON
 
 
 def test_spindle_speed_and_coolant_inspect():
@@ -279,7 +279,7 @@ def test_spindle_speed_and_coolant_inspect():
     assert si.coolant is None
     ci = ops.inspect(1)
     assert ci.type_ == CommandType.SET_COOLANT
-    assert ci.coolant == "Mist"
+    assert ci.coolant == CoolantMode.MIST
     assert ci.spindle_rpm is None
 
 
@@ -732,9 +732,9 @@ def test_apply_state_full():
     assert ops.rate(1) == 1200
     assert ops.rate(2) == 4000
     assert ops.spindle_rpm(3) == 18000
-    assert ops.coolant(4) == "Flood"
-    assert ops.air_assist(5) == "On"
-    assert ops.head_coolant(6) == "On"
+    assert ops.coolant(4) == CoolantMode.FLOOD
+    assert ops.air_assist(5) == AirAssistMode.ON
+    assert ops.head_coolant(6) == HeadCoolantMode.ON
     assert ops.frequency(7) == 5000
     assert ops.pulse_width(8) == pytest.approx(12.5)
     assert ops.head_uid(9) == "head-1"
@@ -767,7 +767,7 @@ def test_apply_state_partial():
     assert ops.len() == 3
     assert ops.power(0) == pytest.approx(0.3)
     assert ops.rate(1) == 600
-    assert ops.coolant(2) == "Mist"
+    assert ops.coolant(2) == CoolantMode.MIST
 
 
 def test_apply_state_accumulates():

@@ -187,15 +187,15 @@ pub struct PyCommandInfo {
     /// Spindle RPM, if a SetSpindleRpm command.
     #[pyo3(get)]
     pub spindle_rpm: Option<u32>,
-    /// Coolant mode string, if a SetCoolant command.
+    /// Coolant mode, if a SetCoolant command.
     #[pyo3(get)]
-    pub coolant: Option<String>,
-    /// Air assist mode string, if a SetAirAssist command.
+    pub coolant: Option<PyCoolantMode>,
+    /// Air assist mode, if a SetAirAssist command.
     #[pyo3(get)]
-    pub air_assist: Option<String>,
-    /// Head coolant mode string, if a SetHeadCoolant command.
+    pub air_assist: Option<PyAirAssistMode>,
+    /// Head coolant mode, if a SetHeadCoolant command.
     #[pyo3(get)]
-    pub head_coolant: Option<String>,
+    pub head_coolant: Option<PyHeadCoolantMode>,
     /// Dwell duration in ms, if a dwell command.
     #[pyo3(get)]
     pub duration_ms: Option<f64>,
@@ -205,9 +205,9 @@ pub struct PyCommandInfo {
     /// Unique identifier of the active workpiece, if a workpiece-start command.
     #[pyo3(get)]
     pub workpiece_uid: Option<String>,
-    /// Section type string (e.g. "VectorOutline", "RasterFill"), if a section marker.
+    /// Section type, if a section marker.
     #[pyo3(get)]
-    pub section_type: Option<String>,
+    pub section_type: Option<PySectionType>,
 }
 
 #[gen_stub_pymethods]
@@ -873,10 +873,10 @@ impl PyOps {
     /// Get the coolant mode from a SetCoolant command.
     ///
     /// :param idx: Command index.
-    /// :returns: Coolant mode string (e.g. "Off", "Flood", "Mist").
+    /// :returns: The coolant mode.
     /// :raises TypeError: If the command is not a SetCoolant.
     /// :complexity: O(1) time, O(1) space
-    fn coolant(&self, idx: usize) -> PyResult<String> {
+    fn coolant(&self, idx: usize) -> PyResult<PyCoolantMode> {
         if idx >= self.inner.len() {
             return Err(PyErr::new::<pyo3::exceptions::PyIndexError, _>(
                 "index out of range",
@@ -885,7 +885,7 @@ impl PyOps {
         if let OpCategory::State(StateCmd::SetCoolant(mode)) =
             &self.inner.commands[idx].category
         {
-            Ok(format!("{:?}", mode))
+            Ok(PyCoolantMode(*mode))
         } else {
             Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
                 "Not a SetCoolantCommand",
@@ -896,10 +896,10 @@ impl PyOps {
     /// Get the air assist mode from a SetAirAssist command.
     ///
     /// :param idx: Command index.
-    /// :returns: Air assist mode string (e.g. "Off", "On").
+    /// :returns: The air assist mode.
     /// :raises TypeError: If the command is not a SetAirAssist.
     /// :complexity: O(1) time, O(1) space
-    fn air_assist(&self, idx: usize) -> PyResult<String> {
+    fn air_assist(&self, idx: usize) -> PyResult<PyAirAssistMode> {
         if idx >= self.inner.len() {
             return Err(PyErr::new::<pyo3::exceptions::PyIndexError, _>(
                 "index out of range",
@@ -908,7 +908,7 @@ impl PyOps {
         if let OpCategory::State(StateCmd::SetAirAssist(mode)) =
             &self.inner.commands[idx].category
         {
-            Ok(format!("{:?}", mode))
+            Ok(PyAirAssistMode(*mode))
         } else {
             Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
                 "Not a SetAirAssistCommand",
@@ -919,10 +919,10 @@ impl PyOps {
     /// Get the head coolant mode from a SetHeadCoolant command.
     ///
     /// :param idx: Command index.
-    /// :returns: Head coolant mode string (e.g. "Off", "On").
+    /// :returns: The head coolant mode.
     /// :raises TypeError: If the command is not a SetHeadCoolant.
     /// :complexity: O(1) time, O(1) space
-    fn head_coolant(&self, idx: usize) -> PyResult<String> {
+    fn head_coolant(&self, idx: usize) -> PyResult<PyHeadCoolantMode> {
         if idx >= self.inner.len() {
             return Err(PyErr::new::<pyo3::exceptions::PyIndexError, _>(
                 "index out of range",
@@ -931,7 +931,7 @@ impl PyOps {
         if let OpCategory::State(StateCmd::SetHeadCoolant(mode)) =
             &self.inner.commands[idx].category
         {
-            Ok(format!("{:?}", mode))
+            Ok(PyHeadCoolantMode(*mode))
         } else {
             Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
                 "Not a SetHeadCoolantCommand",
@@ -1778,13 +1778,13 @@ impl PyOps {
                 StateCmd::SetPulseWidth(pw) => info.pulse_width = Some(*pw),
                 StateCmd::SetSpindleRpm(s) => info.spindle_rpm = Some(*s),
                 StateCmd::SetCoolant(mode) => {
-                    info.coolant = Some(format!("{:?}", mode))
+                    info.coolant = Some(PyCoolantMode(*mode))
                 }
                 StateCmd::SetAirAssist(mode) => {
-                    info.air_assist = Some(format!("{:?}", mode))
+                    info.air_assist = Some(PyAirAssistMode(*mode))
                 }
                 StateCmd::SetHeadCoolant(mode) => {
-                    info.head_coolant = Some(format!("{:?}", mode))
+                    info.head_coolant = Some(PyHeadCoolantMode(*mode))
                 }
                 StateCmd::SetHead(uid) => info.head_uid = Some(uid.to_string()),
                 StateCmd::Dwell(d) => info.duration_ms = Some(*d),
@@ -1801,13 +1801,13 @@ impl PyOps {
                     section_type,
                     workpiece_uid,
                 } => {
-                    info.section_type = Some(format!("{:?}", section_type));
+                    info.section_type = Some(PySectionType(*section_type));
                     if let Some(wp) = workpiece_uid {
                         info.workpiece_uid = Some(wp.to_string());
                     }
                 }
                 MarkerCmd::OpsSectionEnd { section_type, .. } => {
-                    info.section_type = Some(format!("{:?}", section_type));
+                    info.section_type = Some(PySectionType(*section_type));
                 }
                 _ => {}
             },

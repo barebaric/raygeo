@@ -80,7 +80,14 @@ impl SweepCache {
 
     /// Insert a result, evicting the LRU entry if full.
     #[inline]
-    fn insert(&mut self, c1: Point, c2: Point, radius: f64, total: f64, left: f64) {
+    fn insert(
+        &mut self,
+        c1: Point,
+        c2: Point,
+        radius: f64,
+        total: f64,
+        left: f64,
+    ) {
         // Try to find an empty slot first.
         let slot = self.entries.iter_mut().find(|e| !e.valid);
         let slot = match slot {
@@ -1028,7 +1035,10 @@ impl ClearedArea {
 
         let (total, left) = crescent::cut_area(c1, c2, radius, &nearby, &[]);
 
-        self.sweep_cache.lock().unwrap().insert(c1, c2, radius, total, left);
+        self.sweep_cache
+            .lock()
+            .unwrap()
+            .insert(c1, c2, radius, total, left);
 
         (total, left)
     }
