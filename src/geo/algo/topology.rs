@@ -6,6 +6,8 @@
 //! Also provides contour analysis functions like reverse_contour,
 //! normalize_winding_orders, filter_to_external_contours, etc.
 
+use rstar::{RTree, RTreeObject, AABB};
+
 use crate::geo::algo::analysis::{get_subpath_area_from_array, is_closed};
 use crate::geo::geometry::Geometry;
 use crate::geo::shape::polygon::is_point_inside_polygon;
@@ -112,6 +114,22 @@ impl ContourHierarchy {
     }
 }
 
+/// Wrapper for contour bounding boxes, used to build an R-tree spatial index.
+struct ContourEnvelope {
+    index: usize,
+    rect: Rect,
+}
+
+impl RTreeObject for ContourEnvelope {
+    type Envelope = AABB<[f64; 2]>;
+    fn envelope(&self) -> Self::Envelope {
+        AABB::from_corners(
+            [self.rect.min.x, self.rect.min.y],
+            [self.rect.max.x, self.rect.max.y],
+        )
+    }
+}
+
 /// Build a containment hierarchy from a list of geometries.
 pub fn build_hierarchy(contours: &[&Geometry]) -> ContourHierarchy {
     let count = contours.len();
@@ -161,6 +179,19 @@ pub fn build_hierarchy(contours: &[&Geometry]) -> ContourHierarchy {
     let mut nesting_depths = vec![-1i32; count];
     let mut parent_map = vec![-1isize; count];
 
+    // Build R-tree over contour bounding boxes for efficient containment queries.
+    let envelopes: Vec<ContourEnvelope> = info
+        .iter()
+        .enumerate()
+        .filter_map(|(i, ci)| {
+            ci.as_ref().map(|c| ContourEnvelope {
+                index: i,
+                rect: c.rect,
+            })
+        })
+        .collect();
+    let rtree = RTree::bulk_load(envelopes);
+
     for (i, info_i) in info.iter().enumerate() {
         let current = match info_i {
             Some(ci) => ci,
@@ -170,25 +201,19 @@ pub fn build_hierarchy(contours: &[&Geometry]) -> ContourHierarchy {
         let mut depth = 0i32;
         let mut best_parent: isize = -1;
         let mut best_parent_area = f64::INFINITY;
-        let tx = current.test_point.x;
-        let ty = current.test_point.y;
+        let tp = [current.test_point.x, current.test_point.y];
 
-        for (j, info_j) in info.iter().enumerate() {
+        // O(log n + k) query: only check contours whose bounding boxes contain the test point.
+        let point_envelope = AABB::from_point(tp);
+        for candidate in rtree.locate_in_envelope_intersecting(&point_envelope) {
+            let j = candidate.index;
             if i == j {
                 continue;
             }
-            let other = match info_j {
+            let other = match &info[j] {
                 Some(ci) => ci,
                 None => continue,
             };
-
-            if tx < other.rect.min.x
-                || tx > other.rect.max.x
-                || ty < other.rect.min.y
-                || ty > other.rect.max.y
-            {
-                continue;
-            }
 
             if is_point_inside_polygon(current.test_point, &other.vertices) {
                 depth += 1;
