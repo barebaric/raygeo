@@ -82,6 +82,28 @@ def test_generate_material_test_grid_speed_vs_passes():
     assert result.ops.len() > 0
 
 
+def test_generate_material_test_grid_speed_vs_offset():
+    result = generate_material_test_grid(
+        size_mm=(200.0, 200.0),
+        grid_mode="Speed vs Offset",
+        cols=3,
+        rows=3,
+    )
+    assert result.ops.len() > 0
+
+
+def test_generate_material_test_grid_speed_vs_offset_custom_range():
+    result = generate_material_test_grid(
+        size_mm=(200.0, 200.0),
+        grid_mode="Speed vs Offset",
+        cols=2,
+        rows=2,
+        min_offset=-1.0,
+        max_offset=1.0,
+    )
+    assert result.ops.len() > 0
+
+
 def test_generate_material_test_grid_single_cell():
     """1x1 grid still produces ops."""
     result = generate_material_test_grid(

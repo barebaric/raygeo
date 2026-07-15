@@ -20,6 +20,8 @@ pub(super) fn build_attrs(params: &MaterialTestGridParams) -> Meta {
     tu::meta_insert_f64(&mut attrs, "max_power", params.max_power);
     tu::meta_insert_u32(&mut attrs, "min_passes", params.min_passes);
     tu::meta_insert_u32(&mut attrs, "max_passes", params.max_passes);
+    tu::meta_insert_f64(&mut attrs, "min_offset", params.min_offset);
+    tu::meta_insert_f64(&mut attrs, "max_offset", params.max_offset);
     tu::meta_insert_f64(&mut attrs, "shape_size", params.shape_size);
     tu::meta_insert_f64(&mut attrs, "spacing", params.spacing);
     tu::meta_insert_f64(

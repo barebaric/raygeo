@@ -109,6 +109,17 @@ def test_material_grid_trace_attrs_have_power_range():
     assert attrs["max_power"] == 80.0
 
 
+def test_material_grid_trace_attrs_have_offset_range():
+    result = _run_grid(
+        grid_mode="Speed vs Offset", min_offset=-1.0, max_offset=1.0
+    )
+    trace = result.trace
+    assert trace is not None
+    attrs = trace["attrs"]
+    assert attrs["min_offset"] == -1.0
+    assert attrs["max_offset"] == 1.0
+
+
 def test_material_grid_trace_attrs_have_mode():
     result = _run_grid(mode="cut")
     trace = result.trace
@@ -185,6 +196,63 @@ def test_material_grid_total_cells_in_init():
     assert len(init_events) == 1
     meta = init_events[0]["meta"]
     assert meta["total_cells"] == 12  # 3 * 4
+
+
+# ── Speed vs Offset mode ──────────────────────────────────────────
+
+
+def test_material_grid_speed_vs_offset_power_scales_with_speed():
+    """Power should scale up with speed so darkness stays comparable."""
+    result = _run_grid(
+        cols=3,
+        rows=1,
+        grid_mode="Speed vs Offset",
+        min_speed=500.0,
+        max_speed=1500.0,
+        fixed_power=20.0,
+    )
+    trace = result.trace
+    assert trace is not None
+    cuts = [
+        e
+        for e in trace["events"]
+        if e["kind"] == "move"
+        and e.get("move_kind") == "cut"
+        and e.get("meta")
+    ]
+    by_col = {}
+    for e in cuts:
+        by_col.setdefault(e["meta"]["col"], e["meta"])
+    assert by_col[0]["power"] == 20.0
+    assert by_col[2]["power"] > by_col[0]["power"]
+
+
+def test_material_grid_speed_vs_offset_shifts_geometry_by_row():
+    """Each row's cut geometry should shift in X by its offset value."""
+    result = _run_grid(
+        cols=1,
+        rows=3,
+        grid_mode="Speed vs Offset",
+        min_offset=-0.5,
+        max_offset=0.5,
+        shape_size=20.0,
+    )
+    trace = result.trace
+    assert trace is not None
+    cuts = [
+        e
+        for e in trace["events"]
+        if e["kind"] == "move"
+        and e.get("move_kind") == "cut"
+        and e.get("meta")
+    ]
+    min_x_by_row = {}
+    for e in cuts:
+        row = e["meta"]["row"]
+        x = e["tool"]["pos_x"]
+        min_x_by_row[row] = min(min_x_by_row.get(row, x), x)
+    # min_offset -> max_offset across rows 0..2 spans 1.0mm total.
+    assert abs((min_x_by_row[2] - min_x_by_row[0]) - 1.0) < 1e-6
 
 
 # ── step_idx monotonicity ─────────────────────────────────────────

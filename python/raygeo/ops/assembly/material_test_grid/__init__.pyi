@@ -8,7 +8,7 @@ __all__ = [
     "generate_material_test_grid_preview",
 ]
 
-def generate_material_test_grid(size_mm: tuple[float, float], cols: int = 5, rows: int = 5, min_speed: float = 100, max_speed: float = 500, min_power: float = 10, max_power: float = 100, min_passes: int = 1, max_passes: int = 5, fixed_speed: float = 1000, fixed_power: float = 50, shape_size: float = 10, spacing: float = 2, line_interval_mm: float = 0.1, mode: str = 'engrave', grid_mode: str = 'Power vs Speed', include_labels: bool = True) -> raygeo.ops.assembly.AssemblyResult:
+def generate_material_test_grid(size_mm: tuple[float, float], cols: int = 5, rows: int = 5, min_speed: float = 100, max_speed: float = 500, min_power: float = 10, max_power: float = 100, min_passes: int = 1, max_passes: int = 5, fixed_speed: float = 1000, fixed_power: float = 50, shape_size: float = 10, spacing: float = 2, line_interval_mm: float = 0.1, mode: str = 'engrave', grid_mode: str = 'Power vs Speed', include_labels: bool = True, min_offset: float = -0.5, max_offset: float = 0.5) -> raygeo.ops.assembly.AssemblyResult:
     r"""
     Generate a material test grid with varying speed and power.
     
@@ -32,13 +32,17 @@ def generate_material_test_grid(size_mm: tuple[float, float], cols: int = 5, row
     :param spacing: Spacing between cells in mm (default 2.0).
     :param line_interval_mm: Line spacing for engrave mode (default 0.1).
     :param mode: "engrave" or "cut" (default "engrave").
-    :param grid_mode: "Power vs Speed", "Power vs Passes", or "Speed vs Passes"
-                     (default "Power vs Speed").
+    :param grid_mode: "Power vs Speed", "Power vs Passes", "Speed vs Passes",
+                     or "Speed vs Offset" (default "Power vs Speed").
     :param include_labels: Generate text labels (default True).
+    :param min_offset: Minimum bidirectional scan offset in mm for
+                     Speed vs Offset mode (default -0.5).
+    :param max_offset: Maximum bidirectional scan offset in mm for
+                     Speed vs Offset mode (default 0.5).
     :returns: An :class:`AssemblyResult` with grid cell paths and labels.
     """
 
-def generate_material_test_grid_preview(size_mm: tuple[float, float], dpi: float = 96, cols: int = 5, rows: int = 5, min_speed: float = 100, max_speed: float = 500, min_power: float = 10, max_power: float = 100, min_passes: int = 1, max_passes: int = 5, fixed_speed: float = 1000, fixed_power: float = 50, shape_size: float = 10, spacing: float = 2, line_interval_mm: float = 0.1, mode: str = 'engrave', grid_mode: str = 'Power vs Speed', include_labels: bool = True) -> numpy.ndarray:
+def generate_material_test_grid_preview(size_mm: tuple[float, float], dpi: float = 96, cols: int = 5, rows: int = 5, min_speed: float = 100, max_speed: float = 500, min_power: float = 10, max_power: float = 100, min_passes: int = 1, max_passes: int = 5, fixed_speed: float = 1000, fixed_power: float = 50, shape_size: float = 10, spacing: float = 2, line_interval_mm: float = 0.1, mode: str = 'engrave', grid_mode: str = 'Power vs Speed', include_labels: bool = True, min_offset: float = -0.5, max_offset: float = 0.5) -> numpy.ndarray:
     r"""
     Generate a raster preview of the material test grid.
     
@@ -61,9 +65,13 @@ def generate_material_test_grid_preview(size_mm: tuple[float, float], dpi: float
     :param spacing: Spacing between cells in mm (default 2.0).
     :param line_interval_mm: Line spacing for engrave mode (default 0.1).
     :param mode: "engrave" or "cut" (default "engrave").
-    :param grid_mode: "Power vs Speed", "Power vs Passes", or "Speed vs Passes"
-                     (default "Power vs Speed").
+    :param grid_mode: "Power vs Speed", "Power vs Passes", "Speed vs Passes",
+                     or "Speed vs Offset" (default "Power vs Speed").
     :param include_labels: Generate text labels (default True).
+    :param min_offset: Minimum bidirectional scan offset in mm for
+                     Speed vs Offset mode (default -0.5).
+    :param max_offset: Maximum bidirectional scan offset in mm for
+                     Speed vs Offset mode (default 0.5).
     :returns: A (H, W, 4) RGBA uint8 numpy array.
     """
 
