@@ -32,6 +32,8 @@ pub(super) fn build_attrs(params: &MaterialTestGridParams) -> Meta {
     attrs.insert("mode".into(), MetaValue::Str(params.mode.clone()));
     attrs.insert("grid_mode".into(), MetaValue::Str(params.grid_mode.clone()));
     tu::meta_insert_bool(&mut attrs, "include_labels", params.include_labels);
+    tu::meta_insert_f64(&mut attrs, "label_power", params.label_power);
+    tu::meta_insert_i64(&mut attrs, "label_speed", params.label_speed as i64);
     attrs
 }
 

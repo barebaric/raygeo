@@ -36,6 +36,10 @@ pub struct MaterialTestGridParams {
     pub grid_mode: String,
     /// Whether to generate text labels (column headers, row labels, axis titles).
     pub include_labels: bool,
+    /// Power for label engraving (0.0–1.0). Default 0.1 (10%).
+    pub label_power: f64,
+    /// Feed rate for label engraving in mm/min. Default 1000.
+    pub label_speed: i32,
 }
 
 /// Generate a material test grid with varying speed and power settings.
@@ -161,7 +165,10 @@ pub fn generate_material_test_grid(
                         ..
                     } => (*end, true),
                     OpCategory::Moving { end, .. } => (*end, false),
-                    _ => continue,
+                    _ => {
+                        trace.push_raw(node);
+                        continue;
+                    }
                 };
                 let tool = trace_helpers::tool_snapshot(end, prev);
                 prev = end;
@@ -436,8 +443,8 @@ fn generate_labels(
     let title_font =
         FontConfig::new("sans-serif", axis_font_mm / pt_to_mm).bold(true);
 
-    ops.set_power(0.3);
-    ops.set_feed_rate(1000);
+    ops.set_power(params.label_power);
+    ops.set_feed_rate(params.label_speed);
 
     // Determine column/row range descriptors (axis titles match the
     // original rayforge producer exactly).

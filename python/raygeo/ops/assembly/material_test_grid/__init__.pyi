@@ -8,7 +8,7 @@ __all__ = [
     "generate_material_test_grid_preview",
 ]
 
-def generate_material_test_grid(size_mm: tuple[float, float], cols: int = 5, rows: int = 5, min_speed: float = 100, max_speed: float = 500, min_power: float = 10, max_power: float = 100, min_passes: int = 1, max_passes: int = 5, fixed_speed: float = 1000, fixed_power: float = 50, shape_size: float = 10, spacing: float = 2, line_interval_mm: float = 0.1, mode: str = 'engrave', grid_mode: str = 'Power vs Speed', include_labels: bool = True, min_offset: float = -0.5, max_offset: float = 0.5) -> raygeo.ops.assembly.AssemblyResult:
+def generate_material_test_grid(size_mm: tuple[float, float], cols: int = 5, rows: int = 5, min_speed: float = 100, max_speed: float = 500, min_power: float = 10, max_power: float = 100, min_passes: int = 1, max_passes: int = 5, fixed_speed: float = 1000, fixed_power: float = 50, shape_size: float = 10, spacing: float = 2, line_interval_mm: float = 0.1, mode: str = 'engrave', grid_mode: str = 'Power vs Speed', include_labels: bool = True, label_power_percent: float = 10.0, label_speed: float = 1000.0, min_offset: float = -0.5, max_offset: float = 0.5) -> raygeo.ops.assembly.AssemblyResult:
     r"""
     Generate a material test grid with varying speed and power.
     
@@ -35,6 +35,8 @@ def generate_material_test_grid(size_mm: tuple[float, float], cols: int = 5, row
     :param grid_mode: "Power vs Speed", "Power vs Passes", "Speed vs Passes",
                      or "Speed vs Offset" (default "Power vs Speed").
     :param include_labels: Generate text labels (default True).
+    :param label_power_percent: Power for label engraving in percent (default 10.0).
+    :param label_speed: Feed rate for label engraving in mm/min (default 1000.0).
     :param min_offset: Minimum bidirectional scan offset in mm for
                      Speed vs Offset mode (default -0.5).
     :param max_offset: Maximum bidirectional scan offset in mm for
@@ -42,7 +44,7 @@ def generate_material_test_grid(size_mm: tuple[float, float], cols: int = 5, row
     :returns: An :class:`AssemblyResult` with grid cell paths and labels.
     """
 
-def generate_material_test_grid_preview(size_mm: tuple[float, float], dpi: float = 96, cols: int = 5, rows: int = 5, min_speed: float = 100, max_speed: float = 500, min_power: float = 10, max_power: float = 100, min_passes: int = 1, max_passes: int = 5, fixed_speed: float = 1000, fixed_power: float = 50, shape_size: float = 10, spacing: float = 2, line_interval_mm: float = 0.1, mode: str = 'engrave', grid_mode: str = 'Power vs Speed', include_labels: bool = True, min_offset: float = -0.5, max_offset: float = 0.5) -> numpy.ndarray:
+def generate_material_test_grid_preview(size_mm: tuple[float, float], dpi: float = 96, cols: int = 5, rows: int = 5, min_speed: float = 100, max_speed: float = 500, min_power: float = 10, max_power: float = 100, min_passes: int = 1, max_passes: int = 5, fixed_speed: float = 1000, fixed_power: float = 50, shape_size: float = 10, spacing: float = 2, line_interval_mm: float = 0.1, mode: str = 'engrave', grid_mode: str = 'Power vs Speed', include_labels: bool = True, label_power_percent: float = 10.0, label_speed: float = 1000.0, min_offset: float = -0.5, max_offset: float = 0.5) -> numpy.ndarray:
     r"""
     Generate a raster preview of the material test grid.
     
@@ -68,6 +70,8 @@ def generate_material_test_grid_preview(size_mm: tuple[float, float], dpi: float
     :param grid_mode: "Power vs Speed", "Power vs Passes", "Speed vs Passes",
                      or "Speed vs Offset" (default "Power vs Speed").
     :param include_labels: Generate text labels (default True).
+    :param label_power_percent: Power for label engraving in percent (default 10.0).
+    :param label_speed: Feed rate for label engraving in mm/min (default 1000.0).
     :param min_offset: Minimum bidirectional scan offset in mm for
                      Speed vs Offset mode (default -0.5).
     :param max_offset: Maximum bidirectional scan offset in mm for

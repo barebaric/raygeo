@@ -51,6 +51,8 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         mode: str = "engrave",
         grid_mode: str = "Power vs Speed",
         include_labels: bool = True,
+        label_power_percent: float = 10.0,
+        label_speed: float = 1000.0,
         min_offset: float = -0.5,
         max_offset: float = 0.5,
     ) -> raygeo.ops.assembly.AssemblyResult:
@@ -79,6 +81,8 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         :param grid_mode: "Power vs Speed", "Power vs Passes", "Speed vs Passes",
                          or "Speed vs Offset" (default "Power vs Speed").
         :param include_labels: Generate text labels (default True).
+        :param label_power_percent: Power for label engraving in percent (default 10.0).
+        :param label_speed: Feed rate for label engraving in mm/min (default 1000.0).
         :param min_offset: Minimum bidirectional scan offset in mm for
                          Speed vs Offset mode (default -0.5).
         :param max_offset: Maximum bidirectional scan offset in mm for
@@ -108,6 +112,8 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     mode = "engrave",
     grid_mode = "Power vs Speed",
     include_labels = true,
+    label_power_percent = 10.0,
+    label_speed = 1000.0,
     min_offset = -0.5,
     max_offset = 0.5,
 ))]
@@ -129,6 +135,8 @@ fn generate_material_test_grid_py(
     mode: &str,
     grid_mode: &str,
     include_labels: bool,
+    label_power_percent: f64,
+    label_speed: f64,
     min_offset: f64,
     max_offset: f64,
 ) -> PyResult<PyAssemblyResult> {
@@ -149,6 +157,8 @@ fn generate_material_test_grid_py(
         mode: mode.to_string(),
         grid_mode: grid_mode.to_string(),
         include_labels,
+        label_power: label_power_percent / 100.0,
+        label_speed: label_speed as i32,
         min_offset,
         max_offset,
     };
@@ -190,6 +200,8 @@ fn generate_material_test_grid_py(
         mode: str = "engrave",
         grid_mode: str = "Power vs Speed",
         include_labels: bool = True,
+        label_power_percent: float = 10.0,
+        label_speed: float = 1000.0,
         min_offset: float = -0.5,
         max_offset: float = 0.5,
     ) -> numpy.ndarray:
@@ -217,6 +229,8 @@ fn generate_material_test_grid_py(
         :param grid_mode: "Power vs Speed", "Power vs Passes", "Speed vs Passes",
                          or "Speed vs Offset" (default "Power vs Speed").
         :param include_labels: Generate text labels (default True).
+        :param label_power_percent: Power for label engraving in percent (default 10.0).
+        :param label_speed: Feed rate for label engraving in mm/min (default 1000.0).
         :param min_offset: Minimum bidirectional scan offset in mm for
                          Speed vs Offset mode (default -0.5).
         :param max_offset: Maximum bidirectional scan offset in mm for
@@ -247,6 +261,8 @@ fn generate_material_test_grid_py(
     mode = "engrave",
     grid_mode = "Power vs Speed",
     include_labels = true,
+    label_power_percent = 10.0,
+    label_speed = 1000.0,
     min_offset = -0.5,
     max_offset = 0.5,
 ))]
@@ -270,6 +286,8 @@ fn generate_material_test_grid_preview_py(
     mode: &str,
     grid_mode: &str,
     include_labels: bool,
+    label_power_percent: f64,
+    label_speed: f64,
     min_offset: f64,
     max_offset: f64,
 ) -> PyResult<Py<PyAny>> {
@@ -290,6 +308,8 @@ fn generate_material_test_grid_preview_py(
         mode: mode.to_string(),
         grid_mode: grid_mode.to_string(),
         include_labels,
+        label_power: label_power_percent / 100.0,
+        label_speed: label_speed as i32,
         min_offset,
         max_offset,
     };
