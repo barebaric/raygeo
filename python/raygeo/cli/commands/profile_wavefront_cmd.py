@@ -26,7 +26,6 @@ def _add_scenario_args(p):
         default=None,
         help="Path to SVG file. Overrides --scenario.",
     )
-    p.add_argument("--tool-radius", type=float, default=None)
     p.add_argument("--step-over", type=float, default=None)
     p.add_argument("--area-tolerance", type=float, default=None)
     p.add_argument("--offset", type=float, default=None)

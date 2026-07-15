@@ -9,6 +9,13 @@ from raygeo.geo.shape.polygon import (
 )
 from raygeo.ops.feature.region import find_regions
 
+
+def _opt(args, name, default=None):
+    """Return ``getattr(args, name)`` or *default* when missing / ``None``."""
+    val = getattr(args, name, None)
+    return val if val is not None else default
+
+
 # ── Helper geometry functions ────────────────────────────────────
 
 
@@ -227,17 +234,36 @@ def run_entry(scenario):
     return None, seed_polys
 
 
+def _apply_scenario_overrides(scenario, args):
+    """Apply optional CLI overrides to *scenario*."""
+    for field in (
+        "tool_radius",
+        "advance",
+        "step_over",
+        "cut_z",
+        "safe_z",
+        "area_tolerance",
+        "step_length",
+        "max_deflection_deg",
+        "wall_margin",
+    ):
+        val = _opt(args, field)
+        if val is not None:
+            scenario = dataclasses.replace(scenario, **{field: val})
+    return scenario
+
+
 def build_scenario(args):
     """Build (scenario, seed_polys, entry_ops) from parsed CLI args."""
     if args.svg:
         scenario = scenario_from_svg(
             args.svg,
-            tool_radius=args.tool_radius,
-            advance=args.advance,
-            step_over=args.step_over,
-            cut_z=args.cut_z,
-            safe_z=args.safe_z,
-            area_tolerance=args.area_tolerance,
+            tool_radius=_opt(args, "tool_radius", 3.0),
+            advance=_opt(args, "advance", 1.5),
+            step_over=_opt(args, "step_over", 2.0),
+            cut_z=_opt(args, "cut_z", -5.0),
+            safe_z=_opt(args, "safe_z", 2.0),
+            area_tolerance=_opt(args, "area_tolerance", 1.0),
         )
         entry_ops, seed_polys = run_entry(scenario)
         print(
@@ -246,36 +272,7 @@ def build_scenario(args):
         )
 
     elif args.scenario == "centre-island":
-        scenario = SCENARIOS["centre-island"]
-        if args.tool_radius is not None:
-            scenario = dataclasses.replace(
-                scenario, tool_radius=args.tool_radius
-            )
-        if args.advance is not None:
-            scenario = dataclasses.replace(scenario, advance=args.advance)
-        if args.step_over is not None:
-            scenario = dataclasses.replace(scenario, step_over=args.step_over)
-        if args.cut_z is not None:
-            scenario = dataclasses.replace(scenario, cut_z=args.cut_z)
-        if args.safe_z is not None:
-            scenario = dataclasses.replace(scenario, safe_z=args.safe_z)
-        if args.area_tolerance is not None:
-            scenario = dataclasses.replace(
-                scenario, area_tolerance=args.area_tolerance
-            )
-        if args.step_length is not None:
-            scenario = dataclasses.replace(
-                scenario, step_length=args.step_length
-            )
-        if args.max_deflection_deg is not None:
-            scenario = dataclasses.replace(
-                scenario, max_deflection_deg=args.max_deflection_deg
-            )
-        if args.wall_margin is not None:
-            scenario = dataclasses.replace(
-                scenario, wall_margin=args.wall_margin
-            )
-
+        scenario = _apply_scenario_overrides(SCENARIOS["centre-island"], args)
         seed_polys = [circle_polygon(-13.7, 13.7, 12.2, 64)]
         entry_ops = None
         print(
@@ -284,24 +281,9 @@ def build_scenario(args):
         )
 
     elif args.scenario == "trace-with-islands":
-        scenario = SCENARIOS["trace-with-islands"]
-        if args.tool_radius is not None:
-            scenario = dataclasses.replace(
-                scenario, tool_radius=args.tool_radius
-            )
-        if args.advance is not None:
-            scenario = dataclasses.replace(scenario, advance=args.advance)
-        if args.step_over is not None:
-            scenario = dataclasses.replace(scenario, step_over=args.step_over)
-        if args.cut_z is not None:
-            scenario = dataclasses.replace(scenario, cut_z=args.cut_z)
-        if args.safe_z is not None:
-            scenario = dataclasses.replace(scenario, safe_z=args.safe_z)
-        if args.area_tolerance is not None:
-            scenario = dataclasses.replace(
-                scenario, area_tolerance=args.area_tolerance
-            )
-
+        scenario = _apply_scenario_overrides(
+            SCENARIOS["trace-with-islands"], args
+        )
         seed_polys = [circle_polygon(0, 0, 5, 32)]
         entry_ops = None
         print(
@@ -315,22 +297,7 @@ def build_scenario(args):
                 f"Unknown scenario: {args.scenario}. "
                 f"Available: {', '.join(SCENARIOS)}"
             )
-        if args.tool_radius is not None:
-            scenario = dataclasses.replace(
-                scenario, tool_radius=args.tool_radius
-            )
-        if args.advance is not None:
-            scenario = dataclasses.replace(scenario, advance=args.advance)
-        if args.step_over is not None:
-            scenario = dataclasses.replace(scenario, step_over=args.step_over)
-        if args.cut_z is not None:
-            scenario = dataclasses.replace(scenario, cut_z=args.cut_z)
-        if args.safe_z is not None:
-            scenario = dataclasses.replace(scenario, safe_z=args.safe_z)
-        if args.area_tolerance is not None:
-            scenario = dataclasses.replace(
-                scenario, area_tolerance=args.area_tolerance
-            )
+        scenario = _apply_scenario_overrides(scenario, args)
 
         # Use a small interior seed so adaptive clearing has room to
         # spiral outward.  The envelope seed from run_entry would
