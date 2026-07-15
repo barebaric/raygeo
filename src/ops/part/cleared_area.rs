@@ -19,18 +19,122 @@ use crate::geo::shape::polygon::{
 };
 use crate::types::{Point, Polygon, Rect};
 
-/// Single-entry cache for [`ClearedArea::cut_area_split`].
+/// Small LRU cache for [`ClearedArea::cut_area_split`].
 ///
-/// During a step evaluation the same `(c1, c2, radius)` triple is
-/// queried many times (once the angle converges).  Because fragments
-/// are immutable between commits, a single-entry cache avoids
-/// redundant `prepare_sweep` + `sweep_area` calls.
+/// During a step evaluation the stepper probes 6-7 different angles
+/// (varying `c2`), and adjacent steps often probe overlapping angle
+/// ranges.  A single-entry cache only catches repeated hits on the
+/// converged angle; a small multi-entry cache also catches adjacent
+/// steps that revisit nearby angles.
+///
+/// Uses a fixed-size array with a monotonically increasing generation
+/// counter per entry to avoid `HashMap` overhead.
 struct SweepCache {
+    entries: [SweepEntry; 8],
+    /// The generation counter is bumped on every insertion.  The entry
+    /// with the lowest generation is evicted on a miss.
+    gen: u64,
+}
+
+struct SweepEntry {
     c1: Point,
     c2: Point,
     radius: f64,
     total: f64,
     left: f64,
+    generation: u64,
+    valid: bool,
+}
+
+impl SweepCache {
+    const EMPTY: Self = SweepCache {
+        entries: [
+            SweepEntry::EMPTY,
+            SweepEntry::EMPTY,
+            SweepEntry::EMPTY,
+            SweepEntry::EMPTY,
+            SweepEntry::EMPTY,
+            SweepEntry::EMPTY,
+            SweepEntry::EMPTY,
+            SweepEntry::EMPTY,
+        ],
+        gen: 0,
+    };
+
+    /// Look up a cached `(c1, c2, radius)` triple.
+    #[inline]
+    fn get(&mut self, c1: Point, c2: Point, radius: f64) -> Option<(f64, f64)> {
+        for e in &mut self.entries {
+            if e.valid
+                && e.c1 == c1
+                && e.c2 == c2
+                && (e.radius - radius).abs() < 1e-12
+            {
+                e.generation = self.gen;
+                self.gen += 1;
+                return Some((e.total, e.left));
+            }
+        }
+        None
+    }
+
+    /// Insert a result, evicting the LRU entry if full.
+    #[inline]
+    fn insert(&mut self, c1: Point, c2: Point, radius: f64, total: f64, left: f64) {
+        // Try to find an empty slot first.
+        let slot = self.entries.iter_mut().find(|e| !e.valid);
+        let slot = match slot {
+            Some(s) => s,
+            None => {
+                // Evict the entry with the lowest generation.
+                self.entries
+                    .iter_mut()
+                    .min_by_key(|e| e.generation)
+                    .unwrap()
+            }
+        };
+        slot.c1 = c1;
+        slot.c2 = c2;
+        slot.radius = radius;
+        slot.total = total;
+        slot.left = left;
+        slot.generation = self.gen;
+        self.gen += 1;
+        slot.valid = true;
+    }
+
+    /// Invalidate all entries (called on fragment mutation).
+    #[inline]
+    fn clear(&mut self) {
+        for e in &mut self.entries {
+            e.valid = false;
+        }
+    }
+}
+
+impl SweepEntry {
+    const EMPTY: Self = SweepEntry {
+        c1: Point { x: 0.0, y: 0.0 },
+        c2: Point { x: 0.0, y: 0.0 },
+        radius: 0.0,
+        total: 0.0,
+        left: 0.0,
+        generation: 0,
+        valid: false,
+    };
+}
+
+/// Cached nearby fragment list for [`ClearedArea::cut_area_split`].
+///
+/// Within a single step, `c1` is fixed and fragments don't change —
+/// only the angle (and thus `c2`) varies.  The `query_window` call
+/// returns the same fragment set for all angles because the step
+/// length is small relative to the query window.  Caching this list
+/// avoids the redundant spatial query on each angle iteration.
+struct NearbyCache {
+    c1: Point,
+    radius: f64,
+    nearby: Vec<Polygon>,
 }
 
 pub struct ClearedArea {
@@ -47,10 +151,14 @@ pub struct ClearedArea {
     /// True when `begin_batch()` has been called.
     pub(crate) batch_active: bool,
     // ── Sweep cache ──
-    /// Single-entry result cache for [`Self::cut_area_split`].
+    /// Multi-entry LRU result cache for [`Self::cut_area_split`].
     /// Cleared whenever fragments are mutated (see
     /// [`Self::clear_sweep_cache`]).
-    sweep_cache: Mutex<Option<SweepCache>>,
+    sweep_cache: Mutex<SweepCache>,
+    /// Cached nearby fragment list for [`Self::cut_area_split`].
+    /// Keyed by `(c1, radius)` — avoids redundant `query_window` calls
+    /// when only the angle changes within a step.
+    nearby_cache: Mutex<Option<NearbyCache>>,
     /// Cached `get_polygons_union(&self.fragments)`.  Updated
     /// incrementally instead of recomputed from scratch on every
     /// mutation — avoids redundant full union in both [`Self::frontier`]
@@ -89,7 +197,8 @@ impl ClearedArea {
             batch_path: Vec::new(),
             batch_radius: 0.0,
             batch_active: false,
-            sweep_cache: Mutex::new(None),
+            sweep_cache: Mutex::new(SweepCache::EMPTY),
+            nearby_cache: Mutex::new(None),
             fragments_union_cache: Mutex::new(None),
             remaining_area_cache: Mutex::new(None),
             actionable_cache: Mutex::new(None),
@@ -196,7 +305,8 @@ impl ClearedArea {
     /// fragments from scratch.
     #[inline]
     fn clear_sweep_cache(&self) {
-        *self.sweep_cache.lock().unwrap() = None;
+        self.sweep_cache.lock().unwrap().clear();
+        *self.nearby_cache.lock().unwrap() = None;
         *self.remaining_area_cache.lock().unwrap() = None;
         *self.actionable_cache.lock().unwrap() = None;
         self.frag_version.store(
@@ -885,38 +995,61 @@ impl ClearedArea {
         c2: Point,
         radius: f64,
     ) -> (f64, f64) {
-        // Single-entry cache: when the stepper converges on the same
-        // angle, repeated iterations (e.g. 8-19 of 20) query the same
-        // (c1, c2, radius) triple.  Fragments are immutable between
-        // commits, so the cached result is valid.
+        // Multi-entry LRU cache: the stepper probes 6-7 different
+        // angles per step, and adjacent steps often revisit nearby
+        // angles.  A small LRU catches both repeated hits and
+        // cross-step overlaps.
         {
-            let cache = self.sweep_cache.lock().unwrap();
-            if let Some(ref c) = *cache {
-                if c.c1 == c1 && c.c2 == c2 && c.radius == radius {
-                    return (c.total, c.left);
-                }
+            let mut cache = self.sweep_cache.lock().unwrap();
+            if let Some((total, left)) = cache.get(c1, c2, radius) {
+                return (total, left);
             }
         }
 
+        // Use nearby fragment cache: within a step, c1 is fixed and
+        // fragments don't change — only the angle (and thus c2) varies.
+        // The query_window call returns the same fragment set for all
+        // angles because the step length is small relative to the query
+        // window.
+        let nearby = {
+            let cache = self.nearby_cache.lock().unwrap();
+            if let Some(ref c) = *cache {
+                if c.c1 == c1 && c.radius == radius {
+                    c.nearby.clone()
+                } else {
+                    drop(cache);
+                    self.compute_and_cache_nearby(c1, radius)
+                }
+            } else {
+                drop(cache);
+                self.compute_and_cache_nearby(c1, radius)
+            }
+        };
+
+        let (total, left) = crescent::cut_area(c1, c2, radius, &nearby, &[]);
+
+        self.sweep_cache.lock().unwrap().insert(c1, c2, radius, total, left);
+
+        (total, left)
+    }
+
+    /// Compute nearby fragments for `cut_area_split` and cache the result.
+    #[inline]
+    fn compute_and_cache_nearby(&self, c1: Point, radius: f64) -> Vec<Polygon> {
         let bb = Rect::new(
-            c2.x - radius,
-            c2.y - radius,
-            c2.x + radius,
-            c2.y + radius,
+            c1.x - radius,
+            c1.y - radius,
+            c1.x + radius,
+            c1.y + radius,
         );
         let nearby: Vec<Polygon> =
             self.query_window(bb).into_iter().cloned().collect();
-        let (total, left) = crescent::cut_area(c1, c2, radius, &nearby, &[]);
-
-        *self.sweep_cache.lock().unwrap() = Some(SweepCache {
+        *self.nearby_cache.lock().unwrap() = Some(NearbyCache {
             c1,
-            c2,
             radius,
-            total,
-            left,
+            nearby: nearby.clone(),
         });
-
-        (total, left)
+        nearby
     }
 
     /// Evaluate engagement along a polyline for post-hoc analysis.
@@ -940,7 +1073,8 @@ impl Clone for ClearedArea {
             batch_path: self.batch_path.clone(),
             batch_radius: self.batch_radius,
             batch_active: self.batch_active,
-            sweep_cache: Mutex::new(None),
+            sweep_cache: Mutex::new(SweepCache::EMPTY),
+            nearby_cache: Mutex::new(None),
             fragments_union_cache: Mutex::new(None),
             remaining_area_cache: Mutex::new(None),
             actionable_cache: Mutex::new(None),
