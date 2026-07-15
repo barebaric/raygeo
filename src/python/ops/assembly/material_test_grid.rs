@@ -51,6 +51,8 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         mode: str = "engrave",
         grid_mode: str = "Power vs Speed",
         include_labels: bool = True,
+        min_offset: float = -0.5,
+        max_offset: float = 0.5,
     ) -> raygeo.ops.assembly.AssemblyResult:
         """Generate a material test grid with varying speed and power.
 
@@ -74,9 +76,13 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         :param spacing: Spacing between cells in mm (default 2.0).
         :param line_interval_mm: Line spacing for engrave mode (default 0.1).
         :param mode: "engrave" or "cut" (default "engrave").
-        :param grid_mode: "Power vs Speed", "Power vs Passes", or "Speed vs Passes"
-                         (default "Power vs Speed").
+        :param grid_mode: "Power vs Speed", "Power vs Passes", "Speed vs Passes",
+                         or "Speed vs Offset" (default "Power vs Speed").
         :param include_labels: Generate text labels (default True).
+        :param min_offset: Minimum bidirectional scan offset in mm for
+                         Speed vs Offset mode (default -0.5).
+        :param max_offset: Maximum bidirectional scan offset in mm for
+                         Speed vs Offset mode (default 0.5).
         :returns: An :class:`AssemblyResult` with grid cell paths and labels.
         """
     "#,
@@ -102,6 +108,8 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     mode = "engrave",
     grid_mode = "Power vs Speed",
     include_labels = true,
+    min_offset = -0.5,
+    max_offset = 0.5,
 ))]
 fn generate_material_test_grid_py(
     size_mm: (f64, f64),
@@ -121,6 +129,8 @@ fn generate_material_test_grid_py(
     mode: &str,
     grid_mode: &str,
     include_labels: bool,
+    min_offset: f64,
+    max_offset: f64,
 ) -> PyResult<PyAssemblyResult> {
     let params = MaterialTestGridParams {
         cols,
@@ -139,6 +149,8 @@ fn generate_material_test_grid_py(
         mode: mode.to_string(),
         grid_mode: grid_mode.to_string(),
         include_labels,
+        min_offset,
+        max_offset,
     };
 
     let mut trace = Tracelet::new();
@@ -178,6 +190,8 @@ fn generate_material_test_grid_py(
         mode: str = "engrave",
         grid_mode: str = "Power vs Speed",
         include_labels: bool = True,
+        min_offset: float = -0.5,
+        max_offset: float = 0.5,
     ) -> numpy.ndarray:
         """Generate a raster preview of the material test grid.
 
@@ -200,9 +214,13 @@ fn generate_material_test_grid_py(
         :param spacing: Spacing between cells in mm (default 2.0).
         :param line_interval_mm: Line spacing for engrave mode (default 0.1).
         :param mode: "engrave" or "cut" (default "engrave").
-        :param grid_mode: "Power vs Speed", "Power vs Passes", or "Speed vs Passes"
-                         (default "Power vs Speed").
+        :param grid_mode: "Power vs Speed", "Power vs Passes", "Speed vs Passes",
+                         or "Speed vs Offset" (default "Power vs Speed").
         :param include_labels: Generate text labels (default True).
+        :param min_offset: Minimum bidirectional scan offset in mm for
+                         Speed vs Offset mode (default -0.5).
+        :param max_offset: Maximum bidirectional scan offset in mm for
+                         Speed vs Offset mode (default 0.5).
         :returns: A (H, W, 4) RGBA uint8 numpy array.
         """
     "#,
@@ -229,6 +247,8 @@ fn generate_material_test_grid_py(
     mode = "engrave",
     grid_mode = "Power vs Speed",
     include_labels = true,
+    min_offset = -0.5,
+    max_offset = 0.5,
 ))]
 fn generate_material_test_grid_preview_py(
     py: Python<'_>,
@@ -250,6 +270,8 @@ fn generate_material_test_grid_preview_py(
     mode: &str,
     grid_mode: &str,
     include_labels: bool,
+    min_offset: f64,
+    max_offset: f64,
 ) -> PyResult<Py<PyAny>> {
     let params = MaterialTestGridParams {
         cols,
@@ -268,6 +290,8 @@ fn generate_material_test_grid_preview_py(
         mode: mode.to_string(),
         grid_mode: grid_mode.to_string(),
         include_labels,
+        min_offset,
+        max_offset,
     };
 
     // Use the SAME code path as the Ops: generate the full grid + labels,

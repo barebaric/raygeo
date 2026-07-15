@@ -22,6 +22,8 @@ pub struct MaterialTestGridParams {
     pub max_power: f64,
     pub min_passes: u32,
     pub max_passes: u32,
+    pub min_offset: f64,
+    pub max_offset: f64,
     pub fixed_speed: f64,
     pub fixed_power: f64,
     pub shape_size: f64,
@@ -29,7 +31,8 @@ pub struct MaterialTestGridParams {
     pub line_interval_mm: f64,
     /// "engrave" or "cut"
     pub mode: String,
-    /// "Power vs Speed", "Power vs Passes", or "Speed vs Passes"
+    /// "Power vs Speed", "Power vs Passes", "Speed vs Passes", or
+    /// "Speed vs Offset"
     pub grid_mode: String,
     /// Whether to generate text labels (column headers, row labels, axis titles).
     pub include_labels: bool,
@@ -83,6 +86,10 @@ pub fn generate_material_test_grid(
                     params.max_passes as f64,
                 ),
             ),
+            "Speed vs Offset" => (
+                ColRange::Linear(params.min_speed, params.max_speed),
+                ColRange::Linear(params.min_offset, params.max_offset),
+            ),
             _ => (
                 ColRange::Linear(params.min_power, params.max_power),
                 ColRange::Linear(params.min_speed, params.max_speed),
@@ -121,18 +128,35 @@ pub fn generate_material_test_grid(
             let col_val = col_range.min() + c as f64 * col_step;
             let row_val = row_range.min() + r as f64 * row_step;
 
-            let (speed, power, passes) = match params.grid_mode.as_str() {
+            let (speed, power, passes, offset) = match params.grid_mode.as_str()
+            {
                 "Power vs Passes" => (
                     params.fixed_speed,
                     col_val,
                     (row_val.round() as u32).max(1),
+                    0.0,
                 ),
                 "Speed vs Passes" => (
                     col_val,
                     params.fixed_power,
                     (row_val.round() as u32).max(1),
+                    0.0,
                 ),
-                _ => (row_val, col_val, 1),
+                "Speed vs Offset" => {
+                    let speed = col_val;
+                    // Scale power with speed (anchored at fixed_power at
+                    // min_speed) so darkness stays comparable across the
+                    // row - otherwise slow columns overburn and fast
+                    // columns look too faint to compare offsets by eye.
+                    let power = if params.min_speed > 1e-9 {
+                        (params.fixed_power * speed / params.min_speed)
+                            .clamp(1.0, 100.0)
+                    } else {
+                        params.fixed_power
+                    };
+                    (speed, power, 1, row_val)
+                }
+                _ => (row_val, col_val, 1, 0.0),
             };
 
             cells.push(GridCell {
@@ -145,6 +169,7 @@ pub fn generate_material_test_grid(
                 speed,
                 power,
                 passes,
+                offset,
             });
         }
     }
@@ -202,6 +227,7 @@ pub fn generate_material_test_grid(
                     cell.width,
                     cell.height,
                     line_spacing,
+                    cell.offset,
                     &cell_meta,
                 );
             } else {
@@ -394,6 +420,7 @@ fn generate_labels(
     let (col_title, row_title) = match params.grid_mode.as_str() {
         "Power vs Passes" => ("Power (%)", "Passes"),
         "Speed vs Passes" => ("Speed (mm/min)", "Passes"),
+        "Speed vs Offset" => ("Speed (mm/min)", "Offset (mm)"),
         _ => ("Power (%)", "Speed (mm/min)"),
     };
 
@@ -412,6 +439,10 @@ fn generate_labels(
                     params.min_passes as f64,
                     params.max_passes as f64,
                 ),
+            ),
+            "Speed vs Offset" => (
+                ColRange::Linear(params.min_speed, params.max_speed),
+                ColRange::Linear(params.min_offset, params.max_offset),
             ),
             _ => (
                 ColRange::Linear(params.min_power, params.max_power),
@@ -441,10 +472,16 @@ fn generate_labels(
     }
 
     // Row labels: right-aligned at 90% of margin_left.
-    // Uses round-then-truncate (like Python int(round())) for row values.
+    // Uses round-then-truncate (like Python int(round())) for row values,
+    // except Speed vs Offset which needs decimals - otherwise multiple
+    // distinct sub-mm offset rows would collapse to the same label.
     for r in 0..rows {
         let val = row_range.min() + r as f64 * row_step;
-        let text = format_row_label(val);
+        let text = if params.grid_mode == "Speed vs Offset" {
+            format!("{val:+.2}")
+        } else {
+            format_row_label(val)
+        };
         let rx = margin_left * 0.9;
         let ry = margin_top + r as f64 * (shape_h + spacing_y) + shape_h / 2.0;
         add_text_label(ops, &text, &label_font, rx, ry, HAlign::Right, 0.0);
@@ -575,6 +612,7 @@ fn draw_rectangle(
     );
 }
 
+#[allow(clippy::too_many_arguments)]
 fn draw_filled_box(
     trace: &mut Tracelet,
     x: f64,
@@ -582,6 +620,7 @@ fn draw_filled_box(
     w: f64,
     h: f64,
     line_spacing: f64,
+    offset: f64,
     cell_meta: &Meta,
 ) {
     if h < 1e-6 {
@@ -632,20 +671,23 @@ fn draw_filled_box(
                 Some(cell_meta.clone()),
             );
         } else {
-            trace.move_to(x + w, cur_y, 0.0, None);
+            // Right-to-left pass: shift by the cell's offset, mirroring
+            // rayforge's BidirScanOffsetTransformer correction for real
+            // engraves.
+            trace.move_to(x + w + offset, cur_y, 0.0, None);
             trace.move_event(
                 MoveKind::Travel,
                 trace_helpers::tool_snapshot(
-                    Point3D::new(x + w, cur_y, 0.0),
+                    Point3D::new(x + w + offset, cur_y, 0.0),
                     Point3D::ZERO,
                 ),
                 None,
             );
-            trace.line_to(x, cur_y, 0.0, None);
+            trace.line_to(x + offset, cur_y, 0.0, None);
             trace.cut(
                 trace_helpers::tool_snapshot(
-                    Point3D::new(x, cur_y, 0.0),
-                    Point3D::new(x + w, cur_y, 0.0),
+                    Point3D::new(x + offset, cur_y, 0.0),
+                    Point3D::new(x + w + offset, cur_y, 0.0),
                 ),
                 Some(cell_meta.clone()),
             );
@@ -690,6 +732,7 @@ struct GridCell {
     speed: f64,
     power: f64,
     passes: u32,
+    offset: f64,
 }
 
 #[derive(Clone, Copy, Debug)]

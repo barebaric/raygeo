@@ -88,8 +88,27 @@ def register(subparsers):
     p.add_argument(
         "--grid-mode",
         default="Power vs Speed",
-        choices=["Power vs Speed", "Power vs Passes", "Speed vs Passes"],
+        choices=[
+            "Power vs Speed",
+            "Power vs Passes",
+            "Speed vs Passes",
+            "Speed vs Offset",
+        ],
         help="Grid mode (default: Power vs Speed).",
+    )
+    p.add_argument(
+        "--min-offset",
+        type=float,
+        default=-0.5,
+        help="Minimum bidirectional scan offset in mm for Speed vs "
+        "Offset mode (default: -0.5).",
+    )
+    p.add_argument(
+        "--max-offset",
+        type=float,
+        default=0.5,
+        help="Maximum bidirectional scan offset in mm for Speed vs "
+        "Offset mode (default: 0.5).",
     )
     p.set_defaults(func=run)
 
@@ -352,6 +371,8 @@ def _run_material(args, trace_path):
             cols=args.cols,
             rows=args.rows,
             grid_mode=args.grid_mode,
+            min_offset=args.min_offset,
+            max_offset=args.max_offset,
         )
         result.write_trace(str(tp), "material_test_grid", "MaterialTestGrid")
         print(f"  Material grid: {result.ops.len()} ops")
