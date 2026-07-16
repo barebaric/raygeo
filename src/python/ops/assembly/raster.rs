@@ -235,7 +235,7 @@ fn raster_py(
                 offset_x_mm,
                 offset_y_mm,
                 line_interval_mm,
-                max_power,
+                step_power,
                 a,
                 scan_mode_val,
             ),
