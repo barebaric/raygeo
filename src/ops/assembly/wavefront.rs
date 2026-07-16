@@ -11,6 +11,7 @@ use crate::geo::algo::topology::{
 use crate::geo::geometry::Geometry;
 use crate::geo::shape::polygon::{
     get_circle_polygon, get_polygon_area, get_polygon_centroid,
+    get_polygon_signed_area, get_polygons_closest_point,
     is_point_inside_polygon, resample_polygon,
 };
 use crate::ops::assembly::result::AssemblyMeta;
@@ -121,16 +122,26 @@ pub fn adaptive_wavefronts(
         trace.line_to(ring_start.x, ring_start.y, opts.z, None);
     }
 
+    let simplify_tol = if opts.precision > 0.0 {
+        opts.precision
+    } else {
+        0.01
+    };
+
+    // Snapshot the frontier before the loop.  Each iteration filters out
+    // band-polygon points that lie close to the previous frontier (the
+    // inner edge of the annular band — already cut) and splits the
+    // remaining outer-edge points into separate runs so that gaps become
+    // travel moves rather than cut lines.
+    let mut prev_frontier: Vec<Polygon> =
+        part.cleared.frontier(&part.stock_region, simplify_tol);
+
     for _ in 0..MAX_WAVEFRONT_ITERATIONS {
         let bounded = part.cleared.bites(
             &part.stock_region,
             opts.step_over,
             0.0,
-            if opts.precision > 0.0 {
-                opts.precision
-            } else {
-                0.01
-            },
+            simplify_tol,
         );
         if bounded.is_empty() {
             break;
@@ -141,7 +152,15 @@ pub fn adaptive_wavefronts(
             continue;
         }
 
+        let threshold_sq = (opts.step_over * 0.5).powi(2);
+
         for frag in &new_ring {
+            // Skip CW-wound holes (Clipper2 difference output: CCW
+            // outer rings are new material, CW holes are the
+            // already-cleared boundary).
+            if get_polygon_signed_area(frag) <= 0.0 {
+                continue;
+            }
             // Skip fragments that are too small to be meaningful.
             let frag_area = get_polygon_area(frag);
             if frag_area < opts.area_tolerance {
@@ -155,24 +174,78 @@ pub fn adaptive_wavefronts(
             if points.len() < 3 {
                 continue;
             }
-            if !state_applied {
-                trace.apply_state(cut_state);
-                state_applied = true;
+
+            // Keep only points far enough from the previous frontier
+            // boundary.  Points close to the previous frontier are on
+            // the inner edge of the band (already cut).  Using
+            // point-to-boundary distance (not point-to-vertex) handles
+            // cases where `simplify_polyline` produces different vertex
+            // positions along the same curve.
+            let keep: Vec<bool> = points
+                .iter()
+                .map(|p| {
+                    let min_dist_sq =
+                        match get_polygons_closest_point(&prev_frontier, *p) {
+                            Some((_, _, _, d2)) => d2,
+                            None => f64::MAX,
+                        };
+                    min_dist_sq > threshold_sq
+                })
+                .collect();
+
+            // Split into contiguous runs so that gaps (filtered-out
+            // points) become travel moves rather than cut lines.
+            let n = points.len();
+            let mut runs: Vec<Vec<Point>> = Vec::new();
+            let mut current: Vec<Point> = Vec::new();
+            for (i, &p) in points.iter().enumerate() {
+                if keep[i] {
+                    current.push(p);
+                } else if !current.is_empty() {
+                    runs.push(std::mem::take(&mut current));
+                }
             }
-            if first_point.is_none() {
-                first_point = Some(points[0]);
+            if !current.is_empty() {
+                runs.push(current);
             }
-            last_point = Some(points[points.len() - 1]);
-            let ring_start = points[0];
-            trace.move_to(ring_start.x, ring_start.y, opts.z, None);
-            for p in &points[1..] {
-                trace.line_to(p.x, p.y, opts.z, None);
+
+            // Merge first and last runs if the polygon seam wraps.
+            if runs.len() >= 2 && keep[0] && keep[n - 1] {
+                let last = runs.pop().unwrap();
+                runs[0].splice(0..0, last);
             }
-            // Close the fragment ring by moving back to the first point.
-            trace.line_to(ring_start.x, ring_start.y, opts.z, None);
+
+            let all_kept = keep.iter().all(|&k| k);
+            for (ri, run) in runs.iter().enumerate() {
+                if run.len() < 2 {
+                    continue;
+                }
+                if !state_applied {
+                    trace.apply_state(cut_state);
+                    state_applied = true;
+                }
+                if first_point.is_none() {
+                    first_point = Some(run[0]);
+                }
+                last_point = Some(run[run.len() - 1]);
+                let ring_start = run[0];
+                trace.move_to(ring_start.x, ring_start.y, opts.z, None);
+                for p in &run[1..] {
+                    trace.line_to(p.x, p.y, opts.z, None);
+                }
+                // Close only if no points were filtered (inner edge
+                // not present).  Filtered runs are open arcs where a
+                // closing line would cut across the gap — the D shape.
+                if all_kept && ri == 0 {
+                    trace.line_to(ring_start.x, ring_start.y, opts.z, None);
+                }
+            }
         }
 
-        let ring_area: f64 = new_ring.iter().map(get_polygon_area).sum();
+        prev_frontier = part.cleared.frontier(&part.stock_region, simplify_tol);
+
+        let ring_area: f64 =
+            new_ring.iter().map(|p| get_polygon_signed_area(p)).sum();
         if ring_area < opts.area_tolerance
             || part.cleared.actionable_remaining(&part.stock_region, 0.0)
                 < opts.area_tolerance
