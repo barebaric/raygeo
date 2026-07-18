@@ -28,6 +28,56 @@ use crate::python::geo::geometry::Geometry as PyGeometry;
 use crate::python::geo::matrix::Matrix as PyMatrix;
 use crate::python::image::scan::PyScanMode;
 
+/// Convert a Python dict to a JSON string, then deserialise into `T`.
+fn from_pydict<T: serde::de::DeserializeOwned>(
+    py: Python<'_>,
+    dict: &Bound<'_, PyDict>,
+) -> PyResult<T> {
+    let json_mod = py.import("json")?;
+    let json_str: String = json_mod
+        .call_method1("dumps", (dict,))?
+        .extract()
+        .map_err(|_| {
+        pyo3::exceptions::PyValueError::new_err(
+            "Failed to serialise dict to JSON",
+        )
+    })?;
+    serde_json::from_str(&json_str).map_err(|e| {
+        pyo3::exceptions::PyValueError::new_err(format!(
+            "Failed to deserialise JSON into Rust struct: {e}"
+        ))
+    })
+}
+
+/// Convert a Rust `usize`-keyed `HashMap` into a Python dict with
+/// integer keys.
+fn usize_hashmap_to_pydict<'py>(
+    py: Python<'py>,
+    map: &std::collections::HashMap<usize, Vec<usize>>,
+) -> PyResult<Bound<'py, PyDict>> {
+    let dict = PyDict::new(py);
+    for (&k, v) in map {
+        let py_list = PyList::empty(py);
+        for &item in v {
+            py_list.append(item)?;
+        }
+        dict.set_item(k, py_list)?;
+    }
+    Ok(dict)
+}
+
+/// Convert a Rust `usize → usize` `HashMap` into a Python dict.
+fn usize_usize_hashmap_to_pydict<'py>(
+    py: Python<'py>,
+    map: &std::collections::HashMap<usize, usize>,
+) -> PyResult<Bound<'py, PyDict>> {
+    let dict = PyDict::new(py);
+    for (&k, &v) in map {
+        dict.set_item(k, v)?;
+    }
+    Ok(dict)
+}
+
 /// Normalize a Python-style index (negative = from end) to a usize.
 fn normalize_index(idx: isize, len: usize) -> PyResult<usize> {
     let len = len as isize;
@@ -2822,6 +2872,42 @@ impl PyOps {
                 .map(|v| v.into_any()),
         )?;
         Ok(tuple.unbind().into())
+    }
+
+    /// Encode this Ops sequence into G-code text.
+    ///
+    /// Takes a typed dialect specification and an encoding context as a
+    /// plain dict (JSON-serialisable). Returns a dict with the G-code
+    /// text and bidirectional op-to-line index maps.
+    ///
+    /// :param dialect: A :class:`raygeo.ops.convert.GcodeDialectSpec` instance.
+    /// :param context_dict: JSON-serialisable dict matching the Rust
+    ///     ``EncodeContext`` schema.
+    /// :returns: ``{"text": str, "op_to_machine_code": {int: [int]},
+    ///     "machine_code_to_op": {int: int}}``
+    /// :raises ValueError: If deserialization fails.
+    fn to_gcode<'py>(
+        &self,
+        py: Python<'py>,
+        dialect: &super::convert::PyGcodeDialectSpec,
+        context_dict: &Bound<'py, PyDict>,
+    ) -> PyResult<Bound<'py, PyDict>> {
+        use crate::ops::convert::gcode::encode_gcode as encode_gcode_inner;
+        use crate::ops::convert::gcode_types::EncodeContext;
+
+        let context: EncodeContext = from_pydict(py, context_dict)?;
+        let result = encode_gcode_inner(&self.inner, &dialect.0, &context);
+        let dict = PyDict::new(py);
+        dict.set_item("text", &result.text)?;
+        dict.set_item(
+            "op_to_machine_code",
+            usize_hashmap_to_pydict(py, &result.op_to_machine_code)?,
+        )?;
+        dict.set_item(
+            "machine_code_to_op",
+            usize_usize_hashmap_to_pydict(py, &result.machine_code_to_op)?,
+        )?;
+        Ok(dict)
     }
 
     /// Rasterise a grayscale image with power-modulated scans.

@@ -7,6 +7,8 @@
 //! format boundaries.
 
 pub mod dump;
+pub mod gcode;
+pub mod gcode_types;
 pub mod geometry;
 pub mod image;
 pub mod polyline;

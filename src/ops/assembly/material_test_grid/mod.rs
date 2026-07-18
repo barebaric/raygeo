@@ -371,8 +371,7 @@ fn add_text_label(
         return;
     };
 
-    // Use the visual bounding box for centering, matching the original
-    // rayforge producer which calls geo.rect() and uses the total width.
+    // Use the visual bounding box for centering.
     let rect = geo.rect();
     let width = rect.max.x - rect.min.x;
 
@@ -433,8 +432,8 @@ fn generate_labels(
     let spacing_x = params.spacing * scale_x;
     let spacing_y = params.spacing * scale_y;
 
-    // Match original producer: font size in mm proportional to margin,
-    // then converted to points (1 pt = 25.4/72 mm).
+    // Font size in mm proportional to margin,
+    // converted to points (1 pt = 25.4/72 mm).
     let pt_to_mm = 25.4 / 72.0;
     let margin_min = margin_left.min(margin_top);
     let axis_font_mm = margin_min * 0.25;
@@ -446,8 +445,7 @@ fn generate_labels(
     ops.set_power(params.label_power);
     ops.set_feed_rate(params.label_speed);
 
-    // Determine column/row range descriptors (axis titles match the
-    // original rayforge producer exactly).
+    // Determine column/row range descriptors.
     let (col_title, row_title) = match params.grid_mode.as_str() {
         "Power vs Passes" => ("Power (%)", "Passes"),
         "Speed vs Passes" => ("Speed (mm/min)", "Passes"),
@@ -546,7 +544,7 @@ fn generate_labels(
         -90.0,
     );
 
-    // Fixed-parameter labels (matching original producer)
+    // Fixed-parameter labels.
     let fixed_label_offset = margin_min * 0.15;
     let fixed_font =
         FontConfig::new("sans-serif", grid_font_mm * 0.8 / pt_to_mm);
@@ -703,7 +701,7 @@ fn draw_filled_box(
             );
         } else {
             // Right-to-left pass: shift by the cell's offset, mirroring
-            // rayforge's BidirScanOffsetTransformer correction for real
+            // BidirScanOffsetTransformer correction for real
             // engraves.
             trace.move_to(x + w + offset, cur_y, 0.0, None);
             trace.move_event(

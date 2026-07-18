@@ -67,6 +67,7 @@ Examples
 """
 
 from . import cnc
+from . import fstring
 from . import geo
 from . import image
 from . import mesh
@@ -75,6 +76,7 @@ from . import svg
 from . import trace
 __all__ = [
     "cnc",
+    "fstring",
     "geo",
     "image",
     "mesh",

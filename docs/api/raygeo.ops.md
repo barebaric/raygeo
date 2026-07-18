@@ -2198,6 +2198,25 @@ Serialize this Ops sequence to a dict suitable for JSON export.
 | _Returns_    | `dict` | A Python dict representation. |
 | _Complexity_ |        | O(n) time, O(n) space         |
 
+### `to_gcode()`
+
+```python
+to_gcode(dialect: convert.GcodeDialectSpec, context_dict: dict) -> dict
+```
+
+Encode this Ops sequence into G-code text.
+
+Takes a typed dialect specification and an encoding context as a plain dict (JSON-serialisable).
+Returns a dict with the G-code text and bidirectional op-to-line index maps.
+
+**Raises:** `ValueError` — If deserialization fails.
+
+| Parameter      | Type                       | Description                                                                           |
+| -------------- | -------------------------- | ------------------------------------------------------------------------------------- |
+| `dialect`      | `convert.GcodeDialectSpec` | A **raygeo.ops.convert.GcodeDialectSpec** instance.                                   |
+| `context_dict` | `dict`                     | JSON-serialisable dict matching the Rust `EncodeContext` schema.                      |
+| _Returns_      | `dict`                     | `{"text": str, "op_to_machine_code": {int: [int]}, "machine_code_to_op": {int: int}}` |
+
 ### `to_geometry()`
 
 ```python

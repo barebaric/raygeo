@@ -30,8 +30,6 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 
 /// Compute the total offset from kerf, path offset, and cut side.
 ///
-/// Mirrors the logic that used to live in every rayforge producer:
-///
 /// ```text
 /// kerf_compensation = kerf_mm / 2
 /// centerline  -> 0

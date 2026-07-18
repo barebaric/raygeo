@@ -23,6 +23,7 @@ from raygeo.image import scan
 import typing
 from . import assembly
 from . import axis
+from . import convert
 from . import cut
 from . import feature
 from . import part
@@ -36,6 +37,7 @@ __all__ = [
     "OpsSectionRange",
     "assembly",
     "axis",
+    "convert",
     "cut",
     "feature",
     "part",
@@ -1329,6 +1331,21 @@ class Ops:
             travel_vertices[M,3], zero_power_vertices[K,3])`` as float32
             arrays.
         :complexity: O(n) time, O(n) space
+        """
+    def to_gcode(self, dialect: convert.GcodeDialectSpec, context_dict: dict) -> dict:
+        r"""
+        Encode this Ops sequence into G-code text.
+        
+        Takes a typed dialect specification and an encoding context as a
+        plain dict (JSON-serialisable). Returns a dict with the G-code
+        text and bidirectional op-to-line index maps.
+        
+        :param dialect: A :class:`raygeo.ops.convert.GcodeDialectSpec` instance.
+        :param context_dict: JSON-serialisable dict matching the Rust
+            ``EncodeContext`` schema.
+        :returns: ``{"text": str, "op_to_machine_code": {int: [int]},
+            "machine_code_to_op": {int: int}}``
+        :raises ValueError: If deserialization fails.
         """
     @staticmethod
     def from_power_modulated_image(gray_image: typing.Any, alpha: typing.Any, pixels_per_mm: tuple[builtins.float, builtins.float], offset_x_mm: builtins.float, offset_y_mm: builtins.float, line_interval_mm: builtins.float, sample_interval_mm: builtins.float, min_power: builtins.float = 0.0, max_power: builtins.float = 1.0, step_power: builtins.float = 1.0, num_power_levels: builtins.int = 256, angle: builtins.float = 0.0, scan_mode: scan.ScanMode = scan.ScanMode.SEGMENTED) -> Ops:

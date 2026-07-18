@@ -1,4 +1,4 @@
-//! # RayForge Geometry Library
+//! # RayGeo Geometry Library
 //!
 //! A 2D/3D geometry library for CAD/CAM applications. Provides
 //! structures and functions for creating, manipulating, and analyzing
@@ -66,6 +66,7 @@
 pub mod cnc;
 pub mod constants;
 pub mod error;
+pub mod fstring;
 pub mod geo;
 pub mod image;
 pub(crate) mod log;
@@ -195,6 +196,7 @@ pub(crate) const MODULE_DOC: &str = concat!(
 #[pymodule(gil_used = false)]
 fn raygeo(m: &Bound<'_, PyModule>) -> PyResult<()> {
     python::cnc::register(m)?;
+    python::fstring::register(m)?;
     python::geo::register(m)?;
     python::image::register(m)?;
     python::mesh::register(m)?;
