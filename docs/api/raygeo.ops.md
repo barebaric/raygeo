@@ -256,6 +256,24 @@ Get the air assist mode from a SetAirAssist command.
 | _Returns_    | `state.AirAssistMode` | The air assist mode.  |
 | _Complexity_ |                       | O(1) time, O(1) space |
 
+### `apply_bidir_scan_offset()`
+
+```python
+apply_bidir_scan_offset(offset_mm: float) -> None
+```
+
+Correct X misalignment between left-to-right and right-to-left raster passes.
+
+For every raster pass (a `MoveTo` followed by a `ScanLine`), if the pass runs right-to-left, both
+the entry `MoveTo` and the `ScanLine` endpoint are shifted along X by `offset_mm`. Left-to-right
+passes are left untouched.
+
+| Parameter    | Type    | Description                                   |
+| ------------ | ------- | --------------------------------------------- |
+| `offset_mm`  | `float` | Offset in millimeters to apply to RTL passes. |
+| _Returns_    | `None`  |                                               |
+| _Complexity_ |         | O(n) time, O(n) space                         |
+
 ### `apply_lead_in_out()`
 
 ```python

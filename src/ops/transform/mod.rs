@@ -6,6 +6,7 @@
 //! grouping, and clipping.
 
 pub mod affine;
+pub mod bidir_scan_offset;
 pub mod clip;
 pub mod flip;
 pub mod frame;
@@ -21,6 +22,7 @@ pub mod smooth;
 pub mod split;
 pub mod tabs;
 
+pub use bidir_scan_offset::apply_bidir_scan_offset;
 pub use flip::flip_ops;
 pub use group::{group_by_auxiliary_state, without_state};
 pub use lead_in_out::apply_lead_in_out;

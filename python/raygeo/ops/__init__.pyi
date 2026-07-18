@@ -1288,6 +1288,19 @@ class Ops:
         :param distance_mm: Overscan distance in millimeters.
         :complexity: O(n) time, O(n) space
         """
+    def apply_bidir_scan_offset(self, offset_mm: builtins.float) -> None:
+        r"""
+        Correct X misalignment between left-to-right and right-to-left
+        raster passes.
+        
+        For every raster pass (a ``MoveTo`` followed by a ``ScanLine``),
+        if the pass runs right-to-left, both the entry ``MoveTo`` and
+        the ``ScanLine`` endpoint are shifted along X by ``offset_mm``.
+        Left-to-right passes are left untouched.
+        
+        :param offset_mm: Offset in millimeters to apply to RTL passes.
+        :complexity: O(n) time, O(n) space
+        """
     def apply_lead_in_out(self, lead_in_mm: builtins.float, lead_out_mm: builtins.float) -> None:
         r"""
         Apply lead-in and lead-out to vector contour paths.

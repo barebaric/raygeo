@@ -30,7 +30,6 @@ def denoise_binary(binary: numpy.typing.NDArray[numpy.uint8]) -> numpy.typing.ND
     
     Computes connected components, finds the largest gap in component area
     distribution to separate noise from content, and removes small components.
-    Uses the same algorithm as the legacy Python ``_find_adaptive_area_threshold``.
     
     :param binary: 2D binary uint8 array (values 0 or 1).
     :returns: 2D binary uint8 array with noise removed.

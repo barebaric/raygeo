@@ -22,8 +22,9 @@ pub use container::Ops;
 pub use enums::{CommandCategory, CommandType, RasterMode, SectionType};
 pub use state::{AirAssistMode, CoolantMode, HeadCoolantMode, State};
 pub use transform::{
-    apply_lead_in_out, apply_overscan, apply_tab_gaps, apply_tab_power,
-    flip_ops, group_by_auxiliary_state, link_passes, merge_overlapping_lines,
-    optimize_travel, without_state, ClipPoint, LinkStrategy,
+    apply_bidir_scan_offset, apply_lead_in_out, apply_overscan, apply_tab_gaps,
+    apply_tab_power, flip_ops, group_by_auxiliary_state, link_passes,
+    merge_overlapping_lines, optimize_travel, without_state, ClipPoint,
+    LinkStrategy,
 };
 pub use types::{MarkerCmd, MoveCmd, OpCategory, OpNode, StateCmd};

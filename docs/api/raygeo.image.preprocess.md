@@ -37,8 +37,7 @@ denoise_binary(
 Remove small noise components from a binary image using adaptive thresholding.
 
 Computes connected components, finds the largest gap in component area distribution to separate
-noise from content, and removes small components. Uses the same algorithm as the legacy Python
-`_find_adaptive_area_threshold`.
+noise from content, and removes small components.
 
 | Parameter    | Type                         | Description                               |
 | ------------ | ---------------------------- | ----------------------------------------- |

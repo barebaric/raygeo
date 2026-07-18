@@ -2763,6 +2763,23 @@ impl PyOps {
         );
     }
 
+    /// Correct X misalignment between left-to-right and right-to-left
+    /// raster passes.
+    ///
+    /// For every raster pass (a ``MoveTo`` followed by a ``ScanLine``),
+    /// if the pass runs right-to-left, both the entry ``MoveTo`` and
+    /// the ``ScanLine`` endpoint are shifted along X by ``offset_mm``.
+    /// Left-to-right passes are left untouched.
+    ///
+    /// :param offset_mm: Offset in millimeters to apply to RTL passes.
+    /// :complexity: O(n) time, O(n) space
+    fn apply_bidir_scan_offset(&mut self, offset_mm: f64) {
+        crate::ops::transform::apply_bidir_scan_offset(
+            &mut self.inner,
+            offset_mm,
+        );
+    }
+
     /// Apply lead-in and lead-out to vector contour paths.
     ///
     /// For each contour within a VECTOR_OUTLINE section, extends the
