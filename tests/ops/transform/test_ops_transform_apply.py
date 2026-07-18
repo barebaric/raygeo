@@ -1,3 +1,7 @@
+import json
+from pathlib import Path
+from typing import Any, Dict, List
+
 import pytest
 
 from raygeo.ops import Ops
@@ -375,3 +379,78 @@ class TestMixedBatch:
         )
         # Smoothing subdivides, lead-in/out grows, multipass doubles.
         assert ops.len() > before
+
+
+# ----------------------------------------------------------------------
+# Golden-file parametrised tests (fixtures in tests/transform/fixtures/)
+# ----------------------------------------------------------------------
+
+FIXTURE_DIR = Path(__file__).parents[2] / "transform" / "fixtures"
+
+SPEC_CLASSES = {
+    "SmoothSpec": SmoothSpec,
+    "OptimizeSpec": OptimizeSpec,
+    "MergeLinesSpec": MergeLinesSpec,
+    "OverscanSpec": OverscanSpec,
+    "LeadInOutSpec": LeadInOutSpec,
+    "MultiPassSpec": MultiPassSpec,
+    "CropSpec": CropSpec,
+    "TabsSpec": TabsSpec,
+    "BidirScanOffsetSpec": BidirScanOffsetSpec,
+}
+
+
+def _load_spec(spec_dict: Dict[str, Any]):
+    cls = SPEC_CLASSES[spec_dict["__type__"]]
+    kwargs = {k: v for k, v in spec_dict.items() if k != "__type__"}
+    if cls is TabsSpec:
+        kwargs["clips"] = [tuple(c) for c in kwargs["clips"]]
+    if cls is CropSpec:
+        kwargs["regions"] = [
+            [tuple(p) for p in poly] for poly in kwargs["regions"]
+        ]
+    return cls(**kwargs)
+
+
+def _fixture_names() -> List[str]:
+    ops_files = sorted(FIXTURE_DIR.glob("*.ops.json"))
+    return [f.stem.removesuffix(".ops") for f in ops_files]
+
+
+def _spec_type_for(name: str) -> str:
+    if name.startswith("smooth"):
+        return "SmoothSpec"
+    if name.startswith("optimize"):
+        return "OptimizeSpec"
+    if name.startswith("merge_lines"):
+        return "MergeLinesSpec"
+    if name.startswith("overscan"):
+        return "OverscanSpec"
+    if name.startswith("lead_in_out"):
+        return "LeadInOutSpec"
+    if name.startswith("multipass"):
+        return "MultiPassSpec"
+    if name.startswith("crop"):
+        return "CropSpec"
+    if name.startswith("tabs"):
+        return "TabsSpec"
+    if name.startswith("bidir"):
+        return "BidirScanOffsetSpec"
+    raise ValueError(f"Unknown fixture name: {name}")
+
+
+@pytest.mark.parametrize("name", _fixture_names())
+def test_golden_apply_transformers(name: str) -> None:
+    ops = Ops.from_dict(
+        json.loads((FIXTURE_DIR / f"{name}.ops.json").read_text())
+    )
+    spec_data = json.loads((FIXTURE_DIR / f"{name}.spec.json").read_text())
+    spec_data["__type__"] = _spec_type_for(name)
+    spec = _load_spec(spec_data)
+
+    ops.apply_transformers([spec])
+
+    expected = json.loads(
+        (FIXTURE_DIR / f"{name}.expected_ops.json").read_text()
+    )
+    assert json.loads(json.dumps(ops.to_dict())) == expected

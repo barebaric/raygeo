@@ -1,0 +1,66 @@
+{
+  "commands": [
+    {
+      "type": "MOVE_TO",
+      "end": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "type": "SCAN_LINE",
+      "end": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "power_values": [
+        255
+      ]
+    },
+    {
+      "type": "MOVE_TO",
+      "end": [
+        0.0,
+        2.0,
+        0.0
+      ]
+    },
+    {
+      "type": "SCAN_LINE",
+      "end": [
+        10.0,
+        2.0,
+        0.0
+      ],
+      "power_values": [
+        255
+      ]
+    },
+    {
+      "type": "MOVE_TO",
+      "end": [
+        0.0,
+        4.0,
+        0.0
+      ]
+    },
+    {
+      "type": "SCAN_LINE",
+      "end": [
+        10.0,
+        4.0,
+        0.0
+      ],
+      "power_values": [
+        255
+      ]
+    }
+  ],
+  "last_move_to": [
+    0.0,
+    4.0,
+    0.0
+  ]
+}
