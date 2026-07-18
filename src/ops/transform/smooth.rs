@@ -8,7 +8,32 @@
 use crate::geo::algo::smooth::smooth_polyline_3d;
 use crate::ops::container::Ops;
 use crate::ops::enums::CommandType;
+use crate::ops::transform::apply::{Phase, Transformer};
 use crate::types::Point3D;
+
+/// Parameters for the [`smooth`] transformer.
+#[derive(Clone, Debug, PartialEq)]
+pub struct SmoothSpec {
+    /// Smoothing strength (0-100); 0 is a no-op.
+    pub amount: u32,
+    /// Corners with an internal angle (degrees) smaller than this are
+    /// preserved.
+    pub corner_angle_threshold: f64,
+}
+
+impl Transformer for SmoothSpec {
+    fn phase(&self) -> Phase {
+        Phase::GeometryRefinement
+    }
+
+    fn apply(&self, ops: &mut Ops) {
+        ops.smooth(self.amount, self.corner_angle_threshold);
+    }
+
+    fn name(&self) -> &'static str {
+        "smooth"
+    }
+}
 
 /// Check whether a segment contains only MoveTo followed by LineTo
 /// commands (at least 2 commands).

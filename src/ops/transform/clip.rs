@@ -11,9 +11,39 @@ use crate::geo::shape::arc::is_arc_inside_polygons;
 use crate::geo::shape::bezier::is_bezier_inside_polygons;
 use crate::ops::container::Ops;
 use crate::ops::enums::CommandType;
+use crate::ops::transform::apply::{Phase, Transformer};
 use crate::ops::types::{MoveCmd, OpCategory, OpNode};
 use crate::types::Command;
 use crate::types::{Point, Point3D, Polygon, Rect};
+
+/// Parameters for the [`Ops::clip_ops_to_regions`] transformer.
+///
+/// `regions` are pre-resolved clip polygons in ops-local space (e.g.
+/// computed from stock geometries + the inverse workpiece transform).
+#[derive(Clone, Debug, PartialEq)]
+pub struct CropSpec {
+    /// Approximation tolerance for primitive refitting.
+    pub tolerance: f64,
+    /// Offset (mm) that was applied when growing the stock geometry;
+    /// kept for traceability but not used by the dispatch.
+    pub offset: f64,
+    /// Pre-resolved clip regions, each a polygon of `(x, y)` vertices.
+    pub regions: Vec<Polygon>,
+}
+
+impl Transformer for CropSpec {
+    fn phase(&self) -> Phase {
+        Phase::PathInterruption
+    }
+
+    fn apply(&self, ops: &mut Ops) {
+        ops.clip_ops_to_regions(&self.regions, self.tolerance);
+    }
+
+    fn name(&self) -> &'static str {
+        "crop"
+    }
+}
 
 /// Add a clipped line segment to `new_ops`, inserting a move-to if the pen position
 /// does not match the segment start.

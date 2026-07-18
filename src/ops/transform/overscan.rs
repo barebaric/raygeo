@@ -1,7 +1,29 @@
 use crate::ops::container::Ops;
 use crate::ops::enums::{CommandCategory, CommandType, SectionType};
+use crate::ops::transform::apply::{Phase, Transformer};
 use crate::ops::types::{MarkerCmd, OpCategory};
 use crate::types::Point3D;
+
+/// Parameters for the [`apply_overscan`] transformer.
+#[derive(Clone, Debug, PartialEq)]
+pub struct OverscanSpec {
+    /// Overscan distance in millimeters.
+    pub distance_mm: f64,
+}
+
+impl Transformer for OverscanSpec {
+    fn phase(&self) -> Phase {
+        Phase::PostProcessing
+    }
+
+    fn apply(&self, ops: &mut Ops) {
+        apply_overscan(ops, self.distance_mm);
+    }
+
+    fn name(&self) -> &'static str {
+        "overscan"
+    }
+}
 
 pub fn apply_overscan(ops: &mut Ops, distance_mm: f64) {
     if ops.is_empty() || distance_mm <= 0.0 {

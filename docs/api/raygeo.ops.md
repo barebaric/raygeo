@@ -274,6 +274,10 @@ passes are left untouched.
 | _Returns_    | `None`  |                                               |
 | _Complexity_ |         | O(n) time, O(n) space                         |
 
+![Bidirectional scan offset correction](images/ops-transform-bidir-scan-offset-bidir-scan-offset.png)
+
+*Bidirectional scan offset correction*
+
 ### `apply_lead_in_out()`
 
 ```python
@@ -310,6 +314,10 @@ Repeats the ops sequence multiple times, optionally stepping down the Z axis aft
 | `z_step_down` | `float` | Z distance to move down after each pass. |
 | _Returns_     | `None`  |                                          |
 | _Complexity_  |         | O(n * passes) time, O(n * passes) space  |
+
+![Multi-pass with Z stepping](images/ops-transform-multipass-multipass.png)
+
+*Multi-pass with Z stepping*
 
 ### `apply_overscan()`
 
@@ -392,6 +400,33 @@ weaker. Only `VECTOR_OUTLINE` sections are modified.
 | `original_power` | `float`                                | Normal cutting power to restore after the tab.               |
 | _Returns_        | `None`                                 |                                                              |
 | _Complexity_     |                                        | O(n * k) time, O(1) space where k is the number of tab clips |
+
+### `apply_transformers()`
+
+```python
+apply_transformers(
+    transformers: Sequence[Any],
+    progress_cb: Optional[Any] = None,
+) -> None
+```
+
+Apply a batch of transformers in a single call.
+
+The *transformers* list may contain any of the typed spec objects defined in
+**raygeo.ops.transform** (`SmoothSpec`, `OptimizeSpec`, `MergeLinesSpec`, `OverscanSpec`,
+`LeadInOutSpec`, `MultiPassSpec`, `CropSpec`, `TabsSpec`, `BidirScanOffsetSpec`). The transformers
+are sorted by execution phase (geometry refinement -> path interruption -> post-processing) and
+applied in order.
+
+**Raises:** `TypeError` — If any element is not a known spec type.
+
+**Raises:** `RuntimeError` — If the loop was cancelled.
+
+| Parameter      | Type                   | Description                                                                                                                                                                                           |
+| -------------- | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `transformers` | `Sequence[Any]`        | List of typed spec objects.                                                                                                                                                                           |
+| `progress_cb`  | `Optional[Any] = None` | Optional callable `(progress, message)` that also exposes an `is_cancelled()` method; called before each transformer. If `is_cancelled()` returns `True` the loop aborts before the next transformer. |
+| _Returns_      | `None`                 |                                                                                                                                                                                                       |
 
 ### `arc_params()`
 
@@ -2055,6 +2090,10 @@ operates in place.
 | `corner_angle_threshold` | `float` | Corners with an internal angle (in degrees) smaller than this are preserved. |
 | _Returns_                | `None`  |                                                                              |
 | _Complexity_             |         | O(n * k) time, O(n) space where k is the kernel size                         |
+
+![Gaussian smoothing applied to a square path](images/ops-transform-smooth-smooth.png)
+
+*Gaussian smoothing applied to a square path*
 
 ### `spindle_rpm()`
 

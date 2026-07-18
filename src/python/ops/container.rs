@@ -15,7 +15,9 @@ use crate::ops::{
 use crate::python::geo::flex_point::{
     point3d_to_tuple, polygons_from_tuples, tuple_to_point3d,
 };
+use crate::python::ops::transform::apply as py_apply;
 use crate::types::{Point, Point3D, Rect};
+use py_apply::{extract_transformer, PyProgress};
 
 use super::axis::PyAxis;
 use super::state::{
@@ -2861,6 +2863,54 @@ impl PyOps {
             preserve_order,
             Some(&py_progress),
         );
+        Ok(())
+    }
+
+    /// Apply a batch of transformers in a single call.
+    ///
+    /// The *transformers* list may contain any of the typed spec
+    /// objects defined in :mod:`raygeo.ops.transform` (``SmoothSpec``,
+    /// ``OptimizeSpec``, ``MergeLinesSpec``, ``OverscanSpec``,
+    /// ``LeadInOutSpec``, ``MultiPassSpec``, ``CropSpec``,
+    /// ``TabsSpec``, ``BidirScanOffsetSpec``). The transformers are
+    /// sorted by execution phase (geometry refinement -> path
+    /// interruption -> post-processing) and applied in order.
+    ///
+    /// :param transformers: List of typed spec objects.
+    /// :param progress_cb: Optional callable ``(progress, message)``
+    ///     that also exposes an ``is_cancelled()`` method; called
+    ///     before each transformer. If ``is_cancelled()`` returns
+    ///     ``True`` the loop aborts before the next transformer.
+    /// :raises TypeError: If any element is not a known spec type.
+    /// :raises RuntimeError: If the loop was cancelled.
+    #[pyo3(signature = (transformers, progress_cb=None))]
+    fn apply_transformers(
+        &mut self,
+        transformers: Vec<Bound<'_, PyAny>>,
+        progress_cb: Option<&Bound<'_, PyAny>>,
+    ) -> PyResult<()> {
+        let mut specs: Vec<Box<dyn crate::ops::transform::apply::Transformer>> =
+            Vec::with_capacity(transformers.len());
+        for ob in transformers.iter() {
+            specs.push(extract_transformer(ob)?);
+        }
+
+        let py_progress = PyProgress { cb: progress_cb };
+
+        crate::ops::transform::apply::apply_transformers(
+            &mut self.inner,
+            specs,
+            if progress_cb.is_some() {
+                Some(&py_progress)
+            } else {
+                None
+            },
+        )
+        .map_err(|_| {
+            pyo3::exceptions::PyRuntimeError::new_err(
+                "apply_transformers cancelled",
+            )
+        })?;
         Ok(())
     }
 

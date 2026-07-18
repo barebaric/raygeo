@@ -11,11 +11,43 @@ use super::link::{find_pass_entry, find_pass_exit};
 use crate::ops::container::Ops;
 use crate::ops::enums::{CommandCategory, CommandType};
 use crate::ops::state::State;
+use crate::ops::transform::apply::{Phase, Transformer};
 use crate::types::Point3D;
 
 const TWO_OPT_SEGMENT_THRESHOLD: usize = 1000;
 const TWO_OPT_COMMAND_LIMIT: usize = 10000;
 const TWO_OPT_MAX_ITER: usize = 10;
+
+/// Parameters for the [`optimize_travel`] transformer.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct OptimizeSpec {
+    /// Whether flipping subpaths is allowed.
+    pub allow_flip: bool,
+    /// Keep the first workpiece in place.
+    pub preserve_first: bool,
+    /// Workpiece UIDs whose order to preserve.
+    pub preserve_order: Vec<String>,
+}
+
+impl Transformer for OptimizeSpec {
+    fn phase(&self) -> Phase {
+        Phase::GeometryRefinement
+    }
+
+    fn apply(&self, ops: &mut Ops) {
+        optimize_travel(
+            ops,
+            self.allow_flip,
+            self.preserve_first,
+            self.preserve_order.clone(),
+            None,
+        );
+    }
+
+    fn name(&self) -> &'static str {
+        "optimize"
+    }
+}
 
 pub trait ProgressCallback {
     fn report(&self, progress: f64, message: &str);

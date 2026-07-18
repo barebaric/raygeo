@@ -1,4 +1,28 @@
+use crate::ops::transform::apply::{Phase, Transformer};
 use crate::ops::Ops;
+
+/// Parameters for the [`apply_multipass`] transformer.
+#[derive(Clone, Debug, PartialEq)]
+pub struct MultiPassSpec {
+    /// Total number of passes (must be >= 1).
+    pub passes: u32,
+    /// Z distance to move down after each pass.
+    pub z_step_down: f64,
+}
+
+impl Transformer for MultiPassSpec {
+    fn phase(&self) -> Phase {
+        Phase::PostProcessing
+    }
+
+    fn apply(&self, ops: &mut Ops) {
+        apply_multipass(ops, self.passes, self.z_step_down);
+    }
+
+    fn name(&self) -> &'static str {
+        "multipass"
+    }
+}
 
 /// Repeats the ops sequence multiple times, optionally translating each
 /// subsequent pass down the Z axis.

@@ -1,5 +1,27 @@
 use crate::ops::container::Ops;
 use crate::ops::enums::{CommandCategory, CommandType};
+use crate::ops::transform::apply::{Phase, Transformer};
+
+/// Parameters for the [`apply_bidir_scan_offset`] transformer.
+#[derive(Clone, Debug, PartialEq)]
+pub struct BidirScanOffsetSpec {
+    /// X offset in millimeters applied to right-to-left raster passes.
+    pub offset_mm: f64,
+}
+
+impl Transformer for BidirScanOffsetSpec {
+    fn phase(&self) -> Phase {
+        Phase::PostProcessing
+    }
+
+    fn apply(&self, ops: &mut Ops) {
+        apply_bidir_scan_offset(ops, self.offset_mm);
+    }
+
+    fn name(&self) -> &'static str {
+        "bidir_scan_offset"
+    }
+}
 
 /// Apply bidirectional scan offset to right-to-left raster passes.
 ///

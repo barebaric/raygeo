@@ -8,7 +8,29 @@ use std::collections::{HashMap, HashSet};
 
 use crate::ops::container::Ops;
 use crate::ops::enums::{CommandCategory, CommandType};
+use crate::ops::transform::apply::{Phase, Transformer};
 use crate::types::Point3D;
+
+/// Parameters for the [`merge_overlapping_lines`] transformer.
+#[derive(Clone, Debug, PartialEq)]
+pub struct MergeLinesSpec {
+    /// Maximum distance for considering lines collinear.
+    pub tolerance: f64,
+}
+
+impl Transformer for MergeLinesSpec {
+    fn phase(&self) -> Phase {
+        Phase::GeometryRefinement
+    }
+
+    fn apply(&self, ops: &mut Ops) {
+        merge_overlapping_lines(ops, self.tolerance);
+    }
+
+    fn name(&self) -> &'static str {
+        "merge_lines"
+    }
+}
 
 /// Apply merge-lines to the given ops.
 ///

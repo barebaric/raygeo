@@ -6,6 +6,7 @@
 //! grouping, and clipping.
 
 pub mod affine;
+pub mod apply;
 pub mod bidir_scan_offset;
 pub mod clip;
 pub mod flip;

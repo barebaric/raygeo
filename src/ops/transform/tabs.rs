@@ -14,16 +14,51 @@ use std::collections::HashMap;
 use super::link::find_pass_exit;
 use crate::ops::container::Ops;
 use crate::ops::enums::{CommandCategory, CommandType, SectionType};
+use crate::ops::transform::apply::{Phase, Transformer};
 use crate::ops::transform::clip::clip_subpath_linear;
 use crate::ops::types::{MoveCmd, OpCategory};
 use crate::types::Point3D;
 
 /// A clip point: the center and width of a tab on the toolpath.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ClipPoint {
     pub x: f64,
     pub y: f64,
     pub width: f64,
+}
+
+/// Parameters for the [`apply_tab_gaps`] / [`apply_tab_power`] transformer.
+///
+/// `clips` are pre-scaled clip points in ops space. Dispatch rule: if
+/// `tab_power > 0.0` power mode is used (with effective power
+/// `tab_power * original_power`); otherwise gap mode is used.
+#[derive(Clone, Debug, PartialEq)]
+pub struct TabsSpec {
+    /// Tab power level (0.0-1.0). 0.0 selects gap mode.
+    pub tab_power: f64,
+    /// Normal cutting power restored after each tab.
+    pub original_power: f64,
+    /// `(x, y, width)` tuples defining tab positions.
+    pub clips: Vec<ClipPoint>,
+}
+
+impl Transformer for TabsSpec {
+    fn phase(&self) -> Phase {
+        Phase::PathInterruption
+    }
+
+    fn apply(&self, ops: &mut Ops) {
+        if self.tab_power > 0.0 {
+            let effective = self.tab_power * self.original_power;
+            apply_tab_power(ops, &self.clips, effective, self.original_power);
+        } else {
+            apply_tab_gaps(ops, &self.clips);
+        }
+    }
+
+    fn name(&self) -> &'static str {
+        "tabs"
+    }
 }
 
 /// A distance interval along a subpath that should be gapped or power-modulated.

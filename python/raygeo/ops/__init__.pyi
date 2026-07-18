@@ -1336,6 +1336,26 @@ class Ops:
         :param progress_cb: Optional callable(progress, message).
         :complexity: O(n²) average time, O(n) space
         """
+    def apply_transformers(self, transformers: typing.Sequence[typing.Any], progress_cb: typing.Optional[typing.Any] = None) -> None:
+        r"""
+        Apply a batch of transformers in a single call.
+        
+        The *transformers* list may contain any of the typed spec
+        objects defined in :mod:`raygeo.ops.transform` (``SmoothSpec``,
+        ``OptimizeSpec``, ``MergeLinesSpec``, ``OverscanSpec``,
+        ``LeadInOutSpec``, ``MultiPassSpec``, ``CropSpec``,
+        ``TabsSpec``, ``BidirScanOffsetSpec``). The transformers are
+        sorted by execution phase (geometry refinement -> path
+        interruption -> post-processing) and applied in order.
+        
+        :param transformers: List of typed spec objects.
+        :param progress_cb: Optional callable ``(progress, message)``
+            that also exposes an ``is_cancelled()`` method; called
+            before each transformer. If ``is_cancelled()`` returns
+            ``True`` the loop aborts before the next transformer.
+        :raises TypeError: If any element is not a known spec type.
+        :raises RuntimeError: If the loop was cancelled.
+        """
     def to_vertex_arrays(self) -> typing.Any:
         r"""
         Encode all commands into GPU-friendly vertex arrays.

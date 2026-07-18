@@ -1,8 +1,32 @@
 use crate::geo::algo::analysis::get_tangent_at_from_array;
 use crate::ops::container::Ops;
 use crate::ops::enums::{CommandCategory, CommandType, SectionType};
+use crate::ops::transform::apply::{Phase, Transformer};
 use crate::ops::types::{MarkerCmd, OpCategory};
 use crate::types::Point3D;
+
+/// Parameters for the [`apply_lead_in_out`] transformer.
+#[derive(Clone, Debug, PartialEq)]
+pub struct LeadInOutSpec {
+    /// Lead-in distance in millimeters.
+    pub lead_in_mm: f64,
+    /// Lead-out distance in millimeters.
+    pub lead_out_mm: f64,
+}
+
+impl Transformer for LeadInOutSpec {
+    fn phase(&self) -> Phase {
+        Phase::PathInterruption
+    }
+
+    fn apply(&self, ops: &mut Ops) {
+        apply_lead_in_out(ops, self.lead_in_mm, self.lead_out_mm);
+    }
+
+    fn name(&self) -> &'static str {
+        "lead_in_out"
+    }
+}
 
 pub fn apply_lead_in_out(ops: &mut Ops, lead_in_mm: f64, lead_out_mm: f64) {
     let has_lead_in = lead_in_mm > 0.0;
