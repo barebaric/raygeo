@@ -1301,6 +1301,15 @@ class Ops:
         :param offset_mm: Offset in millimeters to apply to RTL passes.
         :complexity: O(n) time, O(n) space
         """
+    def apply_multipass(self, passes: builtins.int, z_step_down: builtins.float) -> None:
+        r"""
+        Repeats the ops sequence multiple times, optionally stepping
+        down the Z axis after each pass.
+        
+        :param passes: Total number of passes (must be >= 1).
+        :param z_step_down: Z distance to move down after each pass.
+        :complexity: O(n * passes) time, O(n * passes) space
+        """
     def apply_lead_in_out(self, lead_in_mm: builtins.float, lead_out_mm: builtins.float) -> None:
         r"""
         Apply lead-in and lead-out to vector contour paths.

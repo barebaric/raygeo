@@ -2780,6 +2780,20 @@ impl PyOps {
         );
     }
 
+    /// Repeats the ops sequence multiple times, optionally stepping
+    /// down the Z axis after each pass.
+    ///
+    /// :param passes: Total number of passes (must be >= 1).
+    /// :param z_step_down: Z distance to move down after each pass.
+    /// :complexity: O(n * passes) time, O(n * passes) space
+    fn apply_multipass(&mut self, passes: u32, z_step_down: f64) {
+        crate::ops::transform::apply_multipass(
+            &mut self.inner,
+            passes,
+            z_step_down,
+        );
+    }
+
     /// Apply lead-in and lead-out to vector contour paths.
     ///
     /// For each contour within a VECTOR_OUTLINE section, extends the

@@ -296,6 +296,21 @@ lead-out segments along the tangent direction at the path start and end.
 
 *Lead-in and lead-out paths*
 
+### `apply_multipass()`
+
+```python
+apply_multipass(passes: int, z_step_down: float) -> None
+```
+
+Repeats the ops sequence multiple times, optionally stepping down the Z axis after each pass.
+
+| Parameter     | Type    | Description                              |
+| ------------- | ------- | ---------------------------------------- |
+| `passes`      | `int`   | Total number of passes (must be >= 1).   |
+| `z_step_down` | `float` | Z distance to move down after each pass. |
+| _Returns_     | `None`  |                                          |
+| _Complexity_  |         | O(n * passes) time, O(n * passes) space  |
+
 ### `apply_overscan()`
 
 ```python
