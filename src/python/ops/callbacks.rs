@@ -1,11 +1,11 @@
-pyo3_stub_gen::module_doc!("raygeo.ops.assembly.callbacks", "{}", MODULE_DOC);
+pyo3_stub_gen::module_doc!("raygeo.ops.callbacks", "{}", MODULE_DOC);
 
 pub(crate) const MODULE_DOC: &str = "Per-node callback bridge types.";
 
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyclass;
 
-use crate::ops::assembly::callbacks::{ChunkPayload, TaskCallbacks};
+use crate::ops::callbacks::{ChunkPayload, TaskCallbacks};
 
 /// Python-side ``TaskCallbacks`` that reacquires the GIL and calls
 /// the stored Python callables.
@@ -64,10 +64,10 @@ impl TaskCallbacks for PyTaskCallbacks {
 }
 
 /// Python-visible chunk payload. Mirrors ``ChunkPayload``.
-#[gen_stub_pyclass(module = "raygeo.ops.assembly.callbacks")]
+#[gen_stub_pyclass(module = "raygeo.ops.callbacks")]
 #[pyclass(
     name = "ChunkPayload",
-    module = "raygeo.ops.assembly.callbacks",
+    module = "raygeo.ops.callbacks",
     skip_from_py_object
 )]
 #[derive(Clone, Debug)]
@@ -90,15 +90,15 @@ impl ChunkPayload {
     }
 }
 
-pub(crate) fn register(parent: &Bound<'_, PyModule>) -> PyResult<()> {
-    let py = parent.py();
+pub(crate) fn register(ops_mod: &Bound<'_, PyModule>) -> PyResult<()> {
+    let py = ops_mod.py();
     let callbacks_mod = PyModule::new(py, "callbacks")?;
     callbacks_mod.setattr("__doc__", MODULE_DOC)?;
     callbacks_mod.add_class::<PyChunkPayload>()?;
-    parent.add_submodule(&callbacks_mod)?;
+    ops_mod.add_submodule(&callbacks_mod)?;
 
     let sys_modules = py.import("sys")?.getattr("modules")?;
-    sys_modules.set_item("raygeo.ops.assembly.callbacks", &callbacks_mod)?;
+    sys_modules.set_item("raygeo.ops.callbacks", &callbacks_mod)?;
 
     Ok(())
 }

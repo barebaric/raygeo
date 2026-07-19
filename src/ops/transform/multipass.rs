@@ -1,4 +1,4 @@
-use crate::ops::transform::apply::{Phase, Transformer};
+use crate::ops::transform::{Phase, TransformCtx, Transformer};
 use crate::ops::Ops;
 
 /// Parameters for the [`apply_multipass`] transformer.
@@ -15,8 +15,8 @@ impl Transformer for MultiPassSpec {
         Phase::PostProcessing
     }
 
-    fn apply(&self, ops: &mut Ops) {
-        apply_multipass(ops, self.passes, self.z_step_down);
+    fn apply(&self, ctx: &mut TransformCtx<'_>) {
+        apply_multipass(ctx.ops, self.passes, self.z_step_down);
     }
 
     fn name(&self) -> &'static str {

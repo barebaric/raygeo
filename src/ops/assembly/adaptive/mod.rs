@@ -6,10 +6,8 @@
 //! backward direction, and the angular engagement solver — aided by the
 //! tool's heading momentum — steers into fresh material.
 //!
-//! The caller is responsible for pre-populating the `ClearedArea` with
-//! entry polygons (e.g. via a workplan built by
-//! `cnc::machining::entry::build_entry_workplan` and executed by
-//! `cnc::machining::plan::Workplan::execute`).
+//! The caller is responsible for pre-populating the `ClearedArea`
+//! with entry polygons before invoking this module.
 
 mod chain;
 pub mod resume;

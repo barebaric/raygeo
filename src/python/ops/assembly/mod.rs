@@ -23,7 +23,6 @@ use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 use crate::ops::assembly::{Assembler, ProgressEvent};
 
 pub(crate) mod adaptive;
-pub(crate) mod callbacks;
 pub(crate) mod contour;
 pub(crate) mod frame;
 pub(crate) mod helix;
@@ -194,7 +193,6 @@ pub(crate) fn register(ops_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     assembly_mod.add_class::<PyAssembler>()?;
 
     adaptive::register(&assembly_mod)?;
-    callbacks::register(&assembly_mod)?;
     contour::register(&assembly_mod)?;
     frame::register(&assembly_mod)?;
     helix::register(&assembly_mod)?;

@@ -6,9 +6,10 @@ use crate::trace_types::{
     EventKind, Meta, MoveKind, ProgressSnapshot, ToolSnapshot,
 };
 
-/// One self-contained trace event produced by an assembler. The workplan
-/// assigns seq/span when emitting; the assembler only describes WHAT
-/// happened (kind, tool state, progress, move classification, meta).
+/// One self-contained trace event produced by an assembler. The
+/// caller assigns seq/span when emitting; the assembler only
+/// describes WHAT happened (kind, tool state, progress, move
+/// classification, meta).
 #[derive(Clone, Debug)]
 pub struct TraceEventData {
     pub(crate) kind: EventKind,
@@ -19,7 +20,9 @@ pub struct TraceEventData {
 }
 
 /// Trace bundle: span attrs + ordered events.
-/// Constructed by the caller from Tracelet data, not returned by assemblers.
+///
+/// Constructed by the caller from Tracelet data, not returned by
+/// assemblers.
 #[derive(Clone, Debug, Default)]
 #[allow(dead_code)]
 pub(crate) struct AssemblyTrace {
@@ -44,7 +47,8 @@ pub struct AssemblyMeta {
 /// | `Move` | [`tracer.move_point`] |
 /// | `Resume` / `Exit` / other | [`tracer.event`] |
 ///
-/// Used by both the workplan executor and the Python `write_trace` binding.
+/// Used by callers that drive an assembler through [`Tracelet`] and
+/// by the Python `write_trace` binding.
 pub(crate) fn emit_trace_events(
     tracer: &mut Tracer,
     span: u32,

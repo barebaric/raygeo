@@ -7,7 +7,6 @@ use pyo3_stub_gen::derive::{
 };
 use pyo3_stub_gen::inventory::submit;
 
-use crate::ops::transform::optimize::ProgressCallback;
 use crate::ops::{
     Axis, CommandType, MarkerCmd, MoveCmd, OpCategory, OpsSection,
     OpsSectionRange, StateCmd,
@@ -15,9 +14,9 @@ use crate::ops::{
 use crate::python::geo::flex_point::{
     point3d_to_tuple, polygons_from_tuples, tuple_to_point3d,
 };
-use crate::python::ops::transform::apply as py_apply;
+use crate::python::ops::transform as py_transform;
 use crate::types::{Point, Point3D, Rect};
-use py_apply::{extract_transformer, PyProgress};
+use py_transform::{extract_transformer, PyCallableCallbacks};
 
 use super::axis::PyAxis;
 use super::state::{
@@ -2832,36 +2831,14 @@ impl PyOps {
         preserve_order: Vec<String>,
         progress_cb: Option<&Bound<'_, PyAny>>,
     ) -> PyResult<()> {
-        struct PyProgress<'py> {
-            cb: Option<&'py Bound<'py, PyAny>>,
-        }
-
-        impl<'py> ProgressCallback for PyProgress<'py> {
-            fn report(&self, progress: f64, message: &str) {
-                if let Some(cb) = self.cb {
-                    let _ = cb.call1((progress, message));
-                }
-            }
-
-            fn is_cancelled(&self) -> bool {
-                if let Some(cb) = self.cb {
-                    if let Ok(result) = cb.call_method0("is_cancelled") {
-                        if let Ok(cancelled) = result.extract::<bool>() {
-                            return cancelled;
-                        }
-                    }
-                }
-                false
-            }
-        }
-
-        let py_progress = PyProgress { cb: progress_cb };
+        let py_callbacks =
+            PyCallableCallbacks::new(progress_cb.map(|b| b.clone().unbind()));
         crate::ops::transform::optimize::optimize_travel(
             &mut self.inner,
             allow_flip,
             preserve_first,
             preserve_order,
-            Some(&py_progress),
+            &py_callbacks,
         );
         Ok(())
     }
@@ -2889,22 +2866,19 @@ impl PyOps {
         transformers: Vec<Bound<'_, PyAny>>,
         progress_cb: Option<&Bound<'_, PyAny>>,
     ) -> PyResult<()> {
-        let mut specs: Vec<Box<dyn crate::ops::transform::apply::Transformer>> =
+        let mut specs: Vec<Box<dyn crate::ops::transform::Transformer>> =
             Vec::with_capacity(transformers.len());
         for ob in transformers.iter() {
             specs.push(extract_transformer(ob)?);
         }
 
-        let py_progress = PyProgress { cb: progress_cb };
+        let py_callbacks =
+            PyCallableCallbacks::new(progress_cb.map(|b| b.clone().unbind()));
 
-        crate::ops::transform::apply::apply_transformers(
+        crate::ops::transform::apply_transformers(
             &mut self.inner,
             &mut specs,
-            if progress_cb.is_some() {
-                Some(&py_progress)
-            } else {
-                None
-            },
+            &py_callbacks,
         )
         .map_err(|_| {
             pyo3::exceptions::PyRuntimeError::new_err(

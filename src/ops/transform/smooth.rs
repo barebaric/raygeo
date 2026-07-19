@@ -8,7 +8,7 @@
 use crate::geo::algo::smooth::smooth_polyline_3d;
 use crate::ops::container::Ops;
 use crate::ops::enums::CommandType;
-use crate::ops::transform::apply::{Phase, Transformer};
+use crate::ops::transform::{Phase, TransformCtx, Transformer};
 use crate::types::Point3D;
 
 /// Parameters for the [`smooth`] transformer.
@@ -26,8 +26,8 @@ impl Transformer for SmoothSpec {
         Phase::GeometryRefinement
     }
 
-    fn apply(&self, ops: &mut Ops) {
-        ops.smooth(self.amount, self.corner_angle_threshold);
+    fn apply(&self, ctx: &mut TransformCtx<'_>) {
+        ctx.ops.smooth(self.amount, self.corner_angle_threshold);
     }
 
     fn name(&self) -> &'static str {

@@ -18,9 +18,7 @@ use crate::types::{Point, Point3D};
 
 /// Spec for the helix assembler.
 ///
-/// Carries the parameters needed by [`generate_helix`] and the workplan
-/// executor's [`WorkplanStep::HelixPlunge`](crate::cnc::machining::plan::WorkplanStep::HelixPlunge)
-/// step.
+/// Carries the parameters needed by [`generate_helix`].
 #[derive(Clone, Debug)]
 pub struct HelixSpec {
     pub center: Point,

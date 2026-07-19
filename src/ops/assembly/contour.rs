@@ -6,8 +6,8 @@
 //! [`PyAssemblyResult`](crate::python::ops::assembly::result::PyAssemblyResult).
 //!
 //! The [`ContourSpec`] struct implements the [`Assembler`] trait so
-//! the pipeline's `Compute` stage can dispatch to it without knowing
-//! the concrete parameter set.
+//! callers can dispatch to it without knowing the concrete parameter
+//! set.
 
 use crate::error::RaygeoResult;
 use crate::geo::algo::fitting::{fit_curves, linearize_geometry};
@@ -27,8 +27,8 @@ use crate::types::Point3D;
 
 /// Spec for the contour assembler.
 ///
-/// Mirrors the parameter list of [`assemble_contour`]. Carried by
-/// the pipeline's `Compute` stage as `Box<dyn Assembler>`.
+/// Mirrors the parameter list of [`assemble_contour`]. Held as
+/// `Box<dyn Assembler>` by callers that drive the trait.
 #[derive(Clone, Debug)]
 pub struct ContourSpec {
     pub kerf_mm: f64,

@@ -8,10 +8,11 @@ use std::collections::HashSet;
 use rstar::{PointDistance, RTree, RTreeObject, AABB};
 
 use super::link::{find_pass_entry, find_pass_exit};
+use crate::ops::callbacks::TaskCallbacks;
 use crate::ops::container::Ops;
 use crate::ops::enums::{CommandCategory, CommandType};
 use crate::ops::state::State;
-use crate::ops::transform::apply::{Phase, Transformer};
+use crate::ops::transform::{Phase, TransformCtx, Transformer};
 use crate::types::Point3D;
 
 const TWO_OPT_SEGMENT_THRESHOLD: usize = 1000;
@@ -34,31 +35,18 @@ impl Transformer for OptimizeSpec {
         Phase::GeometryRefinement
     }
 
-    fn apply(&self, ops: &mut Ops) {
+    fn apply(&self, ctx: &mut TransformCtx<'_>) {
         optimize_travel(
-            ops,
+            ctx.ops,
             self.allow_flip,
             self.preserve_first,
             self.preserve_order.clone(),
-            None,
+            ctx.callbacks,
         );
     }
 
     fn name(&self) -> &'static str {
         "optimize"
-    }
-}
-
-pub trait ProgressCallback {
-    fn report(&self, progress: f64, message: &str);
-    fn is_cancelled(&self) -> bool;
-}
-
-struct NoopProgress;
-impl ProgressCallback for NoopProgress {
-    fn report(&self, _progress: f64, _message: &str) {}
-    fn is_cancelled(&self) -> bool {
-        false
     }
 }
 
@@ -645,17 +633,16 @@ fn sync_state_commands(ops: &mut Ops, state: &State, prev: &State) -> State {
 /// - `preserve_first`: Whether to keep the first workpiece in place.
 /// - `preserve_order`: List of workpiece UIDs whose order must be
 ///   preserved.
-/// - `progress_cb`: Optional progress callback implementing ProgressCallback.
+/// - `callbacks`: Callback bundle for progress reports and
+///   cancellation polling.
 pub fn optimize_travel(
     ops: &mut Ops,
     allow_flip: bool,
     preserve_first: bool,
     preserve_order: Vec<String>,
-    progress_cb: Option<&dyn ProgressCallback>,
+    callbacks: &dyn TaskCallbacks,
 ) {
     ops.preload_state();
-
-    let cb: &dyn ProgressCallback = progress_cb.unwrap_or(&NoopProgress);
 
     let blocks = split_by_workpiece_markers(ops);
     if blocks.len() >= 2 {
@@ -665,20 +652,20 @@ pub fn optimize_travel(
             allow_flip,
             preserve_first,
             &preserve_order,
-            cb,
+            callbacks,
         );
         return;
     }
 
-    optimize_segments(ops, allow_flip, cb);
+    optimize_segments(ops, allow_flip, callbacks);
 }
 
 fn report_progress(
-    progress_cb: &dyn ProgressCallback,
+    callbacks: &dyn TaskCallbacks,
     progress: f64,
     message: &str,
 ) {
-    progress_cb.report(progress, message);
+    callbacks.report_progress(progress, message);
 }
 
 fn optimize_workpiece_order(
@@ -687,9 +674,9 @@ fn optimize_workpiece_order(
     allow_flip: bool,
     preserve_first: bool,
     preserve_order: &[String],
-    progress_cb: &dyn ProgressCallback,
+    callbacks: &dyn TaskCallbacks,
 ) {
-    report_progress(progress_cb, 0.0, "Analyzing workpieces...");
+    report_progress(callbacks, 0.0, "Analyzing workpieces...");
 
     let mut metas: Vec<WorkpieceMeta> = Vec::new();
     for (uid, block_ops) in blocks {
@@ -722,14 +709,14 @@ fn optimize_workpiece_order(
         return;
     }
 
-    report_progress(progress_cb, 0.1, "Optimizing workpiece order...");
+    report_progress(callbacks, 0.1, "Optimizing workpiece order...");
 
     let ordered_metas = kdtree_order_workpieces(&mut reorderable_metas);
 
     let mut ordered_metas = ordered_metas;
     two_opt_workpieces(&mut ordered_metas);
 
-    report_progress(progress_cb, 0.9, "Reassembling optimized workpieces...");
+    report_progress(callbacks, 0.9, "Reassembling optimized workpieces...");
 
     if !preserved_indices.is_empty() {
         let mut final_metas: Vec<WorkpieceMeta> = Vec::new();
@@ -747,7 +734,7 @@ fn optimize_workpiece_order(
         reassemble_workpieces(ops, &ordered_metas);
     }
 
-    report_progress(progress_cb, 1.0, "Workpiece optimization complete");
+    report_progress(callbacks, 1.0, "Workpiece optimization complete");
 }
 
 fn reassemble_workpieces(ops: &mut Ops, ordered_metas: &[WorkpieceMeta]) {
@@ -770,16 +757,16 @@ fn reassemble_workpieces(ops: &mut Ops, ordered_metas: &[WorkpieceMeta]) {
 fn optimize_segments(
     ops: &mut Ops,
     allow_flip: bool,
-    progress_cb: &dyn ProgressCallback,
+    callbacks: &dyn TaskCallbacks,
 ) {
-    report_progress(progress_cb, 0.0, "Preprocessing for optimization...");
+    report_progress(callbacks, 0.0, "Preprocessing for optimization...");
 
     let nons = ops.without_state();
 
     let long_segments = nons.group_by_auxiliary_state();
 
     report_progress(
-        progress_cb,
+        callbacks,
         0.05,
         "Analyzing and bucketing path segments...",
     );
@@ -801,7 +788,7 @@ fn optimize_segments(
     let mut cumulative_workload: usize = 0;
 
     for (i, job) in jobs.iter().enumerate() {
-        if progress_cb.is_cancelled() {
+        if callbacks.is_cancelled() {
             break;
         }
 
@@ -825,7 +812,7 @@ fn optimize_segments(
                 sub_segments,
             } => {
                 report_progress(
-                    progress_cb,
+                    callbacks,
                     progress,
                     &format!("Optimizing segment {}/{}...", i + 1, jobs.len()),
                 );
@@ -853,7 +840,7 @@ fn optimize_segments(
         };
     }
 
-    report_progress(progress_cb, 0.9, "Reassembling optimized paths...");
+    report_progress(callbacks, 0.9, "Reassembling optimized paths...");
 
     let mut flat_result: Vec<Ops> = Vec::new();
     for i in 0..long_segments.len() {
@@ -880,5 +867,5 @@ fn optimize_segments(
         }
     }
 
-    report_progress(progress_cb, 1.0, "Optimization complete");
+    report_progress(callbacks, 1.0, "Optimization complete");
 }

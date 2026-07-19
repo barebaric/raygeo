@@ -29,7 +29,7 @@ pub struct Tracelet {
     // Trace events
     events: Vec<TraceEventData>,
     attrs: Option<Meta>,
-    // Section tracking (for Workplan step boundaries)
+    // Section tracking (caller-supplied step boundaries)
     source: String,
     label: String,
     ops_offset: usize,
@@ -345,8 +345,9 @@ impl Tracelet {
         self.flush();
     }
 
-    /// Push a pre-built OpNode directly (used by Workplan to assemble ops
-    /// from per-step temp tracelets in the correct order).
+    /// Push a pre-built [`OpNode`] directly, bypassing the
+    /// high-level helpers. Used by callers that build their own
+    /// `OpNode`s outside the tracelet API.
     pub fn push_raw(&mut self, node: OpNode) {
         if let OpCategory::Moving { end, .. } = &node.category {
             self.pos = *end;
@@ -361,8 +362,8 @@ impl Tracelet {
     /// Used by [`Assembler`](crate::ops::assembly::Assembler)
     /// implementations that produce an `Ops` through a non-tracelet
     /// code path (e.g. [`assemble_contour`](crate::ops::assembly::contour::assemble_contour))
-    /// to feed their result into the tracelet that the pipeline's
-    /// `Compute` stage drives.
+    /// to feed their result into the tracelet held by
+    /// [`AssembleCtx`](crate::ops::assembly::AssembleCtx).
     pub fn append_ops(&mut self, other: &Ops) {
         self.ops.extend(other);
         if let Some(last) = other.commands.last() {

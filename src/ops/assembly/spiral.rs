@@ -18,8 +18,8 @@ use crate::types::{Point, Point3D};
 
 /// Spec for the spiral assembler.
 ///
-/// Mirrors the parameter list of [`generate_spiral`]. Carried by
-/// the pipeline's `Compute` stage as `Box<dyn Assembler>`.
+/// Mirrors the parameter list of [`generate_spiral`]. Held as
+/// `Box<dyn Assembler>` by callers that drive the trait.
 #[derive(Clone, Debug)]
 pub struct SpiralSpec {
     pub center: Point,

@@ -19,6 +19,7 @@ for multi-axis machines.
 use pyo3::prelude::*;
 pub(crate) mod assembly;
 pub(crate) mod axis;
+pub(crate) mod callbacks;
 pub(crate) mod container;
 pub(crate) mod convert;
 pub(crate) mod cut;
@@ -62,6 +63,10 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     // Child submodule: raygeo.ops.assembly
     assembly::register(&ops_mod)?;
+
+    // Child submodule: raygeo.ops.callbacks (sibling of transform/assembly;
+    // shared TaskCallbacks bridge used by both).
+    callbacks::register(&ops_mod)?;
 
     // Child submodule: raygeo.ops.convert
     convert::register(&ops_mod)?;

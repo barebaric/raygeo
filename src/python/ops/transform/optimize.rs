@@ -2,31 +2,9 @@ use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::ops::transform::optimize::{
-    optimize_travel, OptimizeSpec as CoreOptimizeSpec, ProgressCallback,
+    optimize_travel, OptimizeSpec as CoreOptimizeSpec,
 };
-
-struct PyProgress<'py> {
-    cb: Option<&'py Bound<'py, PyAny>>,
-}
-
-impl<'py> ProgressCallback for PyProgress<'py> {
-    fn report(&self, progress: f64, message: &str) {
-        if let Some(cb) = self.cb {
-            let _ = cb.call1((progress, message));
-        }
-    }
-
-    fn is_cancelled(&self) -> bool {
-        if let Some(cb) = self.cb {
-            if let Ok(result) = cb.call_method0("is_cancelled") {
-                if let Ok(cancelled) = result.extract::<bool>() {
-                    return cancelled;
-                }
-            }
-        }
-        false
-    }
-}
+use crate::python::ops::transform::PyCallableCallbacks;
 
 pub(crate) fn register(transform_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let opt_mod = PyModule::new(transform_mod.py(), "optimize")?;
@@ -50,13 +28,14 @@ fn optimize_travel_py(
     preserve_order: Vec<String>,
     progress_cb: Option<&Bound<'_, PyAny>>,
 ) -> PyResult<()> {
-    let py_progress = PyProgress { cb: progress_cb };
+    let py_callbacks =
+        PyCallableCallbacks::new(progress_cb.map(|b| b.clone().unbind()));
     optimize_travel(
         &mut ops.inner,
         allow_flip,
         preserve_first,
         preserve_order,
-        Some(&py_progress),
+        &py_callbacks,
     );
     Ok(())
 }

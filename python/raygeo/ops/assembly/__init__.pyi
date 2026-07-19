@@ -20,7 +20,6 @@ from raygeo import ops
 from raygeo.ops.cut import search
 import typing
 from . import adaptive
-from . import callbacks
 from . import contour
 from . import frame
 from . import helix
@@ -37,7 +36,6 @@ __all__ = [
     "Assembler",
     "AssemblyResult",
     "adaptive",
-    "callbacks",
     "contour",
     "frame",
     "helix",

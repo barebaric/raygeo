@@ -1,6 +1,6 @@
 use crate::ops::container::Ops;
 use crate::ops::enums::{CommandCategory, CommandType};
-use crate::ops::transform::apply::{Phase, Transformer};
+use crate::ops::transform::{Phase, TransformCtx, Transformer};
 
 /// Parameters for the [`apply_bidir_scan_offset`] transformer.
 #[derive(Clone, Debug, PartialEq)]
@@ -14,8 +14,8 @@ impl Transformer for BidirScanOffsetSpec {
         Phase::PostProcessing
     }
 
-    fn apply(&self, ops: &mut Ops) {
-        apply_bidir_scan_offset(ops, self.offset_mm);
+    fn apply(&self, ctx: &mut TransformCtx<'_>) {
+        apply_bidir_scan_offset(ctx.ops, self.offset_mm);
     }
 
     fn name(&self) -> &'static str {

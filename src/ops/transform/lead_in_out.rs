@@ -1,7 +1,7 @@
 use crate::geo::algo::analysis::get_tangent_at_from_array;
 use crate::ops::container::Ops;
 use crate::ops::enums::{CommandCategory, CommandType, SectionType};
-use crate::ops::transform::apply::{Phase, Transformer};
+use crate::ops::transform::{Phase, TransformCtx, Transformer};
 use crate::ops::types::{MarkerCmd, OpCategory};
 use crate::types::Point3D;
 
@@ -19,8 +19,8 @@ impl Transformer for LeadInOutSpec {
         Phase::PathInterruption
     }
 
-    fn apply(&self, ops: &mut Ops) {
-        apply_lead_in_out(ops, self.lead_in_mm, self.lead_out_mm);
+    fn apply(&self, ctx: &mut TransformCtx<'_>) {
+        apply_lead_in_out(ctx.ops, self.lead_in_mm, self.lead_out_mm);
     }
 
     fn name(&self) -> &'static str {

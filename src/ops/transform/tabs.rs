@@ -14,8 +14,8 @@ use std::collections::HashMap;
 use super::link::find_pass_exit;
 use crate::ops::container::Ops;
 use crate::ops::enums::{CommandCategory, CommandType, SectionType};
-use crate::ops::transform::apply::{Phase, Transformer};
 use crate::ops::transform::clip::clip_subpath_linear;
+use crate::ops::transform::{Phase, TransformCtx, Transformer};
 use crate::ops::types::{MoveCmd, OpCategory};
 use crate::types::Point3D;
 
@@ -47,12 +47,17 @@ impl Transformer for TabsSpec {
         Phase::PathInterruption
     }
 
-    fn apply(&self, ops: &mut Ops) {
+    fn apply(&self, ctx: &mut TransformCtx<'_>) {
         if self.tab_power > 0.0 {
             let effective = self.tab_power * self.original_power;
-            apply_tab_power(ops, &self.clips, effective, self.original_power);
+            apply_tab_power(
+                ctx.ops,
+                &self.clips,
+                effective,
+                self.original_power,
+            );
         } else {
-            apply_tab_gaps(ops, &self.clips);
+            apply_tab_gaps(ctx.ops, &self.clips);
         }
     }
 

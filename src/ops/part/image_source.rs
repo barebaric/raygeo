@@ -8,9 +8,9 @@ use crate::image::types::PixelImage;
 
 /// Lazy access to a raster image for assemblers.
 ///
-/// Implementations must be `Send + Sync` because the part may be
-/// read from rayon workers. Methods are object-safe; the source is
-/// held as `Box<dyn ImageSource>` on [`Part`](super::Part).
+/// Implementations must be `Send + Sync` so the source can be held
+/// as `Box<dyn ImageSource>` on [`Part`](super::Part) regardless of
+/// the caller's threading model. Methods are object-safe.
 pub trait ImageSource: Send + Sync {
     /// Pixel dimensions of the image as `(width, height)`.
     ///

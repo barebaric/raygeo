@@ -11,7 +11,7 @@ use crate::geo::shape::arc::is_arc_inside_polygons;
 use crate::geo::shape::bezier::is_bezier_inside_polygons;
 use crate::ops::container::Ops;
 use crate::ops::enums::CommandType;
-use crate::ops::transform::apply::{Phase, Transformer};
+use crate::ops::transform::{Phase, TransformCtx, Transformer};
 use crate::ops::types::{MoveCmd, OpCategory, OpNode};
 use crate::types::Command;
 use crate::types::{Point, Point3D, Polygon, Rect};
@@ -36,8 +36,8 @@ impl Transformer for CropSpec {
         Phase::PathInterruption
     }
 
-    fn apply(&self, ops: &mut Ops) {
-        ops.clip_ops_to_regions(&self.regions, self.tolerance);
+    fn apply(&self, ctx: &mut TransformCtx<'_>) {
+        ctx.ops.clip_ops_to_regions(&self.regions, self.tolerance);
     }
 
     fn name(&self) -> &'static str {

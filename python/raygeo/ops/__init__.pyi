@@ -23,6 +23,7 @@ from raygeo.image import scan
 import typing
 from . import assembly
 from . import axis
+from . import callbacks
 from . import convert
 from . import cut
 from . import feature
@@ -37,6 +38,7 @@ __all__ = [
     "OpsSectionRange",
     "assembly",
     "axis",
+    "callbacks",
     "convert",
     "cut",
     "feature",

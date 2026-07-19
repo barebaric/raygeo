@@ -5,6 +5,7 @@
 
 pub mod assembly;
 pub mod axis;
+pub mod callbacks;
 pub mod container;
 pub mod convert;
 pub mod cut;

@@ -1,6 +1,6 @@
 use crate::ops::container::Ops;
 use crate::ops::enums::{CommandCategory, CommandType, SectionType};
-use crate::ops::transform::apply::{Phase, Transformer};
+use crate::ops::transform::{Phase, TransformCtx, Transformer};
 use crate::ops::types::{MarkerCmd, OpCategory};
 use crate::types::Point3D;
 
@@ -16,8 +16,8 @@ impl Transformer for OverscanSpec {
         Phase::PostProcessing
     }
 
-    fn apply(&self, ops: &mut Ops) {
-        apply_overscan(ops, self.distance_mm);
+    fn apply(&self, ctx: &mut TransformCtx<'_>) {
+        apply_overscan(ctx.ops, self.distance_mm);
     }
 
     fn name(&self) -> &'static str {

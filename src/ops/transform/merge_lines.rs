@@ -8,7 +8,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::ops::container::Ops;
 use crate::ops::enums::{CommandCategory, CommandType};
-use crate::ops::transform::apply::{Phase, Transformer};
+use crate::ops::transform::{Phase, TransformCtx, Transformer};
 use crate::types::Point3D;
 
 /// Parameters for the [`merge_overlapping_lines`] transformer.
@@ -23,8 +23,8 @@ impl Transformer for MergeLinesSpec {
         Phase::GeometryRefinement
     }
 
-    fn apply(&self, ops: &mut Ops) {
-        merge_overlapping_lines(ops, self.tolerance);
+    fn apply(&self, ctx: &mut TransformCtx<'_>) {
+        merge_overlapping_lines(ctx.ops, self.tolerance);
     }
 
     fn name(&self) -> &'static str {
