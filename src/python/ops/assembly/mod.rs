@@ -11,8 +11,8 @@ than pure geometry.
 
 Each assembler exposes a spec class (e.g.
 :class:`~raygeo.ops.assembly.contour.ContourSpec`) implementing the
-Rust ``Assembler`` trait; :class:`Assembler` wraps any spec for use
-in the pipeline's ``Compute`` stage.
+Rust ``Assembler`` trait; :class:`Assembler` wraps any spec so callers
+can drive it through the trait.
 ";
 
 use pyo3::exceptions::PyTypeError;
@@ -51,8 +51,8 @@ use crate::python::ops::assembly::wavefront::PyAdaptiveWavefrontSpec;
 /// Try to extract an assembler spec from a Python object.
 ///
 /// Returns `PyTypeError` if the object is not one of the known spec
-/// pyclasses. The returned `Box<dyn Assembler>` is fed directly to
-/// the pipeline's `Compute` stage.
+/// pyclasses. The returned `Box<dyn Assembler>` is consumed by
+/// callers that drive the `Assembler` trait.
 pub fn extract_assembler(
     ob: &Bound<'_, PyAny>,
 ) -> PyResult<Box<dyn Assembler>> {
@@ -103,9 +103,8 @@ pub fn extract_assembler(
 ///
 /// Construct as ``Assembler(spec)`` where `spec` is an instance of
 /// one of the assembler spec classes under `raygeo.ops.assembly.*`
-/// (e.g. :class:`~raygeo.ops.assembly.contour.ContourSpec`).
-/// The pipeline's :class:`~raygeo.pipeline.stage.ComputeParams`
-/// takes an `Assembler` instance for its ``assembler`` field.
+/// (e.g. :class:`~raygeo.ops.assembly.contour.ContourSpec`). Callers
+/// that drive the `Assembler` trait hold an `Assembler` instance.
 #[gen_stub_pyclass(module = "raygeo.ops.assembly")]
 #[pyclass(
     name = "Assembler",

@@ -24,9 +24,9 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 ///
 /// Construct with ``ContourSpec(kerf_mm, path_offset_mm, cut_side,
 /// overcut, cut_order, remove_inner, arc_tolerance, allow_arcs,
-/// supports_curves)``. Pass to the pipeline's
-/// :class:`~raygeo.pipeline.stage.ComputeParams` wrapped in an
-/// :class:`~raygeo.ops.assembly.Assembler` instance.
+/// supports_curves)``. Wrap in an
+/// :class:`~raygeo.ops.assembly.Assembler` instance to drive the
+/// `Assembler` trait.
 #[gen_stub_pyclass]
 #[pyclass(
     module = "raygeo.ops.assembly.contour",

@@ -4,8 +4,38 @@
 import builtins
 import typing
 __all__ = [
+    "Encoder",
     "GcodeDialectSpec",
+    "GcodeSpec",
+    "TextureSpec",
+    "VertexSpec",
 ]
+
+@typing.final
+class Encoder:
+    r"""
+    Python-visible wrapper around an encoder spec.
+    
+    Construct as ``Encoder(spec)`` where `spec` is an instance of one
+    of the encoder spec classes under `raygeo.ops.convert` (e.g.
+    :class:`~raygeo.ops.convert.GcodeSpec`). Callers that drive the
+    `Encoder` trait hold an `Encoder` instance.
+    """
+    @property
+    def spec(self) -> typing.Any:
+        r"""
+        The wrapped Python-side spec object. Type-erased here;
+        dispatched to a concrete `Box<dyn Encoder>` by
+        [`PyEncoder::into_core`].
+        """
+    def __new__(cls, spec: typing.Any) -> Encoder:
+        r"""
+        Construct an `Encoder` wrapping a spec object.
+        
+        :param spec: An encoder spec instance (e.g.
+            :class:`~raygeo.ops.convert.GcodeSpec`).
+        """
+    def __repr__(self) -> builtins.str: ...
 
 @typing.final
 class GcodeDialectSpec:
@@ -17,4 +47,41 @@ class GcodeDialectSpec:
     """
     def __new__(cls, laser_on: builtins.str = 'M4 S{power:.0f}', laser_off: builtins.str = 'M5', tool_change: builtins.str = 'T{tool_number}', set_speed: builtins.str = 'G1 F{speed:.0f}', travel_move: builtins.str = 'G0{x_cmd}{y_cmd}{z_cmd}{extra_cmd}{f_command}{s_command}', linear_move: builtins.str = 'G1{x_cmd}{y_cmd}{z_cmd}{extra_cmd}{f_command}{s_command}', arc_cw: builtins.str = 'G2{x_cmd}{y_cmd}{z_cmd} I{i} J{j}{extra_cmd}{f_command}{s_command}', arc_ccw: builtins.str = 'G3{x_cmd}{y_cmd}{z_cmd} I{i} J{j}{extra_cmd}{f_command}{s_command}', air_assist_on: builtins.str = 'M8', air_assist_off: builtins.str = 'M9', bezier_cubic: builtins.str = '', spindle_on_cw: builtins.str = 'M3 S{rpm}', spindle_on_ccw: builtins.str = 'M4 S{rpm}', spindle_off: builtins.str = 'M5', coolant_flood: builtins.str = 'M8', coolant_mist: builtins.str = 'M7', coolant_off: builtins.str = 'M9', dwell: builtins.str = 'G4 P{seconds:.3f}', preamble: typing.Sequence[builtins.str] = ['G90'], postscript: typing.Sequence[builtins.str] = ['M30'], inject_wcs_after_preamble: builtins.bool = False, can_g0_with_speed: builtins.bool = False, omit_unchanged_coords: builtins.bool = True, continuous_laser_mode: builtins.bool = False, modal_feedrate: builtins.bool = False, gcode_precision: builtins.int = 3) -> GcodeDialectSpec: ...
     def __repr__(self) -> builtins.str: ...
+
+@typing.final
+class GcodeSpec:
+    r"""
+    Parameters for the G-code encoder.
+    """
+    @property
+    def dialect(self) -> GcodeDialectSpec: ...
+    @property
+    def context_json(self) -> builtins.str: ...
+    def __new__(cls, dialect: GcodeDialectSpec, context_json: builtins.str) -> GcodeSpec: ...
+
+@typing.final
+class TextureSpec:
+    r"""
+    Parameters for the texture encoder.
+    """
+    @property
+    def width_px(self) -> builtins.int: ...
+    @property
+    def height_px(self) -> builtins.int: ...
+    @property
+    def px_per_mm(self) -> tuple[builtins.float, builtins.float]: ...
+    @property
+    def origin_mm(self) -> tuple[builtins.float, builtins.float]: ...
+    def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
+    def __new__(cls, width_px: builtins.int, height_px: builtins.int, px_per_mm: tuple[builtins.float, builtins.float], origin_mm: tuple[builtins.float, builtins.float]) -> TextureSpec: ...
+
+@typing.final
+class VertexSpec:
+    r"""
+    Parameters for the vertex-array encoder.
+    """
+    @property
+    def _tag(self) -> builtins.bool: ...
+    def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
+    def __new__(cls) -> VertexSpec: ...
 

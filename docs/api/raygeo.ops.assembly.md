@@ -11,15 +11,15 @@ lead-in/out, overscan, and tab insertion — concerns that belong to motion asse
 geometry.
 
 Each assembler exposes a spec class (e.g. **~raygeo.ops.assembly.contour.ContourSpec**) implementing
-the Rust `Assembler` trait; **Assembler** wraps any spec for use in the pipeline's `Compute` stage.
+the Rust `Assembler` trait; **Assembler** wraps any spec so callers can drive it through the trait.
 
 ## Assembler
 
 Python-visible wrapper around an assembler spec.
 
 Construct as `Assembler(spec)` where `spec` is an instance of one of the assembler spec classes
-under `raygeo.ops.assembly.*` (e.g. **~raygeo.ops.assembly.contour.ContourSpec**). The pipeline's
-**~raygeo.pipeline.stage.ComputeParams** takes an `Assembler` instance for its `assembler` field.
+under `raygeo.ops.assembly.*` (e.g. **~raygeo.ops.assembly.contour.ContourSpec**). Callers that
+drive the `Assembler` trait hold an `Assembler` instance.
 
 ### `spec`
 

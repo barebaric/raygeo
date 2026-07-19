@@ -9,8 +9,7 @@ Parameters for the `contour` assembler.
 
 Construct with
 `ContourSpec(kerf_mm, path_offset_mm, cut_side, overcut, cut_order, remove_inner, arc_tolerance, allow_arcs, supports_curves)`.
-Pass to the pipeline's **~raygeo.pipeline.stage.ComputeParams** wrapped in an
-**~raygeo.ops.assembly.Assembler** instance.
+Wrap in an **~raygeo.ops.assembly.Assembler** instance to drive the `Assembler` trait.
 
 ### `allow_arcs`
 

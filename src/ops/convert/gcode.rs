@@ -7,6 +7,8 @@
 
 use std::collections::{HashMap, HashSet};
 
+use serde::de::DeserializeOwned;
+
 use crate::fstring::{
     parse_include_directive, render_named, resolve_path_vars, NamedVars,
 };
@@ -15,6 +17,7 @@ use crate::ops::container::Ops;
 use crate::ops::convert::gcode_types::{
     EncodeContext, EncodeResult, GcodeDialectSpec, Macro, MacroTable,
 };
+use crate::ops::convert::{EncodeCtx, EncodeOutput, Encoder};
 use crate::ops::enums::CommandType;
 use crate::ops::state::{AirAssistMode, CoolantMode};
 use crate::ops::types::MoveCmd;
@@ -1036,4 +1039,46 @@ pub fn encode_gcode(
         op_to_machine_code: enc.op_to_machine_code,
         machine_code_to_op: enc.machine_code_to_op,
     }
+}
+
+/// Spec for the G-code encoder.
+///
+/// `context_json` is a JSON-serialised
+/// [`EncodeContext`](crate::ops::convert::gcode_types::EncodeContext).
+/// The context is deserialised inside [`Encoder::encode`] so the
+/// spec stays cheap to construct and serialise across the Python
+/// boundary.
+#[derive(Clone, Debug)]
+pub struct GcodeSpec {
+    /// Dialect templates.
+    pub dialect: GcodeDialectSpec,
+    /// JSON-serialised `EncodeContext`.
+    pub context_json: String,
+}
+
+impl Encoder for GcodeSpec {
+    fn encode(&self, ctx: &mut EncodeCtx<'_>) -> Result<EncodeOutput, String> {
+        ctx.callbacks.report_progress(0.0, "gcode: parse context");
+        let context: EncodeContext = parse_context(&self.context_json)?;
+
+        ctx.callbacks.report_progress(0.5, "gcode: encode");
+        let result = encode_gcode(ctx.ops, &self.dialect, &context);
+
+        ctx.callbacks.report_progress(1.0, "gcode: done");
+        Ok(EncodeOutput::MachineCode {
+            text: result.text,
+            op_to_machine_code: result.op_to_machine_code,
+            machine_code_to_op: result.machine_code_to_op,
+        })
+    }
+
+    fn name(&self) -> &'static str {
+        "gcode"
+    }
+}
+
+/// Parse a JSON-serialised `EncodeContext`.
+fn parse_context<T: DeserializeOwned>(json: &str) -> Result<T, String> {
+    serde_json::from_str(json)
+        .map_err(|e| format!("failed to deserialise encode context: {e}"))
 }

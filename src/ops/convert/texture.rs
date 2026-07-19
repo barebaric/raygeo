@@ -4,6 +4,7 @@
 //! `Vec<u8>` pixel buffer using Bresenham line drawing.
 
 use crate::ops::container::Ops;
+use crate::ops::convert::{EncodeCtx, EncodeOutput, Encoder};
 use crate::ops::enums::CommandType;
 
 #[allow(clippy::too_many_arguments)]
@@ -214,5 +215,43 @@ impl Ops {
         }
 
         buffer
+    }
+}
+
+/// Spec for the texture encoder.
+///
+/// Carries the target texture dimensions and the mm→pixel mapping.
+/// Calls [`Ops::to_texture`] on the upstream ops.
+#[derive(Clone, Debug)]
+pub struct TextureSpec {
+    /// Texture width in pixels.
+    pub width_px: u32,
+    /// Texture height in pixels.
+    pub height_px: u32,
+    /// `(x, y)` resolution in pixels per millimetre.
+    pub px_per_mm: (f64, f64),
+    /// `(x, y)` origin offset in millimetres.
+    pub origin_mm: (f64, f64),
+}
+
+impl Encoder for TextureSpec {
+    fn encode(&self, ctx: &mut EncodeCtx<'_>) -> Result<EncodeOutput, String> {
+        ctx.callbacks.report_progress(0.0, "texture: encode");
+        let buffer = ctx.ops.to_texture(
+            self.width_px,
+            self.height_px,
+            self.px_per_mm,
+            self.origin_mm,
+        );
+        ctx.callbacks.report_progress(1.0, "texture: done");
+        Ok(EncodeOutput::Texture {
+            power_texture: buffer,
+            width_px: self.width_px,
+            height_px: self.height_px,
+        })
+    }
+
+    fn name(&self) -> &'static str {
+        "texture"
     }
 }

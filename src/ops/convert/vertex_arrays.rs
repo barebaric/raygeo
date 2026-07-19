@@ -8,6 +8,7 @@ use crate::geo::shape::arc::linearize_arc;
 use crate::geo::shape::bezier::linearize_bezier_segment;
 use crate::image::scan::extract_zero_power_segments;
 use crate::ops::container::Ops;
+use crate::ops::convert::{EncodeCtx, EncodeOutput, Encoder};
 use crate::ops::enums::CommandType;
 use crate::ops::types::{MoveCmd, OpCategory, OpNode, StateCmd};
 use crate::types::Point3D;
@@ -218,5 +219,24 @@ impl Ops {
             travel_vertices: travel_v,
             zero_power_vertices: zero_power_v,
         }
+    }
+}
+
+/// Spec for the vertex-array encoder.
+///
+/// Calls [`Ops::to_vertex_arrays`] on the upstream ops.
+#[derive(Clone, Debug, Default)]
+pub struct VertexSpec;
+
+impl Encoder for VertexSpec {
+    fn encode(&self, ctx: &mut EncodeCtx<'_>) -> Result<EncodeOutput, String> {
+        ctx.callbacks.report_progress(0.0, "vertex: encode");
+        let va = ctx.ops.to_vertex_arrays();
+        ctx.callbacks.report_progress(1.0, "vertex: done");
+        Ok(EncodeOutput::VertexArrays(va))
+    }
+
+    fn name(&self) -> &'static str {
+        "vertex"
     }
 }
