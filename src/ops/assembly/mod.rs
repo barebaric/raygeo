@@ -15,6 +15,7 @@
 //! post-processors through the `Transformer` trait.
 
 pub mod adaptive;
+pub mod callbacks;
 pub mod contour;
 pub mod helix;
 pub mod material_test_grid;
@@ -29,6 +30,7 @@ pub(crate) mod trace_utils;
 pub mod tracelet;
 pub mod wavefront;
 
+pub use callbacks::{ChunkPayload, NoCallbacks, TaskCallbacks};
 pub use tracelet::{write_polyline, ProgressEvent, Tracelet};
 
 use crate::ops::part::Part;
@@ -38,10 +40,10 @@ use crate::ops::state::State;
 ///
 /// Bundles the mutable `Part`, the `Tracelet` that accumulates the
 /// produced ops and drives the progress callback, the cut `State`
-/// (feed rate / power), and the pipeline
-/// [`TaskCallbacks`](crate::pipeline::callbacks::TaskCallbacks) for
-/// progress reports and cancellation. Machine capability flags are
-/// intentionally NOT here — each assembler carries its own
+/// (feed rate / power), and the
+/// [`TaskCallbacks`](crate::ops::assembly::callbacks::TaskCallbacks)
+/// for progress reports and cancellation. Machine capability flags
+/// are intentionally NOT here — each assembler carries its own
 /// arc/curve parameters in its spec, and rayforge is responsible for
 /// resolving those before constructing the spec.
 pub struct AssembleCtx<'a> {
@@ -54,7 +56,7 @@ pub struct AssembleCtx<'a> {
     /// Cut-state (feed rate, power) for the assembler's cutting moves.
     pub state: &'a State,
     /// Per-node callbacks (progress, cancellation, chunks).
-    pub callbacks: &'a dyn crate::pipeline::callbacks::TaskCallbacks,
+    pub callbacks: &'a dyn TaskCallbacks,
 }
 
 /// A typed assembler spec that the pipeline's `Compute` stage can
