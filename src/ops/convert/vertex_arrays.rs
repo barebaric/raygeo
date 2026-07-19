@@ -13,6 +13,7 @@ use crate::ops::types::{MoveCmd, OpCategory, OpNode, StateCmd};
 use crate::types::Point3D;
 
 /// Output buffers for vertex encoding.
+#[derive(Debug)]
 pub struct VertexArrays {
     pub powered_vertices: Vec<f32>,
     pub powered_colors: Vec<f32>,

@@ -34,7 +34,10 @@ pub enum Phase {
 /// no knowledge of concrete types. Adding a new transformer is purely
 /// additive: define a spec struct, implement [`Transformer`], and the
 /// driver picks it up.
-pub trait Transformer {
+///
+/// `Send + Sync` is required so that `Box<dyn Transformer>` can be
+/// moved across rayon worker threads by the pipeline executor.
+pub trait Transformer: Send + Sync {
     /// The execution phase this transformer belongs to.
     fn phase(&self) -> Phase;
 
@@ -52,15 +55,19 @@ pub trait Transformer {
 /// consulted: its `is_cancelled()` method, if it returns `true`, aborts
 /// the loop with `Err(Cancelled)`; then `report(progress, message)` is
 /// called with `progress = i / total` and the transformer's name.
+///
+/// Takes `specs` by mutable reference so the caller can retain
+/// ownership (e.g. a borrowed `AggregateSpec` whose `transformers`
+/// field is `Vec<Box<dyn Transformer>>`). The sort happens in place.
 pub fn apply_transformers(
     ops: &mut Ops,
-    mut specs: Vec<Box<dyn Transformer>>,
+    specs: &mut [Box<dyn Transformer>],
     progress: Option<&dyn Progress>,
 ) -> Result<(), Cancelled> {
     specs.sort_by_key(|s| s.phase());
 
     let total = specs.len();
-    for (i, spec) in specs.into_iter().enumerate() {
+    for (i, spec) in specs.iter().enumerate() {
         if let Some(cb) = progress {
             if cb.is_cancelled() {
                 return Err(Cancelled);

@@ -7,6 +7,7 @@
 //! belong to motion assembly rather than pure geometry.
 
 pub mod adaptive;
+pub mod contour;
 pub mod helix;
 pub mod material_test_grid;
 pub mod profile;

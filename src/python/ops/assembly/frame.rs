@@ -3,10 +3,10 @@ use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
 use crate::geo::algo::offset::grow_geometry;
 use crate::geo::geometry::Geometry;
+use crate::ops::assembly::contour::compute_total_offset;
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::container::Ops;
 use crate::ops::types::ToolPose;
-use crate::python::ops::assembly::contour::compute_total_offset;
 use crate::python::ops::assembly::result::PyAssemblyResult;
 use crate::python::ops::part::part::PyPart;
 use crate::types::Point3D;

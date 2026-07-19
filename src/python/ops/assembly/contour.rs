@@ -1,20 +1,9 @@
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
-use crate::geo::algo::fitting::{fit_curves, linearize_geometry};
-use crate::geo::algo::offset::grow_geometry;
-use crate::geo::algo::overcut::apply_overcut;
-use crate::geo::algo::topology::{
-    normalize_winding_orders, remove_inner_edges,
-    split_inner_and_outer_contours, split_into_contours,
-};
-use crate::geo::geometry::Geometry;
-use crate::ops::assembly::result::AssemblyMeta;
-use crate::ops::container::Ops;
-use crate::ops::types::ToolPose;
+use crate::ops::assembly::contour::assemble_contour;
 use crate::python::ops::assembly::result::PyAssemblyResult;
 use crate::python::ops::part::part::PyPart;
-use crate::types::Point3D;
 
 pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = assembly_mod.py();
@@ -26,27 +15,6 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     sys_modules.set_item("raygeo.ops.assembly.contour", &m)?;
 
     Ok(())
-}
-
-/// Compute the total offset from kerf, path offset, and cut side.
-///
-/// ```text
-/// kerf_compensation = kerf_mm / 2
-/// centerline  -> 0
-/// outside     -> +path_offset_mm + kerf_compensation
-/// inside      -> -path_offset_mm - kerf_compensation
-/// ```
-pub(crate) fn compute_total_offset(
-    kerf_mm: f64,
-    path_offset_mm: f64,
-    cut_side: &str,
-) -> f64 {
-    let kerf_comp = kerf_mm / 2.0;
-    match cut_side.to_ascii_lowercase().as_str() {
-        "outside" => path_offset_mm + kerf_comp,
-        "inside" => -path_offset_mm - kerf_comp,
-        _ => 0.0,
-    }
 }
 
 #[gen_stub_pyfunction(
@@ -122,172 +90,17 @@ fn contour_py(
     allow_arcs: bool,
     supports_curves: bool,
 ) -> PyResult<PyAssemblyResult> {
-    let total_offset = compute_total_offset(kerf_mm, path_offset_mm, cut_side);
-
-    let source_geo = part.inner.geometry.clone().ok_or_else(|| {
-        pyo3::exceptions::PyValueError::new_err("Part has no geometry")
-    })?;
-
-    // 1. Split into contours, separate closed from open.
-    let all_contours = split_into_contours(&source_geo);
-    let mut closed: Vec<Geometry> = Vec::new();
-    let mut open: Vec<Geometry> = Vec::new();
-    for c in &all_contours {
-        if c.is_closed(1e-6) {
-            closed.push(c.copy());
-        } else {
-            open.push(c.copy());
-        }
-    }
-
-    // 2. Normalise winding orders so solids are CCW, holes are CW.
-    //    This must happen before offset so that grow() shrinks holes
-    //    and expands solids in the correct direction.
-    let closed_refs: Vec<&Geometry> = closed.iter().collect();
-    closed = normalize_winding_orders(&closed_refs);
-
-    // 3. Build composite closed geometry
-    let mut composite = Geometry::new();
-    for c in &closed {
-        composite.extend(c);
-    }
-
-    // 4. Apply offset to closed contours (open contours skip offset).
-    let offset_applied = if total_offset.abs() > 1e-6 {
-        let original_geo = composite.copy();
-        let grown_geo = grow_geometry(&composite, total_offset);
-        // Fallback: if offset produces empty geometry, keep original.
-        if grown_geo.is_empty() && !original_geo.is_empty() {
-            original_geo
-        } else {
-            grown_geo
-        }
-    } else {
-        composite
-    };
-
-    // 5. Re-append open contours (they were never offset).
-    let mut geo = offset_applied;
-    for c in &open {
-        geo.extend(c);
-    }
-
-    // 6. Handle remove_inner shortcut
-    if remove_inner {
-        geo = remove_inner_edges(&geo);
-        if overcut > 0.0 {
-            let contours = split_into_contours(&geo);
-            let mut result = Geometry::new();
-            for c in &contours {
-                result.extend(&apply_overcut(c, overcut));
-            }
-            geo = result;
-        }
-        let meta = AssemblyMeta {
-            start: ToolPose {
-                pos: Point3D::ZERO,
-                heading: 0.0,
-            },
-            end: ToolPose {
-                pos: Point3D::ZERO,
-                heading: 0.0,
-            },
-        };
-        return Ok(PyAssemblyResult::from_parts(
-            ops_from_geo(&geo, arc_tolerance, allow_arcs, supports_curves)?,
-            meta,
-            None,
-            vec![],
-        ));
-    }
-
-    if geo.is_empty() {
-        let meta = AssemblyMeta {
-            start: ToolPose {
-                pos: Point3D::ZERO,
-                heading: 0.0,
-            },
-            end: ToolPose {
-                pos: Point3D::ZERO,
-                heading: 0.0,
-            },
-        };
-        return Ok(PyAssemblyResult::from_parts(
-            Ops::new(),
-            meta,
-            None,
-            vec![],
-        ));
-    }
-
-    // 7. Re-split after offset, then order inner/outer
-    let after = split_into_contours(&geo);
-    let mut closed_after: Vec<&Geometry> = Vec::new();
-    let mut open_after: Vec<&Geometry> = Vec::new();
-    for c in &after {
-        if c.is_closed(1e-6) {
-            closed_after.push(c);
-        } else {
-            open_after.push(c);
-        }
-    }
-
-    let mut ordered = Geometry::new();
-    if !closed_after.is_empty() {
-        let (inner, outer) = split_inner_and_outer_contours(&closed_after);
-        let inner_first = cut_order.eq_ignore_ascii_case("inside_outside");
-        let groups: &[&[usize]] = if inner_first {
-            &[&inner, &outer]
-        } else {
-            &[&outer, &inner]
-        };
-
-        for group in groups {
-            for &idx in *group {
-                let mut contour = closed_after[idx].copy();
-                if overcut > 0.0 {
-                    contour = apply_overcut(&contour, overcut);
-                }
-                ordered.extend(&contour);
-            }
-        }
-    }
-    for c in &open_after {
-        ordered.extend(c);
-    }
-
-    let meta = AssemblyMeta {
-        start: ToolPose {
-            pos: Point3D::ZERO,
-            heading: 0.0,
-        },
-        end: ToolPose {
-            pos: Point3D::ZERO,
-            heading: 0.0,
-        },
-    };
-    let ops =
-        ops_from_geo(&ordered, arc_tolerance, allow_arcs, supports_curves)?;
+    let (ops, meta) = assemble_contour(
+        &part.inner,
+        kerf_mm,
+        path_offset_mm,
+        cut_side,
+        overcut,
+        cut_order,
+        remove_inner,
+        arc_tolerance,
+        allow_arcs,
+        supports_curves,
+    )?;
     Ok(PyAssemblyResult::from_parts(ops, meta, None, vec![]))
-}
-
-/// Convert geometry to Ops, optionally applying curve fitting.
-fn ops_from_geo(
-    geo: &Geometry,
-    arc_tolerance: f64,
-    allow_arcs: bool,
-    supports_curves: bool,
-) -> PyResult<Ops> {
-    if arc_tolerance <= 0.0 {
-        return Ok(Ops::from_geometry(geo)?);
-    }
-    let apply_curves = allow_arcs || supports_curves;
-    let new_data = if apply_curves {
-        fit_curves(&geo.data, arc_tolerance, supports_curves, allow_arcs, None)
-    } else {
-        linearize_geometry(&geo.data, arc_tolerance)
-    };
-    let mut fitted = geo.copy();
-    fitted.data = new_data;
-    Ok(Ops::from_geometry(&fitted)?)
 }

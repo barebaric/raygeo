@@ -2899,7 +2899,7 @@ impl PyOps {
 
         crate::ops::transform::apply::apply_transformers(
             &mut self.inner,
-            specs,
+            &mut specs,
             if progress_cb.is_some() {
                 Some(&py_progress)
             } else {
