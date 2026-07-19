@@ -19,7 +19,7 @@ use crate::python::ops::assembly::progress_event_to_py;
 use crate::python::ops::assembly::result::PyAssemblyResult;
 use crate::types::Point3D;
 use pyo3::prelude::*;
-use pyo3_stub_gen::derive::gen_stub_pyfunction;
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction};
 use std::path::PathBuf;
 
 /// Callback passed to the core algorithm as `cancel_check`.
@@ -55,6 +55,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         "ResumePointNotFoundError",
         py.get_type::<ResumePointNotFoundError>(),
     )?;
+    adaptive_mod.add_class::<PyAdaptiveClearingSpec>()?;
 
     register_functions!(
         adaptive_mod,
@@ -198,7 +199,7 @@ fn adaptive_clearing_py(
         _ => CutDirection::Ccw,
     };
 
-    let opts = adaptive::AdaptiveClearingOptions {
+    let opts = adaptive::AdaptiveClearingSpec {
         tool_radius,
         step_over,
         step_length,
@@ -265,4 +266,131 @@ fn target_area_per_distance_py(
     step_length: f64,
 ) -> f64 {
     adaptive::target_area_per_distance(radius, advance, step_length)
+}
+
+/// Parameters for the adaptive-clearing assembler.
+#[gen_stub_pyclass]
+#[pyclass(
+    module = "raygeo.ops.assembly.adaptive",
+    name = "AdaptiveClearingSpec",
+    frozen,
+    eq,
+    from_py_object
+)]
+#[derive(Clone, PartialEq)]
+pub struct PyAdaptiveClearingSpec {
+    #[pyo3(get)]
+    pub tool_radius: f64,
+    #[pyo3(get)]
+    pub step_over: f64,
+    #[pyo3(get)]
+    pub step_length: f64,
+    #[pyo3(get)]
+    pub target_z: f64,
+    #[pyo3(get)]
+    pub safe_z: f64,
+    #[pyo3(get)]
+    pub max_deflection_deg: f64,
+    #[pyo3(get)]
+    pub wall_margin: f64,
+    #[pyo3(get)]
+    pub area_tolerance: f64,
+    /// ``"cw"`` or ``"ccw"``.
+    #[pyo3(get)]
+    pub cut_direction: String,
+    /// Optional override start ``(x, y)``.
+    #[pyo3(get)]
+    pub start_pos: Option<(f64, f64)>,
+    #[pyo3(get)]
+    pub start_heading: Option<f64>,
+    #[pyo3(get)]
+    pub expansion_batch_size: usize,
+    /// Optional path to write a binary trace file.
+    #[pyo3(get)]
+    pub trace_path: Option<String>,
+    #[pyo3(get)]
+    pub tolerance: f64,
+}
+
+impl PyAdaptiveClearingSpec {
+    pub fn into_core(self) -> adaptive::AdaptiveClearingSpec {
+        let cd = match self.cut_direction.as_str() {
+            "cw" => CutDirection::Cw,
+            _ => CutDirection::Ccw,
+        };
+        adaptive::AdaptiveClearingSpec {
+            tool_radius: self.tool_radius,
+            step_over: self.step_over,
+            step_length: self.step_length,
+            target_z: self.target_z,
+            safe_z: self.safe_z,
+            max_deflection_deg: self.max_deflection_deg,
+            wall_margin: self.wall_margin,
+            area_tolerance: self.area_tolerance,
+            cut_direction: cd,
+            start_pos: self
+                .start_pos
+                .map(|(x, y)| Point3D::new(x, y, self.target_z)),
+            start_heading: self.start_heading,
+            expansion_batch_size: self.expansion_batch_size,
+            trace_path: self.trace_path.map(PathBuf::from),
+            tolerance: self.tolerance,
+            cancel_check: None,
+        }
+    }
+}
+
+#[pyo3::pymethods]
+impl PyAdaptiveClearingSpec {
+    #[new]
+    #[pyo3(signature = (
+        tool_radius = 3.0,
+        step_over = 1.5,
+        step_length = 0.6,
+        target_z = -5.0,
+        safe_z = 2.0,
+        max_deflection_deg = 30.0,
+        wall_margin = 0.0,
+        area_tolerance = 1.0,
+        cut_direction = "ccw",
+        start_pos = None,
+        start_heading = None,
+        expansion_batch_size = 20,
+        trace_path = None,
+        tolerance = 0.1,
+    ))]
+    #[allow(clippy::too_many_arguments)]
+    fn new(
+        tool_radius: f64,
+        step_over: f64,
+        step_length: f64,
+        target_z: f64,
+        safe_z: f64,
+        max_deflection_deg: f64,
+        wall_margin: f64,
+        area_tolerance: f64,
+        cut_direction: &str,
+        start_pos: Option<(f64, f64)>,
+        start_heading: Option<f64>,
+        expansion_batch_size: usize,
+        trace_path: Option<String>,
+        tolerance: f64,
+    ) -> Self {
+        PyAdaptiveClearingSpec {
+            tool_radius,
+            step_over,
+            step_length,
+            target_z,
+            safe_z,
+            max_deflection_deg,
+            wall_margin,
+            area_tolerance,
+            cut_direction: cut_direction.to_string(),
+            start_pos,
+            start_heading,
+            expansion_batch_size,
+            trace_path,
+            tolerance,
+        }
+    }
 }

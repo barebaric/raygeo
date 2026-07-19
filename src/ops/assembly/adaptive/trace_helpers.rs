@@ -8,7 +8,7 @@ use crate::trace_types::{Meta, MetaValue, ToolSnapshot};
 use crate::types::{Point3D, Polygon};
 
 use super::tool::Tool;
-use super::AdaptiveClearingOptions;
+use super::AdaptiveClearingSpec;
 
 pub(super) fn make_tool_snapshot(
     tool: &Tool,
@@ -26,7 +26,7 @@ pub(super) fn make_tool_snapshot(
 }
 
 pub(super) fn build_attrs(
-    opts: &AdaptiveClearingOptions,
+    opts: &AdaptiveClearingSpec,
     boundary: &Polygon,
     islands: &[Polygon],
     seeds: &[Polygon],

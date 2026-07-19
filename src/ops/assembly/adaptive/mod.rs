@@ -58,11 +58,17 @@ use trace_helpers as th;
 /// Maximum total steps before giving up (safety valve).
 const MAX_TOTAL_STEPS: usize = 100_000;
 
-// ── Options ──────────────────────────────────────────────────────────
+// ── Spec ────────────────────────────────────────────────────────────
 
-/// Options for [`adaptive_clearing`].
+/// Spec for the adaptive-clearing assembler.
+///
+/// Carries every parameter the adaptive-clearing orchestrator needs
+/// (tool geometry, step sizes, engagement thresholds, optional
+/// callback for cancellation). Implements
+/// [`Assembler`](crate::ops::assembly::Assembler) by delegating to
+/// [`adaptive_clearing`].
 #[derive(Clone, Debug)]
-pub struct AdaptiveClearingOptions {
+pub struct AdaptiveClearingSpec {
     pub tool_radius: f64,
     pub step_over: f64,
     pub step_length: f64,
@@ -98,7 +104,7 @@ pub struct AdaptiveClearingOptions {
     pub cancel_check: Option<fn() -> bool>,
 }
 
-impl Default for AdaptiveClearingOptions {
+impl Default for AdaptiveClearingSpec {
     fn default() -> Self {
         Self {
             tool_radius: 3.0,
@@ -117,6 +123,28 @@ impl Default for AdaptiveClearingOptions {
             tolerance: 0.1,
             cancel_check: None,
         }
+    }
+}
+
+impl crate::ops::assembly::Assembler for AdaptiveClearingSpec {
+    fn assemble(
+        &self,
+        ctx: &mut crate::ops::assembly::AssembleCtx,
+    ) -> Result<crate::ops::assembly::AssemblyMeta, String> {
+        ctx.callbacks
+            .report_progress(0.0, "adaptive_clearing: assemble");
+        if ctx.callbacks.is_cancelled() {
+            return Err("cancelled".to_string());
+        }
+        let meta = adaptive_clearing(ctx.part, ctx.trace, self, ctx.state)
+            .map_err(|e| e.to_string())?;
+        ctx.callbacks
+            .report_progress(1.0, "adaptive_clearing: done");
+        Ok(meta)
+    }
+
+    fn name(&self) -> &'static str {
+        "adaptive_clearing"
     }
 }
 
@@ -212,7 +240,7 @@ fn handle_stall(
     growth: f64,
     expected: f64,
     iter: usize,
-    opts: &AdaptiveClearingOptions,
+    opts: &AdaptiveClearingSpec,
     step_opts: &StepperOptions,
     advance: f64,
     step_length: f64,
@@ -460,7 +488,7 @@ fn handle_stall(
 pub fn adaptive_clearing(
     part: &mut Part,
     trace: &mut Tracelet,
-    opts: &AdaptiveClearingOptions,
+    opts: &AdaptiveClearingSpec,
     cut_state: &State,
 ) -> RaygeoResult<AssemblyMeta> {
     let pocket_boundary = part.stock_region.boundary.clone();

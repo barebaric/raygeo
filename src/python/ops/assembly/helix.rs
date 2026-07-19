@@ -1,23 +1,103 @@
 use crate::geo::algo::helix::HelixDirection;
-use crate::ops::assembly::helix::{self, HelixOptions};
+use crate::ops::assembly::helix::{self, HelixSpec};
 use crate::ops::assembly::Tracelet;
 use crate::ops::state::State;
 use crate::python::ops::assembly::result::PyAssemblyResult;
 use crate::python::ops::state::PyState;
 use crate::types::Point;
 use pyo3::prelude::*;
-use pyo3_stub_gen::derive::gen_stub_pyfunction;
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction};
 
 pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = assembly_mod.py();
     let m = PyModule::new(py, "helix")?;
     m.add_function(pyo3::wrap_pyfunction!(generate_helix_py, m.clone())?)?;
+    m.add_class::<PyHelixSpec>()?;
     assembly_mod.add_submodule(&m)?;
 
     let sys_modules = py.import("sys")?.getattr("modules")?;
     sys_modules.set_item("raygeo.ops.assembly.helix", &m)?;
 
     Ok(())
+}
+
+/// Parameters for the ``helix`` assembler.
+#[gen_stub_pyclass]
+#[pyclass(
+    module = "raygeo.ops.assembly.helix",
+    name = "HelixSpec",
+    frozen,
+    eq,
+    from_py_object
+)]
+#[derive(Clone, PartialEq)]
+pub struct PyHelixSpec {
+    #[pyo3(get)]
+    pub center: (f64, f64),
+    #[pyo3(get)]
+    pub start_radius: f64,
+    #[pyo3(get)]
+    pub z_start: f64,
+    #[pyo3(get)]
+    pub z_end: f64,
+    #[pyo3(get)]
+    pub pitch: f64,
+    /// ``"CW"`` or ``"CCW"``.
+    #[pyo3(get)]
+    pub direction: String,
+    #[pyo3(get)]
+    pub angular_step: f64,
+}
+
+impl PyHelixSpec {
+    pub fn into_core(self) -> HelixSpec {
+        let dir = match self.direction.as_str() {
+            "CCW" => HelixDirection::Ccw,
+            _ => HelixDirection::Cw,
+        };
+        HelixSpec {
+            center: Point::new(self.center.0, self.center.1),
+            start_radius: self.start_radius,
+            z_start: self.z_start,
+            z_end: self.z_end,
+            pitch: self.pitch,
+            direction: dir,
+            angular_step: self.angular_step,
+        }
+    }
+}
+
+#[pyo3::pymethods]
+impl PyHelixSpec {
+    #[new]
+    #[pyo3(signature = (
+        center,
+        start_radius,
+        z_start,
+        z_end,
+        pitch,
+        direction = "CW",
+        angular_step = 0.1,
+    ))]
+    fn new(
+        center: (f64, f64),
+        start_radius: f64,
+        z_start: f64,
+        z_end: f64,
+        pitch: f64,
+        direction: &str,
+        angular_step: f64,
+    ) -> Self {
+        PyHelixSpec {
+            center,
+            start_radius,
+            z_start,
+            z_end,
+            pitch,
+            direction: direction.to_string(),
+            angular_step,
+        }
+    }
 }
 
 #[gen_stub_pyfunction(
@@ -89,7 +169,7 @@ fn generate_helix_py(
         None => State::default(),
     };
 
-    let opts = HelixOptions {
+    let opts = HelixSpec {
         center: Point::new(center.0, center.1),
         start_radius,
         z_start,

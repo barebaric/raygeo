@@ -19,16 +19,16 @@ use prof_macros::prof;
 use crate::error::RaygeoResult;
 use crate::geo::algo::helix::HelixDirection;
 use crate::geo::algo::ramp::RampStyle;
-use crate::ops::assembly::adaptive::{self, AdaptiveClearingOptions};
-use crate::ops::assembly::helix::{self, HelixOptions};
-use crate::ops::assembly::profile::{self, ProfileOptions};
-use crate::ops::assembly::ramp::{self, RampOptions};
+use crate::ops::assembly::adaptive::{self, AdaptiveClearingSpec};
+use crate::ops::assembly::helix::{self, HelixSpec};
+use crate::ops::assembly::profile::{self, ProfileSpec};
+use crate::ops::assembly::ramp::{self, RampSpec};
 use crate::ops::assembly::result::{emit_trace_events, AssemblyMeta};
-use crate::ops::assembly::slot::{self, SlotOptions};
-use crate::ops::assembly::spiral::{self, SpiralOptions};
-use crate::ops::assembly::toroid::{self, ToroidalClearOptions};
+use crate::ops::assembly::slot::{self, SlotSpec};
+use crate::ops::assembly::spiral::{self, SpiralSpec};
+use crate::ops::assembly::toroid::{self, ToroidalClearSpec};
 use crate::ops::assembly::trace_utils as tu;
-use crate::ops::assembly::wavefront::{self, AdaptiveWavefrontOptions};
+use crate::ops::assembly::wavefront::{self, AdaptiveWavefrontSpec};
 use crate::ops::assembly::Tracelet;
 use crate::ops::part::Part;
 use crate::ops::state::State;
@@ -144,7 +144,7 @@ impl WorkplanStep {
                 direction,
                 angular_step,
             } => {
-                let opts = HelixOptions {
+                let opts = HelixSpec {
                     center: *center,
                     start_radius: *helix_r,
                     z_start: *z_start,
@@ -165,7 +165,7 @@ impl WorkplanStep {
                 angular_step,
                 start_angle,
             } => {
-                let opts = SpiralOptions {
+                let opts = SpiralSpec {
                     center: *center,
                     z: *z,
                     start_radius: *start_radius,
@@ -185,7 +185,7 @@ impl WorkplanStep {
                 max_ramp_angle_deg,
                 lateral_amplitude,
             } => {
-                let opts = RampOptions {
+                let opts = RampSpec {
                     start: *start,
                     end: *end,
                     z_start: *z_start,
@@ -217,7 +217,7 @@ impl WorkplanStep {
                         full_carrier.insert(0, plunge);
                     }
                 }
-                let opts = ToroidalClearOptions {
+                let opts = ToroidalClearSpec {
                     carrier: full_carrier,
                     start: *start,
                     target_z: *target_z,
@@ -245,7 +245,7 @@ impl WorkplanStep {
                         full_carrier.insert(0, plunge);
                     }
                 }
-                let opts = SlotOptions {
+                let opts = SlotSpec {
                     carrier: full_carrier,
                     tool_radius: *tool_radius,
                     target_z: *target_z,
@@ -268,7 +268,7 @@ impl WorkplanStep {
             } => {
                 let (boundary, islands) = step_part.extract_boundary();
                 let boundary = boundary.unwrap_or_default();
-                let opts = AdaptiveClearingOptions {
+                let opts = AdaptiveClearingSpec {
                     tool_radius: *tool_radius,
                     step_over: *step_over,
                     step_length: *step_length,
@@ -300,7 +300,8 @@ impl WorkplanStep {
             } => {
                 let (boundary, islands) = step_part.extract_boundary();
                 let boundary = boundary.unwrap_or_default();
-                let opts = ProfileOptions {
+                let opts = ProfileSpec {
+                    kind: profile::ProfileKind::Inner,
                     tool_radius: *tool_radius,
                     step_over: *step_over,
                     step_length: *step_length,
@@ -326,7 +327,7 @@ impl WorkplanStep {
             } => {
                 let (boundary, islands) = step_part.extract_boundary();
                 let boundary = boundary.unwrap_or_default();
-                let opts = AdaptiveWavefrontOptions {
+                let opts = AdaptiveWavefrontSpec {
                     step_over: *step_over,
                     z: *z,
                     area_tolerance: *area_tolerance,

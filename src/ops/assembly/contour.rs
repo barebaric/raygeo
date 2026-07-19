@@ -4,6 +4,10 @@
 //! `crate::python::ops::assembly::contour` is a thin wrapper that
 //! calls [`assemble_contour`] and packs the result into a
 //! [`PyAssemblyResult`](crate::python::ops::assembly::result::PyAssemblyResult).
+//!
+//! The [`ContourSpec`] struct implements the [`Assembler`] trait so
+//! the pipeline's `Compute` stage can dispatch to it without knowing
+//! the concrete parameter set.
 
 use crate::error::RaygeoResult;
 use crate::geo::algo::fitting::{fit_curves, linearize_geometry};
@@ -15,10 +19,60 @@ use crate::geo::algo::topology::{
 };
 use crate::geo::geometry::Geometry;
 use crate::ops::assembly::result::AssemblyMeta;
+use crate::ops::assembly::{AssembleCtx, Assembler};
 use crate::ops::container::Ops;
 use crate::ops::part::Part;
 use crate::ops::types::ToolPose;
 use crate::types::Point3D;
+
+/// Spec for the contour assembler.
+///
+/// Mirrors the parameter list of [`assemble_contour`]. Carried by
+/// the pipeline's `Compute` stage as `Box<dyn Assembler>`.
+#[derive(Clone, Debug)]
+pub struct ContourSpec {
+    pub kerf_mm: f64,
+    pub path_offset_mm: f64,
+    pub cut_side: String,
+    pub overcut: f64,
+    pub cut_order: String,
+    pub remove_inner: bool,
+    pub arc_tolerance: f64,
+    pub allow_arcs: bool,
+    pub supports_curves: bool,
+}
+
+impl Assembler for ContourSpec {
+    fn assemble(&self, ctx: &mut AssembleCtx) -> Result<AssemblyMeta, String> {
+        ctx.callbacks.report_progress(0.0, "contour: assemble");
+        if ctx.callbacks.is_cancelled() {
+            return Err("cancelled".to_string());
+        }
+        let (ops, meta) = assemble_contour(
+            ctx.part,
+            self.kerf_mm,
+            self.path_offset_mm,
+            &self.cut_side,
+            self.overcut,
+            &self.cut_order,
+            self.remove_inner,
+            self.arc_tolerance,
+            self.allow_arcs,
+            self.supports_curves,
+        )
+        .map_err(|e| e.to_string())?;
+        if ctx.callbacks.is_cancelled() {
+            return Err("cancelled".to_string());
+        }
+        ctx.trace.append_ops(&ops);
+        ctx.callbacks.report_progress(1.0, "contour: done");
+        Ok(meta)
+    }
+
+    fn name(&self) -> &'static str {
+        "contour"
+    }
+}
 
 /// Compute the total offset from kerf, path offset, and cut side.
 ///

@@ -3,6 +3,100 @@ title: raygeo.ops.assembly.adaptive
 sidebar_label: raygeo.ops.assembly.adaptive
 ---
 
+## AdaptiveClearingSpec
+
+Parameters for the adaptive-clearing assembler.
+
+### `area_tolerance`
+
+```python
+area_tolerance: float
+```
+
+### `cut_direction`
+
+```python
+cut_direction: str
+```
+
+`"cw"` or `"ccw"`.
+
+### `expansion_batch_size`
+
+```python
+expansion_batch_size: int
+```
+
+### `max_deflection_deg`
+
+```python
+max_deflection_deg: float
+```
+
+### `safe_z`
+
+```python
+safe_z: float
+```
+
+### `start_heading`
+
+```python
+start_heading: Optional[float]
+```
+
+### `start_pos`
+
+```python
+start_pos: Optional[tuple[float, float]]
+```
+
+Optional override start `(x, y)`.
+
+### `step_length`
+
+```python
+step_length: float
+```
+
+### `step_over`
+
+```python
+step_over: float
+```
+
+### `target_z`
+
+```python
+target_z: float
+```
+
+### `tolerance`
+
+```python
+tolerance: float
+```
+
+### `tool_radius`
+
+```python
+tool_radius: float
+```
+
+### `trace_path`
+
+```python
+trace_path: Optional[str]
+```
+
+Optional path to write a binary trace file.
+
+### `wall_margin`
+
+```python
+wall_margin: float
+```
+
 ## ResumePointNotFoundError
 
 Raised when all resume strategies fail to find an engagement point.

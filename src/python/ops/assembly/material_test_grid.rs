@@ -1,11 +1,11 @@
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
-use pyo3_stub_gen::derive::gen_stub_pyfunction;
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction};
 
 use crate::geo::geometry::Geometry;
 use crate::image::render::{geometry_to_image, RenderOptions};
 use crate::ops::assembly::material_test_grid::{
-    generate_material_test_grid, MaterialTestGridParams,
+    generate_material_test_grid, MaterialTestGridSpec,
 };
 use crate::ops::assembly::tracelet::Tracelet;
 use crate::python::ops::assembly::result::PyAssemblyResult;
@@ -21,12 +21,178 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         generate_material_test_grid_preview_py,
         m.clone()
     )?)?;
+    m.add_class::<PyMaterialTestGridSpec>()?;
     assembly_mod.add_submodule(&m)?;
 
     let sys_modules = py.import("sys")?.getattr("modules")?;
     sys_modules.set_item("raygeo.ops.assembly.material_test_grid", &m)?;
 
     Ok(())
+}
+
+/// Parameters for the material-test-grid assembler.
+#[gen_stub_pyclass]
+#[pyclass(
+    module = "raygeo.ops.assembly.material_test_grid",
+    name = "MaterialTestGridSpec",
+    frozen,
+    eq,
+    from_py_object
+)]
+#[derive(Clone, PartialEq)]
+pub struct PyMaterialTestGridSpec {
+    /// ``(width_mm, height_mm)`` of the workpiece area to fill.
+    #[pyo3(get)]
+    pub size_mm: (f64, f64),
+    #[pyo3(get)]
+    pub cols: u32,
+    #[pyo3(get)]
+    pub rows: u32,
+    #[pyo3(get)]
+    pub min_speed: f64,
+    #[pyo3(get)]
+    pub max_speed: f64,
+    #[pyo3(get)]
+    pub min_power: f64,
+    #[pyo3(get)]
+    pub max_power: f64,
+    #[pyo3(get)]
+    pub min_passes: u32,
+    #[pyo3(get)]
+    pub max_passes: u32,
+    #[pyo3(get)]
+    pub fixed_speed: f64,
+    #[pyo3(get)]
+    pub fixed_power: f64,
+    #[pyo3(get)]
+    pub shape_size: f64,
+    #[pyo3(get)]
+    pub spacing: f64,
+    #[pyo3(get)]
+    pub line_interval_mm: f64,
+    /// ``"engrave"`` or ``"cut"``.
+    #[pyo3(get)]
+    pub mode: String,
+    /// ``"Power vs Speed"``, ``"Power vs Passes"``, ``"Speed vs Passes"``,
+    /// or ``"Speed vs Offset"``.
+    #[pyo3(get)]
+    pub grid_mode: String,
+    #[pyo3(get)]
+    pub include_labels: bool,
+    /// Power for label engraving in percent (0–100).
+    #[pyo3(get)]
+    pub label_power_percent: f64,
+    /// Feed rate for label engraving in mm/min.
+    #[pyo3(get)]
+    pub label_speed: f64,
+    #[pyo3(get)]
+    pub min_offset: f64,
+    #[pyo3(get)]
+    pub max_offset: f64,
+}
+
+impl PyMaterialTestGridSpec {
+    pub fn into_core(self) -> MaterialTestGridSpec {
+        MaterialTestGridSpec {
+            size_mm: self.size_mm,
+            cols: self.cols,
+            rows: self.rows,
+            min_speed: self.min_speed,
+            max_speed: self.max_speed,
+            min_power: self.min_power,
+            max_power: self.max_power,
+            min_passes: self.min_passes,
+            max_passes: self.max_passes,
+            fixed_speed: self.fixed_speed,
+            fixed_power: self.fixed_power,
+            shape_size: self.shape_size,
+            spacing: self.spacing,
+            line_interval_mm: self.line_interval_mm,
+            mode: self.mode,
+            grid_mode: self.grid_mode,
+            include_labels: self.include_labels,
+            label_power: self.label_power_percent / 100.0,
+            label_speed: self.label_speed as i32,
+            min_offset: self.min_offset,
+            max_offset: self.max_offset,
+        }
+    }
+}
+
+#[pyo3::pymethods]
+impl PyMaterialTestGridSpec {
+    #[new]
+    #[pyo3(signature = (
+        size_mm,
+        cols = 5,
+        rows = 5,
+        min_speed = 100.0,
+        max_speed = 500.0,
+        min_power = 10.0,
+        max_power = 100.0,
+        min_passes = 1,
+        max_passes = 5,
+        fixed_speed = 1000.0,
+        fixed_power = 50.0,
+        shape_size = 10.0,
+        spacing = 2.0,
+        line_interval_mm = 0.1,
+        mode = "engrave",
+        grid_mode = "Power vs Speed",
+        include_labels = true,
+        label_power_percent = 10.0,
+        label_speed = 1000.0,
+        min_offset = -0.5,
+        max_offset = 0.5,
+    ))]
+    #[allow(clippy::too_many_arguments)]
+    fn new(
+        size_mm: (f64, f64),
+        cols: u32,
+        rows: u32,
+        min_speed: f64,
+        max_speed: f64,
+        min_power: f64,
+        max_power: f64,
+        min_passes: u32,
+        max_passes: u32,
+        fixed_speed: f64,
+        fixed_power: f64,
+        shape_size: f64,
+        spacing: f64,
+        line_interval_mm: f64,
+        mode: &str,
+        grid_mode: &str,
+        include_labels: bool,
+        label_power_percent: f64,
+        label_speed: f64,
+        min_offset: f64,
+        max_offset: f64,
+    ) -> Self {
+        PyMaterialTestGridSpec {
+            size_mm,
+            cols,
+            rows,
+            min_speed,
+            max_speed,
+            min_power,
+            max_power,
+            min_passes,
+            max_passes,
+            fixed_speed,
+            fixed_power,
+            shape_size,
+            spacing,
+            line_interval_mm,
+            mode: mode.to_string(),
+            grid_mode: grid_mode.to_string(),
+            include_labels,
+            label_power_percent,
+            label_speed,
+            min_offset,
+            max_offset,
+        }
+    }
 }
 
 #[gen_stub_pyfunction(
@@ -140,7 +306,8 @@ fn generate_material_test_grid_py(
     min_offset: f64,
     max_offset: f64,
 ) -> PyResult<PyAssemblyResult> {
-    let params = MaterialTestGridParams {
+    let params = MaterialTestGridSpec {
+        size_mm,
         cols,
         rows,
         min_speed,
@@ -164,7 +331,7 @@ fn generate_material_test_grid_py(
     };
 
     let mut trace = Tracelet::new();
-    let meta = generate_material_test_grid(&params, size_mm, &mut trace)?;
+    let meta = generate_material_test_grid(&params, &mut trace)?;
     let trace_events = trace.drain();
     let trace_attrs = trace.attrs().cloned();
     let ops = trace.into_ops();
@@ -291,7 +458,8 @@ fn generate_material_test_grid_preview_py(
     min_offset: f64,
     max_offset: f64,
 ) -> PyResult<Py<PyAny>> {
-    let params = MaterialTestGridParams {
+    let params = MaterialTestGridSpec {
+        size_mm,
         cols,
         rows,
         min_speed,
@@ -321,7 +489,7 @@ fn generate_material_test_grid_preview_py(
     // twice and get Y-up output — which matches the canvas coordinate
     // system used for ops rendering.
     let mut trace = Tracelet::new();
-    let _meta = generate_material_test_grid(&params, size_mm, &mut trace)
+    let _meta = generate_material_test_grid(&params, &mut trace)
         .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
     let ops = trace.into_ops();
     let geo = ops.to_geometry();

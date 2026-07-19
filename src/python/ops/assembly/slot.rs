@@ -1,22 +1,69 @@
-use crate::ops::assembly::slot::{self, SlotOptions};
+use crate::ops::assembly::slot::{self, SlotSpec};
 use crate::ops::assembly::Tracelet;
 use crate::ops::state::State;
 use crate::python::ops::assembly::result::PyAssemblyResult;
 use crate::python::ops::state::PyState;
 use crate::types::Point;
 use pyo3::prelude::*;
-use pyo3_stub_gen::derive::gen_stub_pyfunction;
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction};
 
 pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = assembly_mod.py();
     let m = PyModule::new(py, "slot")?;
     m.add_function(pyo3::wrap_pyfunction!(generate_slot_py, m.clone())?)?;
+    m.add_class::<PySlotSpec>()?;
     assembly_mod.add_submodule(&m)?;
 
     let sys_modules = py.import("sys")?.getattr("modules")?;
     sys_modules.set_item("raygeo.ops.assembly.slot", &m)?;
 
     Ok(())
+}
+
+/// Parameters for the ``slot`` assembler.
+#[gen_stub_pyclass]
+#[pyclass(
+    module = "raygeo.ops.assembly.slot",
+    name = "SlotSpec",
+    frozen,
+    eq,
+    from_py_object
+)]
+#[derive(Clone, PartialEq)]
+pub struct PySlotSpec {
+    /// ``(x, y)`` carrier waypoints.
+    #[pyo3(get)]
+    pub carrier: Vec<(f64, f64)>,
+    #[pyo3(get)]
+    pub tool_radius: f64,
+    #[pyo3(get)]
+    pub target_z: f64,
+}
+
+impl PySlotSpec {
+    pub fn into_core(self) -> SlotSpec {
+        SlotSpec {
+            carrier: self
+                .carrier
+                .into_iter()
+                .map(|(x, y)| Point::new(x, y))
+                .collect(),
+            tool_radius: self.tool_radius,
+            target_z: self.target_z,
+        }
+    }
+}
+
+#[pyo3::pymethods]
+impl PySlotSpec {
+    #[new]
+    fn new(carrier: Vec<(f64, f64)>, tool_radius: f64, target_z: f64) -> Self {
+        PySlotSpec {
+            carrier,
+            tool_radius,
+            target_z,
+        }
+    }
 }
 
 #[gen_stub_pyfunction(
@@ -63,7 +110,7 @@ fn generate_slot_py(
     let carrier_pts: Vec<Point> =
         carrier.into_iter().map(|(x, y)| Point::new(x, y)).collect();
 
-    let opts = SlotOptions {
+    let opts = SlotSpec {
         carrier: carrier_pts,
         tool_radius,
         target_z,

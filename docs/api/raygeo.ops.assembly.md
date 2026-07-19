@@ -10,6 +10,26 @@ motion sequences represented as Ops objects. They decide traversal order, linkin
 lead-in/out, overscan, and tab insertion — concerns that belong to motion assembly rather than pure
 geometry.
 
+Each assembler exposes a spec class (e.g. **~raygeo.ops.assembly.contour.ContourSpec**) implementing
+the Rust `Assembler` trait; **Assembler** wraps any spec for use in the pipeline's `Compute` stage.
+
+## Assembler
+
+Python-visible wrapper around an assembler spec.
+
+Construct as `Assembler(spec)` where `spec` is an instance of one of the assembler spec classes
+under `raygeo.ops.assembly.*` (e.g. **~raygeo.ops.assembly.contour.ContourSpec**). The pipeline's
+**~raygeo.pipeline.stage.ComputeParams** takes an `Assembler` instance for its `assembler` field.
+
+### `spec`
+
+```python
+spec: Any
+```
+
+The wrapped Python-side spec object. Type-erased here; dispatched to a concrete `Box<dyn Assembler>`
+by \[`PyAssembler::into_core`\].
+
 ## AssemblyResult
 
 Universal return type for every assembly-level generator.

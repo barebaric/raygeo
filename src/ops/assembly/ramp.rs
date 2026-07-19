@@ -10,15 +10,15 @@ use crate::geo::shape::polygon::get_segment_swept_polygon;
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::trace_utils as tu;
 use crate::ops::assembly::write_polyline;
-use crate::ops::assembly::Tracelet;
+use crate::ops::assembly::{AssembleCtx, Assembler, Tracelet};
 use crate::ops::part::Part;
 use crate::ops::state::State;
 use crate::ops::types::ToolPose;
 use crate::types::{Point, Point3D};
 
-/// Options for generating a ramp entry path.
+/// Spec for the ramp assembler.
 #[derive(Clone, Debug)]
-pub struct RampOptions {
+pub struct RampSpec {
     pub start: Point,
     pub end: Point,
     pub z_start: f64,
@@ -26,6 +26,23 @@ pub struct RampOptions {
     pub max_ramp_angle_deg: f64,
     pub style: RampStyle,
     pub lateral_amplitude: f64,
+}
+
+impl Assembler for RampSpec {
+    fn assemble(&self, ctx: &mut AssembleCtx) -> Result<AssemblyMeta, String> {
+        ctx.callbacks.report_progress(0.0, "ramp: assemble");
+        if ctx.callbacks.is_cancelled() {
+            return Err("cancelled".to_string());
+        }
+        let meta = generate_ramp(ctx.part, ctx.trace, self, ctx.state)
+            .map_err(|e| e.to_string())?;
+        ctx.callbacks.report_progress(1.0, "ramp: done");
+        Ok(meta)
+    }
+
+    fn name(&self) -> &'static str {
+        "ramp"
+    }
 }
 
 /// Generate a ramp entry path.
@@ -36,7 +53,7 @@ pub struct RampOptions {
 pub fn generate_ramp(
     part: &mut Part,
     trace: &mut Tracelet,
-    opts: &RampOptions,
+    opts: &RampSpec,
     cut_state: &State,
 ) -> RaygeoResult<AssemblyMeta> {
     let path = generate_ramp_3d(&GeoRampOptions {

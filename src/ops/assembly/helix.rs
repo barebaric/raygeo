@@ -10,19 +10,19 @@ use crate::geo::shape::polygon::get_circle_polygon;
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::trace_utils as tu;
 use crate::ops::assembly::write_polyline;
-use crate::ops::assembly::Tracelet;
+use crate::ops::assembly::{AssembleCtx, Assembler, Tracelet};
 use crate::ops::part::Part;
 use crate::ops::state::State;
 use crate::ops::types::ToolPose;
 use crate::types::{Point, Point3D};
 
-/// Options for generating a helical entry path.
+/// Spec for the helix assembler.
 ///
 /// Carries the parameters needed by [`generate_helix`] and the workplan
 /// executor's [`WorkplanStep::HelixPlunge`](crate::cnc::machining::plan::WorkplanStep::HelixPlunge)
 /// step.
 #[derive(Clone, Debug)]
-pub struct HelixOptions {
+pub struct HelixSpec {
     pub center: Point,
     pub start_radius: f64,
     pub z_start: f64,
@@ -30,6 +30,23 @@ pub struct HelixOptions {
     pub pitch: f64,
     pub direction: HelixDirection,
     pub angular_step: f64,
+}
+
+impl Assembler for HelixSpec {
+    fn assemble(&self, ctx: &mut AssembleCtx) -> Result<AssemblyMeta, String> {
+        ctx.callbacks.report_progress(0.0, "helix: assemble");
+        if ctx.callbacks.is_cancelled() {
+            return Err("cancelled".to_string());
+        }
+        let meta = generate_helix(ctx.part, ctx.trace, self, ctx.state)
+            .map_err(|e| e.to_string())?;
+        ctx.callbacks.report_progress(1.0, "helix: done");
+        Ok(meta)
+    }
+
+    fn name(&self) -> &'static str {
+        "helix"
+    }
 }
 
 /// Generate a helical entry path.
@@ -41,7 +58,7 @@ pub struct HelixOptions {
 pub fn generate_helix(
     part: &mut Part,
     trace: &mut Tracelet,
-    opts: &HelixOptions,
+    opts: &HelixSpec,
     cut_state: &State,
 ) -> RaygeoResult<AssemblyMeta> {
     let path = generate_helix_3d(&GeoHelixOptions {

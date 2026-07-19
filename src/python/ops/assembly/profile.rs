@@ -1,7 +1,7 @@
 use pyo3::prelude::*;
-use pyo3_stub_gen::derive::gen_stub_pyfunction;
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction};
 
-use crate::ops::assembly::profile::{self, ProfileOptions};
+use crate::ops::assembly::profile::{self, ProfileKind, ProfileSpec};
 use crate::ops::assembly::Tracelet;
 use crate::ops::state::State;
 use crate::ops::types::CutDirection;
@@ -23,12 +23,151 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let m = PyModule::new(py, "profile")?;
     m.add_function(pyo3::wrap_pyfunction!(profile_outer_py, m.clone())?)?;
     m.add_function(pyo3::wrap_pyfunction!(profile_inner_py, m.clone())?)?;
+    m.add_class::<PyProfileSpec>()?;
     assembly_mod.add_submodule(&m)?;
 
     let sys_modules = py.import("sys")?.getattr("modules")?;
     sys_modules.set_item("raygeo.ops.assembly.profile", &m)?;
 
     Ok(())
+}
+
+/// Parameters for the adaptive-profile assembler.
+#[gen_stub_pyclass]
+#[pyclass(
+    module = "raygeo.ops.assembly.profile",
+    name = "ProfileSpec",
+    frozen,
+    eq,
+    from_py_object
+)]
+#[derive(Clone, PartialEq)]
+pub struct PyProfileSpec {
+    /// ``"inner"`` or ``"outer"``.
+    #[pyo3(get)]
+    pub kind: String,
+    #[pyo3(get)]
+    pub tool_radius: f64,
+    #[pyo3(get)]
+    pub step_over: f64,
+    #[pyo3(get)]
+    pub step_length: f64,
+    #[pyo3(get)]
+    pub target_z: f64,
+    #[pyo3(get)]
+    pub safe_z: f64,
+    #[pyo3(get)]
+    pub wall_margin: f64,
+    #[pyo3(get)]
+    pub stock_to_leave: f64,
+    /// ``"cw"`` or ``"ccw"``.
+    #[pyo3(get)]
+    pub cut_direction: String,
+    /// Optional override start ``(x, y)``.
+    #[pyo3(get)]
+    pub start_pos: Option<(f64, f64)>,
+    #[pyo3(get)]
+    pub tolerance: f64,
+    #[pyo3(get)]
+    pub expansion_batch_size: usize,
+    #[pyo3(get)]
+    pub engagement_area_threshold: f64,
+    #[pyo3(get)]
+    pub engagement_angle_threshold: f64,
+    /// Optional path to write a binary trace file.
+    #[pyo3(get)]
+    pub trace_path: Option<String>,
+}
+
+impl PyProfileSpec {
+    pub fn into_core(self) -> ProfileSpec {
+        let kind = match self.kind.as_str() {
+            "outer" => ProfileKind::Outer,
+            _ => ProfileKind::Inner,
+        };
+        let cd = match self.cut_direction.as_str() {
+            "cw" => CutDirection::Cw,
+            _ => CutDirection::Ccw,
+        };
+        ProfileSpec {
+            kind,
+            tool_radius: self.tool_radius,
+            step_over: self.step_over,
+            step_length: self.step_length,
+            target_z: self.target_z,
+            safe_z: self.safe_z,
+            wall_margin: self.wall_margin,
+            stock_to_leave: self.stock_to_leave,
+            cut_direction: cd,
+            start_pos: self
+                .start_pos
+                .map(|(x, y)| Point3D::new(x, y, self.target_z)),
+            tolerance: self.tolerance,
+            expansion_batch_size: self.expansion_batch_size,
+            cancel_check: None,
+            engagement_area_threshold: self.engagement_area_threshold,
+            engagement_angle_threshold: self.engagement_angle_threshold,
+            trace_path: self.trace_path.map(std::path::PathBuf::from),
+        }
+    }
+}
+
+#[pyo3::pymethods]
+impl PyProfileSpec {
+    #[new]
+    #[pyo3(signature = (
+        kind = "inner",
+        tool_radius = 3.0,
+        step_over = 1.5,
+        step_length = 0.6,
+        target_z = -5.0,
+        safe_z = 2.0,
+        wall_margin = 0.0,
+        stock_to_leave = 0.0,
+        cut_direction = "ccw",
+        start_pos = None,
+        tolerance = 0.1,
+        expansion_batch_size = 20,
+        engagement_area_threshold = 0.0,
+        engagement_angle_threshold = std::f64::consts::PI,
+        trace_path = None,
+    ))]
+    #[allow(clippy::too_many_arguments)]
+    fn new(
+        kind: &str,
+        tool_radius: f64,
+        step_over: f64,
+        step_length: f64,
+        target_z: f64,
+        safe_z: f64,
+        wall_margin: f64,
+        stock_to_leave: f64,
+        cut_direction: &str,
+        start_pos: Option<(f64, f64)>,
+        tolerance: f64,
+        expansion_batch_size: usize,
+        engagement_area_threshold: f64,
+        engagement_angle_threshold: f64,
+        trace_path: Option<String>,
+    ) -> Self {
+        PyProfileSpec {
+            kind: kind.to_string(),
+            tool_radius,
+            step_over,
+            step_length,
+            target_z,
+            safe_z,
+            wall_margin,
+            stock_to_leave,
+            cut_direction: cut_direction.to_string(),
+            start_pos,
+            tolerance,
+            expansion_batch_size,
+            engagement_area_threshold,
+            engagement_angle_threshold,
+            trace_path,
+        }
+    }
 }
 
 #[gen_stub_pyfunction(
@@ -125,7 +264,8 @@ fn profile_outer_py(
         _ => CutDirection::Ccw,
     };
 
-    let opts = ProfileOptions {
+    let opts = ProfileSpec {
+        kind: ProfileKind::Outer,
         tool_radius,
         step_over,
         step_length,
@@ -252,7 +392,8 @@ fn profile_inner_py(
         _ => CutDirection::Ccw,
     };
 
-    let opts = ProfileOptions {
+    let opts = ProfileSpec {
+        kind: ProfileKind::Inner,
         tool_radius,
         step_over,
         step_length,

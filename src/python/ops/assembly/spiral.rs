@@ -1,23 +1,110 @@
 use crate::geo::algo::helix::HelixDirection;
-use crate::ops::assembly::spiral::{self, SpiralOptions};
+use crate::ops::assembly::spiral::{self, SpiralSpec};
 use crate::ops::assembly::Tracelet;
 use crate::ops::state::State;
 use crate::python::ops::assembly::result::PyAssemblyResult;
 use crate::python::ops::state::PyState;
 use crate::types::Point;
 use pyo3::prelude::*;
-use pyo3_stub_gen::derive::gen_stub_pyfunction;
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction};
 
 pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = assembly_mod.py();
     let m = PyModule::new(py, "spiral")?;
     m.add_function(pyo3::wrap_pyfunction!(generate_spiral_py, m.clone())?)?;
+    m.add_class::<PySpiralSpec>()?;
     assembly_mod.add_submodule(&m)?;
 
     let sys_modules = py.import("sys")?.getattr("modules")?;
     sys_modules.set_item("raygeo.ops.assembly.spiral", &m)?;
 
     Ok(())
+}
+
+/// Parameters for the ``spiral`` assembler.
+#[gen_stub_pyclass]
+#[pyclass(
+    module = "raygeo.ops.assembly.spiral",
+    name = "SpiralSpec",
+    frozen,
+    eq,
+    from_py_object
+)]
+#[derive(Clone, PartialEq)]
+pub struct PySpiralSpec {
+    #[pyo3(get)]
+    pub center: (f64, f64),
+    #[pyo3(get)]
+    pub z: f64,
+    #[pyo3(get)]
+    pub start_radius: f64,
+    #[pyo3(get)]
+    pub end_radius: f64,
+    #[pyo3(get)]
+    pub revolutions: f64,
+    /// ``"CW"`` or ``"CCW"``.
+    #[pyo3(get)]
+    pub direction: String,
+    #[pyo3(get)]
+    pub angular_step: f64,
+    #[pyo3(get)]
+    pub start_angle: f64,
+}
+
+impl PySpiralSpec {
+    pub fn into_core(self) -> SpiralSpec {
+        let dir = match self.direction.as_str() {
+            "CCW" => HelixDirection::Ccw,
+            _ => HelixDirection::Cw,
+        };
+        SpiralSpec {
+            center: Point::new(self.center.0, self.center.1),
+            z: self.z,
+            start_radius: self.start_radius,
+            end_radius: self.end_radius,
+            revolutions: self.revolutions,
+            direction: dir,
+            angular_step: self.angular_step,
+            start_angle: self.start_angle,
+        }
+    }
+}
+
+#[pyo3::pymethods]
+impl PySpiralSpec {
+    #[new]
+    #[pyo3(signature = (
+        center,
+        z,
+        start_radius,
+        end_radius,
+        revolutions,
+        direction = "CW",
+        angular_step = 0.1,
+        start_angle = 0.0,
+    ))]
+    #[allow(clippy::too_many_arguments)]
+    fn new(
+        center: (f64, f64),
+        z: f64,
+        start_radius: f64,
+        end_radius: f64,
+        revolutions: f64,
+        direction: &str,
+        angular_step: f64,
+        start_angle: f64,
+    ) -> Self {
+        PySpiralSpec {
+            center,
+            z,
+            start_radius,
+            end_radius,
+            revolutions,
+            direction: direction.to_string(),
+            angular_step,
+            start_angle,
+        }
+    }
 }
 
 #[gen_stub_pyfunction(
@@ -93,7 +180,7 @@ fn generate_spiral_py(
         None => State::default(),
     };
 
-    let opts = SpiralOptions {
+    let opts = SpiralSpec {
         center: Point::new(center.0, center.1),
         z,
         start_radius,

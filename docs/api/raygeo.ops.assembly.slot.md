@@ -3,6 +3,30 @@ title: raygeo.ops.assembly.slot
 sidebar_label: raygeo.ops.assembly.slot
 ---
 
+## SlotSpec
+
+Parameters for the `slot` assembler.
+
+### `carrier`
+
+```python
+carrier: list[tuple[float, float]]
+```
+
+`(x, y)` carrier waypoints.
+
+### `target_z`
+
+```python
+target_z: float
+```
+
+### `tool_radius`
+
+```python
+tool_radius: float
+```
+
 ## Functions
 
 ### `generate_slot()`

@@ -6,14 +6,21 @@ Motion-path assembly: turning raw geometry primitives into Ops.
 Functions in this module compose geo-layer primitives (polylines, arcs,
 polygons) into complete motion sequences represented as Ops objects.
 They decide traversal order, linking strategy, lead-in/out, overscan,
-and tab insertion — concerns that belong to motion assembly rather than
-pure geometry.
+and tab insertion — concerns that belong to motion assembly rather
+than pure geometry.
+
+Each assembler exposes a spec class (e.g.
+:class:`~raygeo.ops.assembly.contour.ContourSpec`) implementing the
+Rust ``Assembler`` trait; :class:`Assembler` wraps any spec for use
+in the pipeline's ``Compute`` stage.
 ";
 
+use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
-use crate::ops::assembly::ProgressEvent;
+use crate::ops::assembly::{Assembler, ProgressEvent};
 
 pub(crate) mod adaptive;
 pub(crate) mod contour;
@@ -29,6 +36,123 @@ pub(crate) mod slot;
 pub(crate) mod spiral;
 pub(crate) mod toroid;
 pub(crate) mod wavefront;
+
+use crate::python::ops::assembly::adaptive::PyAdaptiveClearingSpec;
+use crate::python::ops::assembly::contour::PyContourSpec;
+use crate::python::ops::assembly::helix::PyHelixSpec;
+use crate::python::ops::assembly::material_test_grid::PyMaterialTestGridSpec;
+use crate::python::ops::assembly::profile::PyProfileSpec;
+use crate::python::ops::assembly::ramp::PyRampSpec;
+use crate::python::ops::assembly::slot::PySlotSpec;
+use crate::python::ops::assembly::spiral::PySpiralSpec;
+use crate::python::ops::assembly::toroid::{PyToroidSpec, PyToroidalClearSpec};
+use crate::python::ops::assembly::wavefront::PyAdaptiveWavefrontSpec;
+
+/// Try to extract an assembler spec from a Python object.
+///
+/// Returns `PyTypeError` if the object is not one of the known spec
+/// pyclasses. The returned `Box<dyn Assembler>` is fed directly to
+/// the pipeline's `Compute` stage.
+pub fn extract_assembler(
+    ob: &Bound<'_, PyAny>,
+) -> PyResult<Box<dyn Assembler>> {
+    if let Ok(s) = ob.extract::<PyContourSpec>() {
+        return Ok(Box::new(s.into_core()));
+    }
+    if let Ok(s) = ob.extract::<PyAdaptiveClearingSpec>() {
+        return Ok(Box::new(s.into_core()));
+    }
+    if let Ok(s) = ob.extract::<PySpiralSpec>() {
+        return Ok(Box::new(s.into_core()));
+    }
+    if let Ok(s) = ob.extract::<PySlotSpec>() {
+        return Ok(Box::new(s.into_core()));
+    }
+    if let Ok(s) = ob.extract::<PyToroidSpec>() {
+        return Ok(Box::new(s.into_core()));
+    }
+    if let Ok(s) = ob.extract::<PyToroidalClearSpec>() {
+        return Ok(Box::new(s.into_core()));
+    }
+    if let Ok(s) = ob.extract::<PyHelixSpec>() {
+        return Ok(Box::new(s.into_core()));
+    }
+    if let Ok(s) = ob.extract::<PyRampSpec>() {
+        return Ok(Box::new(s.into_core()));
+    }
+    if let Ok(s) = ob.extract::<PyAdaptiveWavefrontSpec>() {
+        return Ok(Box::new(s.into_core()));
+    }
+    if let Ok(s) = ob.extract::<PyMaterialTestGridSpec>() {
+        return Ok(Box::new(s.into_core()));
+    }
+    if let Ok(s) = ob.extract::<PyProfileSpec>() {
+        return Ok(Box::new(s.into_core()));
+    }
+    let type_name = ob
+        .get_type()
+        .qualname()
+        .map(|s| s.to_string())
+        .unwrap_or_default();
+    Err(PyErr::new::<PyTypeError, _>(format!(
+        "Unknown assembler spec type: {type_name}"
+    )))
+}
+
+/// Python-visible wrapper around an assembler spec.
+///
+/// Construct as ``Assembler(spec)`` where `spec` is an instance of
+/// one of the assembler spec classes under `raygeo.ops.assembly.*`
+/// (e.g. :class:`~raygeo.ops.assembly.contour.ContourSpec`).
+/// The pipeline's :class:`~raygeo.pipeline.stage.ComputeParams`
+/// takes an `Assembler` instance for its ``assembler`` field.
+#[gen_stub_pyclass(module = "raygeo.ops.assembly")]
+#[pyclass(
+    name = "Assembler",
+    module = "raygeo.ops.assembly",
+    skip_from_py_object
+)]
+#[derive(Debug)]
+pub struct PyAssembler {
+    /// The wrapped Python-side spec object. Type-erased here;
+    /// dispatched to a concrete `Box<dyn Assembler>` by
+    /// [`PyAssembler::into_core`].
+    #[pyo3(get)]
+    pub spec: Py<PyAny>,
+}
+
+impl PyAssembler {
+    /// Convert into the core-layer `Box<dyn Assembler>` by
+    /// dispatching on the runtime type of `self.spec`.
+    #[allow(clippy::wrong_self_convention)]
+    pub fn into_core(&self, py: Python<'_>) -> PyResult<Box<dyn Assembler>> {
+        extract_assembler(self.spec.bind(py))
+    }
+}
+
+#[gen_stub_pymethods]
+#[pymethods]
+impl PyAssembler {
+    /// Construct an `Assembler` wrapping a spec object.
+    ///
+    /// :param spec: An assembler spec instance (e.g.
+    ///     :class:`~raygeo.ops.assembly.contour.ContourSpec`).
+    #[new]
+    fn new(spec: Py<PyAny>) -> Self {
+        PyAssembler { spec }
+    }
+
+    fn __repr__(&self, py: Python<'_>) -> String {
+        let name = self
+            .spec
+            .bind(py)
+            .get_type()
+            .qualname()
+            .map(|s| s.to_string())
+            .unwrap_or_else(|_| "<unknown>".to_string());
+        format!("Assembler({name})")
+    }
+}
 
 /// Convert a Rust ProgressEvent into a Python dict.
 pub(crate) fn progress_event_to_py(
@@ -66,6 +190,7 @@ pub(crate) fn register(ops_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = ops_mod.py();
     let assembly_mod = PyModule::new(py, "assembly")?;
     assembly_mod.setattr("__doc__", MODULE_DOC)?;
+    assembly_mod.add_class::<PyAssembler>()?;
 
     adaptive::register(&assembly_mod)?;
     contour::register(&assembly_mod)?;

@@ -5,7 +5,7 @@
 //! so they can be exercised directly from Python tests.
 
 use crate::ops::assembly::adaptive::resume::{self, ResumeCtx};
-use crate::ops::assembly::adaptive::AdaptiveClearingOptions;
+use crate::ops::assembly::adaptive::AdaptiveClearingSpec;
 use crate::ops::assembly::Tracelet;
 use crate::ops::cut::StepperOptions;
 use crate::ops::part::ClearedArea;
@@ -82,7 +82,7 @@ fn emit_resume_travel_py(
     from_pt: (f64, f64, f64),
     axis: Option<&PyMedialAxis>,
 ) -> PyResult<()> {
-    let opts = AdaptiveClearingOptions {
+    let opts = AdaptiveClearingSpec {
         tool_radius: radius,
         step_over: 1.5,
         target_z: cut_z,
@@ -202,7 +202,7 @@ fn try_resume_py(
         "cw" => CutDirection::Cw,
         _ => CutDirection::Ccw,
     };
-    let opts = AdaptiveClearingOptions {
+    let opts = AdaptiveClearingSpec {
         tool_radius: radius,
         step_over,
         target_z: cut_z,

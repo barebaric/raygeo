@@ -15,7 +15,7 @@ use crate::geo::shape::polygon::{
     is_point_inside_polygon, resample_polygon,
 };
 use crate::ops::assembly::result::AssemblyMeta;
-use crate::ops::assembly::Tracelet;
+use crate::ops::assembly::{AssembleCtx, Assembler, Tracelet};
 use crate::ops::container::Ops;
 use crate::ops::part::Part;
 use crate::ops::state::State;
@@ -24,13 +24,30 @@ use crate::types::{Point, Point3D, Polygon};
 
 const MAX_WAVEFRONT_ITERATIONS: usize = 1000;
 
-/// Options for [`adaptive_wavefronts`].
+/// Spec for the inside-out adaptive wavefront assembler.
 #[derive(Clone, Debug)]
-pub struct AdaptiveWavefrontOptions {
+pub struct AdaptiveWavefrontSpec {
     pub step_over: f64,
     pub z: f64,
     pub area_tolerance: f64,
     pub precision: f64,
+}
+
+impl Assembler for AdaptiveWavefrontSpec {
+    fn assemble(&self, ctx: &mut AssembleCtx) -> Result<AssemblyMeta, String> {
+        ctx.callbacks.report_progress(0.0, "wavefront: assemble");
+        if ctx.callbacks.is_cancelled() {
+            return Err("cancelled".to_string());
+        }
+        let meta = adaptive_wavefronts(ctx.part, ctx.trace, self, ctx.state)
+            .map_err(|e| e.to_string())?;
+        ctx.callbacks.report_progress(1.0, "wavefront: done");
+        Ok(meta)
+    }
+
+    fn name(&self) -> &'static str {
+        "wavefront"
+    }
 }
 
 /// Inside-out adaptive wavefronts.
@@ -46,7 +63,7 @@ pub struct AdaptiveWavefrontOptions {
 pub fn adaptive_wavefronts(
     part: &mut Part,
     trace: &mut Tracelet,
-    opts: &AdaptiveWavefrontOptions,
+    opts: &AdaptiveWavefrontSpec,
     cut_state: &State,
 ) -> RaygeoResult<AssemblyMeta> {
     let mut state_applied = false;
@@ -374,7 +391,7 @@ pub fn adaptive_wavefronts_multi_pocket(
         let mut pocket_part =
             Part::from_polygons(boundary, islands, (0.0, 0.0));
 
-        let wf_opts = AdaptiveWavefrontOptions {
+        let wf_opts = AdaptiveWavefrontSpec {
             step_over,
             z,
             area_tolerance,

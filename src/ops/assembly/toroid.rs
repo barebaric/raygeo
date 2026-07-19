@@ -11,21 +11,70 @@ use crate::geo::algo::trochoid::{
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::trace_utils as tu;
 use crate::ops::assembly::write_polyline;
-use crate::ops::assembly::Tracelet;
+use crate::ops::assembly::{AssembleCtx, Assembler, Tracelet};
 use crate::ops::part::Part;
 use crate::ops::state::State;
 use crate::ops::types::ToolPose;
 use crate::types::{Point, Point3D, Polygon};
 
-/// Options for generating a toroidal (trochoidal) path along a carrier.
+/// Spec for the toroid (constant-Z trochoid along a carrier) assembler.
 #[derive(Clone, Debug)]
-pub struct ToroidOptions {
+pub struct ToroidSpec {
     pub carrier: Vec<Point>,
     pub tool_radius: f64,
     pub step_over: f64,
     pub target_z: f64,
     pub direction: HelixDirection,
     pub angular_step: f64,
+}
+
+impl Assembler for ToroidSpec {
+    fn assemble(&self, ctx: &mut AssembleCtx) -> Result<AssemblyMeta, String> {
+        ctx.callbacks.report_progress(0.0, "toroid: assemble");
+        if ctx.callbacks.is_cancelled() {
+            return Err("cancelled".to_string());
+        }
+        let meta = generate_toroid(ctx.part, ctx.trace, self, ctx.state)
+            .map_err(|e| e.to_string())?;
+        ctx.callbacks.report_progress(1.0, "toroid: done");
+        Ok(meta)
+    }
+
+    fn name(&self) -> &'static str {
+        "toroid"
+    }
+}
+
+/// Spec for the toroidal-clear (ramped trochoid, Z-descending) assembler.
+#[derive(Clone, Debug)]
+pub struct ToroidalClearSpec {
+    pub carrier: Vec<Point>,
+    pub start: Point3D,
+    pub target_z: f64,
+    pub tool_radius: f64,
+    pub step_over: f64,
+    pub max_ramp_angle_deg: f64,
+    pub direction: HelixDirection,
+    pub angular_step: f64,
+}
+
+impl Assembler for ToroidalClearSpec {
+    fn assemble(&self, ctx: &mut AssembleCtx) -> Result<AssemblyMeta, String> {
+        ctx.callbacks
+            .report_progress(0.0, "toroidal_clear: assemble");
+        if ctx.callbacks.is_cancelled() {
+            return Err("cancelled".to_string());
+        }
+        let meta =
+            generate_toroidal_clear(ctx.part, ctx.trace, self, ctx.state)
+                .map_err(|e| e.to_string())?;
+        ctx.callbacks.report_progress(1.0, "toroidal_clear: done");
+        Ok(meta)
+    }
+
+    fn name(&self) -> &'static str {
+        "toroidal_clear"
+    }
 }
 
 /// Generate a toroidal entry path along a carrier polyline.
@@ -37,7 +86,7 @@ pub struct ToroidOptions {
 pub fn generate_toroid(
     part: &mut Part,
     trace: &mut Tracelet,
-    opts: &ToroidOptions,
+    opts: &ToroidSpec,
     cut_state: &State,
 ) -> RaygeoResult<AssemblyMeta> {
     let path = get_trochoid_along_3d(
@@ -101,19 +150,6 @@ pub fn generate_toroid(
     Ok(AssemblyMeta { start, end })
 }
 
-/// Options for generating a ramp-down toroidal clear path along a carrier.
-#[derive(Clone, Debug)]
-pub struct ToroidalClearOptions {
-    pub carrier: Vec<Point>,
-    pub start: Point3D,
-    pub target_z: f64,
-    pub tool_radius: f64,
-    pub step_over: f64,
-    pub max_ramp_angle_deg: f64,
-    pub direction: HelixDirection,
-    pub angular_step: f64,
-}
-
 /// Generate a ramp-down toroidal clear path that descends Z continuously
 /// along the carrier's arc-length, zig-zagging back-and-forth along the
 /// carrier until `target_z` is reached, then emits one final full forward
@@ -122,7 +158,7 @@ pub struct ToroidalClearOptions {
 pub fn generate_toroidal_clear(
     part: &mut Part,
     trace: &mut Tracelet,
-    opts: &ToroidalClearOptions,
+    opts: &ToroidalClearSpec,
     cut_state: &State,
 ) -> RaygeoResult<AssemblyMeta> {
     if opts.carrier.len() < 2 {
@@ -241,7 +277,7 @@ fn build_toroidal_result(
     part: &mut Part,
     trace: &mut Tracelet,
     path: &[Point3D],
-    opts: &ToroidalClearOptions,
+    opts: &ToroidalClearSpec,
     cut_state: &State,
 ) -> RaygeoResult<AssemblyMeta> {
     let start = if path.is_empty() {

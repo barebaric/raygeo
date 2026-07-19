@@ -3,6 +3,54 @@ title: raygeo.ops.assembly.ramp
 sidebar_label: raygeo.ops.assembly.ramp
 ---
 
+## RampSpec
+
+Parameters for the `ramp` assembler.
+
+### `end`
+
+```python
+end: tuple[float, float]
+```
+
+### `lateral_amplitude`
+
+```python
+lateral_amplitude: float
+```
+
+### `max_ramp_angle_deg`
+
+```python
+max_ramp_angle_deg: float
+```
+
+### `start`
+
+```python
+start: tuple[float, float]
+```
+
+### `style`
+
+```python
+style: str
+```
+
+`"linear"` or `"zigzag"`.
+
+### `z_end`
+
+```python
+z_end: float
+```
+
+### `z_start`
+
+```python
+z_start: float
+```
+
 ## Functions
 
 ### `generate_ramp()`

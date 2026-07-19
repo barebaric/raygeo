@@ -1,12 +1,12 @@
 use crate::geo::algo::helix::HelixDirection;
-use crate::ops::assembly::toroid::{self, ToroidOptions, ToroidalClearOptions};
+use crate::ops::assembly::toroid::{self, ToroidSpec, ToroidalClearSpec};
 use crate::ops::assembly::Tracelet;
 use crate::ops::state::State;
 use crate::python::ops::assembly::result::PyAssemblyResult;
 use crate::python::ops::state::PyState;
 use crate::types::{Point, Point3D};
 use pyo3::prelude::*;
-use pyo3_stub_gen::derive::gen_stub_pyfunction;
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction};
 
 pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = assembly_mod.py();
@@ -16,12 +16,187 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         generate_toroidal_clear_py,
         m.clone()
     )?)?;
+    m.add_class::<PyToroidSpec>()?;
+    m.add_class::<PyToroidalClearSpec>()?;
     assembly_mod.add_submodule(&m)?;
 
     let sys_modules = py.import("sys")?.getattr("modules")?;
     sys_modules.set_item("raygeo.ops.assembly.toroid", &m)?;
 
     Ok(())
+}
+
+/// Parameters for the ``toroid`` (constant-Z trochoid along a carrier)
+/// assembler.
+#[gen_stub_pyclass]
+#[pyclass(
+    module = "raygeo.ops.assembly.toroid",
+    name = "ToroidSpec",
+    frozen,
+    eq,
+    from_py_object
+)]
+#[derive(Clone, PartialEq)]
+pub struct PyToroidSpec {
+    /// ``(x, y)`` carrier waypoints.
+    #[pyo3(get)]
+    pub carrier: Vec<(f64, f64)>,
+    #[pyo3(get)]
+    pub tool_radius: f64,
+    #[pyo3(get)]
+    pub step_over: f64,
+    #[pyo3(get)]
+    pub target_z: f64,
+    /// ``"CW"`` or ``"CCW"``.
+    #[pyo3(get)]
+    pub direction: String,
+    #[pyo3(get)]
+    pub angular_step: f64,
+}
+
+impl PyToroidSpec {
+    pub fn into_core(self) -> ToroidSpec {
+        let dir = match self.direction.as_str() {
+            "CCW" => HelixDirection::Ccw,
+            _ => HelixDirection::Cw,
+        };
+        ToroidSpec {
+            carrier: self
+                .carrier
+                .into_iter()
+                .map(|(x, y)| Point::new(x, y))
+                .collect(),
+            tool_radius: self.tool_radius,
+            step_over: self.step_over,
+            target_z: self.target_z,
+            direction: dir,
+            angular_step: self.angular_step,
+        }
+    }
+}
+
+#[pyo3::pymethods]
+impl PyToroidSpec {
+    #[new]
+    #[pyo3(signature = (
+        carrier,
+        tool_radius,
+        step_over,
+        target_z,
+        direction = "CW",
+        angular_step = 0.1,
+    ))]
+    fn new(
+        carrier: Vec<(f64, f64)>,
+        tool_radius: f64,
+        step_over: f64,
+        target_z: f64,
+        direction: &str,
+        angular_step: f64,
+    ) -> Self {
+        PyToroidSpec {
+            carrier,
+            tool_radius,
+            step_over,
+            target_z,
+            direction: direction.to_string(),
+            angular_step,
+        }
+    }
+}
+
+/// Parameters for the ``toroidal_clear`` (ramped Z-descending trochoid)
+/// assembler.
+#[gen_stub_pyclass]
+#[pyclass(
+    module = "raygeo.ops.assembly.toroid",
+    name = "ToroidalClearSpec",
+    frozen,
+    eq,
+    from_py_object
+)]
+#[derive(Clone, PartialEq)]
+pub struct PyToroidalClearSpec {
+    /// ``(x, y)`` carrier waypoints.
+    #[pyo3(get)]
+    pub carrier: Vec<(f64, f64)>,
+    /// ``(x, y, z)`` entry point; ``x, y`` should match ``carrier[0]``,
+    /// ``z`` is the entry height.
+    #[pyo3(get)]
+    pub start: (f64, f64, f64),
+    #[pyo3(get)]
+    pub target_z: f64,
+    #[pyo3(get)]
+    pub tool_radius: f64,
+    #[pyo3(get)]
+    pub step_over: f64,
+    #[pyo3(get)]
+    pub max_ramp_angle_deg: f64,
+    /// ``"CW"`` or ``"CCW"``.
+    #[pyo3(get)]
+    pub direction: String,
+    #[pyo3(get)]
+    pub angular_step: f64,
+}
+
+impl PyToroidalClearSpec {
+    pub fn into_core(self) -> ToroidalClearSpec {
+        let dir = match self.direction.as_str() {
+            "CCW" => HelixDirection::Ccw,
+            _ => HelixDirection::Cw,
+        };
+        ToroidalClearSpec {
+            carrier: self
+                .carrier
+                .into_iter()
+                .map(|(x, y)| Point::new(x, y))
+                .collect(),
+            start: Point3D::new(self.start.0, self.start.1, self.start.2),
+            target_z: self.target_z,
+            tool_radius: self.tool_radius,
+            step_over: self.step_over,
+            max_ramp_angle_deg: self.max_ramp_angle_deg,
+            direction: dir,
+            angular_step: self.angular_step,
+        }
+    }
+}
+
+#[pyo3::pymethods]
+impl PyToroidalClearSpec {
+    #[new]
+    #[pyo3(signature = (
+        carrier,
+        start,
+        target_z,
+        tool_radius,
+        step_over,
+        max_ramp_angle_deg = 5.0,
+        direction = "CW",
+        angular_step = 0.1,
+    ))]
+    #[allow(clippy::too_many_arguments)]
+    fn new(
+        carrier: Vec<(f64, f64)>,
+        start: (f64, f64, f64),
+        target_z: f64,
+        tool_radius: f64,
+        step_over: f64,
+        max_ramp_angle_deg: f64,
+        direction: &str,
+        angular_step: f64,
+    ) -> Self {
+        PyToroidalClearSpec {
+            carrier,
+            start,
+            target_z,
+            tool_radius,
+            step_over,
+            max_ramp_angle_deg,
+            direction: direction.to_string(),
+            angular_step,
+        }
+    }
 }
 
 #[gen_stub_pyfunction(
@@ -92,7 +267,7 @@ fn generate_toroid_py(
     let carrier_pts: Vec<Point> =
         carrier.into_iter().map(|(x, y)| Point::new(x, y)).collect();
 
-    let opts = ToroidOptions {
+    let opts = ToroidSpec {
         carrier: carrier_pts,
         tool_radius,
         step_over,
@@ -193,7 +368,7 @@ fn generate_toroidal_clear_py(
     let carrier_pts: Vec<Point> =
         carrier.into_iter().map(|(x, y)| Point::new(x, y)).collect();
 
-    let opts = ToroidalClearOptions {
+    let opts = ToroidalClearSpec {
         carrier: carrier_pts,
         start: Point3D::new(start.0, start.1, start.2),
         target_z,

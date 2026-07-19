@@ -18,18 +18,35 @@ use crate::error::RaygeoResult;
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::trace_utils as tu;
 use crate::ops::assembly::write_polyline;
-use crate::ops::assembly::Tracelet;
+use crate::ops::assembly::{AssembleCtx, Assembler, Tracelet};
 use crate::ops::part::Part;
 use crate::ops::state::State;
 use crate::ops::types::ToolPose;
 use crate::types::{Point, Point3D, Polygon};
 
-/// Options for generating a back-and-forth slot pass.
+/// Spec for the slot assembler.
 #[derive(Clone, Debug)]
-pub struct SlotOptions {
+pub struct SlotSpec {
     pub carrier: Vec<Point>,
     pub tool_radius: f64,
     pub target_z: f64,
+}
+
+impl Assembler for SlotSpec {
+    fn assemble(&self, ctx: &mut AssembleCtx) -> Result<AssemblyMeta, String> {
+        ctx.callbacks.report_progress(0.0, "slot: assemble");
+        if ctx.callbacks.is_cancelled() {
+            return Err("cancelled".to_string());
+        }
+        let meta = generate_slot(ctx.part, ctx.trace, self, ctx.state)
+            .map_err(|e| e.to_string())?;
+        ctx.callbacks.report_progress(1.0, "slot: done");
+        Ok(meta)
+    }
+
+    fn name(&self) -> &'static str {
+        "slot"
+    }
 }
 
 /// Generate a back-and-forth slot clearing path along a carrier.
@@ -41,7 +58,7 @@ pub struct SlotOptions {
 pub fn generate_slot(
     part: &mut Part,
     trace: &mut Tracelet,
-    opts: &SlotOptions,
+    opts: &SlotSpec,
     cut_state: &State,
 ) -> RaygeoResult<AssemblyMeta> {
     if opts.carrier.len() < 2 {

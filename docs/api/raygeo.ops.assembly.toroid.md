@@ -3,6 +3,108 @@ title: raygeo.ops.assembly.toroid
 sidebar_label: raygeo.ops.assembly.toroid
 ---
 
+## ToroidSpec
+
+Parameters for the `toroid` (constant-Z trochoid along a carrier) assembler.
+
+### `angular_step`
+
+```python
+angular_step: float
+```
+
+### `carrier`
+
+```python
+carrier: list[tuple[float, float]]
+```
+
+`(x, y)` carrier waypoints.
+
+### `direction`
+
+```python
+direction: str
+```
+
+`"CW"` or `"CCW"`.
+
+### `step_over`
+
+```python
+step_over: float
+```
+
+### `target_z`
+
+```python
+target_z: float
+```
+
+### `tool_radius`
+
+```python
+tool_radius: float
+```
+
+## ToroidalClearSpec
+
+Parameters for the `toroidal_clear` (ramped Z-descending trochoid) assembler.
+
+### `angular_step`
+
+```python
+angular_step: float
+```
+
+### `carrier`
+
+```python
+carrier: list[tuple[float, float]]
+```
+
+`(x, y)` carrier waypoints.
+
+### `direction`
+
+```python
+direction: str
+```
+
+`"CW"` or `"CCW"`.
+
+### `max_ramp_angle_deg`
+
+```python
+max_ramp_angle_deg: float
+```
+
+### `start`
+
+```python
+start: tuple[float, float, float]
+```
+
+`(x, y, z)` entry point; `x, y` should match `carrier[0]`, `z` is the entry height.
+
+### `step_over`
+
+```python
+step_over: float
+```
+
+### `target_z`
+
+```python
+target_z: float
+```
+
+### `tool_radius`
+
+```python
+tool_radius: float
+```
+
 ## Functions
 
 ### `generate_toroid()`

@@ -3,6 +3,146 @@ title: raygeo.ops.assembly.material_test_grid
 sidebar_label: raygeo.ops.assembly.material_test_grid
 ---
 
+## MaterialTestGridSpec
+
+Parameters for the material-test-grid assembler.
+
+### `cols`
+
+```python
+cols: int
+```
+
+### `fixed_power`
+
+```python
+fixed_power: float
+```
+
+### `fixed_speed`
+
+```python
+fixed_speed: float
+```
+
+### `grid_mode`
+
+```python
+grid_mode: str
+```
+
+`"Power vs Speed"`, `"Power vs Passes"`, `"Speed vs Passes"`, or `"Speed vs Offset"`.
+
+### `include_labels`
+
+```python
+include_labels: bool
+```
+
+### `label_power_percent`
+
+```python
+label_power_percent: float
+```
+
+Power for label engraving in percent (0–100).
+
+### `label_speed`
+
+```python
+label_speed: float
+```
+
+Feed rate for label engraving in mm/min.
+
+### `line_interval_mm`
+
+```python
+line_interval_mm: float
+```
+
+### `max_offset`
+
+```python
+max_offset: float
+```
+
+### `max_passes`
+
+```python
+max_passes: int
+```
+
+### `max_power`
+
+```python
+max_power: float
+```
+
+### `max_speed`
+
+```python
+max_speed: float
+```
+
+### `min_offset`
+
+```python
+min_offset: float
+```
+
+### `min_passes`
+
+```python
+min_passes: int
+```
+
+### `min_power`
+
+```python
+min_power: float
+```
+
+### `min_speed`
+
+```python
+min_speed: float
+```
+
+### `mode`
+
+```python
+mode: str
+```
+
+`"engrave"` or `"cut"`.
+
+### `rows`
+
+```python
+rows: int
+```
+
+### `shape_size`
+
+```python
+shape_size: float
+```
+
+### `size_mm`
+
+```python
+size_mm: tuple[float, float]
+```
+
+`(width_mm, height_mm)` of the workpiece area to fill.
+
+### `spacing`
+
+```python
+spacing: float
+```
+
 ## Functions
 
 ### `generate_material_test_grid()`

@@ -3,6 +3,7 @@ use std::collections::BTreeMap;
 use crate::geo::shape::text::{text_to_geometry, FontConfig};
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::tracelet::Tracelet;
+use crate::ops::assembly::{AssembleCtx, Assembler};
 use crate::ops::container::Ops;
 use crate::ops::types::{MoveCmd, OpCategory, ToolPose};
 use crate::trace_types::{Meta, MetaValue, MoveKind};
@@ -10,10 +11,14 @@ use crate::types::{Point, Point3D};
 
 pub(crate) mod trace_helpers;
 
-/// Parameters for the material test grid assembler.
+/// Spec for the material-test-grid assembler.
+///
+/// Carries every parameter the grid generator needs (cell count,
+/// speed/power/passes/offset ranges, label settings) plus the
+/// target ``size_mm`` of the workpiece area to fill.
 #[derive(Clone, Debug)]
-#[allow(dead_code)]
-pub struct MaterialTestGridParams {
+pub struct MaterialTestGridSpec {
+    pub size_mm: (f64, f64),
     pub cols: u32,
     pub rows: u32,
     pub min_speed: f64,
@@ -42,16 +47,35 @@ pub struct MaterialTestGridParams {
     pub label_speed: i32,
 }
 
+impl Assembler for MaterialTestGridSpec {
+    fn assemble(&self, ctx: &mut AssembleCtx) -> Result<AssemblyMeta, String> {
+        ctx.callbacks
+            .report_progress(0.0, "material_test_grid: assemble");
+        if ctx.callbacks.is_cancelled() {
+            return Err("cancelled".to_string());
+        }
+        let meta = generate_material_test_grid(self, ctx.trace)
+            .map_err(|e| e.to_string())?;
+        ctx.callbacks
+            .report_progress(1.0, "material_test_grid: done");
+        Ok(meta)
+    }
+
+    fn name(&self) -> &'static str {
+        "material_test_grid"
+    }
+}
+
 /// Generate a material test grid with varying speed and power settings.
 ///
 /// Creates grid cells arranged in rows × cols, each with baked-in power,
 /// speed, and pass count.  All motion is written through the provided
 /// [`Tracelet`] so that `drain()` produces the full toolpath.
 pub fn generate_material_test_grid(
-    params: &MaterialTestGridParams,
-    size_mm: (f64, f64),
+    params: &MaterialTestGridSpec,
     trace: &mut Tracelet,
 ) -> Result<AssemblyMeta, crate::RaygeoError> {
+    let size_mm = params.size_mm;
     let (_target_width, target_height) = size_mm;
 
     // Calculate proportional base size
@@ -419,7 +443,7 @@ enum HAlign {
 #[allow(clippy::too_many_arguments)]
 fn generate_labels(
     ops: &mut Ops,
-    params: &MaterialTestGridParams,
+    params: &MaterialTestGridSpec,
     scale_x: f64,
     scale_y: f64,
     margin_left: f64,
@@ -725,7 +749,7 @@ fn draw_filled_box(
 }
 
 pub fn get_material_test_proportional_size(
-    params: &MaterialTestGridParams,
+    params: &MaterialTestGridSpec,
 ) -> f64 {
     let cols = params.cols;
     let shape_size = params.shape_size;
@@ -737,7 +761,7 @@ pub fn get_material_test_proportional_size(
 }
 
 pub fn get_material_test_proportional_height(
-    params: &MaterialTestGridParams,
+    params: &MaterialTestGridSpec,
 ) -> f64 {
     let rows = params.rows;
     let shape_size = params.shape_size;

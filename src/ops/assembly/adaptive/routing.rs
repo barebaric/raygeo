@@ -10,7 +10,7 @@ use crate::geo::algo::medial_axis::MedialAxis;
 use crate::geo::algo::smooth::build_smoothed_path;
 use crate::geo::shape::polygon::compute_polygon_bounds;
 use crate::geo::shape::polygon::does_path_sweep_intersect_polygon;
-use crate::ops::assembly::adaptive::AdaptiveClearingOptions;
+use crate::ops::assembly::adaptive::AdaptiveClearingSpec;
 use crate::ops::part::Part;
 use crate::types::{Point, Point3D, Polygon, Rect};
 
@@ -25,7 +25,7 @@ pub use super::routing_zhop::RoutingZHop;
 
 /// Read-only snapshot of everything a routing strategy may need.
 pub struct RouteCtx<'a> {
-    pub opts: &'a AdaptiveClearingOptions,
+    pub opts: &'a AdaptiveClearingSpec,
     pub mat: Option<&'a MedialAxis>,
     pub obstacles: &'a [Polygon],
     pub obstacle_bounds: &'a [Rect],

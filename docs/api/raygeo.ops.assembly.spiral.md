@@ -3,6 +3,60 @@ title: raygeo.ops.assembly.spiral
 sidebar_label: raygeo.ops.assembly.spiral
 ---
 
+## SpiralSpec
+
+Parameters for the `spiral` assembler.
+
+### `angular_step`
+
+```python
+angular_step: float
+```
+
+### `center`
+
+```python
+center: tuple[float, float]
+```
+
+### `direction`
+
+```python
+direction: str
+```
+
+`"CW"` or `"CCW"`.
+
+### `end_radius`
+
+```python
+end_radius: float
+```
+
+### `revolutions`
+
+```python
+revolutions: float
+```
+
+### `start_angle`
+
+```python
+start_angle: float
+```
+
+### `start_radius`
+
+```python
+start_radius: float
+```
+
+### `z`
+
+```python
+z: float
+```
+
 ## Functions
 
 ### `generate_spiral()`

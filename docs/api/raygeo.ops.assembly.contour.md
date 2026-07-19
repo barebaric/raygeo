@@ -3,6 +3,87 @@ title: raygeo.ops.assembly.contour
 sidebar_label: raygeo.ops.assembly.contour
 ---
 
+## ContourSpec
+
+Parameters for the `contour` assembler.
+
+Construct with
+`ContourSpec(kerf_mm, path_offset_mm, cut_side, overcut, cut_order, remove_inner, arc_tolerance, allow_arcs, supports_curves)`.
+Pass to the pipeline's **~raygeo.pipeline.stage.ComputeParams** wrapped in an
+**~raygeo.ops.assembly.Assembler** instance.
+
+### `allow_arcs`
+
+```python
+allow_arcs: bool
+```
+
+Fit arcs when arc_tolerance > 0.
+
+### `arc_tolerance`
+
+```python
+arc_tolerance: float
+```
+
+Curve fitting tolerance in mm; when > 0 arcs/beziers are fitted.
+
+### `cut_order`
+
+```python
+cut_order: str
+```
+
+`"inside_outside"` or `"outside_inside"`.
+
+### `cut_side`
+
+```python
+cut_side: str
+```
+
+`"centerline"`, `"outside"`, or `"inside"`.
+
+### `kerf_mm`
+
+```python
+kerf_mm: float
+```
+
+Tool kerf width in mm.
+
+### `overcut`
+
+```python
+overcut: float
+```
+
+Distance to extend closed contours past their start point (mm).
+
+### `path_offset_mm`
+
+```python
+path_offset_mm: float
+```
+
+Additional offset distance in mm.
+
+### `remove_inner`
+
+```python
+remove_inner: bool
+```
+
+Remove inner (hole) contours.
+
+### `supports_curves`
+
+```python
+supports_curves: bool
+```
+
+Keep Bézier curves when arc_tolerance > 0.
+
 ## Functions
 
 ### `contour()`

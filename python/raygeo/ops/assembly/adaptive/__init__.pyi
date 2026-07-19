@@ -4,10 +4,12 @@
 import builtins
 import collections.abc
 import raygeo
+import typing
 from . import resume
 from . import routing
 from . import tool
 __all__ = [
+    "AdaptiveClearingSpec",
     "ResumePointNotFoundError",
     "RoutingError",
     "adaptive_clearing",
@@ -16,6 +18,50 @@ __all__ = [
     "target_area_per_distance",
     "tool",
 ]
+
+@typing.final
+class AdaptiveClearingSpec:
+    r"""
+    Parameters for the adaptive-clearing assembler.
+    """
+    @property
+    def tool_radius(self) -> builtins.float: ...
+    @property
+    def step_over(self) -> builtins.float: ...
+    @property
+    def step_length(self) -> builtins.float: ...
+    @property
+    def target_z(self) -> builtins.float: ...
+    @property
+    def safe_z(self) -> builtins.float: ...
+    @property
+    def max_deflection_deg(self) -> builtins.float: ...
+    @property
+    def wall_margin(self) -> builtins.float: ...
+    @property
+    def area_tolerance(self) -> builtins.float: ...
+    @property
+    def cut_direction(self) -> builtins.str:
+        r"""
+        ``"cw"`` or ``"ccw"``.
+        """
+    @property
+    def start_pos(self) -> typing.Optional[tuple[builtins.float, builtins.float]]:
+        r"""
+        Optional override start ``(x, y)``.
+        """
+    @property
+    def start_heading(self) -> typing.Optional[builtins.float]: ...
+    @property
+    def expansion_batch_size(self) -> builtins.int: ...
+    @property
+    def trace_path(self) -> typing.Optional[builtins.str]:
+        r"""
+        Optional path to write a binary trace file.
+        """
+    @property
+    def tolerance(self) -> builtins.float: ...
+    def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
 
 class ResumePointNotFoundError(builtins.RuntimeError):
     r"""

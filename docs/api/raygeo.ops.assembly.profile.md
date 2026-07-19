@@ -3,6 +3,108 @@ title: raygeo.ops.assembly.profile
 sidebar_label: raygeo.ops.assembly.profile
 ---
 
+## ProfileSpec
+
+Parameters for the adaptive-profile assembler.
+
+### `cut_direction`
+
+```python
+cut_direction: str
+```
+
+`"cw"` or `"ccw"`.
+
+### `engagement_angle_threshold`
+
+```python
+engagement_angle_threshold: float
+```
+
+### `engagement_area_threshold`
+
+```python
+engagement_area_threshold: float
+```
+
+### `expansion_batch_size`
+
+```python
+expansion_batch_size: int
+```
+
+### `kind`
+
+```python
+kind: str
+```
+
+`"inner"` or `"outer"`.
+
+### `safe_z`
+
+```python
+safe_z: float
+```
+
+### `start_pos`
+
+```python
+start_pos: Optional[tuple[float, float]]
+```
+
+Optional override start `(x, y)`.
+
+### `step_length`
+
+```python
+step_length: float
+```
+
+### `step_over`
+
+```python
+step_over: float
+```
+
+### `stock_to_leave`
+
+```python
+stock_to_leave: float
+```
+
+### `target_z`
+
+```python
+target_z: float
+```
+
+### `tolerance`
+
+```python
+tolerance: float
+```
+
+### `tool_radius`
+
+```python
+tool_radius: float
+```
+
+### `trace_path`
+
+```python
+trace_path: Optional[str]
+```
+
+Optional path to write a binary trace file.
+
+### `wall_margin`
+
+```python
+wall_margin: float
+```
+
 ## Functions
 
 ### `profile_inner()`

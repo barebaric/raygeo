@@ -4,13 +4,13 @@ use crate::ops::assembly::trace_utils as tu;
 use crate::trace_types::{Meta, MetaValue, ToolSnapshot};
 use crate::types::Point3D;
 
-use super::MaterialTestGridParams;
+use super::MaterialTestGridSpec;
 
 pub(super) fn tool_snapshot(pos: Point3D, prev: Point3D) -> ToolSnapshot {
     tu::tool_snapshot(pos, 0.0, prev)
 }
 
-pub(super) fn build_attrs(params: &MaterialTestGridParams) -> Meta {
+pub(super) fn build_attrs(params: &MaterialTestGridSpec) -> Meta {
     let mut attrs: Meta = BTreeMap::new();
     tu::meta_insert_u32(&mut attrs, "cols", params.cols);
     tu::meta_insert_u32(&mut attrs, "rows", params.rows);

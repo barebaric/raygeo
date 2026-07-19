@@ -1,14 +1,32 @@
 use std::path::PathBuf;
 
+use crate::ops::assembly::{result::AssemblyMeta, AssembleCtx, Assembler};
 use crate::ops::types::CutDirection;
 use crate::types::Point3D;
 
-/// Options for adaptive profiling (both inner and outer boundary).
+/// Which boundary the [`ProfileSpec`] walks.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ProfileKind {
+    /// Inset (inward-offset) boundary; material-aware around islands.
+    Inner,
+    /// Grown (outward-offset) boundary; ignores islands.
+    Outer,
+}
+
+/// Spec for the adaptive-profile assembler.
 ///
-/// Geometry is supplied via a [`Part`](crate::ops::part::Part) — the
-/// assembler extracts boundary and islands from it internally.
+/// Walks a tool around the **inner** or **outer** profile of a closed
+/// boundary depending on [`Self::kind`]. Inner profiling follows the
+/// inset boundary (offset inward by tool radius), material-aware
+/// around islands. Outer profiling follows the grown boundary
+/// (offset outward) and ignores islands.
+///
+/// Geometry is supplied via a [`Part`](crate::ops::part::Part) —
+/// boundary and islands are extracted internally.
 #[derive(Clone, Debug)]
-pub struct ProfileOptions {
+pub struct ProfileSpec {
+    /// Inner or outer profile.
+    pub kind: ProfileKind,
     pub tool_radius: f64,
     pub step_over: f64,
     pub step_length: f64,
@@ -26,9 +44,10 @@ pub struct ProfileOptions {
     pub trace_path: Option<PathBuf>,
 }
 
-impl Default for ProfileOptions {
+impl Default for ProfileSpec {
     fn default() -> Self {
         Self {
+            kind: ProfileKind::Inner,
             tool_radius: 3.0,
             step_over: 1.5,
             step_length: 0.6,
@@ -44,6 +63,39 @@ impl Default for ProfileOptions {
             engagement_area_threshold: 0.0,
             engagement_angle_threshold: std::f64::consts::PI,
             trace_path: None,
+        }
+    }
+}
+
+impl Assembler for ProfileSpec {
+    fn assemble(&self, ctx: &mut AssembleCtx) -> Result<AssemblyMeta, String> {
+        let label = match self.kind {
+            ProfileKind::Inner => "profile_inner",
+            ProfileKind::Outer => "profile_outer",
+        };
+        ctx.callbacks
+            .report_progress(0.0, &format!("{label}: assemble"));
+        if ctx.callbacks.is_cancelled() {
+            return Err("cancelled".to_string());
+        }
+        let meta = match self.kind {
+            ProfileKind::Inner => {
+                super::profile_inner(ctx.part, ctx.trace, self, ctx.state)
+            }
+            ProfileKind::Outer => {
+                super::profile_outer(ctx.part, ctx.trace, self, ctx.state)
+            }
+        }
+        .map_err(|e| e.to_string())?;
+        ctx.callbacks
+            .report_progress(1.0, &format!("{label}: done"));
+        Ok(meta)
+    }
+
+    fn name(&self) -> &'static str {
+        match self.kind {
+            ProfileKind::Inner => "profile_inner",
+            ProfileKind::Outer => "profile_outer",
         }
     }
 }

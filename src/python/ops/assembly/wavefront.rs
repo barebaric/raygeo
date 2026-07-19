@@ -4,7 +4,7 @@ use crate::ops::state::State;
 use crate::prof::prof_report;
 use crate::python::ops::assembly::result::PyAssemblyResult;
 use pyo3::prelude::*;
-use pyo3_stub_gen::derive::gen_stub_pyfunction;
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction};
 
 pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = assembly_mod.py();
@@ -14,12 +14,69 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         adaptive_wavefronts_py,
         adaptive_wavefronts_multi_pocket_py,
     );
+    m.add_class::<PyAdaptiveWavefrontSpec>()?;
     assembly_mod.add_submodule(&m)?;
 
     let sys_modules = py.import("sys")?.getattr("modules")?;
     sys_modules.set_item("raygeo.ops.assembly.wavefront", &m)?;
 
     Ok(())
+}
+
+/// Parameters for the inside-out adaptive wavefront assembler.
+#[gen_stub_pyclass]
+#[pyclass(
+    module = "raygeo.ops.assembly.wavefront",
+    name = "AdaptiveWavefrontSpec",
+    frozen,
+    eq,
+    from_py_object
+)]
+#[derive(Clone, PartialEq)]
+pub struct PyAdaptiveWavefrontSpec {
+    #[pyo3(get)]
+    pub step_over: f64,
+    #[pyo3(get)]
+    pub z: f64,
+    #[pyo3(get)]
+    pub area_tolerance: f64,
+    #[pyo3(get)]
+    pub precision: f64,
+}
+
+impl PyAdaptiveWavefrontSpec {
+    pub fn into_core(self) -> wavefront::AdaptiveWavefrontSpec {
+        wavefront::AdaptiveWavefrontSpec {
+            step_over: self.step_over,
+            z: self.z,
+            area_tolerance: self.area_tolerance,
+            precision: self.precision,
+        }
+    }
+}
+
+#[pyo3::pymethods]
+impl PyAdaptiveWavefrontSpec {
+    #[new]
+    #[pyo3(signature = (
+        step_over = 2.0,
+        z = 0.0,
+        area_tolerance = 1.0,
+        precision = 0.0,
+    ))]
+    fn new(
+        step_over: f64,
+        z: f64,
+        area_tolerance: f64,
+        precision: f64,
+    ) -> Self {
+        PyAdaptiveWavefrontSpec {
+            step_over,
+            z,
+            area_tolerance,
+            precision,
+        }
+    }
 }
 
 #[gen_stub_pyfunction(
@@ -83,7 +140,7 @@ fn adaptive_wavefronts_py(
     cut_feed_rate: i32,
     cut_power: f64,
 ) -> PyResult<PyAssemblyResult> {
-    let opts = wavefront::AdaptiveWavefrontOptions {
+    let opts = wavefront::AdaptiveWavefrontSpec {
         step_over,
         z,
         area_tolerance,

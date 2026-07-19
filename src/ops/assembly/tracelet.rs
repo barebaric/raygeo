@@ -356,6 +356,23 @@ impl Tracelet {
         self.maybe_flush();
     }
 
+    /// Append every command from `other` (clones the underlying nodes).
+    ///
+    /// Used by [`Assembler`](crate::ops::assembly::Assembler)
+    /// implementations that produce an `Ops` through a non-tracelet
+    /// code path (e.g. [`assemble_contour`](crate::ops::assembly::contour::assemble_contour))
+    /// to feed their result into the tracelet that the pipeline's
+    /// `Compute` stage drives.
+    pub fn append_ops(&mut self, other: &Ops) {
+        self.ops.extend(other);
+        if let Some(last) = other.commands.last() {
+            if let OpCategory::Moving { end, .. } = &last.category {
+                self.pos = *end;
+            }
+        }
+        self.maybe_flush();
+    }
+
     // --- Result extraction (A6) ---
 
     pub fn ops(&self) -> &Ops {

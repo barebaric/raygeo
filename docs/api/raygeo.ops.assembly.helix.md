@@ -3,6 +3,54 @@ title: raygeo.ops.assembly.helix
 sidebar_label: raygeo.ops.assembly.helix
 ---
 
+## HelixSpec
+
+Parameters for the `helix` assembler.
+
+### `angular_step`
+
+```python
+angular_step: float
+```
+
+### `center`
+
+```python
+center: tuple[float, float]
+```
+
+### `direction`
+
+```python
+direction: str
+```
+
+`"CW"` or `"CCW"`.
+
+### `pitch`
+
+```python
+pitch: float
+```
+
+### `start_radius`
+
+```python
+start_radius: float
+```
+
+### `z_end`
+
+```python
+z_end: float
+```
+
+### `z_start`
+
+```python
+z_start: float
+```
+
 ## Functions
 
 ### `generate_helix()`

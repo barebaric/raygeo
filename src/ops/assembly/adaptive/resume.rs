@@ -29,7 +29,7 @@ use crate::types::{Point, Point3D, Polygon};
 
 use super::routing;
 use super::tool::Tool;
-use super::AdaptiveClearingOptions;
+use super::AdaptiveClearingSpec;
 
 pub use super::resume_envelope::ResumeEnvelope;
 pub use super::resume_frontier::ResumeFrontier;
@@ -513,7 +513,7 @@ pub fn emit_resume_travel(
     from: Point3D,
     to: Point3D,
     part: &Part,
-    opts: &AdaptiveClearingOptions,
+    opts: &AdaptiveClearingSpec,
     out_route_details: Option<&mut [u8; 4]>,
 ) -> RaygeoResult<routing::RouteSource> {
     let (_boundary, islands) = part.extract_boundary();
@@ -613,7 +613,7 @@ pub enum ResumeSource {
 /// Mutable values (`segment_start`, `last_resume_*`) are copied in by
 /// value. The caller updates the originals after `try_resume` returns.
 pub struct ResumeCtx<'a> {
-    pub opts: &'a AdaptiveClearingOptions,
+    pub opts: &'a AdaptiveClearingSpec,
     pub step_opts: &'a StepperOptions<'a>,
     pub part: &'a Part,
     /// Radial step into material (derived from `step_over`).

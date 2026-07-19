@@ -6,8 +6,13 @@ Motion-path assembly: turning raw geometry primitives into Ops.
 Functions in this module compose geo-layer primitives (polylines, arcs,
 polygons) into complete motion sequences represented as Ops objects.
 They decide traversal order, linking strategy, lead-in/out, overscan,
-and tab insertion — concerns that belong to motion assembly rather than
-pure geometry.
+and tab insertion — concerns that belong to motion assembly rather
+than pure geometry.
+
+Each assembler exposes a spec class (e.g.
+:class:`~raygeo.ops.assembly.contour.ContourSpec`) implementing the
+Rust ``Assembler`` trait; :class:`Assembler` wraps any spec for use
+in the pipeline's ``Compute`` stage.
 """
 
 import builtins
@@ -28,6 +33,7 @@ from . import spiral
 from . import toroid
 from . import wavefront
 __all__ = [
+    "Assembler",
     "AssemblyResult",
     "adaptive",
     "contour",
@@ -43,6 +49,33 @@ __all__ = [
     "toroid",
     "wavefront",
 ]
+
+@typing.final
+class Assembler:
+    r"""
+    Python-visible wrapper around an assembler spec.
+    
+    Construct as ``Assembler(spec)`` where `spec` is an instance of
+    one of the assembler spec classes under `raygeo.ops.assembly.*`
+    (e.g. :class:`~raygeo.ops.assembly.contour.ContourSpec`).
+    The pipeline's :class:`~raygeo.pipeline.stage.ComputeParams`
+    takes an `Assembler` instance for its ``assembler`` field.
+    """
+    @property
+    def spec(self) -> typing.Any:
+        r"""
+        The wrapped Python-side spec object. Type-erased here;
+        dispatched to a concrete `Box<dyn Assembler>` by
+        [`PyAssembler::into_core`].
+        """
+    def __new__(cls, spec: typing.Any) -> Assembler:
+        r"""
+        Construct an `Assembler` wrapping a spec object.
+        
+        :param spec: An assembler spec instance (e.g.
+            :class:`~raygeo.ops.assembly.contour.ContourSpec`).
+        """
+    def __repr__(self) -> builtins.str: ...
 
 @typing.final
 class AssemblyResult:

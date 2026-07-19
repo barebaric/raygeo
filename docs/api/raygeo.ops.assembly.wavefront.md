@@ -3,6 +3,34 @@ title: raygeo.ops.assembly.wavefront
 sidebar_label: raygeo.ops.assembly.wavefront
 ---
 
+## AdaptiveWavefrontSpec
+
+Parameters for the inside-out adaptive wavefront assembler.
+
+### `area_tolerance`
+
+```python
+area_tolerance: float
+```
+
+### `precision`
+
+```python
+precision: float
+```
+
+### `step_over`
+
+```python
+step_over: float
+```
+
+### `z`
+
+```python
+z: float
+```
+
 ## Functions
 
 ### `adaptive_wavefronts()`

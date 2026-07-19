@@ -1,7 +1,9 @@
 use pyo3::prelude::*;
-use pyo3_stub_gen::derive::gen_stub_pyfunction;
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction};
 
-use crate::ops::assembly::contour::assemble_contour;
+use crate::ops::assembly::contour::{
+    assemble_contour, ContourSpec as CoreContourSpec,
+};
 use crate::python::ops::assembly::result::PyAssemblyResult;
 use crate::python::ops::part::part::PyPart;
 
@@ -9,12 +11,116 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = assembly_mod.py();
     let m = PyModule::new(py, "contour")?;
     m.add_function(pyo3::wrap_pyfunction!(contour_py, m.clone())?)?;
+    m.add_class::<PyContourSpec>()?;
     assembly_mod.add_submodule(&m)?;
 
     let sys_modules = py.import("sys")?.getattr("modules")?;
     sys_modules.set_item("raygeo.ops.assembly.contour", &m)?;
 
     Ok(())
+}
+
+/// Parameters for the ``contour`` assembler.
+///
+/// Construct with ``ContourSpec(kerf_mm, path_offset_mm, cut_side,
+/// overcut, cut_order, remove_inner, arc_tolerance, allow_arcs,
+/// supports_curves)``. Pass to the pipeline's
+/// :class:`~raygeo.pipeline.stage.ComputeParams` wrapped in an
+/// :class:`~raygeo.ops.assembly.Assembler` instance.
+#[gen_stub_pyclass]
+#[pyclass(
+    module = "raygeo.ops.assembly.contour",
+    name = "ContourSpec",
+    frozen,
+    eq,
+    from_py_object
+)]
+#[derive(Clone, PartialEq)]
+pub struct PyContourSpec {
+    /// Tool kerf width in mm.
+    #[pyo3(get)]
+    pub kerf_mm: f64,
+    /// Additional offset distance in mm.
+    #[pyo3(get)]
+    pub path_offset_mm: f64,
+    /// ``"centerline"``, ``"outside"``, or ``"inside"``.
+    #[pyo3(get)]
+    pub cut_side: String,
+    /// Distance to extend closed contours past their start point (mm).
+    #[pyo3(get)]
+    pub overcut: f64,
+    /// ``"inside_outside"`` or ``"outside_inside"``.
+    #[pyo3(get)]
+    pub cut_order: String,
+    /// Remove inner (hole) contours.
+    #[pyo3(get)]
+    pub remove_inner: bool,
+    /// Curve fitting tolerance in mm; when > 0 arcs/beziers are fitted.
+    #[pyo3(get)]
+    pub arc_tolerance: f64,
+    /// Fit arcs when arc_tolerance > 0.
+    #[pyo3(get)]
+    pub allow_arcs: bool,
+    /// Keep Bézier curves when arc_tolerance > 0.
+    #[pyo3(get)]
+    pub supports_curves: bool,
+}
+
+impl PyContourSpec {
+    /// Convert into the core-layer spec.
+    pub fn into_core(self) -> CoreContourSpec {
+        CoreContourSpec {
+            kerf_mm: self.kerf_mm,
+            path_offset_mm: self.path_offset_mm,
+            cut_side: self.cut_side,
+            overcut: self.overcut,
+            cut_order: self.cut_order,
+            remove_inner: self.remove_inner,
+            arc_tolerance: self.arc_tolerance,
+            allow_arcs: self.allow_arcs,
+            supports_curves: self.supports_curves,
+        }
+    }
+}
+
+#[pyo3::pymethods]
+impl PyContourSpec {
+    #[new]
+    #[pyo3(signature = (
+        kerf_mm = 0.0,
+        path_offset_mm = 0.0,
+        cut_side = "centerline",
+        overcut = 0.0,
+        cut_order = "inside_outside",
+        remove_inner = false,
+        arc_tolerance = 0.0,
+        allow_arcs = true,
+        supports_curves = false,
+    ))]
+    #[allow(clippy::too_many_arguments)]
+    fn new(
+        kerf_mm: f64,
+        path_offset_mm: f64,
+        cut_side: &str,
+        overcut: f64,
+        cut_order: &str,
+        remove_inner: bool,
+        arc_tolerance: f64,
+        allow_arcs: bool,
+        supports_curves: bool,
+    ) -> Self {
+        PyContourSpec {
+            kerf_mm,
+            path_offset_mm,
+            cut_side: cut_side.to_string(),
+            overcut,
+            cut_order: cut_order.to_string(),
+            remove_inner,
+            arc_tolerance,
+            allow_arcs,
+            supports_curves,
+        }
+    }
 }
 
 #[gen_stub_pyfunction(

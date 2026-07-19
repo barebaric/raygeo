@@ -27,6 +27,9 @@
 - You are strictly forbidden from editing stubs manually. They are only to be edited using "make stubs".
 - You should never edit markdown docs. They are auto-generated.
 - Use make commands when available - avoid calling the underlying tools directly.
+- Never add Rust tests (`#[cfg(test)]` / `#[test]` blocks in `src/`).
+  All tests are Python-based, under `tests/`. Exercise new Rust code
+  through PyO3 bindings from Python test code.
 
 # Layering Rules Specification
 
