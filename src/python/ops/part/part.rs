@@ -2,9 +2,11 @@ use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::image::types::PixelImage;
+use crate::ops::part::image_source::WholeImageSource;
 use crate::ops::part::Part;
 use crate::python::geo::geometry::Geometry as PyGeometry;
 use crate::python::ops::part::cleared_area::PyClearedArea;
+use crate::python::ops::part::image_source::PyWholeImageSource;
 use crate::python::ops::part::stock_region::PyStockRegion;
 use crate::types::{Point, Polygon};
 
@@ -30,10 +32,14 @@ fn extract_flat_u8(
 /// tracking what has already been cut.  Assemblers mutate the
 /// cleared area as they work.
 #[gen_stub_pyclass(module = "raygeo.ops.part")]
-#[pyclass(name = "Part", from_py_object)]
-#[derive(Clone, Debug)]
+#[pyclass(name = "Part", skip_from_py_object)]
+#[derive(Debug)]
 pub struct PyPart {
     pub inner: Part,
+    /// Python-visible [`WholeImageSource`] handle, kept in lock-step
+    /// with ``inner.image_source`` so callers see identity-preserving
+    /// round-trips on the ``image_source`` property.
+    py_image_source: Option<Py<PyWholeImageSource>>,
 }
 
 #[gen_stub_pymethods]
@@ -55,7 +61,10 @@ impl PyPart {
         let inner_geo = geometry.map(|py_geo| py_geo.borrow(py).inner.clone());
         let mut inner = Part::new(inner_geo, size_mm);
         inner.pixels_per_mm = pixels_per_mm;
-        PyPart { inner }
+        PyPart {
+            inner,
+            py_image_source: None,
+        }
     }
 
     /// Physical size ``(width, height)`` in millimetres.
@@ -119,6 +128,7 @@ impl PyPart {
             } else {
                 Part::from_polygons_initial(&bnd, &isls, &init, size_mm)
             },
+            py_image_source: None,
         }
     }
 
@@ -165,12 +175,19 @@ impl PyPart {
     ///
     /// Set by the stage before calling an assembler.  The assembler
     /// reads this internally instead of accepting a separate image
-    /// argument.  Expects a 2-D uint8 numpy array.
+    /// argument.  Expects a 2-D uint8 numpy array; the value is
+    /// stored on the part as a `WholeImageSource` and is also
+    /// accessible via the `image_source` property.
     ///
-    /// :returns: ``numpy.ndarray`` or ``None``.
+    /// :returns: flat ``bytes`` of the image (row-major uint8), or
+    ///     ``None`` when no image has been attached.
     #[getter]
     fn image(&self) -> PyResult<Option<Vec<u8>>> {
-        Ok(self.inner.image.as_ref().map(|img| img.data.clone()))
+        Ok(self
+            .inner
+            .image_source
+            .as_ref()
+            .and_then(|src| src.read_all()))
     }
 
     #[setter]
@@ -179,15 +196,64 @@ impl PyPart {
             Some(obj) => {
                 let py = obj.py();
                 let (data, height, width) = extract_flat_u8(py, obj)?;
-                self.inner.image = Some(PixelImage {
+                if height == 0 || width == 0 {
+                    return Err(pyo3::exceptions::PyValueError::new_err(
+                        "Part.image: array has zero dimension",
+                    ));
+                }
+                let pixel = PixelImage {
                     data,
                     height,
                     width,
-                });
+                };
+                let inner = WholeImageSource::new(pixel);
+                let py_ws = PyWholeImageSource {
+                    inner: inner.clone(),
+                };
+                self.inner.image_source = Some(Box::new(inner));
+                self.py_image_source = Some(Py::new(py, py_ws)?);
                 Ok(())
             }
             None => {
-                self.inner.image = None;
+                self.inner.image_source = None;
+                self.py_image_source = None;
+                Ok(())
+            }
+        }
+    }
+
+    /// The lazy `WholeImageSource` backing this part, or ``None``
+    /// if no raster image has been attached.
+    ///
+    /// Reading this property returns the same `WholeImageSource`
+    /// instance that was passed to the setter (or constructed
+    /// implicitly by the ``image`` setter). Assigning ``None``
+    /// clears it; assigning a `WholeImageSource` instance replaces
+    /// the current source.
+    ///
+    /// Vector-only parts have ``image_source = None``.
+    ///
+    /// :returns: `WholeImageSource` or ``None``.
+    #[getter]
+    fn image_source(&self, py: Python<'_>) -> Option<Py<PyWholeImageSource>> {
+        self.py_image_source.as_ref().map(|ws| ws.clone_ref(py))
+    }
+
+    #[setter]
+    fn set_image_source(
+        &mut self,
+        source: Option<Bound<'_, PyWholeImageSource>>,
+    ) -> PyResult<()> {
+        match source {
+            Some(s) => {
+                let inner = s.borrow().inner.clone();
+                self.inner.image_source = Some(Box::new(inner));
+                self.py_image_source = Some(s.unbind());
+                Ok(())
+            }
+            None => {
+                self.inner.image_source = None;
+                self.py_image_source = None;
                 Ok(())
             }
         }

@@ -441,7 +441,7 @@ pub(crate) fn register(machining_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     module = "raygeo.cnc.machining.plan",
     skip_from_py_object
 )]
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct PyWorkplan {
     inner: plan::Workplan,
 }
@@ -496,7 +496,7 @@ impl PyWorkplan {
             let d = item.cast::<PyDict>()?;
             parsed.push(dict_to_step(d)?);
         }
-        self.inner.extend(&parsed);
+        self.inner.extend(parsed);
         Ok(())
     }
 

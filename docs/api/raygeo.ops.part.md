@@ -45,7 +45,22 @@ image: Optional[list[int]]
 Optional pixel image buffer for raster/shrinkwrap operations.
 
 Set by the stage before calling an assembler. The assembler reads this internally instead of
-accepting a separate image argument. Expects a 2-D uint8 numpy array.
+accepting a separate image argument. Expects a 2-D uint8 numpy array; the value is stored on the
+part as a `WholeImageSource` and is also accessible via the `image_source` property.
+
+### `image_source`
+
+```python
+image_source: Optional[image_source.WholeImageSource]
+```
+
+The lazy `WholeImageSource` backing this part, or `None` if no raster image has been attached.
+
+Reading this property returns the same `WholeImageSource` instance that was passed to the setter (or
+constructed implicitly by the `image` setter). Assigning `None` clears it; assigning a
+`WholeImageSource` instance replaces the current source.
+
+Vector-only parts have `image_source = None`.
 
 ### `pixels_per_mm`
 

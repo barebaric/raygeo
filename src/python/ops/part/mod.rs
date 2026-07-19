@@ -11,6 +11,7 @@ use pyo3::prelude::*;
 
 pub(crate) mod cleared_area;
 pub(crate) mod crescent;
+pub(crate) mod image_source;
 #[allow(clippy::module_inception)]
 pub(crate) mod part;
 pub(crate) mod stock_region;
@@ -22,6 +23,7 @@ pub fn register(ops_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 
     cleared_area::register(&m)?;
     crescent::register(&m)?;
+    image_source::register(&m)?;
     part::register(&m)?;
     stock_region::register(&m)?;
 

@@ -125,14 +125,19 @@ fn shrinkwrap_py(
         ));
     }
 
-    let pixel_img = part.inner.image.as_ref().ok_or_else(|| {
+    let image_src = part.inner.image_source.as_ref().ok_or_else(|| {
         pyo3::exceptions::PyValueError::new_err(
             "Part has no image — set part.image before calling shrinkwrap",
         )
     })?;
-    let raw = &pixel_img.data;
-    let h_px = pixel_img.height;
-    let w_px = pixel_img.width;
+    let (w_px, h_px) = image_src.dimensions();
+    let raw = image_src.read_all().ok_or_else(|| {
+        pyo3::exceptions::PyValueError::new_err(
+            "Part's image source cannot materialise a full buffer — \
+             shrinkwrap requires an in-memory image",
+        )
+    })?;
+    let (h_px, w_px) = (h_px as usize, w_px as usize);
     // Convert grayscale to binary: non-zero → 1
     let flat: Vec<u8> =
         raw.iter().map(|&v| if v != 0 { 1 } else { 0 }).collect();

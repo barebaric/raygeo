@@ -15,17 +15,20 @@ use crate::geo::algo::topology::{
 };
 use crate::geo::shape::polygon::clean_polygon;
 use crate::geo::Geometry;
-use crate::image::types::PixelImage;
 use crate::types::{Point, Polygon};
 
 use super::cleared_area::ClearedArea;
+use super::image_source::ImageSource;
 use super::stock_region::StockRegion;
 
 /// Unified workpiece description shared by all assemblers.
 ///
 /// Carries geometry, physical metadata, and a [`ClearedArea`] that
 /// accumulates the cleared fragments as assemblers work the part.
-#[derive(Clone, Debug)]
+///
+/// Not `Clone`: an [`ImageSource`] is an opaque trait object. Callers
+/// that previously cloned a `Part` should construct a fresh one or
+/// borrow `&mut Part` instead.
 pub struct Part {
     /// Vector geometry — the outline(s) of the part.
     ///
@@ -50,12 +53,32 @@ pub struct Part {
     /// time; assemblers mutate this as they work.
     pub cleared: ClearedArea,
 
-    /// Optional pixel image buffer for raster/shrinkwrap operations.
+    /// Optional lazy source of pixel data for raster/shrinkwrap
+    /// assemblers.
     ///
     /// Set by the stage before calling an assembler. The assembler
-    /// reads this internally instead of accepting a separate image
-    /// argument.
-    pub image: Option<PixelImage>,
+    /// pulls rows via [`ImageSource::read_slab`] (or
+    /// [`ImageSource::read_all`] for full-buffer passes) instead of
+    /// reading a separate image argument. `None` for vector-only
+    /// work.
+    pub image_source: Option<Box<dyn ImageSource>>,
+}
+
+impl std::fmt::Debug for Part {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let img = match &self.image_source {
+            None => "None",
+            Some(_) => "<ImageSource>",
+        };
+        f.debug_struct("Part")
+            .field("geometry", &self.geometry)
+            .field("stock_region", &self.stock_region)
+            .field("size_mm", &self.size_mm)
+            .field("pixels_per_mm", &self.pixels_per_mm)
+            .field("cleared", &self.cleared)
+            .field("image_source", &img)
+            .finish()
+    }
 }
 
 impl Part {
@@ -78,7 +101,7 @@ impl Part {
             size_mm,
             pixels_per_mm: None,
             cleared: ClearedArea::new(),
-            image: None,
+            image_source: None,
         }
     }
 
@@ -117,7 +140,7 @@ impl Part {
             size_mm,
             pixels_per_mm: None,
             cleared: ClearedArea::new(),
-            image: None,
+            image_source: None,
         }
     }
 
@@ -154,7 +177,7 @@ impl Part {
             size_mm,
             pixels_per_mm: None,
             cleared,
-            image: None,
+            image_source: None,
         }
     }
 

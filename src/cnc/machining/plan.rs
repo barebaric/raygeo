@@ -39,7 +39,7 @@ use crate::trace_types::{
 };
 use crate::types::{Point, Point3D, Polygon};
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub enum WorkplanStep {
     HelixPlunge {
         center: Point,
@@ -387,7 +387,7 @@ impl WorkplanStep {
 ///
 /// Captures `pocket_boundary`, `islands`, and `safe_z` at plan time;
 /// [`execute`](Workplan::execute) takes only the runtime tool states.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Workplan {
     pub steps: Vec<WorkplanStep>,
     pub pocket_boundary: Polygon,
@@ -428,8 +428,8 @@ impl Workplan {
     }
 
     /// Append builder output steps.
-    pub fn extend(&mut self, steps: &[WorkplanStep]) {
-        self.steps.extend(steps.iter().cloned());
+    pub fn extend(&mut self, steps: Vec<WorkplanStep>) {
+        self.steps.extend(steps);
     }
 
     /// Execute all steps, linking passes with safe-Z travel moves.

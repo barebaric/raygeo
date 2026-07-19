@@ -173,13 +173,19 @@ fn raster_py(
         }
     };
 
-    let pixel_img = part.inner.image.as_ref().ok_or_else(|| {
+    let image_src = part.inner.image_source.as_ref().ok_or_else(|| {
         PyValueError::new_err(
             "Part has no image — set part.image before calling raster",
         )
     })?;
-    let (gray, h, w) =
-        (pixel_img.data.clone(), pixel_img.height, pixel_img.width);
+    let (w, h) = image_src.dimensions();
+    let gray = image_src.read_all().ok_or_else(|| {
+        PyValueError::new_err(
+            "Part's image source cannot materialise a full buffer — \
+             raster requires an in-memory image",
+        )
+    })?;
+    let (h, w) = (h as usize, w as usize);
 
     // Build the list of scan angles (cross-hatch adds 90°).
     let mut angles = vec![angle];
