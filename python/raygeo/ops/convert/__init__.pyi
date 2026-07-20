@@ -4,12 +4,100 @@
 import builtins
 import typing
 __all__ = [
+    "EncodeOutput",
     "Encoder",
     "GcodeDialectSpec",
     "GcodeSpec",
     "TextureSpec",
     "VertexSpec",
 ]
+
+class EncodeOutput:
+    r"""
+    Non-Ops artifact produced by an Encode stage.
+    """
+    @property
+    def variant(self) -> builtins.str:
+        r"""
+        The variant's name: ``"MachineCode"``, ``"VertexArrays"``, or
+        ``"Texture"``.
+        """
+    @property
+    def text(self) -> typing.Optional[builtins.str]:
+        r"""
+        The G-code text. Returns ``None`` unless this is the
+        ``MachineCode`` variant.
+        """
+    @property
+    def op_to_machine_code(self) -> typing.Optional[builtins.dict[builtins.int, builtins.list[builtins.int]]]:
+        r"""
+        Mapping ``op_index -> list of machine-code line indices``.
+        Returns ``None`` unless this is the ``MachineCode`` variant.
+        """
+    @property
+    def machine_code_to_op(self) -> typing.Optional[builtins.dict[builtins.int, builtins.int]]:
+        r"""
+        Mapping ``machine-code line index -> op_index``.
+        Returns ``None`` unless this is the ``MachineCode`` variant.
+        """
+    @property
+    def repr(self) -> typing.Optional[builtins.str]:
+        r"""
+        The vertex-array debug repr. Returns ``None`` unless this is
+        the ``VertexArrays`` variant.
+        """
+    @property
+    def power_texture(self) -> typing.Optional[builtins.list[builtins.int]]:
+        r"""
+        Raw texture bytes (row-major uint8 power map). Returns
+        ``None`` unless this is the ``Texture`` variant.
+        """
+    @property
+    def width_px(self) -> typing.Optional[builtins.int]:
+        r"""
+        Texture width in pixels. Returns ``None`` unless this is the
+        ``Texture`` variant.
+        """
+    @property
+    def height_px(self) -> typing.Optional[builtins.int]:
+        r"""
+        Texture height in pixels. Returns ``None`` unless this is the
+        ``Texture`` variant.
+        """
+    def __repr__(self) -> builtins.str:
+        r"""
+        Variant name as a string: ``"MachineCode"``, ``"VertexArrays"``,
+        or ``"Texture"``.
+        """
+    @typing.final
+    class MachineCode(EncodeOutput):
+        __match_args__ = ("text", "op_to_machine_code", "machine_code_to_op",)
+        @property
+        def text(self) -> builtins.str: ...
+        @property
+        def op_to_machine_code(self) -> builtins.dict[builtins.int, builtins.list[builtins.int]]: ...
+        @property
+        def machine_code_to_op(self) -> builtins.dict[builtins.int, builtins.int]: ...
+        def __new__(cls, text: builtins.str, op_to_machine_code: typing.Mapping[builtins.int, typing.Sequence[builtins.int]], machine_code_to_op: typing.Mapping[builtins.int, builtins.int]) -> EncodeOutput.MachineCode: ...
+    
+    @typing.final
+    class VertexArrays(EncodeOutput):
+        __match_args__ = ("repr",)
+        @property
+        def repr(self) -> builtins.str: ...
+        def __new__(cls, repr: builtins.str) -> EncodeOutput.VertexArrays: ...
+    
+    @typing.final
+    class Texture(EncodeOutput):
+        __match_args__ = ("power_texture", "width_px", "height_px",)
+        @property
+        def power_texture(self) -> builtins.list[builtins.int]: ...
+        @property
+        def width_px(self) -> builtins.int: ...
+        @property
+        def height_px(self) -> builtins.int: ...
+        def __new__(cls, power_texture: typing.Sequence[builtins.int], width_px: builtins.int, height_px: builtins.int) -> EncodeOutput.Texture: ...
+    
 
 @typing.final
 class Encoder:

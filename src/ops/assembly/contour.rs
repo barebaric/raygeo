@@ -19,8 +19,9 @@ use crate::geo::algo::topology::{
 };
 use crate::geo::geometry::Geometry;
 use crate::ops::assembly::result::AssemblyMeta;
+use crate::ops::assembly::AssemblyOutput;
 use crate::ops::assembly::{AssembleCtx, Assembler};
-use crate::ops::cache::{AssemblyOutput, Cacheable};
+use crate::ops::cache::Cacheable;
 use crate::ops::container::Ops;
 use crate::ops::part::FaceState;
 use crate::ops::types::ToolPose;

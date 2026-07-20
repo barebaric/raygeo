@@ -11,9 +11,9 @@ contract directly: calling ``cache_key`` / ``restore_cache`` /
 
 from raygeo.geo import Geometry
 from raygeo.ops import Ops
-from raygeo.ops.assembly import Assembler
+from raygeo.ops.assembly import Assembler, AssemblyOutput
 from raygeo.ops.assembly.contour import ContourSpec
-from raygeo.ops.cache import AssemblyOutput, CacheKey
+from raygeo.ops.cache import CacheKey
 from raygeo.ops.part import Part
 
 

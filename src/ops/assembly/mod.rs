@@ -32,10 +32,12 @@ pub mod wavefront;
 
 pub use tracelet::{write_polyline, ProgressEvent, Tracelet};
 
-use crate::ops::cache::{AssemblyOutput, Cacheable};
+use crate::ops::cache::Cacheable;
 use crate::ops::callbacks::TaskCallbacks;
+use crate::ops::container::Ops;
 use crate::ops::part::FaceState;
 use crate::ops::state::State;
+use crate::types::Polygon;
 
 /// Context passed to [`Assembler::assemble`].
 ///
@@ -58,6 +60,33 @@ pub struct AssembleCtx<'a> {
     pub state: &'a State,
     /// Callbacks (progress, cancellation, chunks).
     pub callbacks: &'a dyn TaskCallbacks,
+}
+
+/// The output of an assembler, packaged for caching.
+///
+/// Carries the assembled `Ops`, metadata, and optional post-assembly
+/// cleared fragments for face-state restoration on cache hit.
+#[derive(Debug, Clone)]
+pub struct AssemblyOutput {
+    /// The assembled `Ops` (with transformers already applied).
+    pub ops: Ops,
+    /// Whether the `Ops` may be uniformly scaled during aggregation.
+    pub is_scalable: bool,
+    /// Source `(width_mm, height_mm)` of the part that produced `ops`.
+    pub source_dimensions: Option<(f64, f64)>,
+    /// Post-assembly cleared fragments to restore into
+    /// `FaceState.cleared`. `None` for assemblers that don't touch
+    /// `cleared`.
+    pub cleared_fragments: Option<Vec<Polygon>>,
+}
+
+impl AssemblyOutput {
+    /// Produce the core output triple `(ops, is_scalable,
+    /// source_dimensions)` for the consumer to build its own
+    /// output type without an upward dependency on [`AssemblyOutput`].
+    pub fn into_parts(self) -> (Ops, bool, Option<(f64, f64)>) {
+        (self.ops, self.is_scalable, self.source_dimensions)
+    }
 }
 
 /// A typed assembler spec.

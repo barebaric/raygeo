@@ -1,10 +1,14 @@
+use std::collections::HashMap;
+
 use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;
-use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
+use pyo3_stub_gen::derive::{
+    gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pymethods,
+};
 
 use crate::ops::convert::{
-    gcode::GcodeSpec as CoreGcodeSpec, texture::TextureSpec as CoreTextureSpec,
-    vertex_arrays::VertexSpec as CoreVertexSpec, Encoder,
+    gcode::GcodeSpec, texture::TextureSpec, vertex_arrays::VertexSpec,
+    EncodeOutput, Encoder,
 };
 
 pub(crate) mod dict;
@@ -108,9 +112,9 @@ pub struct PyGcodeSpec {
 }
 
 impl PyGcodeSpec {
-    pub fn into_core(self, py: Python<'_>) -> CoreGcodeSpec {
+    pub fn into_core(self, py: Python<'_>) -> GcodeSpec {
         let dialect = self.dialect.borrow(py).0.clone();
-        CoreGcodeSpec {
+        GcodeSpec {
             dialect,
             context_json: self.context_json,
         }
@@ -145,8 +149,8 @@ pub struct PyVertexSpec {
 }
 
 impl PyVertexSpec {
-    pub fn into_core(self) -> CoreVertexSpec {
-        CoreVertexSpec
+    pub fn into_core(self) -> VertexSpec {
+        VertexSpec
     }
 }
 
@@ -181,8 +185,8 @@ pub struct PyTextureSpec {
 }
 
 impl PyTextureSpec {
-    pub fn into_core(self) -> CoreTextureSpec {
-        CoreTextureSpec {
+    pub fn into_core(self) -> TextureSpec {
+        TextureSpec {
             width_px: self.width_px,
             height_px: self.height_px,
             px_per_mm: self.px_per_mm,
@@ -211,8 +215,172 @@ impl PyTextureSpec {
     }
 }
 
+/// Non-Ops artifact produced by an Encode stage.
+#[gen_stub_pyclass_complex_enum]
+#[pyclass(
+    name = "EncodeOutput",
+    module = "raygeo.ops.convert",
+    skip_from_py_object
+)]
+#[derive(Clone)]
+pub enum PyEncodeOutput {
+    MachineCode {
+        text: String,
+        op_to_machine_code: HashMap<usize, Vec<usize>>,
+        machine_code_to_op: HashMap<usize, usize>,
+    },
+    VertexArrays {
+        repr: String,
+    },
+    Texture {
+        power_texture: Vec<u8>,
+        width_px: u32,
+        height_px: u32,
+    },
+}
+
+#[gen_stub_pymethods]
+#[pymethods]
+impl PyEncodeOutput {
+    /// Variant name as a string: ``"MachineCode"``, ``"VertexArrays"``,
+    /// or ``"Texture"``.
+    fn __repr__(&self) -> String {
+        match self {
+            PyEncodeOutput::MachineCode { .. } => {
+                "EncodeOutput.MachineCode".to_string()
+            }
+            PyEncodeOutput::VertexArrays { .. } => {
+                "EncodeOutput.VertexArrays".to_string()
+            }
+            PyEncodeOutput::Texture {
+                width_px,
+                height_px,
+                ..
+            } => {
+                format!("EncodeOutput.Texture({}x{})", width_px, height_px)
+            }
+        }
+    }
+
+    /// The variant's name: ``"MachineCode"``, ``"VertexArrays"``, or
+    /// ``"Texture"``.
+    #[getter]
+    fn variant(&self) -> &'static str {
+        match self {
+            PyEncodeOutput::MachineCode { .. } => "MachineCode",
+            PyEncodeOutput::VertexArrays { .. } => "VertexArrays",
+            PyEncodeOutput::Texture { .. } => "Texture",
+        }
+    }
+
+    /// The G-code text. Returns ``None`` unless this is the
+    /// ``MachineCode`` variant.
+    #[getter]
+    fn text(&self) -> Option<String> {
+        match self {
+            PyEncodeOutput::MachineCode { text, .. } => Some(text.clone()),
+            _ => None,
+        }
+    }
+
+    /// Mapping ``op_index -> list of machine-code line indices``.
+    /// Returns ``None`` unless this is the ``MachineCode`` variant.
+    #[getter]
+    fn op_to_machine_code(&self) -> Option<HashMap<usize, Vec<usize>>> {
+        match self {
+            PyEncodeOutput::MachineCode {
+                op_to_machine_code, ..
+            } => Some(op_to_machine_code.clone()),
+            _ => None,
+        }
+    }
+
+    /// Mapping ``machine-code line index -> op_index``.
+    /// Returns ``None`` unless this is the ``MachineCode`` variant.
+    #[getter]
+    fn machine_code_to_op(&self) -> Option<HashMap<usize, usize>> {
+        match self {
+            PyEncodeOutput::MachineCode {
+                machine_code_to_op, ..
+            } => Some(machine_code_to_op.clone()),
+            _ => None,
+        }
+    }
+
+    /// The vertex-array debug repr. Returns ``None`` unless this is
+    /// the ``VertexArrays`` variant.
+    #[getter]
+    fn repr(&self) -> Option<String> {
+        match self {
+            PyEncodeOutput::VertexArrays { repr } => Some(repr.clone()),
+            _ => None,
+        }
+    }
+
+    /// Raw texture bytes (row-major uint8 power map). Returns
+    /// ``None`` unless this is the ``Texture`` variant.
+    #[getter]
+    fn power_texture(&self) -> Option<Vec<u8>> {
+        match self {
+            PyEncodeOutput::Texture { power_texture, .. } => {
+                Some(power_texture.clone())
+            }
+            _ => None,
+        }
+    }
+
+    /// Texture width in pixels. Returns ``None`` unless this is the
+    /// ``Texture`` variant.
+    #[getter]
+    fn width_px(&self) -> Option<u32> {
+        match self {
+            PyEncodeOutput::Texture { width_px, .. } => Some(*width_px),
+            _ => None,
+        }
+    }
+
+    /// Texture height in pixels. Returns ``None`` unless this is the
+    /// ``Texture`` variant.
+    #[getter]
+    fn height_px(&self) -> Option<u32> {
+        match self {
+            PyEncodeOutput::Texture { height_px, .. } => Some(*height_px),
+            _ => None,
+        }
+    }
+}
+
+impl From<EncodeOutput> for PyEncodeOutput {
+    fn from(eo: EncodeOutput) -> Self {
+        match eo {
+            EncodeOutput::MachineCode {
+                text,
+                op_to_machine_code,
+                machine_code_to_op,
+            } => PyEncodeOutput::MachineCode {
+                text,
+                op_to_machine_code,
+                machine_code_to_op,
+            },
+            EncodeOutput::VertexArrays(_va) => PyEncodeOutput::VertexArrays {
+                repr: "<VertexArrays>".to_string(),
+            },
+            EncodeOutput::Texture {
+                power_texture,
+                width_px,
+                height_px,
+            } => PyEncodeOutput::Texture {
+                power_texture,
+                width_px,
+                height_px,
+            },
+        }
+    }
+}
+
 pub(crate) fn register(ops_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let convert_mod = PyModule::new(ops_mod.py(), "convert")?;
+    convert_mod.add_class::<PyEncodeOutput>()?;
     convert_mod.add_class::<PyGcodeDialectSpec>()?;
     convert_mod.add_class::<PyEncoder>()?;
     convert_mod.add_class::<PyGcodeSpec>()?;

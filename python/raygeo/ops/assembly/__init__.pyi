@@ -36,6 +36,7 @@ from . import toroid
 from . import wavefront
 __all__ = [
     "Assembler",
+    "AssemblyOutput",
     "AssemblyResult",
     "adaptive",
     "contour",
@@ -91,7 +92,7 @@ class Assembler:
             pruning of cache entries).
         :returns: A :class:`CacheKey` or ``None``.
         """
-    def restore_cache(self, cached: cache.AssemblyOutput) -> typing.Optional[cache.AssemblyOutput]:
+    def restore_cache(self, cached: AssemblyOutput) -> typing.Optional[AssemblyOutput]:
         r"""
         Reconstruct a cached result from a :class:`AssemblyOutput`.
         
@@ -102,7 +103,7 @@ class Assembler:
         :param cached: The cached value to restore.
         :returns: A :class:`AssemblyOutput` or ``None``.
         """
-    def store_cache(self, ops: ops.Ops, is_scalable: builtins.bool, source_dimensions: typing.Optional[tuple[builtins.float, builtins.float]], part: part.Part) -> typing.Optional[cache.AssemblyOutput]:
+    def store_cache(self, ops: ops.Ops, is_scalable: builtins.bool, source_dimensions: typing.Optional[tuple[builtins.float, builtins.float]], part: part.Part) -> typing.Optional[AssemblyOutput]:
         r"""
         Build a :class:`AssemblyOutput` from the assembler's output.
         
@@ -116,6 +117,43 @@ class Assembler:
         :param part: The part (face state is read for cleared fragments).
         :returns: A :class:`AssemblyOutput` or ``None``.
         """
+
+@typing.final
+class AssemblyOutput:
+    r"""
+    The output of an assembler, packaged for caching.
+    
+    Produced by
+    :meth:`Assembler.store_cache() <raygeo.ops.assembly.Assembler.store_cache>`
+    and consumed by
+    :meth:`Assembler.restore_cache() <raygeo.ops.assembly.Assembler.restore_cache>`.
+    
+    Carries the assembled ``Ops``, metadata, and optional post-assembly
+    cleared fragments for face-state restoration on cache hit.
+    """
+    @property
+    def ops(self) -> ops.Ops:
+        r"""
+        The assembled Ops.
+        """
+    @property
+    def is_scalable(self) -> builtins.bool:
+        r"""
+        Whether the Ops may be uniformly scaled during aggregation.
+        """
+    @property
+    def source_dimensions(self) -> typing.Optional[tuple[builtins.float, builtins.float]]:
+        r"""
+        Source ``(width_mm, height_mm)`` of the part that produced the Ops.
+        """
+    @property
+    def cleared_fragments(self) -> typing.Optional[builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]]:
+        r"""
+        Post-assembly cleared fragments (``list[list[(x, y)]]``), or
+        ``None`` for assemblers that don't touch ``FaceState.cleared``.
+        """
+    def __new__(cls, ops: ops.Ops, is_scalable: builtins.bool = False, source_dimensions: typing.Optional[tuple[builtins.float, builtins.float]] = None, cleared_fragments: typing.Optional[typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]] = None) -> AssemblyOutput: ...
+    def __repr__(self) -> builtins.str: ...
 
 @typing.final
 class AssemblyResult:

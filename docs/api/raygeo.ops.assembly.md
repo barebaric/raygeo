@@ -51,7 +51,7 @@ Returns `None` for assemblers that opt out of caching (e.g.
 ### `restore_cache()`
 
 ```python
-restore_cache(cached: cache.AssemblyOutput) -> Optional[cache.AssemblyOutput]
+restore_cache(cached: AssemblyOutput) -> Optional[AssemblyOutput]
 ```
 
 Reconstruct a cached result from a **AssemblyOutput**.
@@ -59,10 +59,10 @@ Reconstruct a cached result from a **AssemblyOutput**.
 Assemblers that opt out return `None` unconditionally. Assemblers that opt in (e.g. adaptive
 clearing) return `Some` with the reconstructed value.
 
-| Parameter | Type                             | Description                     |
-| --------- | -------------------------------- | ------------------------------- |
-| `cached`  | `cache.AssemblyOutput`           | The cached value to restore.    |
-| _Returns_ | `Optional[cache.AssemblyOutput]` | A **AssemblyOutput** or `None`. |
+| Parameter | Type                       | Description                     |
+| --------- | -------------------------- | ------------------------------- |
+| `cached`  | `AssemblyOutput`           | The cached value to restore.    |
+| _Returns_ | `Optional[AssemblyOutput]` | A **AssemblyOutput** or `None`. |
 
 ### `store_cache()`
 
@@ -72,7 +72,7 @@ store_cache(
     is_scalable: bool,
     source_dimensions: Optional[tuple[float, float]],
     part: part.Part,
-) -> Optional[cache.AssemblyOutput]
+) -> Optional[AssemblyOutput]
 ```
 
 Build a **AssemblyOutput** from the assembler's output.
@@ -80,13 +80,56 @@ Build a **AssemblyOutput** from the assembler's output.
 Assemblers that opt out return `None` unconditionally. Assemblers that opt in return `Some` with the
 output packaged for the cache.
 
-| Parameter           | Type                             | Description                                          |
-| ------------------- | -------------------------------- | ---------------------------------------------------- |
-| `ops`               | `ops.Ops`                        | The assembled Ops.                                   |
-| `is_scalable`       | `bool`                           | Whether the Ops may be uniformly scaled.             |
-| `source_dimensions` | `Optional[tuple[float, float]]`  | Source `(width_mm, height_mm)`.                      |
-| `part`              | `part.Part`                      | The part (face state is read for cleared fragments). |
-| _Returns_           | `Optional[cache.AssemblyOutput]` | A **AssemblyOutput** or `None`.                      |
+| Parameter           | Type                            | Description                                          |
+| ------------------- | ------------------------------- | ---------------------------------------------------- |
+| `ops`               | `ops.Ops`                       | The assembled Ops.                                   |
+| `is_scalable`       | `bool`                          | Whether the Ops may be uniformly scaled.             |
+| `source_dimensions` | `Optional[tuple[float, float]]` | Source `(width_mm, height_mm)`.                      |
+| `part`              | `part.Part`                     | The part (face state is read for cleared fragments). |
+| _Returns_           | `Optional[AssemblyOutput]`      | A **AssemblyOutput** or `None`.                      |
+
+## AssemblyOutput
+
+The output of an assembler, packaged for caching.
+
+Produced by **Assembler.store_cache() \<raygeo.ops.assembly.Assembler.store_cache>** and consumed by
+**Assembler.restore_cache() \<raygeo.ops.assembly.Assembler.restore_cache>**.
+
+Carries the assembled `Ops`, metadata, and optional post-assembly cleared fragments for face-state
+restoration on cache hit.
+
+### `cleared_fragments`
+
+```python
+cleared_fragments: Optional[list[list[tuple[float, float]]]]
+```
+
+Post-assembly cleared fragments (`list[list[(x, y)]]`), or `None` for assemblers that don't touch
+`FaceState.cleared`.
+
+### `is_scalable`
+
+```python
+is_scalable: bool
+```
+
+Whether the Ops may be uniformly scaled during aggregation.
+
+### `ops`
+
+```python
+ops: ops.Ops
+```
+
+The assembled Ops.
+
+### `source_dimensions`
+
+```python
+source_dimensions: Optional[tuple[float, float]]
+```
+
+Source `(width_mm, height_mm)` of the part that produced the Ops.
 
 ## AssemblyResult
 

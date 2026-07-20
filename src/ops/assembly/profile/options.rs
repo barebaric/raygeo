@@ -1,7 +1,8 @@
 use std::path::PathBuf;
 
+use crate::ops::assembly::AssemblyOutput;
 use crate::ops::assembly::{result::AssemblyMeta, AssembleCtx, Assembler};
-use crate::ops::cache::{AssemblyOutput, Cacheable};
+use crate::ops::cache::Cacheable;
 use crate::ops::types::CutDirection;
 use crate::types::Point3D;
 

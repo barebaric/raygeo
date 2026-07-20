@@ -146,7 +146,7 @@ impl crate::ops::assembly::Assembler for AdaptiveClearingSpec {
     }
 }
 
-impl crate::ops::cache::Cacheable<crate::ops::cache::AssemblyOutput>
+impl crate::ops::cache::Cacheable<crate::ops::assembly::AssemblyOutput>
     for AdaptiveClearingSpec
 {
     fn cache_key(
@@ -205,16 +205,16 @@ impl crate::ops::cache::Cacheable<crate::ops::cache::AssemblyOutput>
 
     fn restore_cache(
         &self,
-        cached: &crate::ops::cache::AssemblyOutput,
-    ) -> Option<crate::ops::cache::AssemblyOutput> {
+        cached: &crate::ops::assembly::AssemblyOutput,
+    ) -> Option<crate::ops::assembly::AssemblyOutput> {
         Some(cached.clone())
     }
 
     fn store_cache(
         &self,
-        output: &crate::ops::cache::AssemblyOutput,
-    ) -> Option<crate::ops::cache::AssemblyOutput> {
-        Some(crate::ops::cache::AssemblyOutput {
+        output: &crate::ops::assembly::AssemblyOutput,
+    ) -> Option<crate::ops::assembly::AssemblyOutput> {
+        Some(crate::ops::assembly::AssemblyOutput {
             ops: output.ops.copy(),
             is_scalable: output.is_scalable,
             source_dimensions: output.source_dimensions,

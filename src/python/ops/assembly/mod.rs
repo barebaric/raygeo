@@ -37,6 +37,10 @@ pub(crate) mod spiral;
 pub(crate) mod toroid;
 pub(crate) mod wavefront;
 
+use crate::ops::assembly::AssemblyOutput;
+use crate::python::geo::flex_point::{
+    polygons_from_tuples, polygons_to_tuples,
+};
 use crate::python::ops::assembly::adaptive::PyAdaptiveClearingSpec;
 use crate::python::ops::assembly::contour::PyContourSpec;
 use crate::python::ops::assembly::helix::PyHelixSpec;
@@ -47,7 +51,7 @@ use crate::python::ops::assembly::slot::PySlotSpec;
 use crate::python::ops::assembly::spiral::PySpiralSpec;
 use crate::python::ops::assembly::toroid::{PyToroidSpec, PyToroidalClearSpec};
 use crate::python::ops::assembly::wavefront::PyAdaptiveWavefrontSpec;
-use crate::python::ops::cache::{PyAssemblyOutput, PyCacheKey};
+use crate::python::ops::cache::PyCacheKey;
 use crate::python::ops::container::PyOps;
 use crate::python::ops::part::part::PyPart;
 
@@ -100,6 +104,95 @@ pub fn extract_assembler(
     Err(PyErr::new::<PyTypeError, _>(format!(
         "Unknown assembler spec type: {type_name}"
     )))
+}
+
+/// The output of an assembler, packaged for caching.
+///
+/// Produced by
+/// :meth:`Assembler.store_cache() <raygeo.ops.assembly.Assembler.store_cache>`
+/// and consumed by
+/// :meth:`Assembler.restore_cache() <raygeo.ops.assembly.Assembler.restore_cache>`.
+///
+/// Carries the assembled ``Ops``, metadata, and optional post-assembly
+/// cleared fragments for face-state restoration on cache hit.
+#[gen_stub_pyclass(module = "raygeo.ops.assembly")]
+#[pyclass(
+    name = "AssemblyOutput",
+    module = "raygeo.ops.assembly",
+    skip_from_py_object
+)]
+#[derive(Clone)]
+pub struct PyAssemblyOutput {
+    pub inner: AssemblyOutput,
+}
+
+#[gen_stub_pymethods]
+#[pymethods]
+impl PyAssemblyOutput {
+    #[new]
+    #[pyo3(signature = (ops, is_scalable = false, source_dimensions = None, cleared_fragments = None))]
+    fn new(
+        ops: &PyOps,
+        is_scalable: bool,
+        source_dimensions: Option<(f64, f64)>,
+        cleared_fragments: Option<Vec<Vec<(f64, f64)>>>,
+    ) -> Self {
+        let frags = cleared_fragments.map(polygons_from_tuples);
+        PyAssemblyOutput {
+            inner: AssemblyOutput {
+                ops: ops.inner.clone(),
+                is_scalable,
+                source_dimensions,
+                cleared_fragments: frags,
+            },
+        }
+    }
+
+    /// The assembled Ops.
+    #[getter]
+    fn ops(&self) -> PyOps {
+        PyOps {
+            inner: self.inner.ops.clone(),
+        }
+    }
+
+    /// Whether the Ops may be uniformly scaled during aggregation.
+    #[getter]
+    fn is_scalable(&self) -> bool {
+        self.inner.is_scalable
+    }
+
+    /// Source ``(width_mm, height_mm)`` of the part that produced the Ops.
+    #[getter]
+    fn source_dimensions(&self) -> Option<(f64, f64)> {
+        self.inner.source_dimensions
+    }
+
+    /// Post-assembly cleared fragments (``list[list[(x, y)]]``), or
+    /// ``None`` for assemblers that don't touch ``FaceState.cleared``.
+    #[getter]
+    fn cleared_fragments(&self) -> Option<Vec<Vec<(f64, f64)>>> {
+        self.inner
+            .cleared_fragments
+            .as_ref()
+            .map(|frags| polygons_to_tuples(frags.clone()))
+    }
+
+    fn __repr__(&self) -> String {
+        let n_frags = self
+            .inner
+            .cleared_fragments
+            .as_ref()
+            .map(|f| f.len())
+            .unwrap_or(0);
+        format!(
+            "AssemblyOutput(ops_len={}, is_scalable={}, source_dimensions={:?}, n_fragments={})",
+            self.inner.ops.len(),
+            self.inner.is_scalable,
+            self.inner.source_dimensions,
+            n_frags,
+        )
+    }
 }
 
 /// Python-visible wrapper around an assembler spec.
@@ -226,7 +319,7 @@ impl PyAssembler {
             .inner
             .face("")
             .unwrap_or_else(|| unreachable!("Part has no primary face"));
-        let output = crate::ops::cache::AssemblyOutput {
+        let output = crate::ops::assembly::AssemblyOutput {
             ops: ops.inner.clone(),
             is_scalable,
             source_dimensions,
@@ -275,6 +368,7 @@ pub(crate) fn register(ops_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let assembly_mod = PyModule::new(py, "assembly")?;
     assembly_mod.setattr("__doc__", MODULE_DOC)?;
     assembly_mod.add_class::<PyAssembler>()?;
+    assembly_mod.add_class::<PyAssemblyOutput>()?;
 
     adaptive::register(&assembly_mod)?;
     contour::register(&assembly_mod)?;
