@@ -371,6 +371,9 @@ impl Tracelet {
                 self.pos = *end;
             }
         }
+        if !other.is_empty() {
+            self.ops.last_move_to = other.last_move_to;
+        }
         self.maybe_flush();
     }
 

@@ -982,6 +982,7 @@ from_mask_scan(
     step_power: float = 1.0,
     angle: float = 0.0,
     scan_mode: scan.ScanMode = scan.ScanMode.SEGMENTED,
+    dot_width_correction_mm: float = 0.0,
 ) -> Ops
 ```
 
@@ -990,18 +991,19 @@ Rasterise a binary mask into scan-to commands.
 Generates scan lines covering the mask's bounding box, samples the mask along each line, and emits
 move-to/scan-to commands for each non-zero segment (or the full sweep).
 
-| Parameter          | Type                                      | Description                                                                         |
-| ------------------ | ----------------------------------------- | ----------------------------------------------------------------------------------- |
-| `mask`             | `Any`                                     | 2-D binary mask array.                                                              |
-| `pixels_per_mm`    | `tuple[float, float]`                     | `(x, y)` pixel density in px/mm.                                                    |
-| `offset_x_mm`      | `float`                                   | Global X offset in mm.                                                              |
-| `offset_y_mm`      | `float`                                   | Global Y offset in mm.                                                              |
-| `line_interval_mm` | `float`                                   | Spacing between scan lines in mm.                                                   |
-| `step_power`       | `float = 1.0`                             | Power value (0-1) for exposed pixels.                                               |
-| `angle`            | `float = 0.0`                             | Scan angle in degrees.                                                              |
-| `scan_mode`        | `scan.ScanMode = scan.ScanMode.SEGMENTED` | `ScanMode.SEGMENTED` or `ScanMode.FULL_SWEEP`.                                      |
-| _Returns_          | `Ops`                                     | A new **Ops** container.                                                            |
-| _Complexity_       |                                           | O(h * w + n * p) where h, w = image dimensions, n = scan lines, p = pixels per line |
+| Parameter                 | Type                                      | Description                                                                                                                                         |
+| ------------------------- | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `mask`                    | `Any`                                     | 2-D binary mask array.                                                                                                                              |
+| `pixels_per_mm`           | `tuple[float, float]`                     | `(x, y)` pixel density in px/mm.                                                                                                                    |
+| `offset_x_mm`             | `float`                                   | Global X offset in mm.                                                                                                                              |
+| `offset_y_mm`             | `float`                                   | Global Y offset in mm.                                                                                                                              |
+| `line_interval_mm`        | `float`                                   | Spacing between scan lines in mm.                                                                                                                   |
+| `step_power`              | `float = 1.0`                             | Power value (0-1) for exposed pixels.                                                                                                               |
+| `angle`                   | `float = 0.0`                             | Scan angle in degrees.                                                                                                                              |
+| `scan_mode`               | `scan.ScanMode = scan.ScanMode.SEGMENTED` | `ScanMode.SEGMENTED` or `ScanMode.FULL_SWEEP`.                                                                                                      |
+| `dot_width_correction_mm` | `float = 0.0`                             | Shortens laser firing by this distance at each end of every engraved run, compensating for the laser spot's physical width. Geometry is unaffected. |
+| _Returns_                 | `Ops`                                     | A new **Ops** container.                                                                                                                            |
+| _Complexity_              |                                           | O(h * w + n * p) where h, w = image dimensions, n = scan lines, p = pixels per line                                                                 |
 
 ### `from_multi_pass_image()`
 
@@ -1102,6 +1104,7 @@ from_power_modulated_image(
     num_power_levels: int = 256,
     angle: float = 0.0,
     scan_mode: scan.ScanMode = scan.ScanMode.SEGMENTED,
+    dot_width_correction_mm: float = 0.0,
 ) -> Ops
 ```
 
@@ -1110,23 +1113,24 @@ Rasterise a grayscale image with power-modulated scans.
 Samples the image along scan lines and computes per-pixel power values from the grayscale intensity
 and alpha channel, then emits move-to/scan-to commands with the modulated power.
 
-| Parameter            | Type                                      | Description                                                                         |
-| -------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------- |
-| `gray_image`         | `Any`                                     | 2-D grayscale image (0 = black, 255 = white).                                       |
-| `alpha`              | `Any`                                     | 2-D alpha mask (0 = transparent/no emission).                                       |
-| `pixels_per_mm`      | `tuple[float, float]`                     | `(x, y)` pixel density in px/mm.                                                    |
-| `offset_x_mm`        | `float`                                   | Global X offset in mm.                                                              |
-| `offset_y_mm`        | `float`                                   | Global Y offset in mm.                                                              |
-| `line_interval_mm`   | `float`                                   | Spacing between scan lines in mm.                                                   |
-| `sample_interval_mm` | `float`                                   | Output sample spacing in mm.                                                        |
-| `min_power`          | `float = 0.0`                             | Minimum power fraction (for white pixels).                                          |
-| `max_power`          | `float = 1.0`                             | Maximum power fraction (for black pixels).                                          |
-| `step_power`         | `float = 1.0`                             | Global power multiplier.                                                            |
-| `num_power_levels`   | `int = 256`                               | Number of quantised power levels.                                                   |
-| `angle`              | `float = 0.0`                             | Scan angle in degrees.                                                              |
-| `scan_mode`          | `scan.ScanMode = scan.ScanMode.SEGMENTED` | `ScanMode.SEGMENTED` or `ScanMode.FULL_SWEEP`.                                      |
-| _Returns_            | `Ops`                                     | A new **Ops** container.                                                            |
-| _Complexity_         |                                           | O(h * w + n * p) where h, w = image dimensions, n = scan lines, p = pixels per line |
+| Parameter                 | Type                                      | Description                                                                                                                                         |
+| ------------------------- | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `gray_image`              | `Any`                                     | 2-D grayscale image (0 = black, 255 = white).                                                                                                       |
+| `alpha`                   | `Any`                                     | 2-D alpha mask (0 = transparent/no emission).                                                                                                       |
+| `pixels_per_mm`           | `tuple[float, float]`                     | `(x, y)` pixel density in px/mm.                                                                                                                    |
+| `offset_x_mm`             | `float`                                   | Global X offset in mm.                                                                                                                              |
+| `offset_y_mm`             | `float`                                   | Global Y offset in mm.                                                                                                                              |
+| `line_interval_mm`        | `float`                                   | Spacing between scan lines in mm.                                                                                                                   |
+| `sample_interval_mm`      | `float`                                   | Output sample spacing in mm.                                                                                                                        |
+| `min_power`               | `float = 0.0`                             | Minimum power fraction (for white pixels).                                                                                                          |
+| `max_power`               | `float = 1.0`                             | Maximum power fraction (for black pixels).                                                                                                          |
+| `step_power`              | `float = 1.0`                             | Global power multiplier.                                                                                                                            |
+| `num_power_levels`        | `int = 256`                               | Number of quantised power levels.                                                                                                                   |
+| `angle`                   | `float = 0.0`                             | Scan angle in degrees.                                                                                                                              |
+| `scan_mode`               | `scan.ScanMode = scan.ScanMode.SEGMENTED` | `ScanMode.SEGMENTED` or `ScanMode.FULL_SWEEP`.                                                                                                      |
+| `dot_width_correction_mm` | `float = 0.0`                             | Shortens laser firing by this distance at each end of every engraved run, compensating for the laser spot's physical width. Geometry is unaffected. |
+| _Returns_                 | `Ops`                                     | A new **Ops** container.                                                                                                                            |
+| _Complexity_              |                                           | O(h * w + n * p) where h, w = image dimensions, n = scan lines, p = pixels per line                                                                 |
 
 ### `get_frame()`
 

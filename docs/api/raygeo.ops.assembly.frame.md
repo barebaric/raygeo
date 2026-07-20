@@ -3,6 +3,37 @@ title: raygeo.ops.assembly.frame
 sidebar_label: raygeo.ops.assembly.frame
 ---
 
+## FrameSpec
+
+Parameters for the `frame` assembler.
+
+Construct with `FrameSpec(kerf_mm, path_offset_mm, cut_side)`. Wrap in an
+**~raygeo.ops.assembly.Assembler** instance to drive the `Assembler` trait.
+
+### `cut_side`
+
+```python
+cut_side: str
+```
+
+`"centerline"`, `"outside"`, or `"inside"`.
+
+### `kerf_mm`
+
+```python
+kerf_mm: float
+```
+
+Tool kerf width in mm.
+
+### `path_offset_mm`
+
+```python
+path_offset_mm: float
+```
+
+Additional offset distance in mm.
+
 ## Functions
 
 ### `frame()`

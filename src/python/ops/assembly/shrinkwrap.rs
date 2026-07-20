@@ -1,22 +1,19 @@
 use pyo3::prelude::*;
-use pyo3_stub_gen::derive::gen_stub_pyfunction;
+use pyo3_stub_gen::derive::{
+    gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pymethods,
+};
 
-use crate::geo::algo::fitting::{fit_curves, linearize_geometry};
-use crate::geo::algo::hull::get_concave_hull;
-use crate::geo::algo::offset::grow_geometry;
-use crate::geo::geometry::Geometry;
-use crate::ops::assembly::contour::compute_total_offset;
-use crate::ops::assembly::result::AssemblyMeta;
-use crate::ops::container::Ops;
-use crate::ops::types::ToolPose;
+use crate::ops::assembly::shrinkwrap::{
+    assemble_shrinkwrap, ShrinkwrapSpec as CoreShrinkwrapSpec,
+};
 use crate::python::ops::assembly::result::PyAssemblyResult;
 use crate::python::ops::part::part::PyPart;
-use crate::types::Point3D;
 
 pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = assembly_mod.py();
     let m = PyModule::new(py, "shrinkwrap")?;
     m.add_function(pyo3::wrap_pyfunction!(shrinkwrap_py, m.clone())?)?;
+    m.add_class::<PyShrinkwrapSpec>()?;
     assembly_mod.add_submodule(&m)?;
 
     let sys_modules = py.import("sys")?.getattr("modules")?;
@@ -25,29 +22,85 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     Ok(())
 }
 
-fn hull_to_mm(
-    hull_pts: &[crate::types::Point],
-    part_size_mm: (f64, f64),
-    img_shape: (usize, usize),
-) -> Geometry {
-    let (w_mm, h_mm) = part_size_mm;
-    let (h_px, w_px) = img_shape;
-    let scale_x = if w_px > 0 { w_mm / w_px as f64 } else { 1.0 };
-    let scale_y = if h_px > 0 { h_mm / h_px as f64 } else { 1.0 };
+/// Parameters for the ``shrinkwrap`` assembler.
+///
+/// Construct with ``ShrinkwrapSpec(gravity, kerf_mm, ...)``. Wrap in
+/// an :class:`~raygeo.ops.assembly.Assembler` instance to drive the
+/// `Assembler` trait.
+#[gen_stub_pyclass]
+#[pyclass(
+    module = "raygeo.ops.assembly.shrinkwrap",
+    name = "ShrinkwrapSpec",
+    frozen,
+    eq,
+    from_py_object
+)]
+#[derive(Clone, PartialEq)]
+pub struct PyShrinkwrapSpec {
+    #[pyo3(get)]
+    pub gravity: f64,
+    #[pyo3(get)]
+    pub kerf_mm: f64,
+    #[pyo3(get)]
+    pub path_offset_mm: f64,
+    #[pyo3(get)]
+    pub cut_side: String,
+    #[pyo3(get)]
+    pub arc_tolerance: f64,
+    #[pyo3(get)]
+    pub allow_arcs: bool,
+    #[pyo3(get)]
+    pub supports_curves: bool,
+}
 
-    let mut geo = Geometry::new();
-    if !hull_pts.is_empty() {
-        let x = hull_pts[0].x * scale_x;
-        let y = (h_px as f64 - hull_pts[0].y) * scale_y;
-        geo.move_to(x, y, 0.0);
+impl PyShrinkwrapSpec {
+    /// Convert into the core-layer spec.
+    pub fn into_core(self) -> CoreShrinkwrapSpec {
+        CoreShrinkwrapSpec {
+            gravity: self.gravity,
+            kerf_mm: self.kerf_mm,
+            path_offset_mm: self.path_offset_mm,
+            cut_side: self.cut_side,
+            arc_tolerance: self.arc_tolerance,
+            allow_arcs: self.allow_arcs,
+            supports_curves: self.supports_curves,
+        }
     }
-    for p in &hull_pts[1..] {
-        let x = p.x * scale_x;
-        let y = (h_px as f64 - p.y) * scale_y;
-        geo.line_to(x, y, 0.0);
+}
+
+#[gen_stub_pymethods]
+#[pyo3::pymethods]
+impl PyShrinkwrapSpec {
+    #[new]
+    #[pyo3(signature = (
+        gravity = 0.1,
+        kerf_mm = 0.0,
+        path_offset_mm = 0.0,
+        cut_side = "centerline",
+        arc_tolerance = 0.0,
+        allow_arcs = true,
+        supports_curves = false,
+    ))]
+    #[allow(clippy::too_many_arguments)]
+    fn new(
+        gravity: f64,
+        kerf_mm: f64,
+        path_offset_mm: f64,
+        cut_side: &str,
+        arc_tolerance: f64,
+        allow_arcs: bool,
+        supports_curves: bool,
+    ) -> Self {
+        PyShrinkwrapSpec {
+            gravity,
+            kerf_mm,
+            path_offset_mm,
+            cut_side: cut_side.to_string(),
+            arc_tolerance,
+            allow_arcs,
+            supports_curves,
+        }
     }
-    geo.close_path();
-    geo
 }
 
 #[gen_stub_pyfunction(
@@ -108,7 +161,6 @@ fn hull_to_mm(
     supports_curves = false,
 ))]
 fn shrinkwrap_py(
-    _py: Python<'_>,
     part: &PyPart,
     gravity: f64,
     kerf_mm: f64,
@@ -118,82 +170,21 @@ fn shrinkwrap_py(
     allow_arcs: bool,
     supports_curves: bool,
 ) -> PyResult<PyAssemblyResult> {
-    let (w_mm, h_mm) = part.inner.size_mm;
-    if w_mm <= 0.0 || h_mm <= 0.0 {
-        return Err(pyo3::exceptions::PyValueError::new_err(
-            "Part has invalid or zero size",
-        ));
-    }
-
     let image_src = part.inner.image_source.as_ref().ok_or_else(|| {
         pyo3::exceptions::PyValueError::new_err(
             "Part has no image — set part.image before calling shrinkwrap",
         )
     })?;
-    let (w_px, h_px) = image_src.dimensions();
-    let raw = image_src.read_all().ok_or_else(|| {
-        pyo3::exceptions::PyValueError::new_err(
-            "Part's image source cannot materialise a full buffer — \
-             shrinkwrap requires an in-memory image",
-        )
-    })?;
-    let (h_px, w_px) = (h_px as usize, w_px as usize);
-    // Convert grayscale to binary: non-zero → 1
-    let flat: Vec<u8> =
-        raw.iter().map(|&v| if v != 0 { 1 } else { 0 }).collect();
-    if flat.iter().all(|&v| v == 0) {
-        return Err(pyo3::exceptions::PyValueError::new_err(
-            "Image is empty (all background)",
-        ));
-    }
-
-    let hull_pts =
-        get_concave_hull(&flat, w_px, h_px, gravity).ok_or_else(|| {
-            pyo3::exceptions::PyValueError::new_err(
-                "Could not compute concave hull from image",
-            )
-        })?;
-
-    let mut geo = hull_to_mm(&hull_pts, (w_mm, h_mm), (h_px, w_px));
-
-    let total_offset = compute_total_offset(kerf_mm, path_offset_mm, cut_side);
-    if total_offset.abs() > 1e-6 {
-        geo = grow_geometry(&geo, total_offset);
-    }
-
-    // Optionally apply curve fitting
-    let ops = if arc_tolerance > 0.0 {
-        let apply_curves = allow_arcs || supports_curves;
-        let new_data = if apply_curves {
-            fit_curves(
-                &geo.data,
-                arc_tolerance,
-                supports_curves,
-                allow_arcs,
-                None,
-            )
-        } else {
-            linearize_geometry(&geo.data, arc_tolerance)
-        };
-        let mut fitted = geo.copy();
-        fitted.data = new_data;
-        Ops::from_geometry(&fitted)?
-    } else {
-        Ops::from_geometry(&geo)?
-    };
-    Ok(PyAssemblyResult::from_parts(
-        ops,
-        AssemblyMeta {
-            start: ToolPose {
-                pos: Point3D::ZERO,
-                heading: 0.0,
-            },
-            end: ToolPose {
-                pos: Point3D::ZERO,
-                heading: 0.0,
-            },
-        },
-        None,
-        vec![],
-    ))
+    let (ops, meta) = assemble_shrinkwrap(
+        image_src.as_ref(),
+        part.inner.size_mm,
+        gravity,
+        kerf_mm,
+        path_offset_mm,
+        cut_side,
+        arc_tolerance,
+        allow_arcs,
+        supports_curves,
+    )?;
+    Ok(PyAssemblyResult::from_parts(ops, meta, None, vec![]))
 }

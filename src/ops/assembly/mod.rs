@@ -17,12 +17,15 @@
 
 pub mod adaptive;
 pub mod contour;
+pub mod frame;
 pub mod helix;
 pub mod material_test_grid;
 pub mod profile;
 pub mod ramp;
+pub mod raster;
 pub(crate) mod result;
 pub use result::AssemblyMeta;
+pub mod shrinkwrap;
 pub mod slot;
 pub mod spiral;
 pub mod toroid;
@@ -36,6 +39,7 @@ use crate::ops::cache::Cacheable;
 use crate::ops::callbacks::TaskCallbacks;
 use crate::ops::container::Ops;
 use crate::ops::part::FaceState;
+use crate::ops::part::ImageSource;
 use crate::ops::state::State;
 use crate::types::Polygon;
 
@@ -60,6 +64,18 @@ pub struct AssembleCtx<'a> {
     pub state: &'a State,
     /// Callbacks (progress, cancellation, chunks).
     pub callbacks: &'a dyn TaskCallbacks,
+    /// Physical size of the part in millimetres `(width, height)`.
+    /// Needed by raster / shrinkwrap / frame assemblers that scale
+    /// pixel coordinates into mm space.
+    pub size_mm: (f64, f64),
+    /// Pixel density `(x, y)` in pixels per millimetre. `None` for
+    /// purely vector work; required by raster assemblers.
+    pub pixels_per_mm: Option<(f64, f64)>,
+    /// Lazy source of pixel data for raster / shrinkwrap assemblers.
+    /// `None` for vector-only assemblers (contour, frame, ...). Set
+    /// by the Compute stage from `Part.image_source` before calling
+    /// [`Assembler::assemble`].
+    pub image_source: Option<&'a dyn ImageSource>,
 }
 
 /// The output of an assembler, packaged for caching.
@@ -111,6 +127,14 @@ pub trait Assembler: Cacheable<AssemblyOutput> + Send + Sync {
     /// (the string `"cancelled"` is the conventional cancellation
     /// signal).
     fn assemble(&self, ctx: &mut AssembleCtx) -> Result<AssemblyMeta, String>;
+
+    /// Whether the produced `Ops` may be uniformly scaled during
+    /// aggregation. Vector assemblers (the default) return `true`;
+    /// raster / shrinkwrap assemblers return `false` because their
+    /// scanline spacing is physical, not graphical.
+    fn is_scalable(&self) -> bool {
+        true
+    }
 
     /// Short, human-readable name used in progress messages.
     fn name(&self) -> &'static str;

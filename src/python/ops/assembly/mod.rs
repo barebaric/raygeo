@@ -43,10 +43,13 @@ use crate::python::geo::flex_point::{
 };
 use crate::python::ops::assembly::adaptive::PyAdaptiveClearingSpec;
 use crate::python::ops::assembly::contour::PyContourSpec;
+use crate::python::ops::assembly::frame::PyFrameSpec;
 use crate::python::ops::assembly::helix::PyHelixSpec;
 use crate::python::ops::assembly::material_test_grid::PyMaterialTestGridSpec;
 use crate::python::ops::assembly::profile::PyProfileSpec;
 use crate::python::ops::assembly::ramp::PyRampSpec;
+use crate::python::ops::assembly::raster::PyRasterSpec;
+use crate::python::ops::assembly::shrinkwrap::PyShrinkwrapSpec;
 use crate::python::ops::assembly::slot::PySlotSpec;
 use crate::python::ops::assembly::spiral::PySpiralSpec;
 use crate::python::ops::assembly::toroid::{PyToroidSpec, PyToroidalClearSpec};
@@ -94,6 +97,15 @@ pub fn extract_assembler(
         return Ok(Box::new(s.into_core()));
     }
     if let Ok(s) = ob.extract::<PyProfileSpec>() {
+        return Ok(Box::new(s.into_core()));
+    }
+    if let Ok(s) = ob.extract::<PyFrameSpec>() {
+        return Ok(Box::new(s.into_core()));
+    }
+    if let Ok(s) = ob.extract::<PyRasterSpec>() {
+        return Ok(Box::new(s.into_core()));
+    }
+    if let Ok(s) = ob.extract::<PyShrinkwrapSpec>() {
         return Ok(Box::new(s.into_core()));
     }
     let type_name = ob

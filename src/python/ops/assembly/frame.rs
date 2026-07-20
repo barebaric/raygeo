@@ -1,26 +1,78 @@
 use pyo3::prelude::*;
-use pyo3_stub_gen::derive::gen_stub_pyfunction;
+use pyo3_stub_gen::derive::{
+    gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pymethods,
+};
 
-use crate::geo::algo::offset::grow_geometry;
-use crate::geo::geometry::Geometry;
-use crate::ops::assembly::contour::compute_total_offset;
-use crate::ops::assembly::result::AssemblyMeta;
-use crate::ops::container::Ops;
-use crate::ops::types::ToolPose;
+use crate::ops::assembly::frame::{assemble_frame, FrameSpec as CoreFrameSpec};
 use crate::python::ops::assembly::result::PyAssemblyResult;
 use crate::python::ops::part::part::PyPart;
-use crate::types::Point3D;
 
 pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = assembly_mod.py();
     let m = PyModule::new(py, "frame")?;
     m.add_function(pyo3::wrap_pyfunction!(frame_py, m.clone())?)?;
+    m.add_class::<PyFrameSpec>()?;
     assembly_mod.add_submodule(&m)?;
 
     let sys_modules = py.import("sys")?.getattr("modules")?;
     sys_modules.set_item("raygeo.ops.assembly.frame", &m)?;
 
     Ok(())
+}
+
+/// Parameters for the ``frame`` assembler.
+///
+/// Construct with ``FrameSpec(kerf_mm, path_offset_mm, cut_side)``.
+/// Wrap in an :class:`~raygeo.ops.assembly.Assembler` instance to
+/// drive the `Assembler` trait.
+#[gen_stub_pyclass]
+#[pyclass(
+    module = "raygeo.ops.assembly.frame",
+    name = "FrameSpec",
+    frozen,
+    eq,
+    from_py_object
+)]
+#[derive(Clone, PartialEq)]
+pub struct PyFrameSpec {
+    /// Tool kerf width in mm.
+    #[pyo3(get)]
+    pub kerf_mm: f64,
+    /// Additional offset distance in mm.
+    #[pyo3(get)]
+    pub path_offset_mm: f64,
+    /// ``"centerline"``, ``"outside"``, or ``"inside"``.
+    #[pyo3(get)]
+    pub cut_side: String,
+}
+
+impl PyFrameSpec {
+    /// Convert into the core-layer spec.
+    pub fn into_core(self) -> CoreFrameSpec {
+        CoreFrameSpec {
+            kerf_mm: self.kerf_mm,
+            path_offset_mm: self.path_offset_mm,
+            cut_side: self.cut_side,
+        }
+    }
+}
+
+#[gen_stub_pymethods]
+#[pyo3::pymethods]
+impl PyFrameSpec {
+    #[new]
+    #[pyo3(signature = (
+        kerf_mm = 0.0,
+        path_offset_mm = 0.0,
+        cut_side = "centerline",
+    ))]
+    fn new(kerf_mm: f64, path_offset_mm: f64, cut_side: &str) -> Self {
+        PyFrameSpec {
+            kerf_mm,
+            path_offset_mm,
+            cut_side: cut_side.to_string(),
+        }
+    }
 }
 
 #[gen_stub_pyfunction(
@@ -64,40 +116,7 @@ fn frame_py(
     path_offset_mm: f64,
     cut_side: &str,
 ) -> PyResult<PyAssemblyResult> {
-    let (w, h) = part.inner.size_mm;
-    if w <= 0.0 || h <= 0.0 {
-        return Err(pyo3::exceptions::PyValueError::new_err(
-            "Part has invalid or zero size",
-        ));
-    }
-
-    let total_offset = compute_total_offset(kerf_mm, path_offset_mm, cut_side);
-
-    let mut geo = Geometry::new();
-    geo.move_to(0.0, 0.0, 0.0);
-    geo.line_to(w, 0.0, 0.0);
-    geo.line_to(w, h, 0.0);
-    geo.line_to(0.0, h, 0.0);
-    geo.close_path();
-
-    if total_offset.abs() > 1e-6 {
-        geo = grow_geometry(&geo, total_offset);
-    }
-
-    let ops = Ops::from_geometry(&geo)?;
-    let start = ToolPose {
-        pos: Point3D::new(0.0, 0.0, 0.0),
-        heading: 0.0,
-    };
-    let end = ToolPose {
-        pos: Point3D::new(0.0, 0.0, 0.0),
-        heading: 0.0,
-    };
-
-    Ok(PyAssemblyResult::from_parts(
-        ops,
-        AssemblyMeta { start, end },
-        None,
-        vec![],
-    ))
+    let (ops, meta) =
+        assemble_frame(part.inner.size_mm, kerf_mm, path_offset_mm, cut_side)?;
+    Ok(PyAssemblyResult::from_parts(ops, meta, None, vec![]))
 }

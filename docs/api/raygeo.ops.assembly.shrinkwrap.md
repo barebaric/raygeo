@@ -3,6 +3,55 @@ title: raygeo.ops.assembly.shrinkwrap
 sidebar_label: raygeo.ops.assembly.shrinkwrap
 ---
 
+## ShrinkwrapSpec
+
+Parameters for the `shrinkwrap` assembler.
+
+Construct with `ShrinkwrapSpec(gravity, kerf_mm, ...)`. Wrap in an
+**~raygeo.ops.assembly.Assembler** instance to drive the `Assembler` trait.
+
+### `allow_arcs`
+
+```python
+allow_arcs: bool
+```
+
+### `arc_tolerance`
+
+```python
+arc_tolerance: float
+```
+
+### `cut_side`
+
+```python
+cut_side: str
+```
+
+### `gravity`
+
+```python
+gravity: float
+```
+
+### `kerf_mm`
+
+```python
+kerf_mm: float
+```
+
+### `path_offset_mm`
+
+```python
+path_offset_mm: float
+```
+
+### `supports_curves`
+
+```python
+supports_curves: bool
+```
+
 ## Functions
 
 ### `shrinkwrap()`

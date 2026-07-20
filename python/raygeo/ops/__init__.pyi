@@ -1415,10 +1415,9 @@ class Ops:
         :param num_power_levels: Number of quantised power levels.
         :param angle: Scan angle in degrees.
         :param scan_mode: ``ScanMode.SEGMENTED`` or ``ScanMode.FULL_SWEEP``.
-        :param dot_width_correction_mm: Delays laser-on and advances
-            laser-off by this distance at each end of every continuous
-            engraved run, to compensate for the physical width of the
-            laser spot. Toolpath geometry is unaffected.
+        :param dot_width_correction_mm: Shortens laser firing by this
+            distance at each end of every engraved run, compensating
+            for the laser spot's physical width. Geometry is unaffected.
         :returns: A new :class:`Ops` container.
         :complexity: O(h * w + n * p) where h, w = image dimensions, n = scan lines, p = pixels per line
         """
@@ -1439,10 +1438,9 @@ class Ops:
         :param step_power: Power value (0-1) for exposed pixels.
         :param angle: Scan angle in degrees.
         :param scan_mode: ``ScanMode.SEGMENTED`` or ``ScanMode.FULL_SWEEP``.
-        :param dot_width_correction_mm: Delays laser-on and advances
-            laser-off by this distance at each end of every continuous
-            engraved run, to compensate for the physical width of the
-            laser spot. Toolpath geometry is unaffected.
+        :param dot_width_correction_mm: Shortens laser firing by this
+            distance at each end of every engraved run, compensating
+            for the laser spot's physical width. Geometry is unaffected.
         :returns: A new :class:`Ops` container.
         :complexity: O(h * w + n * p) where h, w = image dimensions, n = scan lines, p = pixels per line
         """

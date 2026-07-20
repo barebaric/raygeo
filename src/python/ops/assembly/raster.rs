@@ -1,15 +1,14 @@
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-use pyo3_stub_gen::derive::gen_stub_pyfunction;
+use pyo3_stub_gen::derive::{
+    gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pymethods,
+};
 
-use crate::ops::assembly::result::AssemblyMeta;
-use crate::ops::container::Ops;
-use crate::ops::convert::image::ScanMode;
-use crate::ops::enums::{RasterMode, SectionType};
-use crate::ops::types::ToolPose;
+use crate::ops::assembly::raster::{
+    assemble_raster, RasterSpec as CoreRasterSpec,
+};
 use crate::python::ops::assembly::result::PyAssemblyResult;
 use crate::python::ops::part::part::PyPart;
-use crate::types::Point3D;
 
 /// Extract a flat u8 buffer from a numpy array.
 fn extract_flat_u8(
@@ -31,12 +30,160 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = assembly_mod.py();
     let m = PyModule::new(py, "raster")?;
     m.add_function(pyo3::wrap_pyfunction!(raster_py, m.clone())?)?;
+    m.add_class::<PyRasterSpec>()?;
     assembly_mod.add_submodule(&m)?;
 
     let sys_modules = py.import("sys")?.getattr("modules")?;
     sys_modules.set_item("raygeo.ops.assembly.raster", &m)?;
 
     Ok(())
+}
+
+/// Parameters for the ``raster`` assembler.
+///
+/// Construct with ``RasterSpec(mode, line_interval_mm, ...)``. The
+/// optional ``alpha`` buffer is set via the ``alpha`` keyword. Wrap
+/// in an :class:`~raygeo.ops.assembly.Assembler` instance to drive
+/// the `Assembler` trait.
+#[gen_stub_pyclass]
+#[pyclass(
+    module = "raygeo.ops.assembly.raster",
+    name = "RasterSpec",
+    frozen,
+    eq,
+    from_py_object
+)]
+#[derive(Clone, PartialEq)]
+pub struct PyRasterSpec {
+    #[pyo3(get)]
+    pub mode: String,
+    #[pyo3(get)]
+    pub line_interval_mm: f64,
+    #[pyo3(get)]
+    pub sample_interval_mm: f64,
+    #[pyo3(get)]
+    pub min_power: f64,
+    #[pyo3(get)]
+    pub max_power: f64,
+    #[pyo3(get)]
+    pub step_power: f64,
+    #[pyo3(get)]
+    pub num_power_levels: usize,
+    #[pyo3(get)]
+    pub angle: f64,
+    #[pyo3(get)]
+    pub offset_x_mm: f64,
+    #[pyo3(get)]
+    pub offset_y_mm: f64,
+    #[pyo3(get)]
+    pub scan_mode: String,
+    #[pyo3(get)]
+    pub cross_hatch: bool,
+    #[pyo3(get)]
+    pub num_depth_levels: usize,
+    #[pyo3(get)]
+    pub z_step_down: f64,
+    #[pyo3(get)]
+    pub angle_increment: f64,
+    /// Compensates for the physical width of the laser spot by
+    /// delaying laser-on and advancing laser-off by this distance
+    /// at each end of every continuous engraved run.
+    #[pyo3(get)]
+    pub dot_width_correction_mm: f64,
+    /// Optional alpha mask buffer (row-major u8). Not exposed as a
+    /// Python getter because it is a raw buffer; set via the
+    /// constructor keyword.
+    pub alpha: Option<Vec<u8>>,
+}
+
+impl PyRasterSpec {
+    /// Convert into the core-layer spec.
+    pub fn into_core(self) -> CoreRasterSpec {
+        CoreRasterSpec {
+            mode: self.mode,
+            line_interval_mm: self.line_interval_mm,
+            sample_interval_mm: self.sample_interval_mm,
+            min_power: self.min_power,
+            max_power: self.max_power,
+            step_power: self.step_power,
+            num_power_levels: self.num_power_levels,
+            angle: self.angle,
+            offset_x_mm: self.offset_x_mm,
+            offset_y_mm: self.offset_y_mm,
+            scan_mode: self.scan_mode,
+            cross_hatch: self.cross_hatch,
+            num_depth_levels: self.num_depth_levels,
+            z_step_down: self.z_step_down,
+            angle_increment: self.angle_increment,
+            dot_width_correction_mm: self.dot_width_correction_mm,
+            alpha: self.alpha,
+        }
+    }
+}
+
+#[gen_stub_pymethods]
+#[pyo3::pymethods]
+impl PyRasterSpec {
+    #[new]
+    #[pyo3(signature = (
+        mode = "power_modulated",
+        line_interval_mm = 0.1,
+        sample_interval_mm = 0.05,
+        min_power = 0.0,
+        max_power = 1.0,
+        step_power = 0.1,
+        num_power_levels = 10,
+        angle = 0.0,
+        offset_x_mm = 0.0,
+        offset_y_mm = 0.0,
+        scan_mode = "segmented",
+        cross_hatch = false,
+        num_depth_levels = 5,
+        z_step_down = 0.0,
+        angle_increment = 0.0,
+        dot_width_correction_mm = 0.0,
+        alpha = None,
+    ))]
+    #[allow(clippy::too_many_arguments)]
+    fn new(
+        mode: &str,
+        line_interval_mm: f64,
+        sample_interval_mm: f64,
+        min_power: f64,
+        max_power: f64,
+        step_power: f64,
+        num_power_levels: usize,
+        angle: f64,
+        offset_x_mm: f64,
+        offset_y_mm: f64,
+        scan_mode: &str,
+        cross_hatch: bool,
+        num_depth_levels: usize,
+        z_step_down: f64,
+        angle_increment: f64,
+        dot_width_correction_mm: f64,
+        alpha: Option<Vec<u8>>,
+    ) -> Self {
+        PyRasterSpec {
+            mode: mode.to_string(),
+            line_interval_mm,
+            sample_interval_mm,
+            min_power,
+            max_power,
+            step_power,
+            num_power_levels,
+            angle,
+            offset_x_mm,
+            offset_y_mm,
+            scan_mode: scan_mode.to_string(),
+            cross_hatch,
+            num_depth_levels,
+            z_step_down,
+            angle_increment,
+            dot_width_correction_mm,
+            alpha,
+        }
+    }
 }
 
 #[gen_stub_pyfunction(
@@ -122,6 +269,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     "#,
     module = "raygeo.ops.assembly.raster"
 )]
+#[allow(clippy::too_many_arguments)]
 #[pyfunction(name = "raster")]
 #[pyo3(signature = (
     part,
@@ -143,7 +291,6 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     angle_increment = 0.0,
     dot_width_correction_mm = 0.0,
 ))]
-#[allow(clippy::too_many_arguments)]
 fn raster_py(
     py: Python<'_>,
     part: &PyPart,
@@ -169,144 +316,48 @@ fn raster_py(
         PyValueError::new_err("Part has no pixels_per_mm — required for raster")
     })?;
 
-    let scan_mode_val = match scan_mode {
-        "segmented" | "Segmented" => ScanMode::Segmented,
-        "full_sweep" | "FullSweep" => ScanMode::FullSweep,
-        other => {
-            return Err(PyValueError::new_err(format!(
-                "Unknown scan_mode '{}' — expected 'segmented' or \
-                 'full_sweep'",
-                other
-            )));
-        }
-    };
-
     let image_src = part.inner.image_source.as_ref().ok_or_else(|| {
         PyValueError::new_err(
             "Part has no image — set part.image before calling raster",
         )
     })?;
-    let (w, h) = image_src.dimensions();
-    let gray = image_src.read_all().ok_or_else(|| {
-        PyValueError::new_err(
-            "Part's image source cannot materialise a full buffer — \
-             raster requires an in-memory image",
-        )
-    })?;
-    let (h, w) = (h as usize, w as usize);
 
-    // Build the list of scan angles (cross-hatch adds 90°).
-    let mut angles = vec![angle];
-    if cross_hatch {
-        angles.push(angle + 90.0);
-    }
-
-    let raster_mode = match mode {
-        "power_modulated" => Some(RasterMode::VariablePower),
-        "mask_scan" | "dither" => Some(RasterMode::ConstantPower),
-        "multi_pass" => Some(RasterMode::DepthMap),
-        _ => None,
+    let alpha_buf = match alpha {
+        Some(a_obj) => {
+            let (flat, ah, aw) = extract_flat_u8(py, a_obj)?;
+            let (w, h) = image_src.dimensions();
+            let (h, w) = (h as usize, w as usize);
+            if ah != h || aw != w {
+                return Err(PyValueError::new_err(
+                    "Alpha array dimensions must match image \
+                     dimensions",
+                ));
+            }
+            Some(flat)
+        }
+        None => None,
     };
 
-    let mut combined = Ops::new();
-
-    for &a in &angles {
-        let pass = match mode {
-            "power_modulated" => {
-                let (alp, ah, aw) = match alpha {
-                    Some(a_obj) => extract_flat_u8(py, a_obj)?,
-                    None => (gray.clone(), h, w),
-                };
-                if ah != h || aw != w {
-                    return Err(PyValueError::new_err(
-                        "Alpha array dimensions must match image \
-                         dimensions",
-                    ));
-                }
-                Ops::from_power_modulated_image(
-                    &gray,
-                    &alp,
-                    h,
-                    w,
-                    pixels_per_mm,
-                    offset_x_mm,
-                    offset_y_mm,
-                    line_interval_mm,
-                    sample_interval_mm,
-                    min_power,
-                    max_power,
-                    step_power,
-                    num_power_levels,
-                    a,
-                    scan_mode_val,
-                    dot_width_correction_mm,
-                )
-            }
-            "mask_scan" | "dither" => Ops::from_mask_scan(
-                &gray,
-                h,
-                w,
-                pixels_per_mm,
-                offset_x_mm,
-                offset_y_mm,
-                line_interval_mm,
-                step_power,
-                a,
-                scan_mode_val,
-                dot_width_correction_mm,
-            ),
-            "multi_pass" => Ops::from_multi_pass_image(
-                &gray,
-                h,
-                w,
-                pixels_per_mm,
-                offset_x_mm,
-                offset_y_mm,
-                line_interval_mm,
-                num_depth_levels,
-                z_step_down,
-                a,
-                angle_increment,
-                scan_mode_val,
-            ),
-            other => {
-                return Err(PyValueError::new_err(format!(
-                    "Unknown mode '{}' — expected 'power_modulated', \
-                     'mask_scan', or 'multi_pass'",
-                    other
-                )));
-            }
-        };
-
-        // Wrap each pass in OpsSectionStart/End with the appropriate raster mode
-        if let Some(rm) = raster_mode {
-            let mut wrapped = Ops::new();
-            wrapped
-                .ops_section_start(SectionType::RasterFill, "raster", Some(rm))
-                .expect("valid section params");
-            wrapped.extend(&pass);
-            wrapped
-                .ops_section_end(SectionType::RasterFill, Some(rm))
-                .expect("valid section params");
-            combined.extend(&wrapped);
-        } else {
-            combined.extend(&pass);
-        }
-    }
-
-    Ok(PyAssemblyResult::from_parts(
-        combined,
-        AssemblyMeta {
-            start: ToolPose {
-                pos: Point3D::ZERO,
-                heading: 0.0,
-            },
-            end: ToolPose {
-                pos: Point3D::ZERO,
-                heading: 0.0,
-            },
-        },
-        None,
-        vec![],
-    ))
+    let (ops, meta) = assemble_raster(
+        image_src.as_ref(),
+        pixels_per_mm,
+        alpha_buf.as_deref(),
+        mode,
+        line_interval_mm,
+        sample_interval_mm,
+        min_power,
+        max_power,
+        step_power,
+        num_power_levels,
+        angle,
+        offset_x_mm,
+        offset_y_mm,
+        scan_mode,
+        cross_hatch,
+        num_depth_levels,
+        z_step_down,
+        angle_increment,
+        dot_width_correction_mm,
+    )?;
+    Ok(PyAssemblyResult::from_parts(ops, meta, None, vec![]))
 }
