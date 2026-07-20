@@ -14,12 +14,41 @@ from . import cleared_area
 from . import crescent
 from . import image_source
 __all__ = [
+    "FaceState",
     "Part",
     "StockRegion",
     "cleared_area",
     "crescent",
     "image_source",
 ]
+
+@typing.final
+class FaceState:
+    r"""
+    Geometry, stock region, and cleared area for one face of a
+    multi-face part.
+    
+    Read-only snapshot. Assemblers mutate face state internally;
+    use the getters to inspect the state after assembly.
+    """
+    @property
+    def geometry(self) -> typing.Optional[geo.Geometry]:
+        r"""
+        Vector geometry for this face, if any.
+        """
+    @property
+    def stock_region(self) -> StockRegion:
+        r"""
+        Boundary and islands of this face — the geometric input to
+        clearing operations.
+        """
+    @property
+    def cleared(self) -> cleared_area.ClearedArea:
+        r"""
+        Accumulated cleared-area state for this face — what has been
+        cut so far.
+        """
+    def __repr__(self) -> builtins.str: ...
 
 @typing.final
 class Part:
@@ -124,6 +153,25 @@ class Part:
     def has_geometry(self) -> builtins.bool:
         r"""
         True if this Part has geometry.
+        """
+    def add_face(self, id: builtins.str, geometry: typing.Optional[geo.Geometry]) -> None:
+        r"""
+        Add a new face. Panics if a face with the given ``id`` already
+        exists.
+        
+        :param id: Face identifier string. The empty string ``""`` is
+            reserved for the default face.
+        :param geometry: Optional geometry for this face.
+        """
+    def face(self, id: builtins.str) -> typing.Optional[FaceState]:
+        r"""
+        Access a face's state by id.
+        
+        Returns ``None`` if the given id does not exist. Use the empty
+        string ``""`` to get the default face (always exists).
+        
+        :param id: Face identifier string.
+        :returns: A :class:`FaceState` snapshot, or ``None``.
         """
     def __repr__(self) -> builtins.str: ...
 

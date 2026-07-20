@@ -8,6 +8,37 @@ Workpiece state: cleared-area tracker, stock region, and part descriptor.
 Maintains a union of swept-disk polygons and provides a spatial-indexed windowed query for efficient
 engagement computation.
 
+## FaceState
+
+Geometry, stock region, and cleared area for one face of a multi-face part.
+
+Read-only snapshot. Assemblers mutate face state internally; use the getters to inspect the state
+after assembly.
+
+### `cleared`
+
+```python
+cleared: cleared_area.ClearedArea
+```
+
+Accumulated cleared-area state for this face — what has been cut so far.
+
+### `geometry`
+
+```python
+geometry: Optional[geo.Geometry]
+```
+
+Vector geometry for this face, if any.
+
+### `stock_region`
+
+```python
+stock_region: StockRegion
+```
+
+Boundary and islands of this face — the geometric input to clearing operations.
+
 ## Part
 
 Unified workpiece description for motion assembly.
@@ -85,6 +116,36 @@ stock_region: StockRegion
 ```
 
 Boundary and islands of the workpiece — cached extraction from geometry. Read-only.
+
+### `add_face()`
+
+```python
+add_face(id: str, geometry: Optional[geo.Geometry]) -> None
+```
+
+Add a new face. Panics if a face with the given `id` already exists.
+
+| Parameter  | Type                     | Description                                                                     |
+| ---------- | ------------------------ | ------------------------------------------------------------------------------- |
+| `id`       | `str`                    | Face identifier string. The empty string `""` is reserved for the default face. |
+| `geometry` | `Optional[geo.Geometry]` | Optional geometry for this face.                                                |
+| _Returns_  | `None`                   |                                                                                 |
+
+### `face()`
+
+```python
+face(id: str) -> Optional[FaceState]
+```
+
+Access a face's state by id.
+
+Returns `None` if the given id does not exist. Use the empty string `""` to get the default face
+(always exists).
+
+| Parameter | Type                  | Description                          |
+| --------- | --------------------- | ------------------------------------ |
+| `id`      | `str`                 | Face identifier string.              |
+| _Returns_ | `Optional[FaceState]` | A **FaceState** snapshot, or `None`. |
 
 ### `from_polygons()`
 

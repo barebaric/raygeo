@@ -6,6 +6,7 @@ use crate::ops::part::image_source::WholeImageSource;
 use crate::ops::part::Part;
 use crate::python::geo::geometry::Geometry as PyGeometry;
 use crate::python::ops::part::cleared_area::PyClearedArea;
+use crate::python::ops::part::face_state::PyFaceState;
 use crate::python::ops::part::image_source::PyWholeImageSource;
 use crate::python::ops::part::stock_region::PyStockRegion;
 use crate::types::{Point, Polygon};
@@ -159,6 +160,36 @@ impl PyPart {
     /// True if this Part has geometry.
     fn has_geometry(&self) -> bool {
         self.inner.geometry().is_some()
+    }
+
+    /// Add a new face. Panics if a face with the given ``id`` already
+    /// exists.
+    ///
+    /// :param id: Face identifier string. The empty string ``""`` is
+    ///     reserved for the default face.
+    /// :param geometry: Optional geometry for this face.
+    fn add_face(
+        &mut self,
+        id: &str,
+        geometry: Option<Py<PyGeometry>>,
+        py: Python<'_>,
+    ) -> PyResult<()> {
+        let inner_geo = geometry.map(|py_geo| py_geo.borrow(py).inner.clone());
+        self.inner.add_face(id, inner_geo);
+        Ok(())
+    }
+
+    /// Access a face's state by id.
+    ///
+    /// Returns ``None`` if the given id does not exist. Use the empty
+    /// string ``""`` to get the default face (always exists).
+    ///
+    /// :param id: Face identifier string.
+    /// :returns: A :class:`FaceState` snapshot, or ``None``.
+    fn face(&self, id: &str) -> Option<PyFaceState> {
+        self.inner
+            .face(id)
+            .map(|f| PyFaceState { inner: f.clone() })
     }
 
     fn __repr__(&self) -> String {
