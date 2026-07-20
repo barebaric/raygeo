@@ -6,7 +6,7 @@ use crate::geo::shape::polygon::{
 use crate::geo::shape::polygon3d::walk_along_polygon_3d;
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::Tracelet;
-use crate::ops::part::Part;
+use crate::ops::part::FaceState;
 use crate::ops::state::State;
 use crate::ops::types::CutDirection;
 use crate::ops::types::ToolPose;
@@ -117,7 +117,7 @@ pub(crate) struct ProfileCommon {
 }
 
 pub(crate) fn run_profile(
-    part: &mut Part,
+    face: &mut FaceState,
     trace: &mut Tracelet,
     offset_poly: &Polygon,
     common: &ProfileCommon,
@@ -247,13 +247,13 @@ pub(crate) fn run_profile(
         // where earlier passes leave material that the check can measure
         // against. On a first pass (or finish pass), the tool is fully
         // buried by design and the check would spuriously fire on every
-        // step. Gate it on stock_to_leave > 0 (rough pass) AND the part.cleared
+        // step. Gate it on stock_to_leave > 0 (rough pass) AND the face.cleared
         // area already containing material from a prior pass.
         let check_engagement =
-            common.stock_to_leave > 0.0 && !part.cleared.is_empty();
+            common.stock_to_leave > 0.0 && !face.cleared.is_empty();
         if check_engagement {
             loop {
-                let eng = part.cleared.get_point_engagement(
+                let eng = face.cleared.get_point_engagement(
                     Point::new(next.x, next.y),
                     common.tool_radius,
                 );
@@ -320,17 +320,17 @@ pub(crate) fn run_profile(
         };
         dist_traveled += effective_step;
 
-        // Expand the part.cleared area for this step BEFORE the next engagement
-        // check so the swept path is reflected in the part.cleared fragments.
-        part.cleared.begin_batch();
-        part.cleared.expand_batched(
+        // Expand the face.cleared area for this step BEFORE the next engagement
+        // check so the swept path is reflected in the face.cleared fragments.
+        face.cleared.begin_batch();
+        face.cleared.expand_batched(
             crate::types::Point::new(current_3d.x, current_3d.y),
             crate::types::Point::new(next.x, next.y),
             common.tool_radius,
         );
-        part.cleared.commit_batch_local();
-        part.cleared
-            .compact_if_needed(&part.stock_region, common.tolerance);
+        face.cleared.commit_batch_local();
+        face.cleared
+            .compact_if_needed(&face.stock_region, common.tolerance);
 
         if dist_traveled >= perimeter - common.step_length * 0.5 {
             if !travel_skipped {

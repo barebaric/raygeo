@@ -33,23 +33,23 @@ pub mod wavefront;
 pub use tracelet::{write_polyline, ProgressEvent, Tracelet};
 
 use crate::ops::callbacks::TaskCallbacks;
-use crate::ops::part::Part;
+use crate::ops::part::FaceState;
 use crate::ops::state::State;
 
 /// Context passed to [`Assembler::assemble`].
 ///
-/// Bundles the mutable `Part`, the `Tracelet` that accumulates the
-/// produced ops and drives the progress callback, the cut `State`
-/// (feed rate / power), and the
-/// [`TaskCallbacks`](crate::ops::callbacks::TaskCallbacks) for
+/// Bundles the mutable `Part`, the target [`FaceState`] the assembler
+/// operates on, the `Tracelet` that accumulates the produced ops and
+/// drives the progress callback, the cut `State` (feed rate / power),
+/// and the [`TaskCallbacks`](crate::ops::callbacks::TaskCallbacks) for
 /// progress reports and cancellation. Machine capability flags are
 /// intentionally NOT here — each assembler carries its own arc/curve
 /// parameters in its spec, and rayforge is responsible for resolving
 /// those before constructing the spec.
 pub struct AssembleCtx<'a> {
-    /// The part being assembled. The assembler may mutate `cleared`
-    /// and `stock_region` as it works.
-    pub part: &'a mut Part,
+    /// The target face's state — geometry, stock region, and cleared
+    /// area.  This is what assemblers mutate and read for machining.
+    pub face: &'a mut FaceState,
     /// Tracelet accumulating the produced `Ops`; also drives the
     /// progress callback.
     pub trace: &'a mut Tracelet,

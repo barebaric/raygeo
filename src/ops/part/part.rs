@@ -1,12 +1,4 @@
-//! The `Part` type — unified workpiece + accumulated state for motion assembly.
-//!
-//! A `Part` describes the item being worked on.  It carries the
-//! geometry (vector outlines) and/or metadata needed by assemblers,
-//! plus a [`ClearedArea`] tracking what has already been cut.
-//! No machine parameters, no step metadata — just the workpiece data
-//! and its accumulated machining state.
-//!
-//! Assemblers accept `&mut Part` and mutate `part.cleared` as they work.
+use std::collections::HashMap;
 
 use crate::constants::{EPSILON_BOUNDARY, EPSILON_MERGE};
 use crate::geo::algo::fitting::linearize_data;
@@ -21,23 +13,122 @@ use super::cleared_area::ClearedArea;
 use super::image_source::ImageSource;
 use super::stock_region::StockRegion;
 
+/// State for one face of a multi-face part.
+///
+/// Each face carries its own geometry, stock region, and cleared
+/// area. Assemblers operate on one face at a time via
+/// [`AssembleCtx::face`](crate::ops::assembly::AssembleCtx).
+#[derive(Clone, Debug)]
+pub struct FaceState {
+    /// Vector geometry for this face.
+    pub geometry: Option<Geometry>,
+    /// Boundary and islands extracted from `geometry`.
+    pub stock_region: StockRegion,
+    /// Accumulated cleared-area state for this face.
+    pub cleared: ClearedArea,
+}
+
+impl FaceState {
+    pub fn new(geometry: Option<Geometry>) -> Self {
+        let stock_region = match &geometry {
+            Some(_) => {
+                let (boundary, islands) =
+                    Self::extract_boundary_from_geometry(geometry.as_ref());
+                StockRegion::new(boundary.unwrap_or_default(), islands)
+            }
+            None => StockRegion::empty(),
+        };
+        FaceState {
+            geometry,
+            stock_region,
+            cleared: ClearedArea::new(),
+        }
+    }
+
+    /// Extract boundary + islands from this face's geometry.
+    pub fn extract_boundary(&self) -> (Option<Polygon>, Vec<Polygon>) {
+        Self::extract_boundary_from_geometry(self.geometry.as_ref())
+    }
+
+    /// Standalone boundary extraction from a geometry reference.
+    pub(crate) fn extract_boundary_from_geometry(
+        geo: Option<&Geometry>,
+    ) -> (Option<Polygon>, Vec<Polygon>) {
+        let geo = match geo {
+            Some(g) => g,
+            None => return (None, vec![]),
+        };
+
+        let mut linearized = geo.copy();
+        if !linearized.data.is_empty() {
+            linearized.data =
+                linearize_data(&linearized.data, EPSILON_BOUNDARY);
+        }
+        let contours = split_into_contours(&linearized);
+        if contours.is_empty() {
+            return (None, vec![]);
+        }
+
+        let refs: Vec<&Geometry> = contours.iter().collect();
+        let (inner_indices, outer_indices) =
+            split_inner_and_outer_contours(&refs);
+
+        let contour_to_poly = |i: usize| -> Option<Polygon> {
+            let segs = contours[i].segments();
+            for seg in &segs {
+                if seg.len() < 3 {
+                    continue;
+                }
+                let poly: Polygon =
+                    seg.iter().map(|p| Point::new(p.x, p.y)).collect();
+                if let Some(cleaned) =
+                    clean_polygon(&poly, 0.01 * EPSILON_MERGE)
+                {
+                    return Some(cleaned);
+                }
+                if poly.len() >= 3 {
+                    return Some(poly);
+                }
+            }
+            None
+        };
+
+        let outers: Vec<Polygon> = outer_indices
+            .iter()
+            .filter_map(|&i| contour_to_poly(i))
+            .collect();
+
+        let islands: Vec<Polygon> = inner_indices
+            .iter()
+            .filter_map(|&i| contour_to_poly(i))
+            .collect();
+
+        let boundary = outers.into_iter().max_by(|a, b| {
+            crate::utils::sort_f64(
+                crate::geo::shape::polygon::get_polygon_area(a),
+                crate::geo::shape::polygon::get_polygon_area(b),
+            )
+        });
+
+        (boundary, islands)
+    }
+}
+
 /// Unified workpiece description shared by all assemblers.
 ///
-/// Carries geometry, physical metadata, and a [`ClearedArea`] that
-/// accumulates the cleared fragments as assemblers work the part.
+/// Carries physical metadata (size, pixels_per_mm, image_source)
+/// at the part level, plus a per-face map of geometry, stock region,
+/// and cleared area.  Most assemblers operate on a single face —
+/// the `AssembleCtx` provides `face: &mut FaceState` for that.
 ///
 /// Not `Clone`: an [`ImageSource`] is an opaque trait object. Callers
 /// that previously cloned a `Part` should construct a fresh one or
 /// borrow `&mut Part` instead.
 pub struct Part {
-    /// Vector geometry — the outline(s) of the part.
-    ///
-    /// May contain multiple closed contours (including holes).
-    pub geometry: Option<Geometry>,
-
-    /// Boundary and islands — cached extraction from geometry.
-    /// Computed once at construction; never changes.
-    pub stock_region: StockRegion,
+    /// Per-face state. The empty string `""` is the default face.
+    /// A part constructed the old (single-face) way has exactly one
+    /// entry for `""`.
+    pub faces: HashMap<String, FaceState>,
 
     /// Physical size of the part in millimetres `(width, height)`.
     pub size_mm: (f64, f64),
@@ -46,12 +137,6 @@ pub struct Part {
     ///
     /// Required for raster operations; `None` for purely vector work.
     pub pixels_per_mm: Option<(f64, f64)>,
-
-    /// Accumulated cleared-area state — what has been cut so far.
-    ///
-    /// Initialized from the part's boundary/islands at construction
-    /// time; assemblers mutate this as they work.
-    pub cleared: ClearedArea,
 
     /// Optional lazy source of pixel data for raster/shrinkwrap
     /// assemblers.
@@ -71,11 +156,9 @@ impl std::fmt::Debug for Part {
             Some(_) => "<ImageSource>",
         };
         f.debug_struct("Part")
-            .field("geometry", &self.geometry)
-            .field("stock_region", &self.stock_region)
+            .field("faces", &self.faces)
             .field("size_mm", &self.size_mm)
             .field("pixels_per_mm", &self.pixels_per_mm)
-            .field("cleared", &self.cleared)
             .field("image_source", &img)
             .finish()
     }
@@ -84,23 +167,16 @@ impl std::fmt::Debug for Part {
 impl Part {
     /// Create a new `Part` from geometry and size.
     ///
+    /// The single default face `""` is populated from `geometry`.
     /// The `StockRegion` is extracted from `geometry` (empty if `None`).
     /// The `ClearedArea` starts empty.
     pub fn new(geometry: Option<Geometry>, size_mm: (f64, f64)) -> Self {
-        let stock_region = match &geometry {
-            Some(_) => {
-                let (boundary, islands) =
-                    Part::extract_boundary_from_geometry(geometry.as_ref());
-                StockRegion::new(boundary.unwrap_or_default(), islands)
-            }
-            None => StockRegion::empty(),
-        };
+        let mut faces = HashMap::new();
+        faces.insert(String::new(), FaceState::new(geometry));
         Part {
-            geometry,
-            stock_region,
+            faces,
             size_mm,
             pixels_per_mm: None,
-            cleared: ClearedArea::new(),
             image_source: None,
         }
     }
@@ -110,7 +186,8 @@ impl Part {
     /// Constructs a `Geometry` containing the boundary as the first
     /// closed contour and each island as an additional contour, then
     /// wraps it in a `Part` with the given `size_mm`.
-    /// The `StockRegion` is set directly from `boundary`/`islands`.
+    /// The default face's `StockRegion` is set directly from
+    /// `boundary`/`islands`.
     pub fn from_polygons(
         boundary: &Polygon,
         islands: &[Polygon],
@@ -134,12 +211,19 @@ impl Part {
             }
         }
         let stock_region = StockRegion::new(boundary.clone(), islands.to_vec());
+        let mut faces = HashMap::new();
+        faces.insert(
+            String::new(),
+            FaceState {
+                geometry: Some(geo),
+                stock_region,
+                cleared: ClearedArea::new(),
+            },
+        );
         Part {
-            geometry: Some(geo),
-            stock_region,
+            faces,
             size_mm,
             pixels_per_mm: None,
-            cleared: ClearedArea::new(),
             image_source: None,
         }
     }
@@ -171,102 +255,84 @@ impl Part {
         }
         let stock_region = StockRegion::new(boundary.clone(), islands.to_vec());
         let cleared = ClearedArea::with_fragments(initial);
+        let mut faces = HashMap::new();
+        faces.insert(
+            String::new(),
+            FaceState {
+                geometry: Some(geo),
+                stock_region,
+                cleared,
+            },
+        );
         Part {
-            geometry: Some(geo),
-            stock_region,
+            faces,
             size_mm,
             pixels_per_mm: None,
-            cleared,
             image_source: None,
         }
     }
 
-    /// Extract the outer boundary and island polygons from `self.geometry`.
-    ///
-    /// Returns `(boundary, islands)`.
-    /// - `boundary` is the largest outer (CCW) contour, or `None`.
-    /// - `islands` are all inner (CW) contours.
-    pub fn extract_boundary(&self) -> (Option<Polygon>, Vec<Polygon>) {
-        Self::extract_boundary_from_geometry(self.geometry.as_ref())
-    }
-
-    /// Replace `self.stock_region` with a new one built from the given
-    /// boundary and islands.  Returns the old stock region so callers
-    /// can restore it after an operation that temporarily scopes the region.
-    pub fn replace_stock_region(
+    /// Add a new face. Panics if `id` already exists.
+    pub fn add_face(
         &mut self,
-        boundary: Polygon,
-        islands: Vec<Polygon>,
-    ) -> StockRegion {
-        std::mem::replace(
-            &mut self.stock_region,
-            StockRegion::new(boundary, islands),
-        )
+        id: &str,
+        geometry: Option<Geometry>,
+    ) -> &mut FaceState {
+        let old = self.faces.insert(id.to_string(), FaceState::new(geometry));
+        assert!(old.is_none(), "face {id} already exists");
+        self.faces.get_mut(id).unwrap()
     }
 
-    /// Standalone boundary extraction from a geometry reference.
-    fn extract_boundary_from_geometry(
-        geo: Option<&Geometry>,
-    ) -> (Option<Polygon>, Vec<Polygon>) {
-        let geo = match geo {
-            Some(g) => g,
-            None => return (None, vec![]),
-        };
+    /// Borrow the state for a face. Returns the default face `""` for
+    /// unknown ids so callers that don't know about faces get the
+    /// single-face behaviour.
+    ///
+    /// When `id` is not found, the default face is inserted (lazy
+    /// init) so that mutations work.
+    pub fn face_mut(&mut self, id: &str) -> &mut FaceState {
+        let entry = self.faces.entry(id.to_string());
+        entry.or_insert_with(|| FaceState::new(None))
+    }
 
-        // Linearize once, then split.
-        let mut linearized = geo.copy();
-        if !linearized.data.is_empty() {
-            linearized.data =
-                linearize_data(&linearized.data, EPSILON_BOUNDARY);
-        }
-        let contours = split_into_contours(&linearized);
-        if contours.is_empty() {
-            return (None, vec![]);
-        }
+    /// Immutable borrow of a face's state. Returns `None` for unknown
+    /// ids.
+    pub fn face(&self, id: &str) -> Option<&FaceState> {
+        self.faces.get(id)
+    }
 
-        let refs: Vec<&Geometry> = contours.iter().collect();
-        let (inner_indices, outer_indices) =
-            split_inner_and_outer_contours(&refs);
+    /// Convenience: access the default face's geometry (for callers
+    /// that don't care about faces).
+    pub fn geometry(&self) -> Option<&Geometry> {
+        self.faces.get("").and_then(|f| f.geometry.as_ref())
+    }
 
-        // Convert indexed contours to polygons (without re-linearizing).
-        let contour_to_poly = |i: usize| -> Option<Polygon> {
-            let segs = contours[i].segments();
-            for seg in &segs {
-                if seg.len() < 3 {
-                    continue;
-                }
-                let poly: Polygon =
-                    seg.iter().map(|p| Point::new(p.x, p.y)).collect();
-                if let Some(cleaned) =
-                    clean_polygon(&poly, 0.01 * EPSILON_MERGE)
-                {
-                    return Some(cleaned);
-                }
-                if poly.len() >= 3 {
-                    return Some(poly);
-                }
-            }
-            None
-        };
+    /// Convenience: access the default face's stock_region.
+    pub fn stock_region(&self) -> &StockRegion {
+        // The default face always exists.
+        &self.faces.get("").unwrap().stock_region
+    }
 
-        let outers: Vec<Polygon> = outer_indices
-            .iter()
-            .filter_map(|&i| contour_to_poly(i))
-            .collect();
+    /// Convenience: mutable access to the default face's stock_region.
+    pub fn stock_region_mut(&mut self) -> &mut StockRegion {
+        &mut self.faces.get_mut("").unwrap().stock_region
+    }
 
-        let islands: Vec<Polygon> = inner_indices
-            .iter()
-            .filter_map(|&i| contour_to_poly(i))
-            .collect();
+    /// Convenience: access the default face's cleared area.
+    pub fn cleared(&self) -> &ClearedArea {
+        &self.faces.get("").unwrap().cleared
+    }
 
-        // Pick the largest outer contour as the main boundary.
-        let boundary = outers.into_iter().max_by(|a, b| {
-            crate::utils::sort_f64(
-                crate::geo::shape::polygon::get_polygon_area(a),
-                crate::geo::shape::polygon::get_polygon_area(b),
-            )
-        });
+    /// Convenience: mutable access to the default face's cleared area.
+    pub fn cleared_mut(&mut self) -> &mut ClearedArea {
+        &mut self.faces.get_mut("").unwrap().cleared
+    }
 
-        (boundary, islands)
+    /// Extract the outer boundary and island polygons from the
+    /// default face's geometry.
+    pub fn extract_boundary(&self) -> (Option<Polygon>, Vec<Polygon>) {
+        self.faces
+            .get("")
+            .map(|f| f.extract_boundary())
+            .unwrap_or((None, vec![]))
     }
 }

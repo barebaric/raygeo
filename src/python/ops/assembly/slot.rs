@@ -117,8 +117,8 @@ fn generate_slot_py(
     };
 
     let mut trace = Tracelet::new();
-    let meta =
-        slot::generate_slot(&mut part.inner, &mut trace, &opts, &cut_state)?;
+    let face = part.inner.face_mut("");
+    let meta = slot::generate_slot(face, &mut trace, &opts, &cut_state)?;
     let events = trace.drain();
     let attrs = trace.attrs().cloned();
     let ops = trace.into_ops();

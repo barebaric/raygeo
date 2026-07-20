@@ -84,7 +84,10 @@ impl PyPart {
     /// Returns ``None`` if no geometry was provided at construction time.
     #[getter]
     fn geometry(&self) -> Option<PyGeometry> {
-        self.inner.geometry.clone().map(|g| PyGeometry { inner: g })
+        self.inner
+            .geometry()
+            .cloned()
+            .map(|g| PyGeometry { inner: g })
     }
 
     /// Build a Part from a boundary polygon and optional islands.
@@ -140,7 +143,7 @@ impl PyPart {
     #[getter]
     fn cleared(&self) -> PyClearedArea {
         PyClearedArea {
-            inner: self.inner.cleared.clone(),
+            inner: self.inner.cleared().clone(),
         }
     }
 
@@ -149,13 +152,13 @@ impl PyPart {
     #[getter]
     fn stock_region(&self) -> PyStockRegion {
         PyStockRegion {
-            inner: self.inner.stock_region.clone(),
+            inner: self.inner.stock_region().clone(),
         }
     }
 
     /// True if this Part has geometry.
     fn has_geometry(&self) -> bool {
-        self.inner.geometry.is_some()
+        self.inner.geometry().is_some()
     }
 
     fn __repr__(&self) -> String {
@@ -163,7 +166,7 @@ impl PyPart {
             "Part(size_mm=({:.1}, {:.1}), geometry={})",
             self.inner.size_mm.0,
             self.inner.size_mm.1,
-            if self.inner.geometry.is_some() {
+            if self.inner.geometry().is_some() {
                 "Some"
             } else {
                 "None"

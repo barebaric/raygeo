@@ -6,20 +6,20 @@ use crate::ops::assembly::profile::engine::{run_profile, ProfileCommon};
 use crate::ops::assembly::profile::ProfileSpec;
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::Tracelet;
-use crate::ops::part::Part;
+use crate::ops::part::FaceState;
 use crate::ops::state::State;
 
 use super::trace_helpers as th;
 
 /// Profile the outer boundary of a pocket, extracting geometry from
-/// `part`.
+/// `face`.
 pub fn profile_outer(
-    part: &mut Part,
+    face: &mut FaceState,
     trace: &mut Tracelet,
     opts: &ProfileSpec,
     cut_state: &State,
 ) -> RaygeoResult<AssemblyMeta> {
-    let (boundary_opt, _islands) = part.extract_boundary();
+    let (boundary_opt, _islands) = face.extract_boundary();
     let boundary = boundary_opt.ok_or_else(|| {
         RaygeoError::DegenerateGeometry(
             "Part has no extractable boundary geometry".into(),
@@ -52,5 +52,5 @@ pub fn profile_outer(
     let walk_order: Vec<u32> = (0..offset_polys.len() as u32).collect();
     trace.set_attrs(th::build_attrs(&offset_polys, &walk_order));
 
-    run_profile(part, trace, &offset_polys[0], &common, cut_state, 0)
+    run_profile(face, trace, &offset_polys[0], &common, cut_state, 0)
 }

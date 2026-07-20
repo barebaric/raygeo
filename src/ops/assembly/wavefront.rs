@@ -17,7 +17,7 @@ use crate::geo::shape::polygon::{
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::{AssembleCtx, Assembler, Tracelet};
 use crate::ops::container::Ops;
-use crate::ops::part::Part;
+use crate::ops::part::{FaceState, Part};
 use crate::ops::state::State;
 use crate::ops::types::ToolPose;
 use crate::types::{Point, Point3D, Polygon};
@@ -39,7 +39,7 @@ impl Assembler for AdaptiveWavefrontSpec {
         if ctx.callbacks.is_cancelled() {
             return Err("cancelled".to_string());
         }
-        let meta = adaptive_wavefronts(ctx.part, ctx.trace, self, ctx.state)
+        let meta = adaptive_wavefronts(ctx.face, ctx.trace, self, ctx.state)
             .map_err(|e| e.to_string())?;
         ctx.callbacks.report_progress(1.0, "wavefront: done");
         Ok(meta)
@@ -61,7 +61,7 @@ impl Assembler for AdaptiveWavefrontSpec {
 /// (rest), all at height `z`, with `cut_state` applied.
 #[prof]
 pub fn adaptive_wavefronts(
-    part: &mut Part,
+    face: &mut FaceState,
     trace: &mut Tracelet,
     opts: &AdaptiveWavefrontSpec,
     cut_state: &State,
@@ -76,17 +76,17 @@ pub fn adaptive_wavefronts(
     // region, which is constant throughout the loop.
     // This avoids recomputing compute_inset_region in every bites()
     // and actionable_remaining() call.
-    let envelope = part.cleared.envelope(&part.stock_region, 0.0);
-    part.cleared.set_envelope_cache(envelope);
+    let envelope = face.cleared.envelope(&face.stock_region, 0.0);
+    face.cleared.set_envelope_cache(envelope);
 
     // Seed: find the largest inscribed circle and emit concentric rings.
     let (center, r_max) = find_largest_circle(
-        &part.stock_region.boundary,
-        &part.stock_region.islands,
+        &face.stock_region.boundary,
+        &face.stock_region.islands,
         0.1,
     )
     .unwrap_or_else(|| {
-        (get_polygon_centroid(&part.stock_region.boundary), 0.0)
+        (get_polygon_centroid(&face.stock_region.boundary), 0.0)
     });
     let seed_r = (0.01_f64).max(r_max * 0.02);
     let spiral_max_r = r_max.max(seed_r);
@@ -103,7 +103,7 @@ pub fn adaptive_wavefronts(
     } else {
         seed_polys.push(get_circle_polygon(center, seed_r, 64));
     }
-    part.cleared = crate::ops::part::cleared_area::ClearedArea::with_fragments(
+    face.cleared = crate::ops::part::cleared_area::ClearedArea::with_fragments(
         &seed_polys,
     );
 
@@ -151,11 +151,11 @@ pub fn adaptive_wavefronts(
     // remaining outer-edge points into separate runs so that gaps become
     // travel moves rather than cut lines.
     let mut prev_frontier: Vec<Polygon> =
-        part.cleared.frontier(&part.stock_region, simplify_tol);
+        face.cleared.frontier(&face.stock_region, simplify_tol);
 
     for _ in 0..MAX_WAVEFRONT_ITERATIONS {
-        let bounded = part.cleared.bites(
-            &part.stock_region,
+        let bounded = face.cleared.bites(
+            &face.stock_region,
             opts.step_over,
             0.0,
             simplify_tol,
@@ -164,7 +164,7 @@ pub fn adaptive_wavefronts(
             break;
         }
 
-        let new_ring = part.cleared.cut_fast(&bounded);
+        let new_ring = face.cleared.cut_fast(&bounded);
         if new_ring.is_empty() {
             continue;
         }
@@ -259,12 +259,12 @@ pub fn adaptive_wavefronts(
             }
         }
 
-        prev_frontier = part.cleared.frontier(&part.stock_region, simplify_tol);
+        prev_frontier = face.cleared.frontier(&face.stock_region, simplify_tol);
 
         let ring_area: f64 =
             new_ring.iter().map(|p| get_polygon_signed_area(p)).sum();
         if ring_area < opts.area_tolerance
-            || part.cleared.actionable_remaining(&part.stock_region, 0.0)
+            || face.cleared.actionable_remaining(&face.stock_region, 0.0)
                 < opts.area_tolerance
         {
             break;
@@ -297,7 +297,7 @@ pub fn adaptive_wavefronts(
 #[allow(clippy::too_many_arguments)]
 #[prof]
 pub fn adaptive_wavefronts_multi_pocket(
-    part: &Part,
+    face: &FaceState,
     step_over: f64,
     offset_mm: f64,
     area_tolerance: f64,
@@ -305,7 +305,7 @@ pub fn adaptive_wavefronts_multi_pocket(
     cut_feed_rate: i32,
     cut_power: f64,
 ) -> RaygeoResult<(Ops, AssemblyMeta)> {
-    let src_geo = part.geometry.as_ref().ok_or_else(|| {
+    let src_geo = face.geometry.as_ref().ok_or_else(|| {
         crate::RaygeoError::ContourError(
             "adaptive_wavefronts_multi_pocket requires a part with geometry"
                 .to_string(),
@@ -398,7 +398,7 @@ pub fn adaptive_wavefronts_multi_pocket(
             precision,
         };
         let meta = adaptive_wavefronts(
-            &mut pocket_part,
+            pocket_part.face_mut(""),
             &mut trace,
             &wf_opts,
             &cut_state,

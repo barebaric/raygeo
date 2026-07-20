@@ -178,8 +178,8 @@ fn generate_ramp_py(
     };
 
     let mut trace = Tracelet::new();
-    let meta =
-        ramp::generate_ramp(&mut part.inner, &mut trace, &opts, &cut_state)?;
+    let face = part.inner.face_mut("");
+    let meta = ramp::generate_ramp(face, &mut trace, &opts, &cut_state)?;
     let events = trace.drain();
     let attrs = trace.attrs().cloned();
     let ops = trace.into_ops();

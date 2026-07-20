@@ -237,12 +237,9 @@ fn adaptive_clearing_py(
     } else {
         Tracelet::new()
     };
-    let meta = adaptive::adaptive_clearing(
-        &mut part.inner,
-        &mut trace,
-        &opts,
-        &cut_state,
-    )?;
+    let face = part.inner.face_mut("");
+    let meta =
+        adaptive::adaptive_clearing(face, &mut trace, &opts, &cut_state)?;
     if profile {
         prof_report();
     }

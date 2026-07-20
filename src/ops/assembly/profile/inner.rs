@@ -10,21 +10,21 @@ use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::Tracelet;
 
 use super::trace_helpers as th;
-use crate::ops::part::Part;
+use crate::ops::part::FaceState;
 use crate::ops::state::State;
 use crate::ops::types::ToolPose;
 use crate::types::{Point3D, Polygon};
 use glam::Vec3Swizzles;
 
 /// Profile the inner boundary of a pocket, extracting geometry from
-/// `part`.
+/// `face`.
 pub fn profile_inner(
-    part: &mut Part,
+    face: &mut FaceState,
     trace: &mut Tracelet,
     opts: &ProfileSpec,
     cut_state: &State,
 ) -> RaygeoResult<AssemblyMeta> {
-    let (boundary_opt, islands) = part.extract_boundary();
+    let (boundary_opt, islands) = face.extract_boundary();
     let boundary = boundary_opt.ok_or_else(|| {
         RaygeoError::DegenerateGeometry(
             "Part has no extractable boundary geometry".into(),
@@ -111,7 +111,7 @@ pub fn profile_inner(
     trace.set_attrs(th::build_attrs(&all_offset_polys, &walk_order));
 
     let outer_meta =
-        run_profile(part, trace, outer_poly, &common, cut_state, 0)?;
+        run_profile(face, trace, outer_poly, &common, cut_state, 0)?;
     let start_pose = outer_meta.start;
     let mut end_pose = outer_meta.end;
 
@@ -136,7 +136,7 @@ pub fn profile_inner(
             let idx = remaining.remove(nearest_idx);
             let island_idx = 1 + idx as u32;
             let island_meta = run_profile(
-                part,
+                face,
                 trace,
                 &grown_islands[idx],
                 &common,

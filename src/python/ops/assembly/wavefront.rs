@@ -154,12 +154,9 @@ fn adaptive_wavefronts_py(
     };
 
     let mut trace = Tracelet::new();
-    let meta = wavefront::adaptive_wavefronts(
-        &mut part.inner,
-        &mut trace,
-        &opts,
-        &cut_state,
-    )?;
+    let face = part.inner.face_mut("");
+    let meta =
+        wavefront::adaptive_wavefronts(face, &mut trace, &opts, &cut_state)?;
     let events = trace.drain();
     let attrs = trace.attrs().cloned();
     let ops = trace.into_ops();
@@ -223,8 +220,11 @@ fn adaptive_wavefronts_multi_pocket_py(
     cut_power: f64,
     profile: bool,
 ) -> PyResult<PyAssemblyResult> {
+    let face = part.inner.face("").ok_or_else(|| {
+        pyo3::exceptions::PyValueError::new_err("no default face")
+    })?;
     let (ops, meta) = wavefront::adaptive_wavefronts_multi_pocket(
-        &part.inner,
+        face,
         step_over,
         offset_mm,
         area_tolerance,

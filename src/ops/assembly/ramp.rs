@@ -11,7 +11,7 @@ use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::trace_utils as tu;
 use crate::ops::assembly::write_polyline;
 use crate::ops::assembly::{AssembleCtx, Assembler, Tracelet};
-use crate::ops::part::Part;
+use crate::ops::part::FaceState;
 use crate::ops::state::State;
 use crate::ops::types::ToolPose;
 use crate::types::{Point, Point3D};
@@ -34,7 +34,7 @@ impl Assembler for RampSpec {
         if ctx.callbacks.is_cancelled() {
             return Err("cancelled".to_string());
         }
-        let meta = generate_ramp(ctx.part, ctx.trace, self, ctx.state)
+        let meta = generate_ramp(ctx.face, ctx.trace, self, ctx.state)
             .map_err(|e| e.to_string())?;
         ctx.callbacks.report_progress(1.0, "ramp: done");
         Ok(meta)
@@ -51,7 +51,7 @@ impl Assembler for RampSpec {
 /// [`AssemblyResult`] with a segment-swept cleared polygon.
 #[prof]
 pub fn generate_ramp(
-    part: &mut Part,
+    face: &mut FaceState,
     trace: &mut Tracelet,
     opts: &RampSpec,
     cut_state: &State,
@@ -95,6 +95,6 @@ pub fn generate_ramp(
         get_segment_swept_polygon(opts.start, opts.end, opts.lateral_amplitude);
 
     write_polyline(trace, &path, true, Some(cut_state));
-    part.cleared.cut(&cleared_polygons);
+    face.cleared.cut(&cleared_polygons);
     Ok(AssemblyMeta { start, end })
 }

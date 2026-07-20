@@ -21,7 +21,7 @@ use crate::geo::geometry::Geometry;
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::{AssembleCtx, Assembler};
 use crate::ops::container::Ops;
-use crate::ops::part::Part;
+use crate::ops::part::FaceState;
 use crate::ops::types::ToolPose;
 use crate::types::Point3D;
 
@@ -49,7 +49,7 @@ impl Assembler for ContourSpec {
             return Err("cancelled".to_string());
         }
         let (ops, meta) = assemble_contour(
-            ctx.part,
+            ctx.face,
             self.kerf_mm,
             self.path_offset_mm,
             &self.cut_side,
@@ -106,7 +106,7 @@ pub fn compute_total_offset(
 /// Returns `Err` if the part has no geometry.
 #[allow(clippy::too_many_arguments)]
 pub fn assemble_contour(
-    part: &Part,
+    face: &FaceState,
     kerf_mm: f64,
     path_offset_mm: f64,
     cut_side: &str,
@@ -119,7 +119,7 @@ pub fn assemble_contour(
 ) -> RaygeoResult<(Ops, AssemblyMeta)> {
     let total_offset = compute_total_offset(kerf_mm, path_offset_mm, cut_side);
 
-    let source_geo = part.geometry.clone().ok_or_else(|| {
+    let source_geo = face.geometry.clone().ok_or_else(|| {
         crate::error::RaygeoError::ContourError(
             "Part has no geometry".to_string(),
         )

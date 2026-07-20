@@ -180,8 +180,12 @@ fn generate_helix_py(
     };
 
     let mut trace = Tracelet::new();
-    let meta =
-        helix::generate_helix(&mut part.inner, &mut trace, &opts, &cut_state)?;
+    let meta = helix::generate_helix(
+        part.inner.face_mut(""),
+        &mut trace,
+        &opts,
+        &cut_state,
+    )?;
     let events = trace.drain();
     let attrs = trace.attrs().cloned();
     let ops = trace.into_ops();

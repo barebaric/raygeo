@@ -1,5 +1,7 @@
 use pyo3::prelude::*;
-use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction};
+use pyo3_stub_gen::derive::{
+    gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pymethods,
+};
 
 use crate::ops::assembly::contour::{
     assemble_contour, ContourSpec as CoreContourSpec,
@@ -83,6 +85,7 @@ impl PyContourSpec {
     }
 }
 
+#[gen_stub_pymethods]
 #[pyo3::pymethods]
 impl PyContourSpec {
     #[new]
@@ -196,8 +199,11 @@ fn contour_py(
     allow_arcs: bool,
     supports_curves: bool,
 ) -> PyResult<PyAssemblyResult> {
+    let face = part.inner.face("").ok_or_else(|| {
+        pyo3::exceptions::PyValueError::new_err("no default face")
+    })?;
     let (ops, meta) = assemble_contour(
-        &part.inner,
+        face,
         kerf_mm,
         path_offset_mm,
         cut_side,

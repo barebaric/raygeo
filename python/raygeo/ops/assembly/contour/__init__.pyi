@@ -66,6 +66,7 @@ class ContourSpec:
         Keep Bézier curves when arc_tolerance > 0.
         """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
+    def __new__(cls, kerf_mm: builtins.float = 0.0, path_offset_mm: builtins.float = 0.0, cut_side: builtins.str = 'centerline', overcut: builtins.float = 0.0, cut_order: builtins.str = 'inside_outside', remove_inner: builtins.bool = False, arc_tolerance: builtins.float = 0.0, allow_arcs: builtins.bool = True, supports_curves: builtins.bool = False) -> ContourSpec: ...
 
 def contour(part: raygeo.ops.part.Part, kerf_mm: float = 0, path_offset_mm: float = 0, cut_side: str = 'centerline', overcut: float = 0, cut_order: str = 'inside_outside', remove_inner: bool = False, arc_tolerance: float = 0, allow_arcs: bool = True, supports_curves: bool = False) -> raygeo.ops.assembly.AssemblyResult:
     r"""

@@ -30,7 +30,7 @@ use crate::ops::assembly::toroid::{self, ToroidalClearSpec};
 use crate::ops::assembly::trace_utils as tu;
 use crate::ops::assembly::wavefront::{self, AdaptiveWavefrontSpec};
 use crate::ops::assembly::Tracelet;
-use crate::ops::part::Part;
+use crate::ops::part::{FaceState, Part, StockRegion};
 use crate::ops::state::State;
 use crate::ops::types::ToolPose;
 use crate::trace::Tracer;
@@ -124,13 +124,13 @@ impl WorkplanStep {
     /// Invoke this step's assembler.
     ///
     /// Entry-style steps (helix, spiral, ramp, toroid, slot) deposit their
-    /// swept polygons into `part.cleared` internally.  The stateful
+    /// swept polygons into `face.cleared` internally.  The stateful
     /// strategies (adaptive clearing, profiling, wavefront) borrow
-    /// `part.cleared` directly and mutate it from within the assembler.
+    /// `face.cleared` directly and mutate it from within the assembler.
     pub fn execute(
         &self,
         trace: &mut Tracelet,
-        part: &mut Part,
+        face: &mut FaceState,
         cut_state: &State,
         travel_state: &State,
     ) -> RaygeoResult<AssemblyMeta> {
@@ -153,7 +153,7 @@ impl WorkplanStep {
                     direction: *direction,
                     angular_step: *angular_step,
                 };
-                helix::generate_helix(part, trace, &opts, cut_state)
+                helix::generate_helix(face, trace, &opts, cut_state)
             }
             WorkplanStep::FlatSpiral {
                 center,
@@ -175,7 +175,7 @@ impl WorkplanStep {
                     angular_step: *angular_step,
                     start_angle: *start_angle,
                 };
-                spiral::generate_spiral(part, trace, &opts, cut_state)
+                spiral::generate_spiral(face, trace, &opts, cut_state)
             }
             WorkplanStep::RampEntry {
                 start,
@@ -194,7 +194,7 @@ impl WorkplanStep {
                     style: RampStyle::ZigZag,
                     lateral_amplitude: *lateral_amplitude,
                 };
-                ramp::generate_ramp(part, trace, &opts, cut_state)
+                ramp::generate_ramp(face, trace, &opts, cut_state)
             }
             WorkplanStep::ToroidalClear {
                 carrier,
@@ -208,8 +208,8 @@ impl WorkplanStep {
             } => {
                 let mut full_carrier = carrier.clone();
                 if let Some(&first) = carrier.first() {
-                    if let Some(plunge) = part.cleared.find_plunge_point(
-                        &part.stock_region,
+                    if let Some(plunge) = face.cleared.find_plunge_point(
+                        &face.stock_region,
                         first,
                         *tool_radius,
                         *tool_radius * 3.0,
@@ -227,7 +227,7 @@ impl WorkplanStep {
                     direction: *direction,
                     angular_step: *angular_step,
                 };
-                toroid::generate_toroidal_clear(part, trace, &opts, cut_state)
+                toroid::generate_toroidal_clear(face, trace, &opts, cut_state)
             }
             WorkplanStep::Slot {
                 carrier,
@@ -236,8 +236,8 @@ impl WorkplanStep {
             } => {
                 let mut full_carrier = carrier.clone();
                 if let Some(&first) = carrier.first() {
-                    if let Some(plunge) = part.cleared.find_plunge_point(
-                        &part.stock_region,
+                    if let Some(plunge) = face.cleared.find_plunge_point(
+                        &face.stock_region,
                         first,
                         *tool_radius,
                         *tool_radius * 3.0,
@@ -250,7 +250,7 @@ impl WorkplanStep {
                     tool_radius: *tool_radius,
                     target_z: *target_z,
                 };
-                slot::generate_slot(part, trace, &opts, cut_state)
+                slot::generate_slot(face, trace, &opts, cut_state)
             }
             WorkplanStep::AdaptiveClear {
                 part: step_part,
@@ -281,11 +281,13 @@ impl WorkplanStep {
                     start_heading: *start_heading,
                     ..Default::default()
                 };
-                let saved_region = part
-                    .replace_stock_region(boundary.clone(), islands.clone());
+                let saved_region = std::mem::replace(
+                    &mut face.stock_region,
+                    StockRegion::new(boundary.clone(), islands.clone()),
+                );
                 let result =
-                    adaptive::adaptive_clearing(part, trace, &opts, cut_state);
-                part.stock_region = saved_region;
+                    adaptive::adaptive_clearing(face, trace, &opts, cut_state);
+                face.stock_region = saved_region;
                 result
             }
             WorkplanStep::ProfileInner {
@@ -311,11 +313,13 @@ impl WorkplanStep {
                     stock_to_leave: *stock_to_leave,
                     ..Default::default()
                 };
-                let saved_region = part
-                    .replace_stock_region(boundary.clone(), islands.clone());
+                let saved_region = std::mem::replace(
+                    &mut face.stock_region,
+                    StockRegion::new(boundary.clone(), islands.clone()),
+                );
                 let result =
-                    profile::profile_inner(part, trace, &opts, cut_state);
-                part.stock_region = saved_region;
+                    profile::profile_inner(face, trace, &opts, cut_state);
+                face.stock_region = saved_region;
                 result
             }
             WorkplanStep::Wavefront {
@@ -333,12 +337,14 @@ impl WorkplanStep {
                     area_tolerance: *area_tolerance,
                     precision: *precision,
                 };
-                let saved_region = part
-                    .replace_stock_region(boundary.clone(), islands.clone());
-                let result = wavefront::adaptive_wavefronts(
-                    part, trace, &opts, cut_state,
+                let saved_region = std::mem::replace(
+                    &mut face.stock_region,
+                    StockRegion::new(boundary.clone(), islands.clone()),
                 );
-                part.stock_region = saved_region;
+                let result = wavefront::adaptive_wavefronts(
+                    face, trace, &opts, cut_state,
+                );
+                face.stock_region = saved_region;
                 result
             }
             WorkplanStep::Retract { safe_z } => {
@@ -413,12 +419,9 @@ impl Workplan {
 
     /// Create a new empty workplan from a [`Part`](crate::ops::part::Part).
     ///
-    /// Extracts the boundary polygon and islands from `part.geometry`.
+    /// Extracts the boundary polygon and islands from `face.geometry`.
     /// Returns `None` if the part has no extractable boundary geometry.
-    pub fn from_part(
-        part: &crate::ops::part::Part,
-        safe_z: f64,
-    ) -> Option<Self> {
+    pub fn from_part(part: &Part, safe_z: f64) -> Option<Self> {
         let (boundary, islands) = part.extract_boundary();
         Some(Workplan {
             steps: Vec::new(),
@@ -478,6 +481,7 @@ impl Workplan {
             &self.islands,
             (0.0, 0.0),
         );
+        let face = part.face_mut("");
         let mut prev_end: Option<ToolPose> = None;
         let mut first_start: Option<ToolPose> = None;
 
@@ -488,7 +492,7 @@ impl Workplan {
             let mut temp = Tracelet::new();
             temp.begin_section(step.assembler(), &step.label());
             let meta =
-                step.execute(&mut temp, &mut part, cut_state, travel_state)?;
+                step.execute(&mut temp, face, cut_state, travel_state)?;
             let step_events = temp.drain();
             let step_attrs = temp.attrs().cloned();
             let step_ops = temp.into_ops();

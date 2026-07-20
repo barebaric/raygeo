@@ -22,7 +22,7 @@ use crate::ops::cut::step;
 use crate::ops::cut::StepStatus;
 use crate::ops::cut::StepperOptions;
 use crate::ops::part::ClearedArea;
-use crate::ops::part::Part;
+use crate::ops::part::FaceState;
 use crate::ops::types::CutDirection;
 use crate::ops::types::ToolPose;
 use crate::types::{Point, Point3D, Polygon};
@@ -512,23 +512,23 @@ pub fn emit_resume_travel(
     mat: Option<&MedialAxis>,
     from: Point3D,
     to: Point3D,
-    part: &Part,
+    face: &FaceState,
     opts: &AdaptiveClearingSpec,
     out_route_details: Option<&mut [u8; 4]>,
 ) -> RaygeoResult<routing::RouteSource> {
-    let (_boundary, islands) = part.extract_boundary();
+    let (_boundary, islands) = face.extract_boundary();
 
     // Obstacles = remaining (uncut) material + islands (permanent no-go zones).
     // Clip remaining to the tool-centre envelope so that thin wall slivers
     // (which are unreachable by the tool centre and too narrow to matter)
     // are not treated as routing obstacles.  Interior uncut islands are
     // kept and correctly avoided.
-    let envelope = cleared.envelope(&part.stock_region, opts.tool_radius);
+    let envelope = cleared.envelope(&face.stock_region, opts.tool_radius);
     let mut obstacles = if envelope.is_empty() {
-        cleared.remaining(&part.stock_region)
+        cleared.remaining(&face.stock_region)
     } else {
         get_polygons_group_intersection(
-            &cleared.remaining(&part.stock_region),
+            &cleared.remaining(&face.stock_region),
             &envelope,
         )
     };
@@ -540,7 +540,7 @@ pub fn emit_resume_travel(
         mat,
         obstacles: &obstacles,
         obstacle_bounds: &obs_bounds,
-        part,
+        part: face,
     };
 
     let mut route_details = [0u8; 4];
@@ -615,7 +615,7 @@ pub enum ResumeSource {
 pub struct ResumeCtx<'a> {
     pub opts: &'a AdaptiveClearingSpec,
     pub step_opts: &'a StepperOptions<'a>,
-    pub part: &'a Part,
+    pub part: &'a FaceState,
     /// Radial step into material (derived from `step_over`).
     pub advance: f64,
     /// Forward step length (derived from `step_over`).

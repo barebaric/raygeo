@@ -80,10 +80,10 @@ impl Assembler for ProfileSpec {
         }
         let meta = match self.kind {
             ProfileKind::Inner => {
-                super::profile_inner(ctx.part, ctx.trace, self, ctx.state)
+                super::profile_inner(ctx.face, ctx.trace, self, ctx.state)
             }
             ProfileKind::Outer => {
-                super::profile_outer(ctx.part, ctx.trace, self, ctx.state)
+                super::profile_outer(ctx.face, ctx.trace, self, ctx.state)
             }
         }
         .map_err(|e| e.to_string())?;

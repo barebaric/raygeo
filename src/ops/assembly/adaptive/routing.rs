@@ -11,7 +11,7 @@ use crate::geo::algo::smooth::build_smoothed_path;
 use crate::geo::shape::polygon::compute_polygon_bounds;
 use crate::geo::shape::polygon::does_path_sweep_intersect_polygon;
 use crate::ops::assembly::adaptive::AdaptiveClearingSpec;
-use crate::ops::part::Part;
+use crate::ops::part::FaceState;
 use crate::types::{Point, Point3D, Polygon, Rect};
 
 use super::chain::StrategyChain;
@@ -29,7 +29,7 @@ pub struct RouteCtx<'a> {
     pub mat: Option<&'a MedialAxis>,
     pub obstacles: &'a [Polygon],
     pub obstacle_bounds: &'a [Rect],
-    pub part: &'a Part,
+    pub part: &'a FaceState,
 }
 
 // ── Detail codes (shared across all routing strategies) ────────────

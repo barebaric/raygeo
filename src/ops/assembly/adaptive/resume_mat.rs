@@ -11,8 +11,7 @@ use crate::ops::assembly::adaptive::resume::{
     DETAIL_NO_WALL_HIT, WALL_PROXIMITY,
 };
 use crate::ops::assembly::adaptive::tool::Tool;
-use crate::ops::part::ClearedArea;
-use crate::ops::part::StockRegion;
+use crate::ops::part::{ClearedArea, StockRegion};
 use crate::ops::types::CutDirection;
 use crate::ops::types::ToolPose;
 use crate::types::{Point, Point3D, Polygon};

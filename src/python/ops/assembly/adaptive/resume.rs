@@ -91,17 +91,20 @@ fn emit_resume_travel_py(
     let ca: &ClearedArea = if let Some(c) = cleared {
         &c.inner
     } else {
-        &part.inner.cleared
+        part.inner.cleared()
     };
     let mat = axis.map(|a| &a.inner);
     let mut trace = Tracelet::new();
+    let face = part.inner.face("");
     resume::emit_resume_travel(
         &mut trace,
         ca,
         mat,
         Point3D::new(from_pt.0, from_pt.1, from_pt.2),
         Point3D::new(to_pt.0, to_pt.1, to_pt.2),
-        &part.inner,
+        face.ok_or_else(|| {
+            pyo3::exceptions::PyValueError::new_err("no default face")
+        })?,
         &opts,
         None,
     )?;
@@ -229,10 +232,13 @@ fn try_resume_py(
         ..Default::default()
     };
 
+    let face = part.inner.face("").ok_or_else(|| {
+        pyo3::exceptions::PyValueError::new_err("no default face")
+    })?;
     let ctx = ResumeCtx {
         opts: &opts,
         step_opts: &step_opts,
-        part: &part.inner,
+        part: face,
         advance,
         step_length,
         mat,
@@ -267,7 +273,7 @@ fn try_resume_py(
             mat,
             tool.inner.pos,
             rp.pos,
-            &part.inner,
+            face,
             &opts,
             None,
         )?;

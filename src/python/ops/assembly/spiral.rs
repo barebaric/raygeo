@@ -192,12 +192,8 @@ fn generate_spiral_py(
     };
 
     let mut trace = Tracelet::new();
-    let meta = spiral::generate_spiral(
-        &mut part.inner,
-        &mut trace,
-        &opts,
-        &cut_state,
-    )?;
+    let face = part.inner.face_mut("");
+    let meta = spiral::generate_spiral(face, &mut trace, &opts, &cut_state)?;
     let events = trace.drain();
     let attrs = trace.attrs().cloned();
     let ops = trace.into_ops();
