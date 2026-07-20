@@ -32,6 +32,7 @@ pub mod wavefront;
 
 pub use tracelet::{write_polyline, ProgressEvent, Tracelet};
 
+use crate::ops::cache::{AssemblyOutput, Cacheable};
 use crate::ops::callbacks::TaskCallbacks;
 use crate::ops::part::FaceState;
 use crate::ops::state::State;
@@ -66,11 +67,12 @@ pub struct AssembleCtx<'a> {
 /// implements this trait so callers can hold a collection of
 /// `Box<dyn Assembler>` without knowing concrete types. Adding a new
 /// assembler is purely additive: define a spec struct, implement
-/// [`Assembler`], and pass an instance to the caller.
+/// [`Assembler`] + [`Cacheable<AssemblyOutput>`], and pass an
+/// instance to the caller.
 ///
 /// `Send + Sync` is required so a `Box<dyn Assembler>` can be held
 /// across thread boundaries by the caller.
-pub trait Assembler: Send + Sync {
+pub trait Assembler: Cacheable<AssemblyOutput> + Send + Sync {
     /// Run the assembler against the supplied [`AssembleCtx`].
     ///
     /// On success, returns the [`AssemblyMeta`] (start/end tool

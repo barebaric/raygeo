@@ -1,3 +1,4 @@
+use crate::ops::cache::Cacheable;
 use crate::ops::container::Ops;
 use crate::ops::enums::{CommandCategory, CommandType, SectionType};
 use crate::ops::transform::{Phase, TransformCtx, Transformer};
@@ -24,6 +25,8 @@ impl Transformer for OverscanSpec {
         "overscan"
     }
 }
+
+impl Cacheable<Ops> for OverscanSpec {}
 
 pub fn apply_overscan(ops: &mut Ops, distance_mm: f64) {
     if ops.is_empty() || distance_mm <= 0.0 {

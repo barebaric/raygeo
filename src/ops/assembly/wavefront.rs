@@ -16,6 +16,7 @@ use crate::geo::shape::polygon::{
 };
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::{AssembleCtx, Assembler, Tracelet};
+use crate::ops::cache::{AssemblyOutput, Cacheable};
 use crate::ops::container::Ops;
 use crate::ops::part::{FaceState, Part};
 use crate::ops::state::State;
@@ -49,6 +50,8 @@ impl Assembler for AdaptiveWavefrontSpec {
         "wavefront"
     }
 }
+
+impl Cacheable<AssemblyOutput> for AdaptiveWavefrontSpec {}
 
 /// Inside-out adaptive wavefronts.
 ///

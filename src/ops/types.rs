@@ -19,7 +19,7 @@ pub struct ToolPose {
 /// positions with one-sided deflection bounds.  The main stepper
 /// loop uses symmetric bounds and relies on heading momentum +
 /// cleared-area geometry to maintain the rotational bias.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum CutDirection {
     /// Clockwise.
     Cw,

@@ -47,6 +47,9 @@ use crate::python::ops::assembly::slot::PySlotSpec;
 use crate::python::ops::assembly::spiral::PySpiralSpec;
 use crate::python::ops::assembly::toroid::{PyToroidSpec, PyToroidalClearSpec};
 use crate::python::ops::assembly::wavefront::PyAdaptiveWavefrontSpec;
+use crate::python::ops::cache::{PyAssemblyOutput, PyCacheKey};
+use crate::python::ops::container::PyOps;
+use crate::python::ops::part::part::PyPart;
 
 /// Try to extract an assembler spec from a Python object.
 ///
@@ -150,6 +153,88 @@ impl PyAssembler {
             .map(|s| s.to_string())
             .unwrap_or_else(|_| "<unknown>".to_string());
         format!("Assembler({name})")
+    }
+
+    /// Compute a cache key for this assembler against the given part.
+    ///
+    /// Returns ``None`` for assemblers that opt out of caching
+    /// (e.g. :class:`~raygeo.ops.assembly.contour.ContourSpec`),
+    /// or a :class:`CacheKey` for assemblers that opt in (e.g.
+    /// :class:`~raygeo.ops.assembly.adaptive.AdaptiveClearingSpec`).
+    ///
+    /// :param part: The part whose primary face state is hashed.
+    /// :param tag: Caller-provided identifier (used for prefix-based
+    ///     pruning of cache entries).
+    /// :returns: A :class:`CacheKey` or ``None``.
+    fn cache_key(
+        &self,
+        py: Python<'_>,
+        part: &PyPart,
+        tag: &str,
+    ) -> PyResult<Option<PyCacheKey>> {
+        let core = self.into_core(py)?;
+        let face = part.inner.face("").unwrap_or_else(|| {
+            // Part::new always creates the primary face, so this
+            // branch is unreachable in normal operation.
+            unreachable!("Part has no primary face")
+        });
+        Ok(core
+            .cache_key(Some(face), tag)
+            .map(|ck| PyCacheKey { inner: ck }))
+    }
+
+    /// Reconstruct a cached result from a :class:`AssemblyOutput`.
+    ///
+    /// Assemblers that opt out return ``None`` unconditionally.
+    /// Assemblers that opt in (e.g. adaptive clearing) return
+    /// ``Some`` with the reconstructed value.
+    ///
+    /// :param cached: The cached value to restore.
+    /// :returns: A :class:`AssemblyOutput` or ``None``.
+    fn restore_cache(
+        &self,
+        py: Python<'_>,
+        cached: &PyAssemblyOutput,
+    ) -> PyResult<Option<PyAssemblyOutput>> {
+        let core = self.into_core(py)?;
+        Ok(core
+            .restore_cache(&cached.inner)
+            .map(|cc| PyAssemblyOutput { inner: cc }))
+    }
+
+    /// Build a :class:`AssemblyOutput` from the assembler's output.
+    ///
+    /// Assemblers that opt out return ``None`` unconditionally.
+    /// Assemblers that opt in return ``Some`` with the output
+    /// packaged for the cache.
+    ///
+    /// :param ops: The assembled Ops.
+    /// :param is_scalable: Whether the Ops may be uniformly scaled.
+    /// :param source_dimensions: Source ``(width_mm, height_mm)``.
+    /// :param part: The part (face state is read for cleared fragments).
+    /// :returns: A :class:`AssemblyOutput` or ``None``.
+    fn store_cache(
+        &self,
+        py: Python<'_>,
+        ops: &PyOps,
+        is_scalable: bool,
+        source_dimensions: Option<(f64, f64)>,
+        part: &PyPart,
+    ) -> PyResult<Option<PyAssemblyOutput>> {
+        let core = self.into_core(py)?;
+        let face = part
+            .inner
+            .face("")
+            .unwrap_or_else(|| unreachable!("Part has no primary face"));
+        let output = crate::ops::cache::AssemblyOutput {
+            ops: ops.inner.clone(),
+            is_scalable,
+            source_dimensions,
+            cleared_fragments: Some(face.cleared.fragments().to_vec()),
+        };
+        Ok(core
+            .store_cache(&output)
+            .map(|cc| PyAssemblyOutput { inner: cc }))
     }
 }
 

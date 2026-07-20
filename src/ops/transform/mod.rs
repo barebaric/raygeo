@@ -24,6 +24,7 @@
 //! translate pyclass instances into spec structs that implement
 //! [`Transformer`].
 
+use crate::ops::cache::Cacheable;
 use crate::ops::callbacks::TaskCallbacks;
 use crate::ops::Ops;
 
@@ -90,7 +91,7 @@ pub struct TransformCtx<'a> {
 /// needs no knowledge of concrete types. `Send + Sync` is required
 /// so a `Box<dyn Transformer>` can be held across thread boundaries
 /// by the caller.
-pub trait Transformer: Send + Sync {
+pub trait Transformer: Cacheable<Ops> + Send + Sync {
     /// The execution phase this transformer belongs to.
     fn phase(&self) -> Phase;
 

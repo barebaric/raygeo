@@ -1,4 +1,5 @@
 use crate::geo::algo::analysis::get_tangent_at_from_array;
+use crate::ops::cache::Cacheable;
 use crate::ops::container::Ops;
 use crate::ops::enums::{CommandCategory, CommandType, SectionType};
 use crate::ops::transform::{Phase, TransformCtx, Transformer};
@@ -27,6 +28,8 @@ impl Transformer for LeadInOutSpec {
         "lead_in_out"
     }
 }
+
+impl Cacheable<Ops> for LeadInOutSpec {}
 
 pub fn apply_lead_in_out(ops: &mut Ops, lead_in_mm: f64, lead_out_mm: f64) {
     let has_lead_in = lead_in_mm > 0.0;

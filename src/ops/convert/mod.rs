@@ -29,11 +29,13 @@ pub mod polyline;
 pub mod texture;
 pub mod vertex_arrays;
 
+use crate::ops::cache::Cacheable;
+
 /// Non-Ops artifact produced by an [`Encoder`].
 ///
 /// Opaque to the caller; the variant's payload is the encoder's
 /// native output shape.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum EncodeOutput {
     /// Machine-code text (G-code or any future machine language) +
     /// bidirectional op-to-line index maps.
@@ -81,7 +83,7 @@ pub struct EncodeCtx<'a> {
 ///
 /// `Send + Sync` is required so a `Box<dyn Encoder>` can be held
 /// across thread boundaries by the caller.
-pub trait Encoder: Send + Sync {
+pub trait Encoder: Cacheable<EncodeOutput> + Send + Sync {
     /// Run the encoder against the supplied [`EncodeCtx`].
     ///
     /// On success, returns the encoder's [`EncodeOutput`]. On

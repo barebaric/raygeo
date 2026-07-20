@@ -1,3 +1,4 @@
+use crate::ops::cache::Cacheable;
 use crate::ops::container::Ops;
 use crate::ops::enums::{CommandCategory, CommandType};
 use crate::ops::transform::{Phase, TransformCtx, Transformer};
@@ -22,6 +23,8 @@ impl Transformer for BidirScanOffsetSpec {
         "bidir_scan_offset"
     }
 }
+
+impl Cacheable<Ops> for BidirScanOffsetSpec {}
 
 /// Apply bidirectional scan offset to right-to-left raster passes.
 ///

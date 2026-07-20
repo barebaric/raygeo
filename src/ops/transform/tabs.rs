@@ -12,6 +12,7 @@
 use std::collections::HashMap;
 
 use super::link::find_pass_exit;
+use crate::ops::cache::Cacheable;
 use crate::ops::container::Ops;
 use crate::ops::enums::{CommandCategory, CommandType, SectionType};
 use crate::ops::transform::clip::clip_subpath_linear;
@@ -65,6 +66,8 @@ impl Transformer for TabsSpec {
         "tabs"
     }
 }
+
+impl Cacheable<Ops> for TabsSpec {}
 
 /// A distance interval along a subpath that should be gapped or power-modulated.
 #[derive(Clone, Debug)]

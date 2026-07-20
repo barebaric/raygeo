@@ -12,6 +12,7 @@ use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::trace_utils as tu;
 use crate::ops::assembly::write_polyline;
 use crate::ops::assembly::{AssembleCtx, Assembler, Tracelet};
+use crate::ops::cache::{AssemblyOutput, Cacheable};
 use crate::ops::part::FaceState;
 use crate::ops::state::State;
 use crate::ops::types::ToolPose;
@@ -45,6 +46,8 @@ impl Assembler for ToroidSpec {
     }
 }
 
+impl Cacheable<AssemblyOutput> for ToroidSpec {}
+
 /// Spec for the toroidal-clear (ramped trochoid, Z-descending) assembler.
 #[derive(Clone, Debug)]
 pub struct ToroidalClearSpec {
@@ -76,6 +79,8 @@ impl Assembler for ToroidalClearSpec {
         "toroidal_clear"
     }
 }
+
+impl Cacheable<AssemblyOutput> for ToroidalClearSpec {}
 
 /// Generate a toroidal entry path along a carrier polyline.
 ///

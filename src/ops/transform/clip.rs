@@ -9,6 +9,7 @@ use crate::geo::algo::interp::{
 };
 use crate::geo::shape::arc::is_arc_inside_polygons;
 use crate::geo::shape::bezier::is_bezier_inside_polygons;
+use crate::ops::cache::Cacheable;
 use crate::ops::container::Ops;
 use crate::ops::enums::CommandType;
 use crate::ops::transform::{Phase, TransformCtx, Transformer};
@@ -44,6 +45,8 @@ impl Transformer for CropSpec {
         "crop"
     }
 }
+
+impl Cacheable<Ops> for CropSpec {}
 
 /// Add a clipped line segment to `new_ops`, inserting a move-to if the pen position
 /// does not match the segment start.

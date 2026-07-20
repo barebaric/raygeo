@@ -577,6 +577,20 @@ impl ClearedArea {
         &self.fragments
     }
 
+    /// Replace the cleared fragments wholesale. Used by the
+    /// assembler-owned cache to restore the post-Compute cleared
+    /// state on a cache hit. Invalidates all derived caches and
+    /// rebuilds the spatial grid.
+    pub fn set_fragments(&mut self, fragments: Vec<Polygon>) {
+        self.fragments = fragments;
+        self.clear_sweep_cache();
+        self.rebuild_grid();
+        *self.fragments_union_cache.lock().unwrap() = None;
+        *self.remaining_area_cache.lock().unwrap() = None;
+        *self.actionable_cache.lock().unwrap() = None;
+        self.frag_version.fetch_add(1, Ordering::SeqCst);
+    }
+
     pub fn len(&self) -> usize {
         self.fragments.len()
     }

@@ -8,6 +8,7 @@ use std::collections::HashSet;
 use rstar::{PointDistance, RTree, RTreeObject, AABB};
 
 use super::link::{find_pass_entry, find_pass_exit};
+use crate::ops::cache::Cacheable;
 use crate::ops::callbacks::TaskCallbacks;
 use crate::ops::container::Ops;
 use crate::ops::enums::{CommandCategory, CommandType};
@@ -49,6 +50,8 @@ impl Transformer for OptimizeSpec {
         "optimize"
     }
 }
+
+impl Cacheable<Ops> for OptimizeSpec {}
 
 #[derive(Clone)]
 struct WorkpieceMeta {
