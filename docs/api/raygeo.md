@@ -7,10 +7,10 @@ RayGeo — 2D/3D geometry engine for CAD/CAM applications.
 
 ## Layered architecture
 
-The crate is split into two layers that depend only downward::
+The crate is split into layers that depend only downward::
 
 ```
-geo  →  ops      (never import upward)
+geo  →  ops  →  cnc   →  pipeline  (runtime)
 ```
 
 `geo` — Pure geometry. Primitives & geometric algorithms: points, paths, offsets, medial axes,
@@ -21,6 +21,11 @@ commands, tools, or feed rates.
 classification (cut vs travel), lead-in/out, overscan, raster fill, peeling strategy. Holds the
 generic `State` representation (feed_rate, rapid_rate, …) but does NOT decide what values to use —
 those are passed in by the caller.
+
+`cnc` — Orchestration. Builds workplans, drives assemblers through the pipeline.
+
+`pipeline` — Generic runtime. Runs an intent tree of nodes on a thread pool. Knows nothing about CNC
+or ops — purely generic Compute/Aggregate dispatch.
 
 Key constraint: ops-layer assemblers always produce/consume `Ops` objects, never raw polygon or
 polyline lists. Motion classification is encoded as `MoveTo` (travel) vs `LineTo` (cut) at the
@@ -34,11 +39,14 @@ command level.
 - Minkowski sums for toolpath generation
 - Command sequence (Ops) for CNC motion control
 - Serialization to/from industry formats
+- Generic intent-tree pipeline (rayon-threadpool execution)
 
 ## Submodules
 
 - raygeo.geo — Geometry and path/shape/algo operations
 - raygeo.ops — Command sequence (Ops) manipulation and motion assembly
+- raygeo.cnc — CNC orchestration (workplans, pipeline glue)
+- raygeo.pipeline — Generic runtime intent-tree executor
 
 ## Examples
 

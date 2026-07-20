@@ -7,10 +7,12 @@
 //!
 //! ## Layered architecture
 //!
-//! The crate is split into two layers that depend only downward:
+//! The crate is split into layers that depend only downward:
 //!
 //! ```text
-//! geo  →  ops      (never import upward)
+//! geo  →  ops  ──────────→ cnc      (plan-time; Workplan, builders)
+//!                           ↑
+//!          pipeline  ───────┘       (runtime; execute_stages, rayon::scope)
 //! ```
 //!
 //! **[`geo`]** — Pure geometry.
@@ -25,6 +27,18 @@
 //! peeling strategy.  Holds the generic [`State`] representation
 //! (feed_rate, rapid_rate, …) but does NOT decide what values to use —
 //! those are passed in by the caller.
+//!
+//! **[`cnc`]** — Orchestration.
+//! Builds workplans, drives assemblers/encoders through the pipeline,
+//! and bridges domain types to the generic pipeline traits. Depends
+//! on both `ops` and `pipeline`.
+//!
+//! **[`pipeline`]** — Generic runtime executor.
+//! Executes an intent tree of `NodeRequest`s on a rayon thread pool.
+//! Knows nothing about CNC, ops, or geometry — it runs generic
+//! [`Compute`] and [`Aggregate`] trait objects and passes opaque
+//! `Box<dyn Any>` outputs between nodes. Depends only on `std` and
+//! `rayon`.
 //!
 //! ### Key constraint
 //!
@@ -72,6 +86,7 @@ pub mod image;
 pub(crate) mod log;
 pub mod mesh;
 pub mod ops;
+pub mod pipeline;
 pub mod prof;
 pub mod svg;
 pub(crate) mod trace_types;
@@ -131,9 +146,9 @@ pub(crate) const MODULE_DOC: &str = concat!(
     "Layered architecture\n",
     "--------------------\n",
     "\n",
-    "The crate is split into two layers that depend only downward::\n",
+    "The crate is split into layers that depend only downward::\n",
     "\n",
-    "    geo  →  ops      (never import upward)\n",
+    "    geo  →  ops  →  cnc   →  pipeline  (runtime)\n",
     "\n",
     "``geo`` — Pure geometry.\n",
     "    Primitives & geometric algorithms: points, paths, offsets,\n",
@@ -148,6 +163,13 @@ pub(crate) const MODULE_DOC: &str = concat!(
     "    representation (feed_rate, rapid_rate, …) but does NOT decide\n",
     "    what values to use — those are passed in by the caller.\n",
     "\n",
+    "``cnc`` — Orchestration.\n",
+    "    Builds workplans, drives assemblers through the pipeline.\n",
+    "\n",
+    "``pipeline`` — Generic runtime.\n",
+    "    Runs an intent tree of nodes on a thread pool. Knows nothing\n",
+    "    about CNC or ops — purely generic Compute/Aggregate dispatch.\n",
+    "\n",
     "Key constraint: ops-layer assemblers always produce/consume ``Ops``\n",
     "objects, never raw polygon or polyline lists.  Motion classification\n",
     "is encoded as ``MoveTo`` (travel) vs ``LineTo`` (cut) at the command\n",
@@ -161,11 +183,14 @@ pub(crate) const MODULE_DOC: &str = concat!(
     "- Minkowski sums for toolpath generation\n",
     "- Command sequence (Ops) for CNC motion control\n",
     "- Serialization to/from industry formats\n",
+    "- Generic intent-tree pipeline (rayon-threadpool execution)\n",
     "\n",
     "Submodules\n",
     "----------\n",
     "- raygeo.geo — Geometry and path/shape/algo operations\n",
     "- raygeo.ops — Command sequence (Ops) manipulation and motion assembly\n",
+    "- raygeo.cnc — CNC orchestration (workplans, pipeline glue)\n",
+    "- raygeo.pipeline — Generic runtime intent-tree executor\n",
     "\n",
     "Examples\n",
     "--------\n",
@@ -203,6 +228,7 @@ fn raygeo(m: &Bound<'_, PyModule>) -> PyResult<()> {
     python::ops::register(m)?;
     python::svg::register(m)?;
     python::trace::register(m)?;
+    python::pipeline::register(m)?;
 
     Ok(())
 }

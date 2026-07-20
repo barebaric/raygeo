@@ -239,6 +239,36 @@ pub enum PyEncodeOutput {
     },
 }
 
+impl PyEncodeOutput {
+    pub fn from_core(core: crate::ops::convert::EncodeOutput) -> Self {
+        match core {
+            crate::ops::convert::EncodeOutput::MachineCode {
+                text,
+                op_to_machine_code,
+                machine_code_to_op,
+            } => PyEncodeOutput::MachineCode {
+                text,
+                op_to_machine_code,
+                machine_code_to_op,
+            },
+            crate::ops::convert::EncodeOutput::VertexArrays(va) => {
+                PyEncodeOutput::VertexArrays {
+                    repr: format!("{:?}", va),
+                }
+            }
+            crate::ops::convert::EncodeOutput::Texture {
+                power_texture,
+                width_px,
+                height_px,
+            } => PyEncodeOutput::Texture {
+                power_texture,
+                width_px,
+                height_px,
+            },
+        }
+    }
+}
+
 #[gen_stub_pymethods]
 #[pymethods]
 impl PyEncodeOutput {
