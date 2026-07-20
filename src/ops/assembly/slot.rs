@@ -18,9 +18,7 @@ use crate::error::RaygeoResult;
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::trace_utils as tu;
 use crate::ops::assembly::write_polyline;
-use crate::ops::assembly::AssemblyOutput;
 use crate::ops::assembly::{AssembleCtx, Assembler, Tracelet};
-use crate::ops::cache::Cacheable;
 use crate::ops::part::FaceState;
 use crate::ops::state::State;
 use crate::ops::types::ToolPose;
@@ -50,8 +48,6 @@ impl Assembler for SlotSpec {
         "slot"
     }
 }
-
-impl Cacheable<AssemblyOutput> for SlotSpec {}
 
 /// Generate a back-and-forth slot clearing path along a carrier.
 ///

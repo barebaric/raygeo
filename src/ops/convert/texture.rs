@@ -3,7 +3,6 @@
 //! Reads ScanLine commands from [`Ops`] and rasterizes them into a
 //! `Vec<u8>` pixel buffer using Bresenham line drawing.
 
-use crate::ops::cache::Cacheable;
 use crate::ops::container::Ops;
 use crate::ops::convert::{EncodeCtx, EncodeOutput, Encoder};
 use crate::ops::enums::CommandType;
@@ -256,5 +255,3 @@ impl Encoder for TextureSpec {
         "texture"
     }
 }
-
-impl Cacheable<EncodeOutput> for TextureSpec {}

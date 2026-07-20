@@ -35,8 +35,7 @@ pub mod wavefront;
 
 pub use tracelet::{write_polyline, ProgressEvent, Tracelet};
 
-use crate::ops::cache::Cacheable;
-use crate::ops::callbacks::TaskCallbacks;
+use crate::ops::callbacks::Callbacks;
 use crate::ops::container::Ops;
 use crate::ops::part::FaceState;
 use crate::ops::part::ImageSource;
@@ -48,11 +47,11 @@ use crate::types::Polygon;
 /// Bundles the mutable `Part`, the target [`FaceState`] the assembler
 /// operates on, the `Tracelet` that accumulates the produced ops and
 /// drives the progress callback, the cut `State` (feed rate / power),
-/// and the [`TaskCallbacks`](crate::ops::callbacks::TaskCallbacks) for
-/// progress reports and cancellation. Machine capability flags are
-/// intentionally NOT here — each assembler carries its own arc/curve
-/// parameters in its spec, and rayforge is responsible for resolving
-/// those before constructing the spec.
+/// and the [`Callbacks`] for progress reports and cancellation.
+/// Machine capability flags are intentionally NOT here — each
+/// assembler carries its own arc/curve parameters in its spec, and
+/// rayforge is responsible for resolving those before constructing
+/// the spec.
 pub struct AssembleCtx<'a> {
     /// The target face's state — geometry, stock region, and cleared
     /// area.  This is what assemblers mutate and read for machining.
@@ -63,7 +62,7 @@ pub struct AssembleCtx<'a> {
     /// Cut-state (feed rate, power) for the assembler's cutting moves.
     pub state: &'a State,
     /// Callbacks (progress, cancellation, chunks).
-    pub callbacks: &'a dyn TaskCallbacks,
+    pub callbacks: &'a dyn Callbacks,
     /// Physical size of the part in millimetres `(width, height)`.
     /// Needed by raster / shrinkwrap / frame assemblers that scale
     /// pixel coordinates into mm space.
@@ -117,7 +116,7 @@ impl AssemblyOutput {
 ///
 /// `Send + Sync` is required so a `Box<dyn Assembler>` can be held
 /// across thread boundaries by the caller.
-pub trait Assembler: Cacheable<AssemblyOutput> + Send + Sync {
+pub trait Assembler: Send + Sync {
     /// Run the assembler against the supplied [`AssembleCtx`].
     ///
     /// On success, returns the [`AssemblyMeta`] (start/end tool
@@ -138,4 +137,24 @@ pub trait Assembler: Cacheable<AssemblyOutput> + Send + Sync {
 
     /// Short, human-readable name used in progress messages.
     fn name(&self) -> &'static str;
+
+    /// Compute a cache-key payload hash from face state. The glue
+    /// module wraps this hash with the caller's tag to form a
+    /// `CacheKey`. Returning `None` opts out of caching.
+    fn cache_key_for_face(&self, _face: &FaceState) -> Option<u64> {
+        None
+    }
+
+    /// Reconstruct the cached output from a stored entry.
+    fn restore_cache(
+        &self,
+        _cached: &AssemblyOutput,
+    ) -> Option<AssemblyOutput> {
+        None
+    }
+
+    /// Store the just-computed output for future cache hits.
+    fn store_cache(&self, _output: &AssemblyOutput) -> Option<AssemblyOutput> {
+        None
+    }
 }

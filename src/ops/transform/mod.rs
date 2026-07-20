@@ -24,8 +24,7 @@
 //! translate pyclass instances into spec structs that implement
 //! [`Transformer`].
 
-use crate::ops::cache::Cacheable;
-use crate::ops::callbacks::TaskCallbacks;
+use crate::ops::callbacks::Callbacks;
 use crate::ops::Ops;
 
 pub mod affine;
@@ -75,14 +74,14 @@ pub enum Phase {
 /// Per-call context handed to [`Transformer::apply`].
 ///
 /// Bundles the mutable [`Ops`] being modified with the caller's
-/// [`TaskCallbacks`] so transformers can report progress, poll for
+/// [`Callbacks`] so transformers can report progress, poll for
 /// cancellation, and (for raster sources) emit progressive chunks
 /// without depending on a separate progress trait.
 pub struct TransformCtx<'a> {
     /// The ops being modified in place.
     pub ops: &'a mut Ops,
     /// The caller's callback bundle.
-    pub callbacks: &'a dyn TaskCallbacks,
+    pub callbacks: &'a dyn Callbacks,
 }
 
 /// A typed transformer spec driven by [`apply_transformers`].
@@ -91,14 +90,14 @@ pub struct TransformCtx<'a> {
 /// needs no knowledge of concrete types. `Send + Sync` is required
 /// so a `Box<dyn Transformer>` can be held across thread boundaries
 /// by the caller.
-pub trait Transformer: Cacheable<Ops> + Send + Sync {
+pub trait Transformer: Send + Sync {
     /// The execution phase this transformer belongs to.
     fn phase(&self) -> Phase;
 
     /// Apply the transformer to `ctx.ops` in place. Implementations
     /// may poll `ctx.callbacks.is_cancelled()` between meaningful
     /// units of work and report progress through
-    /// [`TaskCallbacks::report_progress`].
+    /// [`Callbacks::report_progress`].
     fn apply(&self, ctx: &mut TransformCtx<'_>);
 
     /// Short, human-readable name used in progress messages.
@@ -119,7 +118,7 @@ pub trait Transformer: Cacheable<Ops> + Send + Sync {
 pub fn apply_transformers(
     ops: &mut Ops,
     specs: &mut [Box<dyn Transformer>],
-    callbacks: &dyn TaskCallbacks,
+    callbacks: &dyn Callbacks,
 ) -> Result<(), Cancelled> {
     specs.sort_by_key(|s| s.phase());
 

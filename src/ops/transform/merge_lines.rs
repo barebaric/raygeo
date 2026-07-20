@@ -6,7 +6,6 @@
 
 use std::collections::{HashMap, HashSet};
 
-use crate::ops::cache::Cacheable;
 use crate::ops::container::Ops;
 use crate::ops::enums::{CommandCategory, CommandType};
 use crate::ops::transform::{Phase, TransformCtx, Transformer};
@@ -32,8 +31,6 @@ impl Transformer for MergeLinesSpec {
         "merge_lines"
     }
 }
-
-impl Cacheable<Ops> for MergeLinesSpec {}
 
 /// Apply merge-lines to the given ops.
 ///

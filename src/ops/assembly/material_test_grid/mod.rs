@@ -3,9 +3,7 @@ use std::collections::BTreeMap;
 use crate::geo::shape::text::{text_to_geometry, FontConfig};
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::tracelet::Tracelet;
-use crate::ops::assembly::AssemblyOutput;
 use crate::ops::assembly::{AssembleCtx, Assembler};
-use crate::ops::cache::Cacheable;
 use crate::ops::container::Ops;
 use crate::ops::types::{MoveCmd, OpCategory, ToolPose};
 use crate::trace_types::{Meta, MetaValue, MoveKind};
@@ -67,8 +65,6 @@ impl Assembler for MaterialTestGridSpec {
         "material_test_grid"
     }
 }
-
-impl Cacheable<AssemblyOutput> for MaterialTestGridSpec {}
 
 /// Generate a material test grid with varying speed and power settings.
 ///

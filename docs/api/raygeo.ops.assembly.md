@@ -33,60 +33,19 @@ by \[`PyAssembler::into_core`\].
 ### `cache_key()`
 
 ```python
-cache_key(part: part.Part, tag: str) -> Optional[cache.CacheKey]
+cache_key(part: part.Part, tag: str) -> Optional[tuple[str, int]]
 ```
 
 Compute a cache key for this assembler against the given part.
 
-Returns `None` for assemblers that opt out of caching (e.g.
-**~raygeo.ops.assembly.contour.ContourSpec**), or a **CacheKey** for assemblers that opt in (e.g.
-**~raygeo.ops.assembly.adaptive.AdaptiveClearingSpec**).
+Returns `None` for assemblers that opt out of caching, or a `(tag, payload_hash)` tuple for
+assemblers that opt in.
 
-| Parameter | Type                       | Description                                                                  |
-| --------- | -------------------------- | ---------------------------------------------------------------------------- |
-| `part`    | `part.Part`                | The part whose primary face state is hashed.                                 |
-| `tag`     | `str`                      | Caller-provided identifier (used for prefix-based pruning of cache entries). |
-| _Returns_ | `Optional[cache.CacheKey]` | A **CacheKey** or `None`.                                                    |
-
-### `restore_cache()`
-
-```python
-restore_cache(cached: AssemblyOutput) -> Optional[AssemblyOutput]
-```
-
-Reconstruct a cached result from a **AssemblyOutput**.
-
-Assemblers that opt out return `None` unconditionally. Assemblers that opt in (e.g. adaptive
-clearing) return `Some` with the reconstructed value.
-
-| Parameter | Type                       | Description                     |
-| --------- | -------------------------- | ------------------------------- |
-| `cached`  | `AssemblyOutput`           | The cached value to restore.    |
-| _Returns_ | `Optional[AssemblyOutput]` | A **AssemblyOutput** or `None`. |
-
-### `store_cache()`
-
-```python
-store_cache(
-    ops: ops.Ops,
-    is_scalable: bool,
-    source_dimensions: Optional[tuple[float, float]],
-    part: part.Part,
-) -> Optional[AssemblyOutput]
-```
-
-Build a **AssemblyOutput** from the assembler's output.
-
-Assemblers that opt out return `None` unconditionally. Assemblers that opt in return `Some` with the
-output packaged for the cache.
-
-| Parameter           | Type                            | Description                                          |
-| ------------------- | ------------------------------- | ---------------------------------------------------- |
-| `ops`               | `ops.Ops`                       | The assembled Ops.                                   |
-| `is_scalable`       | `bool`                          | Whether the Ops may be uniformly scaled.             |
-| `source_dimensions` | `Optional[tuple[float, float]]` | Source `(width_mm, height_mm)`.                      |
-| `part`              | `part.Part`                     | The part (face state is read for cleared fragments). |
-| _Returns_           | `Optional[AssemblyOutput]`      | A **AssemblyOutput** or `None`.                      |
+| Parameter | Type                        | Description |
+| --------- | --------------------------- | ----------- |
+| `part`    | `part.Part`                 |             |
+| `tag`     | `str`                       |             |
+| _Returns_ | `Optional[tuple[str, int]]` |             |
 
 ## AssemblyOutput
 

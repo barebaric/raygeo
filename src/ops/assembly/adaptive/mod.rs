@@ -144,20 +144,13 @@ impl crate::ops::assembly::Assembler for AdaptiveClearingSpec {
     fn name(&self) -> &'static str {
         "adaptive_clearing"
     }
-}
 
-impl crate::ops::cache::Cacheable<crate::ops::assembly::AssemblyOutput>
-    for AdaptiveClearingSpec
-{
-    fn cache_key(
+    fn cache_key_for_face(
         &self,
-        face: Option<&crate::ops::part::FaceState>,
-        tag: &str,
-    ) -> Option<crate::ops::cache::CacheKey> {
-        let face = face?;
+        face: &crate::ops::part::FaceState,
+    ) -> Option<u64> {
         use std::hash::{Hash, Hasher};
         let mut h = std::collections::hash_map::DefaultHasher::new();
-        // Spec fields (everything we read).
         self.tool_radius.to_bits().hash(&mut h);
         self.step_over.to_bits().hash(&mut h);
         self.step_length.to_bits().hash(&mut h);
@@ -185,9 +178,6 @@ impl crate::ops::cache::Cacheable<crate::ops::assembly::AssemblyOutput>
         }
         self.expansion_batch_size.hash(&mut h);
         self.tolerance.to_bits().hash(&mut h);
-        // Face state reads: geometry + stock_region + cleared fragments.
-        // Geometry is hashed via its command count + a sample of
-        // endpoints; full hashing would be expensive.
         if let Some(geo) = &face.geometry {
             geo.len().hash(&mut h);
         } else {
@@ -200,7 +190,7 @@ impl crate::ops::cache::Cacheable<crate::ops::assembly::AssemblyOutput>
         for frag in face.cleared.fragments() {
             hash_polygons(&mut h, frag);
         }
-        Some(crate::ops::cache::CacheKey::new(tag, h.finish()))
+        Some(h.finish())
     }
 
     fn restore_cache(

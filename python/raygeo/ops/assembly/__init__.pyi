@@ -17,7 +17,6 @@ can drive it through the trait.
 
 import builtins
 from raygeo import ops
-from raygeo.ops import cache
 from raygeo.ops.cut import search
 from raygeo.ops import part
 import typing
@@ -78,44 +77,12 @@ class Assembler:
             :class:`~raygeo.ops.assembly.contour.ContourSpec`).
         """
     def __repr__(self) -> builtins.str: ...
-    def cache_key(self, part: part.Part, tag: builtins.str) -> typing.Optional[cache.CacheKey]:
+    def cache_key(self, part: part.Part, tag: builtins.str) -> typing.Optional[tuple[builtins.str, builtins.int]]:
         r"""
         Compute a cache key for this assembler against the given part.
         
-        Returns ``None`` for assemblers that opt out of caching
-        (e.g. :class:`~raygeo.ops.assembly.contour.ContourSpec`),
-        or a :class:`CacheKey` for assemblers that opt in (e.g.
-        :class:`~raygeo.ops.assembly.adaptive.AdaptiveClearingSpec`).
-        
-        :param part: The part whose primary face state is hashed.
-        :param tag: Caller-provided identifier (used for prefix-based
-            pruning of cache entries).
-        :returns: A :class:`CacheKey` or ``None``.
-        """
-    def restore_cache(self, cached: AssemblyOutput) -> typing.Optional[AssemblyOutput]:
-        r"""
-        Reconstruct a cached result from a :class:`AssemblyOutput`.
-        
-        Assemblers that opt out return ``None`` unconditionally.
-        Assemblers that opt in (e.g. adaptive clearing) return
-        ``Some`` with the reconstructed value.
-        
-        :param cached: The cached value to restore.
-        :returns: A :class:`AssemblyOutput` or ``None``.
-        """
-    def store_cache(self, ops: ops.Ops, is_scalable: builtins.bool, source_dimensions: typing.Optional[tuple[builtins.float, builtins.float]], part: part.Part) -> typing.Optional[AssemblyOutput]:
-        r"""
-        Build a :class:`AssemblyOutput` from the assembler's output.
-        
-        Assemblers that opt out return ``None`` unconditionally.
-        Assemblers that opt in return ``Some`` with the output
-        packaged for the cache.
-        
-        :param ops: The assembled Ops.
-        :param is_scalable: Whether the Ops may be uniformly scaled.
-        :param source_dimensions: Source ``(width_mm, height_mm)``.
-        :param part: The part (face state is read for cleared fragments).
-        :returns: A :class:`AssemblyOutput` or ``None``.
+        Returns ``None`` for assemblers that opt out of caching, or
+        a ``(tag, payload_hash)`` tuple for assemblers that opt in.
         """
 
 @typing.final

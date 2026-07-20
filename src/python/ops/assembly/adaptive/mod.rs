@@ -19,7 +19,9 @@ use crate::python::ops::assembly::progress_event_to_py;
 use crate::python::ops::assembly::result::PyAssemblyResult;
 use crate::types::Point3D;
 use pyo3::prelude::*;
-use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction};
+use pyo3_stub_gen::derive::{
+    gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pymethods,
+};
 use std::path::PathBuf;
 
 /// Callback passed to the core algorithm as `cancel_check`.
@@ -337,6 +339,7 @@ impl PyAdaptiveClearingSpec {
     }
 }
 
+#[gen_stub_pymethods]
 #[pyo3::pymethods]
 impl PyAdaptiveClearingSpec {
     #[new]

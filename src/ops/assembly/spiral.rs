@@ -11,9 +11,7 @@ use crate::geo::shape::polygon::get_circle_polygon;
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::trace_utils as tu;
 use crate::ops::assembly::write_polyline;
-use crate::ops::assembly::AssemblyOutput;
 use crate::ops::assembly::{AssembleCtx, Assembler, Tracelet};
-use crate::ops::cache::Cacheable;
 use crate::ops::part::FaceState;
 use crate::ops::state::State;
 use crate::types::{Point, Point3D};
@@ -50,8 +48,6 @@ impl Assembler for SpiralSpec {
         "spiral"
     }
 }
-
-impl Cacheable<AssemblyOutput> for SpiralSpec {}
 
 /// Generate a flat spiral entry path followed by a smoothing circular pass.
 ///

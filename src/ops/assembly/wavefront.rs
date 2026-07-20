@@ -15,9 +15,7 @@ use crate::geo::shape::polygon::{
     is_point_inside_polygon, resample_polygon,
 };
 use crate::ops::assembly::result::AssemblyMeta;
-use crate::ops::assembly::AssemblyOutput;
 use crate::ops::assembly::{AssembleCtx, Assembler, Tracelet};
-use crate::ops::cache::Cacheable;
 use crate::ops::container::Ops;
 use crate::ops::part::{FaceState, Part};
 use crate::ops::state::State;
@@ -51,8 +49,6 @@ impl Assembler for AdaptiveWavefrontSpec {
         "wavefront"
     }
 }
-
-impl Cacheable<AssemblyOutput> for AdaptiveWavefrontSpec {}
 
 /// Inside-out adaptive wavefronts.
 ///

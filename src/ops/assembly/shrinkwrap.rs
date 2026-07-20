@@ -18,7 +18,6 @@ use crate::geo::geometry::Geometry;
 use crate::ops::assembly::contour::compute_total_offset;
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::{AssembleCtx, Assembler};
-use crate::ops::cache::Cacheable;
 use crate::ops::container::Ops;
 use crate::ops::part::ImageSource;
 use crate::ops::types::ToolPose;
@@ -77,8 +76,6 @@ impl Assembler for ShrinkwrapSpec {
         "shrinkwrap"
     }
 }
-
-impl Cacheable<crate::ops::assembly::AssemblyOutput> for ShrinkwrapSpec {}
 
 /// Convert hull points from pixel space to millimetre space.
 fn hull_to_mm(

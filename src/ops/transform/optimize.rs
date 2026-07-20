@@ -8,8 +8,7 @@ use std::collections::HashSet;
 use rstar::{PointDistance, RTree, RTreeObject, AABB};
 
 use super::link::{find_pass_entry, find_pass_exit};
-use crate::ops::cache::Cacheable;
-use crate::ops::callbacks::TaskCallbacks;
+use crate::ops::callbacks::Callbacks;
 use crate::ops::container::Ops;
 use crate::ops::enums::{CommandCategory, CommandType};
 use crate::ops::state::State;
@@ -50,8 +49,6 @@ impl Transformer for OptimizeSpec {
         "optimize"
     }
 }
-
-impl Cacheable<Ops> for OptimizeSpec {}
 
 #[derive(Clone)]
 struct WorkpieceMeta {
@@ -643,7 +640,7 @@ pub fn optimize_travel(
     allow_flip: bool,
     preserve_first: bool,
     preserve_order: Vec<String>,
-    callbacks: &dyn TaskCallbacks,
+    callbacks: &dyn Callbacks,
 ) {
     ops.preload_state();
 
@@ -663,11 +660,7 @@ pub fn optimize_travel(
     optimize_segments(ops, allow_flip, callbacks);
 }
 
-fn report_progress(
-    callbacks: &dyn TaskCallbacks,
-    progress: f64,
-    message: &str,
-) {
+fn report_progress(callbacks: &dyn Callbacks, progress: f64, message: &str) {
     callbacks.report_progress(progress, message);
 }
 
@@ -677,7 +670,7 @@ fn optimize_workpiece_order(
     allow_flip: bool,
     preserve_first: bool,
     preserve_order: &[String],
-    callbacks: &dyn TaskCallbacks,
+    callbacks: &dyn Callbacks,
 ) {
     report_progress(callbacks, 0.0, "Analyzing workpieces...");
 
@@ -760,7 +753,7 @@ fn reassemble_workpieces(ops: &mut Ops, ordered_metas: &[WorkpieceMeta]) {
 fn optimize_segments(
     ops: &mut Ops,
     allow_flip: bool,
-    callbacks: &dyn TaskCallbacks,
+    callbacks: &dyn Callbacks,
 ) {
     report_progress(callbacks, 0.0, "Preprocessing for optimization...");
 

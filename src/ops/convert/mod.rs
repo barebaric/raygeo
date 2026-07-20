@@ -16,7 +16,6 @@
 //! `ops::transform` drives transformers through `Transformer`. All
 //! three traits take their callbacks from [`crate::ops::callbacks`].
 
-use crate::ops::callbacks::TaskCallbacks;
 use crate::ops::container::Ops;
 use crate::ops::convert::vertex_arrays::VertexArrays;
 
@@ -29,7 +28,7 @@ pub mod polyline;
 pub mod texture;
 pub mod vertex_arrays;
 
-use crate::ops::cache::Cacheable;
+use crate::ops::callbacks::Callbacks;
 
 /// Non-Ops artifact produced by an [`Encoder`].
 ///
@@ -63,13 +62,13 @@ pub enum EncodeOutput {
 /// Per-call context handed to [`Encoder::encode`].
 ///
 /// Bundles the immutable [`Ops`] being encoded with the caller's
-/// [`TaskCallbacks`] so encoders can report progress and poll for
+/// [`Callbacks`] so encoders can report progress and poll for
 /// cancellation without depending on a separate progress trait.
 pub struct EncodeCtx<'a> {
     /// The ops being encoded.
     pub ops: &'a Ops,
     /// The caller's callback bundle.
-    pub callbacks: &'a dyn TaskCallbacks,
+    pub callbacks: &'a dyn Callbacks,
 }
 
 /// A typed encoder spec.
@@ -83,7 +82,7 @@ pub struct EncodeCtx<'a> {
 ///
 /// `Send + Sync` is required so a `Box<dyn Encoder>` can be held
 /// across thread boundaries by the caller.
-pub trait Encoder: Cacheable<EncodeOutput> + Send + Sync {
+pub trait Encoder: Send + Sync {
     /// Run the encoder against the supplied [`EncodeCtx`].
     ///
     /// On success, returns the encoder's [`EncodeOutput`]. On

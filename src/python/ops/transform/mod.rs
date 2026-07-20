@@ -20,7 +20,7 @@ use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyclass_enum;
 
-use crate::ops::callbacks::TaskCallbacks;
+use crate::ops::callbacks::Callbacks;
 use crate::ops::transform as core_transform;
 use crate::python::ops::transform::bidir_scan_offset::BidirScanOffsetSpec;
 use crate::python::ops::transform::clip::CropSpec;
@@ -134,16 +134,13 @@ pub fn extract_transformer(
     )))
 }
 
-/// Adapter implementing [`TaskCallbacks`] by delegating to a single
+/// Adapter implementing [`Callbacks`] by delegating to a single
 /// Python callable.
 ///
 /// The Python object is expected to be callable as
 /// `cb(progress, message)` and to expose an `is_cancelled()` method.
 /// Either may be absent on the object; the adapter degrades
-/// gracefully (no reports / no cancellation) in that case. Used both
-/// for the per-node callback bridge and for the legacy
-/// ``Ops.apply_transformers(..., progress_cb=...)`` /
-/// ``Ops.optimize_travel(..., progress_cb=...)`` signatures.
+/// gracefully (no reports / no cancellation) in that case.
 pub struct PyCallableCallbacks {
     cb: Option<Py<PyAny>>,
 }
@@ -159,7 +156,7 @@ impl PyCallableCallbacks {
     }
 }
 
-impl TaskCallbacks for PyCallableCallbacks {
+impl Callbacks for PyCallableCallbacks {
     fn report_progress(&self, frac: f64, msg: &str) {
         if let Some(ref cb) = self.cb {
             Python::attach(|py| {

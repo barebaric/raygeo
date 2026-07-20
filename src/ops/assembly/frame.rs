@@ -16,7 +16,6 @@ use crate::geo::geometry::Geometry;
 use crate::ops::assembly::contour::compute_total_offset;
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::{AssembleCtx, Assembler};
-use crate::ops::cache::Cacheable;
 use crate::ops::container::Ops;
 use crate::ops::types::ToolPose;
 use crate::types::Point3D;
@@ -61,8 +60,6 @@ impl Assembler for FrameSpec {
         "frame"
     }
 }
-
-impl Cacheable<crate::ops::assembly::AssemblyOutput> for FrameSpec {}
 
 /// Generate a rectangular frame matching the part's `size_mm`,
 /// optionally offset by kerf / path-offset / cut-side.

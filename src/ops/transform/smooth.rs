@@ -6,7 +6,6 @@
 //! non-line segments unchanged.
 
 use crate::geo::algo::smooth::smooth_polyline_3d;
-use crate::ops::cache::Cacheable;
 use crate::ops::container::Ops;
 use crate::ops::enums::CommandType;
 use crate::ops::transform::{Phase, TransformCtx, Transformer};
@@ -35,8 +34,6 @@ impl Transformer for SmoothSpec {
         "smooth"
     }
 }
-
-impl Cacheable<Ops> for SmoothSpec {}
 
 /// Check whether a segment contains only MoveTo followed by LineTo
 /// commands (at least 2 commands).

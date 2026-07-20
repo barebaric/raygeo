@@ -1,10 +1,10 @@
 //! Per-task callback interface shared across the `ops` layer.
 //!
-//! [`TaskCallbacks`] is the trait used by assembler implementations
+//! [`Callbacks`] is the trait used by assembler implementations
 //! (under [`crate::ops::assembly`]) and transformer implementations
 //! (under [`crate::ops::transform`]) to report progress, poll for
 //! cancellation, and emit progressive chunks back to the caller. The
-//! trait is object-safe so a `Box<dyn TaskCallbacks>` can be held
+//! trait is object-safe so a `Box<dyn Callbacks>` can be held
 //! without the ops layer depending on pyo3.
 //!
 //! This module sits at the root of `ops` because both `assembly` and
@@ -16,7 +16,7 @@
 /// Progressive paint chunk emitted by raster assemblers.
 ///
 /// Raster assemblers that produce partial Ops as slabs complete push
-/// a `ChunkPayload` via [`TaskCallbacks::emit_chunk`]. The payload
+/// a `ChunkPayload` via [`Callbacks::emit_chunk`]. The payload
 /// carries the slab's row range and the partial Ops; the caller
 /// paints it onto the canvas without waiting for the full stage to
 /// finish.
@@ -37,11 +37,7 @@ pub struct ChunkPayload {
 /// transformers ([`crate::ops::transform::Transformer`]) so every
 /// long-running unit of work shares one progress / cancellation /
 /// chunk shape.
-///
-/// `Send + Sync` so the trait object can be held by a
-/// `Box<dyn TaskCallbacks>` regardless of the caller's threading
-/// model.
-pub trait TaskCallbacks: Send + Sync {
+pub trait Callbacks: Send {
     /// Report progress in `[0.0, 1.0]` with a short message.
     ///
     /// Implementors decide whether to reacquire the GIL — the ops
@@ -60,12 +56,12 @@ pub trait TaskCallbacks: Send + Sync {
     fn emit_chunk(&self, _chunk: ChunkPayload) {}
 }
 
-/// A no-op `TaskCallbacks` for tests and code paths that don't need
+/// A no-op `Callbacks` for tests and code paths that don't need
 /// callbacks.
 #[derive(Debug, Default, Clone, Copy)]
 pub struct NoCallbacks;
 
-impl TaskCallbacks for NoCallbacks {
+impl Callbacks for NoCallbacks {
     fn report_progress(&self, _frac: f64, _msg: &str) {}
     fn is_cancelled(&self) -> bool {
         false

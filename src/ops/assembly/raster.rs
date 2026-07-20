@@ -12,7 +12,6 @@
 use crate::error::{RaygeoError, RaygeoResult};
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::{AssembleCtx, Assembler};
-use crate::ops::cache::Cacheable;
 use crate::ops::container::Ops;
 use crate::ops::convert::image::ScanMode;
 use crate::ops::enums::{RasterMode, SectionType};
@@ -106,8 +105,6 @@ impl Assembler for RasterSpec {
         "raster"
     }
 }
-
-impl Cacheable<crate::ops::assembly::AssemblyOutput> for RasterSpec {}
 
 /// Rasterise a part image into scan paths.
 ///

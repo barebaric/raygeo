@@ -13,7 +13,6 @@ use crate::fstring::{
     parse_include_directive, render_named, resolve_path_vars, NamedVars,
 };
 use crate::ops::axis::Axis;
-use crate::ops::cache::Cacheable;
 use crate::ops::container::Ops;
 use crate::ops::convert::gcode_types::{
     EncodeContext, EncodeResult, GcodeDialectSpec, Macro, MacroTable,
@@ -1077,8 +1076,6 @@ impl Encoder for GcodeSpec {
         "gcode"
     }
 }
-
-impl Cacheable<EncodeOutput> for GcodeSpec {}
 
 /// Parse a JSON-serialised `EncodeContext`.
 fn parse_context<T: DeserializeOwned>(json: &str) -> Result<T, String> {

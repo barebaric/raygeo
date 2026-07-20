@@ -1,4 +1,3 @@
-use crate::ops::cache::Cacheable;
 use crate::ops::transform::{Phase, TransformCtx, Transformer};
 use crate::ops::Ops;
 
@@ -24,8 +23,6 @@ impl Transformer for MultiPassSpec {
         "multipass"
     }
 }
-
-impl Cacheable<Ops> for MultiPassSpec {}
 
 /// Repeats the ops sequence multiple times, optionally translating each
 /// subsequent pass down the Z axis.

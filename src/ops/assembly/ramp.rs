@@ -10,9 +10,7 @@ use crate::geo::shape::polygon::get_segment_swept_polygon;
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::trace_utils as tu;
 use crate::ops::assembly::write_polyline;
-use crate::ops::assembly::AssemblyOutput;
 use crate::ops::assembly::{AssembleCtx, Assembler, Tracelet};
-use crate::ops::cache::Cacheable;
 use crate::ops::part::FaceState;
 use crate::ops::state::State;
 use crate::ops::types::ToolPose;
@@ -46,8 +44,6 @@ impl Assembler for RampSpec {
         "ramp"
     }
 }
-
-impl Cacheable<AssemblyOutput> for RampSpec {}
 
 /// Generate a ramp entry path.
 ///
