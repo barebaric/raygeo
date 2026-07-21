@@ -33,6 +33,15 @@ impl Transformer for SmoothSpec {
     fn name(&self) -> &'static str {
         "smooth"
     }
+
+    fn cache_key(&self) -> u64 {
+        use std::hash::{Hash, Hasher};
+        let mut h = std::collections::hash_map::DefaultHasher::new();
+        self.name().hash(&mut h);
+        self.amount.hash(&mut h);
+        self.corner_angle_threshold.to_bits().hash(&mut h);
+        h.finish()
+    }
 }
 
 /// Check whether a segment contains only MoveTo followed by LineTo

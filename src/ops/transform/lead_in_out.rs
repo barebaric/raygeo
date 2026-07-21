@@ -26,6 +26,15 @@ impl Transformer for LeadInOutSpec {
     fn name(&self) -> &'static str {
         "lead_in_out"
     }
+
+    fn cache_key(&self) -> u64 {
+        use std::hash::{Hash, Hasher};
+        let mut h = std::collections::hash_map::DefaultHasher::new();
+        self.name().hash(&mut h);
+        self.lead_in_mm.to_bits().hash(&mut h);
+        self.lead_out_mm.to_bits().hash(&mut h);
+        h.finish()
+    }
 }
 
 pub fn apply_lead_in_out(ops: &mut Ops, lead_in_mm: f64, lead_out_mm: f64) {

@@ -21,6 +21,14 @@ impl Transformer for BidirScanOffsetSpec {
     fn name(&self) -> &'static str {
         "bidir_scan_offset"
     }
+
+    fn cache_key(&self) -> u64 {
+        use std::hash::{Hash, Hasher};
+        let mut h = std::collections::hash_map::DefaultHasher::new();
+        self.name().hash(&mut h);
+        self.offset_mm.to_bits().hash(&mut h);
+        h.finish()
+    }
 }
 
 /// Apply bidirectional scan offset to right-to-left raster passes.

@@ -22,6 +22,15 @@ impl Transformer for MultiPassSpec {
     fn name(&self) -> &'static str {
         "multipass"
     }
+
+    fn cache_key(&self) -> u64 {
+        use std::hash::{Hash, Hasher};
+        let mut h = std::collections::hash_map::DefaultHasher::new();
+        self.name().hash(&mut h);
+        self.passes.hash(&mut h);
+        self.z_step_down.to_bits().hash(&mut h);
+        h.finish()
+    }
 }
 
 /// Repeats the ops sequence multiple times, optionally translating each

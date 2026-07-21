@@ -6,7 +6,9 @@ use crate::python::ops::assembly::result::PyAssemblyResult;
 use crate::python::ops::state::PyState;
 use crate::types::{Point, Point3D};
 use pyo3::prelude::*;
-use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction};
+use pyo3_stub_gen::derive::{
+    gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pymethods,
+};
 
 pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = assembly_mod.py();
@@ -75,6 +77,7 @@ impl PyToroidSpec {
     }
 }
 
+#[gen_stub_pymethods]
 #[pyo3::pymethods]
 impl PyToroidSpec {
     #[new]
@@ -162,6 +165,7 @@ impl PyToroidalClearSpec {
     }
 }
 
+#[gen_stub_pymethods]
 #[pyo3::pymethods]
 impl PyToroidalClearSpec {
     #[new]

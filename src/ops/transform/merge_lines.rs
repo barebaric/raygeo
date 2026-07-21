@@ -30,6 +30,14 @@ impl Transformer for MergeLinesSpec {
     fn name(&self) -> &'static str {
         "merge_lines"
     }
+
+    fn cache_key(&self) -> u64 {
+        use std::hash::{Hash, Hasher};
+        let mut h = std::collections::hash_map::DefaultHasher::new();
+        self.name().hash(&mut h);
+        self.tolerance.to_bits().hash(&mut h);
+        h.finish()
+    }
 }
 
 /// Apply merge-lines to the given ops.

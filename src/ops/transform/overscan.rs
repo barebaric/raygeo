@@ -23,6 +23,14 @@ impl Transformer for OverscanSpec {
     fn name(&self) -> &'static str {
         "overscan"
     }
+
+    fn cache_key(&self) -> u64 {
+        use std::hash::{Hash, Hasher};
+        let mut h = std::collections::hash_map::DefaultHasher::new();
+        self.name().hash(&mut h);
+        self.distance_mm.to_bits().hash(&mut h);
+        h.finish()
+    }
 }
 
 pub fn apply_overscan(ops: &mut Ops, distance_mm: f64) {

@@ -43,6 +43,22 @@ impl Transformer for CropSpec {
     fn name(&self) -> &'static str {
         "crop"
     }
+
+    fn cache_key(&self) -> u64 {
+        use std::hash::{Hash, Hasher};
+        let mut h = std::collections::hash_map::DefaultHasher::new();
+        self.name().hash(&mut h);
+        self.tolerance.to_bits().hash(&mut h);
+        self.offset.to_bits().hash(&mut h);
+        for region in &self.regions {
+            region.len().hash(&mut h);
+            for pt in region {
+                pt.x.to_bits().hash(&mut h);
+                pt.y.to_bits().hash(&mut h);
+            }
+        }
+        h.finish()
+    }
 }
 
 /// Add a clipped line segment to `new_ops`, inserting a move-to if the pen position

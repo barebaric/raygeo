@@ -1,6 +1,8 @@
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
-use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction};
+use pyo3_stub_gen::derive::{
+    gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pymethods,
+};
 
 use crate::geo::geometry::Geometry;
 use crate::image::render::{geometry_to_image, RenderOptions};
@@ -119,6 +121,7 @@ impl PyMaterialTestGridSpec {
     }
 }
 
+#[gen_stub_pymethods]
 #[pyo3::pymethods]
 impl PyMaterialTestGridSpec {
     #[new]

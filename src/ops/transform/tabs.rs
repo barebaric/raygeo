@@ -64,6 +64,20 @@ impl Transformer for TabsSpec {
     fn name(&self) -> &'static str {
         "tabs"
     }
+
+    fn cache_key(&self) -> u64 {
+        use std::hash::{Hash, Hasher};
+        let mut h = std::collections::hash_map::DefaultHasher::new();
+        self.name().hash(&mut h);
+        self.tab_power.to_bits().hash(&mut h);
+        self.original_power.to_bits().hash(&mut h);
+        for clip in &self.clips {
+            clip.x.to_bits().hash(&mut h);
+            clip.y.to_bits().hash(&mut h);
+            clip.width.to_bits().hash(&mut h);
+        }
+        h.finish()
+    }
 }
 
 /// A distance interval along a subpath that should be gapped or power-modulated.

@@ -48,6 +48,16 @@ impl Transformer for OptimizeSpec {
     fn name(&self) -> &'static str {
         "optimize"
     }
+
+    fn cache_key(&self) -> u64 {
+        use std::hash::{Hash, Hasher};
+        let mut h = std::collections::hash_map::DefaultHasher::new();
+        self.name().hash(&mut h);
+        self.allow_flip.hash(&mut h);
+        self.preserve_first.hash(&mut h);
+        self.preserve_order.hash(&mut h);
+        h.finish()
+    }
 }
 
 #[derive(Clone)]

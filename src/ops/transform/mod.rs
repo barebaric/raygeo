@@ -102,6 +102,40 @@ pub trait Transformer: Send + Sync {
 
     /// Short, human-readable name used in progress messages.
     fn name(&self) -> &'static str;
+
+    /// Hash the parameters that affect this transformer's output.
+    ///
+    /// The returned hash is folded into the owning node's cache key
+    /// so that changing a transformer (or any of its parameters)
+    /// invalidates the cache independently of the assembler's hash.
+    /// Returning `0` is allowed for transformers whose effect is
+    /// already captured by the upstream cache key, but the default
+    /// is to hash the transformer's `name()` so that adding any
+    /// transformer (even with default params) changes the cache key.
+    fn cache_key(&self) -> u64 {
+        use std::hash::{Hash, Hasher};
+        let mut h = std::collections::hash_map::DefaultHasher::new();
+        self.name().hash(&mut h);
+        h.finish()
+    }
+}
+
+/// Combine an assembler hash with a list of transformer hashes into
+/// a single cache-key payload hash.
+///
+/// The two components are kept separate so that changing either
+/// independently invalidates the cache. `assembler_hash` may be `0`
+/// (when the assembler opts out of caching); `transformer_hashes`
+/// may be empty (when no transformers are attached).
+pub fn combine_cache_hashes(
+    assembler_hash: u64,
+    transformer_hashes: &[u64],
+) -> u64 {
+    use std::hash::{Hash, Hasher};
+    let mut h = std::collections::hash_map::DefaultHasher::new();
+    assembler_hash.hash(&mut h);
+    transformer_hashes.hash(&mut h);
+    h.finish()
 }
 
 /// Apply a sequence of transformer specs to an `Ops` in phase order.
