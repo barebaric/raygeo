@@ -1,6 +1,7 @@
 use crate::image::scan::{
-    compute_power_values, downsample_power_values, find_mask_bounding_box,
-    find_segments, generate_scan_lines, sample_mask_along_line, ScanLine,
+    apply_dot_width_trim, compute_power_values, downsample_power_values,
+    find_mask_bounding_box, find_segments, generate_scan_lines,
+    sample_mask_along_line, ScanLine,
 };
 use crate::ops::container::Ops;
 
@@ -20,6 +21,34 @@ fn convert_y_to_output(y_mm: f64, ymax_mm: f64) -> f64 {
 
 fn is_reversed(scan_line_index: i64) -> bool {
     (scan_line_index % 2) != 0
+}
+
+/// Samples per mm along `scan_line`'s own sampled span (not an assumed
+/// grid spacing), so it stays correct at any scan angle.
+fn line_samples_per_mm(scan_line: &ScanLine, pixels_per_mm: (f64, f64)) -> f64 {
+    if scan_line.pixels.len() < 2 {
+        return 0.0;
+    }
+    let (start_mm, end_mm) = line_endpoints_mm(scan_line, pixels_per_mm);
+    let dx = end_mm.0 - start_mm.0;
+    let dy = end_mm.1 - start_mm.1;
+    let length_mm = dx.hypot(dy);
+    if length_mm < 1e-9 {
+        return 0.0;
+    }
+    (scan_line.pixels.len() - 1) as f64 / length_mm
+}
+
+fn dot_width_trim_px(
+    scan_line: &ScanLine,
+    pixels_per_mm: (f64, f64),
+    dot_width_correction_mm: f64,
+) -> usize {
+    if dot_width_correction_mm <= 0.0 {
+        return 0;
+    }
+    let samples_per_mm = line_samples_per_mm(scan_line, pixels_per_mm);
+    (dot_width_correction_mm * samples_per_mm).round() as usize
 }
 
 fn line_endpoints_mm(
@@ -143,6 +172,7 @@ fn emit_line(
     ops.line_to(end_mm.0, convert_y_to_output(end_mm.1, ymax_mm), z, None);
 }
 
+#[allow(clippy::too_many_arguments)]
 fn process_power_full_sweep(
     ops: &mut Ops,
     scan_line: &ScanLine,
@@ -151,11 +181,14 @@ fn process_power_full_sweep(
     sample_interval_mm: f64,
     ymax_mm: f64,
     rev: bool,
+    trim_px: usize,
 ) {
     let (start_mm, end_mm) = line_endpoints_mm(scan_line, pixels_per_mm);
+    let mut power_values = power_values.to_vec();
+    apply_dot_width_trim(&mut power_values, trim_px);
     emit_downsampled_scan(
         ops,
-        power_values,
+        &power_values,
         start_mm,
         end_mm,
         sample_interval_mm,
@@ -164,6 +197,7 @@ fn process_power_full_sweep(
     );
 }
 
+#[allow(clippy::too_many_arguments)]
 fn process_power_segmented(
     ops: &mut Ops,
     scan_line: &ScanLine,
@@ -172,7 +206,9 @@ fn process_power_segmented(
     sample_interval_mm: f64,
     ymax_mm: f64,
     rev: bool,
+    trim_px: usize,
 ) {
+    // Segments come from the untrimmed array so geometry can't shift.
     let segments = find_segments(power_values);
     if segments.is_empty() {
         return;
@@ -190,9 +226,11 @@ fn process_power_segmented(
         }
         let (seg_start, seg_end) =
             segment_endpoints_mm(scan_line, si, ei, rev, pixels_per_mm);
+        let mut seg_values = power_values[si..ei].to_vec();
+        apply_dot_width_trim(&mut seg_values, trim_px);
         emit_downsampled_scan(
             ops,
-            &power_values[si..ei],
+            &seg_values,
             seg_start,
             seg_end,
             sample_interval_mm,
@@ -202,6 +240,7 @@ fn process_power_segmented(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn process_scan_full_sweep(
     ops: &mut Ops,
     scan_line: &ScanLine,
@@ -210,12 +249,14 @@ fn process_scan_full_sweep(
     ymax_mm: f64,
     step_power: f64,
     rev: bool,
+    trim_px: usize,
 ) {
     let power_byte = (255.0 * step_power).round() as u8;
-    let power_values: Vec<u8> = values
+    let mut power_values: Vec<u8> = values
         .iter()
         .map(|&v| if v > 0 { power_byte } else { 0 })
         .collect();
+    apply_dot_width_trim(&mut power_values, trim_px);
 
     let (start_mm, end_mm) = endpoints_for_scan(scan_line, rev, pixels_per_mm);
     let pw = if rev {
@@ -226,6 +267,7 @@ fn process_scan_full_sweep(
     emit_scan(ops, start_mm, end_mm, ymax_mm, pw);
 }
 
+#[allow(clippy::too_many_arguments)]
 fn process_scan_segmented(
     ops: &mut Ops,
     scan_line: &ScanLine,
@@ -234,7 +276,9 @@ fn process_scan_segmented(
     ymax_mm: f64,
     step_power: f64,
     rev: bool,
+    trim_px: usize,
 ) {
+    // Segments come from the untrimmed mask so geometry can't shift.
     let power_byte = (255.0 * step_power).round() as u8;
     let segments = find_segments(values);
     if segments.is_empty() {
@@ -253,7 +297,8 @@ fn process_scan_segmented(
         }
         let (start_mm, end_mm) =
             segment_endpoints_mm(scan_line, si, ei, rev, pixels_per_mm);
-        let pw = vec![power_byte; ei - si];
+        let mut pw = vec![power_byte; ei - si];
+        apply_dot_width_trim(&mut pw, trim_px);
         emit_scan(ops, start_mm, end_mm, ymax_mm, pw);
     }
 }
@@ -318,6 +363,7 @@ impl Ops {
         num_power_levels: usize,
         angle: f64,
         scan_mode: ScanMode,
+        dot_width_correction_mm: f64,
     ) -> Ops {
         let mut ops = Ops::new();
         let ymax_mm =
@@ -360,6 +406,11 @@ impl Ops {
                 continue;
             }
 
+            let trim_px = dot_width_trim_px(
+                scan_line,
+                pixels_per_mm,
+                dot_width_correction_mm,
+            );
             let rev = is_reversed(scan_line.index);
 
             match scan_mode {
@@ -371,6 +422,7 @@ impl Ops {
                     sample_interval_mm,
                     ymax_mm,
                     rev,
+                    trim_px,
                 ),
                 ScanMode::Segmented => process_power_segmented(
                     &mut ops,
@@ -380,6 +432,7 @@ impl Ops {
                     sample_interval_mm,
                     ymax_mm,
                     rev,
+                    trim_px,
                 ),
             }
         }
@@ -399,6 +452,7 @@ impl Ops {
         step_power: f64,
         angle: f64,
         scan_mode: ScanMode,
+        dot_width_correction_mm: f64,
     ) -> Ops {
         let mut ops = Ops::new();
         let ymax_mm =
@@ -430,6 +484,11 @@ impl Ops {
                 continue;
             }
 
+            let trim_px = dot_width_trim_px(
+                scan_line,
+                pixels_per_mm,
+                dot_width_correction_mm,
+            );
             let rev = is_reversed(scan_line.index);
 
             match scan_mode {
@@ -441,6 +500,7 @@ impl Ops {
                     ymax_mm,
                     step_power,
                     rev,
+                    trim_px,
                 ),
                 ScanMode::Segmented => process_scan_segmented(
                     &mut ops,
@@ -450,6 +510,7 @@ impl Ops {
                     ymax_mm,
                     step_power,
                     rev,
+                    trim_px,
                 ),
             }
         }

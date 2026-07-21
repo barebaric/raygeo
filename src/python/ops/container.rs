@@ -2984,10 +2984,13 @@ impl PyOps {
     /// :param num_power_levels: Number of quantised power levels.
     /// :param angle: Scan angle in degrees.
     /// :param scan_mode: ``ScanMode.SEGMENTED`` or ``ScanMode.FULL_SWEEP``.
+    /// :param dot_width_correction_mm: Shortens laser firing by this
+    ///     distance at each end of every engraved run, compensating
+    ///     for the laser spot's physical width. Geometry is unaffected.
     /// :returns: A new :class:`Ops` container.
     /// :complexity: O(h * w + n * p) where h, w = image dimensions, n = scan lines, p = pixels per line
     #[staticmethod]
-    #[pyo3(signature = (gray_image, alpha, pixels_per_mm, offset_x_mm, offset_y_mm, line_interval_mm, sample_interval_mm, min_power=0.0, max_power=1.0, step_power=1.0, num_power_levels=256, angle=0.0, scan_mode=PyScanMode::Segmented))]
+    #[pyo3(signature = (gray_image, alpha, pixels_per_mm, offset_x_mm, offset_y_mm, line_interval_mm, sample_interval_mm, min_power=0.0, max_power=1.0, step_power=1.0, num_power_levels=256, angle=0.0, scan_mode=PyScanMode::Segmented, dot_width_correction_mm=0.0))]
     #[allow(clippy::too_many_arguments)]
     fn from_power_modulated_image(
         py: Python<'_>,
@@ -3004,6 +3007,7 @@ impl PyOps {
         num_power_levels: usize,
         angle: f64,
         scan_mode: PyScanMode,
+        dot_width_correction_mm: f64,
     ) -> PyResult<Self> {
         let (gray, h, w) = extract_flat_u8(py, gray_image)?;
         let (alp, h2, w2) = extract_flat_u8(py, alpha)?;
@@ -3025,6 +3029,7 @@ impl PyOps {
             num_power_levels,
             angle,
             scan_mode.into(),
+            dot_width_correction_mm,
         );
         Ok(PyOps { inner: ops })
     }
@@ -3043,10 +3048,13 @@ impl PyOps {
     /// :param step_power: Power value (0-1) for exposed pixels.
     /// :param angle: Scan angle in degrees.
     /// :param scan_mode: ``ScanMode.SEGMENTED`` or ``ScanMode.FULL_SWEEP``.
+    /// :param dot_width_correction_mm: Shortens laser firing by this
+    ///     distance at each end of every engraved run, compensating
+    ///     for the laser spot's physical width. Geometry is unaffected.
     /// :returns: A new :class:`Ops` container.
     /// :complexity: O(h * w + n * p) where h, w = image dimensions, n = scan lines, p = pixels per line
     #[staticmethod]
-    #[pyo3(signature = (mask, pixels_per_mm, offset_x_mm, offset_y_mm, line_interval_mm, step_power=1.0, angle=0.0, scan_mode=PyScanMode::Segmented))]
+    #[pyo3(signature = (mask, pixels_per_mm, offset_x_mm, offset_y_mm, line_interval_mm, step_power=1.0, angle=0.0, scan_mode=PyScanMode::Segmented, dot_width_correction_mm=0.0))]
     #[allow(clippy::too_many_arguments)]
     fn from_mask_scan(
         py: Python<'_>,
@@ -3058,6 +3066,7 @@ impl PyOps {
         step_power: f64,
         angle: f64,
         scan_mode: PyScanMode,
+        dot_width_correction_mm: f64,
     ) -> PyResult<Self> {
         let (m, h, w) = extract_flat_u8(py, mask)?;
         let ops = crate::ops::Ops::from_mask_scan(
@@ -3071,6 +3080,7 @@ impl PyOps {
             step_power,
             angle,
             scan_mode.into(),
+            dot_width_correction_mm,
         );
         Ok(PyOps { inner: ops })
     }

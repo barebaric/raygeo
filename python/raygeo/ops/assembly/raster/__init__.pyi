@@ -7,7 +7,7 @@ __all__ = [
     "raster",
 ]
 
-def raster(part: raygeo.ops.part.Part, alpha: numpy.ndarray | None = None, mode: str = 'power_modulated', line_interval_mm: float = 0.1, sample_interval_mm: float = 0.05, min_power: float = 0, max_power: float = 1, step_power: float = 0.1, num_power_levels: int = 10, angle: float = 0, offset_x_mm: float = 0, offset_y_mm: float = 0, scan_mode: str = 'segmented', cross_hatch: bool = False, num_depth_levels: int = 5, z_step_down: float = 0, angle_increment: float = 0) -> raygeo.ops.assembly.AssemblyResult:
+def raster(part: raygeo.ops.part.Part, alpha: numpy.ndarray | None = None, mode: str = 'power_modulated', line_interval_mm: float = 0.1, sample_interval_mm: float = 0.05, min_power: float = 0, max_power: float = 1, step_power: float = 0.1, num_power_levels: int = 10, angle: float = 0, offset_x_mm: float = 0, offset_y_mm: float = 0, scan_mode: str = 'segmented', cross_hatch: bool = False, num_depth_levels: int = 5, z_step_down: float = 0, angle_increment: float = 0, dot_width_correction_mm: float = 0) -> raygeo.ops.assembly.AssemblyResult:
     r"""
     Rasterise a part image into scan paths.
     
@@ -55,6 +55,12 @@ def raster(part: raygeo.ops.part.Part, alpha: numpy.ndarray | None = None, mode:
         (multi_pass only, default 0.0).
     :param angle_increment: Angle added per depth layer in degrees
         (multi_pass only, default 0.0).
+    :param dot_width_correction_mm: Compensates for the physical
+        width of the laser spot by delaying laser-on and advancing
+        laser-off by this distance at each end of every continuous
+        engraved run. Toolpath geometry is unaffected — only the
+        firing timing along it. Applies to ``power_modulated`` and
+        ``mask_scan``/``dither`` modes only.
     :returns: An :class:`AssemblyResult` with the raster path.
     :raises ValueError: If the mode is unknown, required data is
         missing, or ``part.image`` is None.

@@ -62,6 +62,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         num_depth_levels: int = 5,
         z_step_down: float = 0.0,
         angle_increment: float = 0.0,
+        dot_width_correction_mm: float = 0.0,
     ) -> raygeo.ops.assembly.AssemblyResult:
         """Rasterise a part image into scan paths.
 
@@ -109,6 +110,11 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
             (multi_pass only, default 0.0).
         :param angle_increment: Angle added per depth layer in degrees
             (multi_pass only, default 0.0).
+        :param dot_width_correction_mm: Shortens laser firing by this
+            distance at each end of every engraved run, to compensate
+            for the physical width of the laser spot. Geometry is
+            unaffected. ``power_modulated``/``mask_scan``/``dither``
+            only.
         :returns: An :class:`AssemblyResult` with the raster path.
         :raises ValueError: If the mode is unknown, required data is
             missing, or ``part.image`` is None.
@@ -135,6 +141,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     num_depth_levels = 5,
     z_step_down = 0.0,
     angle_increment = 0.0,
+    dot_width_correction_mm = 0.0,
 ))]
 #[allow(clippy::too_many_arguments)]
 fn raster_py(
@@ -156,6 +163,7 @@ fn raster_py(
     num_depth_levels: usize,
     z_step_down: f64,
     angle_increment: f64,
+    dot_width_correction_mm: f64,
 ) -> PyResult<PyAssemblyResult> {
     let pixels_per_mm = part.inner.pixels_per_mm.ok_or_else(|| {
         PyValueError::new_err("Part has no pixels_per_mm — required for raster")
@@ -231,6 +239,7 @@ fn raster_py(
                     num_power_levels,
                     a,
                     scan_mode_val,
+                    dot_width_correction_mm,
                 )
             }
             "mask_scan" | "dither" => Ops::from_mask_scan(
@@ -244,6 +253,7 @@ fn raster_py(
                 step_power,
                 a,
                 scan_mode_val,
+                dot_width_correction_mm,
             ),
             "multi_pass" => Ops::from_multi_pass_image(
                 &gray,
