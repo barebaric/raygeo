@@ -26,9 +26,8 @@ def test_stage_spec_variants_exist():
 
 
 def test_cache_key_roundtrip():
-    key = CacheKey("test-tag", 42)
+    key = CacheKey("test-tag")
     assert key.tag == "test-tag"
-    assert key.payload_hash == 42
 
 
 # ── execute_stages — empty batch ───────────────────────────────────

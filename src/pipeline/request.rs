@@ -4,6 +4,7 @@ use crate::pipeline::stage::StageSpec;
 pub struct NodeRequest {
     pub key: String,
     pub generation_id: u64,
+    pub version_token: u64,
     pub stage: StageSpec,
     pub callbacks: Box<dyn Callbacks>,
 }
@@ -13,6 +14,7 @@ impl std::fmt::Debug for NodeRequest {
         f.debug_struct("NodeRequest")
             .field("key", &self.key)
             .field("generation_id", &self.generation_id)
+            .field("version_token", &self.version_token)
             .field("stage", &self.stage)
             .field("callbacks", &"<Callbacks>")
             .finish()
@@ -23,12 +25,14 @@ impl NodeRequest {
     pub fn new(
         key: impl Into<String>,
         generation_id: u64,
+        version_token: u64,
         stage: StageSpec,
         callbacks: Box<dyn Callbacks>,
     ) -> Self {
         NodeRequest {
             key: key.into(),
             generation_id,
+            version_token,
             stage,
             callbacks,
         }

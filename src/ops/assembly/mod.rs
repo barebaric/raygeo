@@ -142,24 +142,22 @@ pub trait Assembler: Send + Sync {
     /// Short, human-readable name used in progress messages.
     fn name(&self) -> &'static str;
 
-    /// Compute a cache-key payload hash from face state. The glue
-    /// module wraps this hash with the caller's tag to form a
-    /// `CacheKey`. Returning `None` opts out of caching.
-    fn cache_key_for_face(&self, _face: &FaceState) -> Option<u64> {
-        None
-    }
-
     /// Reconstruct the cached output from a stored entry.
-    fn restore_cache(
-        &self,
-        _cached: &AssemblyOutput,
-    ) -> Option<AssemblyOutput> {
-        None
+    ///
+    /// Defaults to returning a clone of the cached output. Override
+    /// for assembler-specific cache reconstruction (e.g. adaptive
+    /// clearing restores cleared fragments into the face).
+    fn restore_cache(&self, cached: &AssemblyOutput) -> Option<AssemblyOutput> {
+        Some(cached.clone())
     }
 
-    /// Store the just-computed output for future cache hits.
-    fn store_cache(&self, _output: &AssemblyOutput) -> Option<AssemblyOutput> {
-        None
+    /// Prepare the just-computed output for cache storage.
+    ///
+    /// Defaults to returning a clone of the output. Override for
+    /// assembler-specific storage preparation (e.g. adaptive clearing
+    /// injects cleared fragments into the stored copy).
+    fn store_cache(&self, output: &AssemblyOutput) -> Option<AssemblyOutput> {
+        Some(output.clone())
     }
 
     /// Clone the assembler spec into a new boxed trait object.

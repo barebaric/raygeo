@@ -2,6 +2,7 @@ use std::any::Any;
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use crate::pipeline::cache::CacheKey;
 use crate::pipeline::callbacks::Callbacks;
 
 pub type DepMap = HashMap<String, Arc<dyn Any + Send + Sync>>;
@@ -24,6 +25,25 @@ pub trait Aggregate: Send + Sync {
     ) -> Result<Box<dyn Any + Send + Sync>, String>;
 
     fn source_keys(&self) -> Vec<String>;
+
+    fn cache_key(&self, _tag: &str) -> Option<CacheKey> {
+        None
+    }
+
+    fn restore_from_cache(
+        &mut self,
+        cached: &(dyn Any + Send + Sync),
+    ) -> Result<Box<dyn Any + Send + Sync>, String> {
+        let _ = cached;
+        Err("not cached".into())
+    }
+
+    fn prepare_cache_entry(
+        &self,
+        _output: &(dyn Any + Send + Sync),
+    ) -> Option<Box<dyn Any + Send + Sync>> {
+        None
+    }
 
     fn name(&self) -> &'static str;
 }

@@ -1,24 +1,22 @@
-"""Cache invalidation tests for the pipeline.
+"""Cache tests for the pipeline.
 
 The pipeline cache is a simple key→value store with LRU eviction.
-There is no automatic invalidation: callers invalidate by either
+The cache key is the node's ``key`` string only — no content hash.
 
-  - changing the assembler's parameters (which changes the
-    ``cache_key_for_face`` hash, producing a different cache key), or
-  - calling ``clear_cache_prefix(tag)`` / ``clear_cache()`` to
-    drop entries explicitly.
+There is no automatic invalidation. Callers invalidate by:
 
-Only the ``AdaptiveClearingSpec`` assembler opts into caching today
-(every other assembler's ``cache_key_for_face`` returns ``None``).
-The parameter-change-driven tests therefore exercise adaptive
-clearing; the external-invalidation tests use any assembler and
-observe effects via ``Pipeline.cache_used_bytes`` and the
-``CompletedNode.error`` field.
+  - calling ``clear_cache_prefix(tag)`` or ``clear_cache()`` to drop
+    entries explicitly, or
+  - bumping the node's epoch via the cache (supersession), which
+    causes in-flight results to be discarded on completion.
 
-Also covers the interaction between transformers and the compute
-cache — transformers now contribute their own hash to the cache
-key, so changing a transformer invalidates independently of the
-assembler.
+Changing an assembler's parameters does NOT invalidate the cache —
+the caller must evict explicitly. This is by design: hashing geometry
+and raster pixels on every lookup is too expensive.
+
+All compute and aggregate nodes cache uniformly. The tests below
+exercise both external invalidation and the cache-hit / cache-miss
+behavior.
 """
 
 from typing import List
@@ -51,8 +49,6 @@ def _adaptive_part():
         (20.0, 20.0),
         (-20.0, 20.0),
     ]
-    # `initial` is a list of polygons; each polygon is a list of
-    # (x, y) tuples. A single rectangular seed polygon.
     seed = [[(-5.0, -5.0), (5.0, -5.0), (5.0, 5.0), (-5.0, 5.0)]]
     return Part.from_polygons(boundary, initial=seed)
 
@@ -131,7 +127,6 @@ def test_clear_cache_prefix_drops_only_matching_entries():
     assert before > 0
     p.clear_cache_prefix("a-")
     after = p.cache_used_bytes
-    # Some entries dropped, but 'b-1' should remain.
     assert after < before, "prefix clear should drop at least one entry"
     assert after > 0, "non-matching entries should remain"
 
@@ -139,24 +134,20 @@ def test_clear_cache_prefix_drops_only_matching_entries():
 def test_clear_cache_prefix_with_empty_string_clears_everything():
     """An empty prefix matches every tag (``str.startswith("")`` is
     always true), so clear_cache_prefix("") is equivalent to
-    clear_cache(). This documents the current behaviour."""
+    clear_cache()."""
     p = Pipeline()
     _run_pipeline(p, [_adaptive_node("a1", AdaptiveClearingSpec())])
-    before = p.cache_used_bytes
-    assert before > 0
+    assert p.cache_used_bytes > 0
     p.clear_cache_prefix("")
-    assert p.cache_used_bytes == 0, (
-        "empty prefix should match all entries (start_with semantic)"
-    )
+    assert p.cache_used_bytes == 0
 
 
 def test_generation_id_change_alone_does_not_invalidate():
-    """The cache is keyed by content hash, not generation_id.
+    """The cache is keyed by node key, not generation_id.
 
     Re-running the same key with a different generation_id still
-    hits cache (the cache entry has the same payload_hash). This
-    documents the current design: generation_id is for shadow-node
-    tracking, not cache invalidation.
+    hits cache. generation_id is for shadow-node tracking, not cache
+    invalidation.
     """
     p = Pipeline()
     first = _run_pipeline(
@@ -165,8 +156,6 @@ def test_generation_id_change_alone_does_not_invalidate():
     assert first["a"].error is None
     cached_bytes = p.cache_used_bytes
     assert cached_bytes > 0
-    # Second run with different generation_id on the same key: cache
-    # hit, so the cache size shouldn't grow.
     second = _run_pipeline(
         p, [_adaptive_node("a", AdaptiveClearingSpec(), generation_id=2)]
     )
@@ -185,7 +174,7 @@ def test_pipeline_instances_have_independent_caches():
     assert b.cache_used_bytes == 0
 
 
-# ── Parameter-change-driven (adaptive only) ────────────────────────
+# ── Cache key = node key only ──────────────────────────────────────
 
 
 def _adaptive_spec(tool_radius=3.0, step_over=1.5, target_z=-5.0):
@@ -196,9 +185,9 @@ def _adaptive_spec(tool_radius=3.0, step_over=1.5, target_z=-5.0):
     )
 
 
-def test_adaptive_cache_hit_on_identical_spec():
+def test_cache_hit_on_identical_spec():
     """Running identical adaptive compute twice keeps the cache size
-    stable (cache hit, no new entry inserted)."""
+    stable (cache hit, entry overwritten in place)."""
     p = Pipeline()
     spec = _adaptive_spec()
     first = _run_pipeline(p, [_adaptive_node("a", spec)])
@@ -212,50 +201,66 @@ def test_adaptive_cache_hit_on_identical_spec():
     )
 
 
-def test_adaptive_cache_miss_on_tool_radius_change():
-    """Changing tool_radius changes the cache key (cache miss)."""
+def test_parameter_change_does_not_auto_invalidate():
+    """Changing tool_radius does NOT cause a cache miss — the cache
+    key is the node key, not a content hash. The caller must evict
+    explicitly (via clear_cache_prefix) to force recomputation.
+    """
     p = Pipeline()
     spec_a = _adaptive_spec(tool_radius=3.0)
-    spec_b = _adaptive_spec(tool_radius=3.5)
     _run_pipeline(p, [_adaptive_node("a", spec_a)])
     after_a = p.cache_used_bytes
+    spec_b = _adaptive_spec(tool_radius=3.5)
     _run_pipeline(p, [_adaptive_node("a", spec_b)])
-    after_b = p.cache_used_bytes
-    assert after_b > after_a, (
-        "different tool_radius should cause cache miss; cache grew"
+    assert p.cache_used_bytes == after_a, (
+        "parameter change should NOT auto-invalidate under explicit "
+        "invalidation model; cache size should be stable"
     )
 
 
-def test_adaptive_cache_miss_on_target_z_change():
-    """Changing target_z changes the cache key (cache miss)."""
+def test_eviction_then_rerun_recomputes():
+    """After clear_cache_prefix, re-running with different params
+    recomputes and the cache grows again."""
     p = Pipeline()
-    spec_a = _adaptive_spec(target_z=-5.0)
-    spec_b = _adaptive_spec(target_z=-3.0)
+    spec_a = _adaptive_spec(tool_radius=3.0)
     _run_pipeline(p, [_adaptive_node("a", spec_a)])
-    after_a = p.cache_used_bytes
+    assert p.cache_used_bytes > 0
+
+    p.clear_cache_prefix("a")
+    assert p.cache_used_bytes == 0
+
+    spec_b = _adaptive_spec(tool_radius=3.5)
     _run_pipeline(p, [_adaptive_node("a", spec_b)])
-    after_b = p.cache_used_bytes
-    assert after_b > after_a
+    assert p.cache_used_bytes > 0, (
+        "after eviction, re-run should repopulate cache"
+    )
 
 
-def test_adaptive_cache_miss_produces_different_ops():
-    """The cached and recomputed outputs must differ for different
-    parameters (otherwise a hit would be correct!)."""
+def test_stale_cache_returns_old_result_without_eviction():
+    """Without eviction, a cache hit returns the previously stored
+    (stale) result even if the assembler params changed. This
+    documents the explicit-invalidation contract: the caller is
+    responsible for evicting when content changes.
+    """
     p = Pipeline()
     ops_a = result_ops(
         _run_pipeline(p, [_adaptive_node("a", _adaptive_spec(target_z=-5.0))])[
             "a"
         ]
     ).to_dict()
+
     ops_b = result_ops(
         _run_pipeline(p, [_adaptive_node("a", _adaptive_spec(target_z=-3.0))])[
             "a"
         ]
     ).to_dict()
-    assert ops_a != ops_b
+
+    assert ops_a == ops_b, (
+        "without eviction, second run should return cached (stale) result"
+    )
 
 
-def test_adaptive_cache_hit_preserves_cleared_fragments():
+def test_cache_hit_preserves_cleared_fragments():
     """On a cache hit, face.cleared.fragments() should be restored
     to the same state as the original run."""
     p = Pipeline()
@@ -276,8 +281,6 @@ def test_adaptive_cache_hit_preserves_cleared_fragments():
     assert face_a is not None
     frags_after_first = face_a.cleared.fragments()
 
-    # Second run with a fresh Python Part that has the same geometry
-    # — should hit the cache and restore the same fragments.
     nr_b = NodeRequest(
         key="a",
         generation_id=1,
@@ -300,70 +303,43 @@ def test_adaptive_cache_hit_preserves_cleared_fragments():
 # ── Transformer caching ────────────────────────────────────────────
 
 
-def test_transformer_changes_cache_key_for_adaptive():
-    """Adding a transformer to an adaptive compute changes the cache
-    key — the compute is re-run (cache miss) and the cache grows."""
+def test_transformer_change_does_not_auto_invalidate():
+    """Adding or changing a transformer does NOT auto-invalidate the
+    cache. The cache key is the node key only.
+    """
     p = Pipeline()
     spec = _adaptive_spec()
-    # First run: no transformers.
     _run_pipeline(p, [_adaptive_node("a", spec)])
     after_first = p.cache_used_bytes
-    # Second run: add a SmoothSpec transformer.
     second = _run_pipeline(
         p,
         [_adaptive_node("a", spec, transformers=[SmoothSpec(50, 30.0)])],
     )
     assert second["a"].error is None
-    assert p.cache_used_bytes > after_first, (
-        "transformer change should have invalidated cache (miss)"
+    assert p.cache_used_bytes == after_first, (
+        "transformer change should NOT auto-invalidate"
     )
 
 
-def test_transformer_param_change_invalidates_cache():
-    """Changing a transformer parameter (e.g. SmoothSpec.amount)
-    produces a different cache key — the compute is re-run."""
-    p = Pipeline()
-    spec = _adaptive_spec()
-    _run_pipeline(
-        p,
-        [_adaptive_node("a", spec, transformers=[SmoothSpec(20, 30.0)])],
-    )
-    after_first = p.cache_used_bytes
-    _run_pipeline(
-        p,
-        [_adaptive_node("a", spec, transformers=[SmoothSpec(80, 30.0)])],
-    )
-    assert p.cache_used_bytes > after_first, (
-        "transformer param change should have invalidated cache"
-    )
-
-
-def test_transformer_added_then_removed_invalidates():
-    """Adding then removing a transformer produces a cache miss each
-    time (the key depends on the transformer set)."""
+def test_transformer_change_after_eviction_recomputes():
+    """After clear_cache_prefix, adding a transformer causes a fresh
+    compute (cache miss)."""
     p = Pipeline()
     spec = _adaptive_spec()
     _run_pipeline(p, [_adaptive_node("a", spec)])
-    after_none = p.cache_used_bytes
-
-    _run_pipeline(
-        p, [_adaptive_node("a", spec, transformers=[SmoothSpec(20, 30.0)])]
+    p.clear_cache_prefix("a")
+    assert p.cache_used_bytes == 0
+    second = _run_pipeline(
+        p,
+        [_adaptive_node("a", spec, transformers=[SmoothSpec(50, 30.0)])],
     )
-    after_add = p.cache_used_bytes
-    assert after_add > after_none
-
-    _run_pipeline(p, [_adaptive_node("a", spec)])
-    after_remove = p.cache_used_bytes
-    # Removing should produce a miss back to the original key (which
-    # is still in cache), so the new key is no longer needed — but
-    # the previously-added entry for the 'with-transformer' key
-    # remains unless evicted by LRU.
-    assert after_remove >= after_none
+    assert second["a"].error is None
+    assert p.cache_used_bytes > 0
 
 
-def test_different_transformer_types_produce_different_keys():
-    """Two compute nodes with different transformer *types* produce
-    different cache keys and both are stored."""
+def test_different_transformer_types_on_different_keys():
+    """Two compute nodes with different transformer types on different
+    keys both cache independently."""
     p = Pipeline()
     spec = _adaptive_spec()
     _run_pipeline(
@@ -373,46 +349,32 @@ def test_different_transformer_types_produce_different_keys():
             _adaptive_node("k2", spec, transformers=[OverscanSpec(2.0)]),
         ],
     )
-    # Both nodes cached; both should be present.
     assert p.cache_used_bytes > 0
 
 
-def test_transformer_change_invalidates_only_for_affected_node():
-    """A compute node whose transformers change re-runs; a sibling
-    node with the same transformers does NOT re-run."""
+# ── All assemblers cache ───────────────────────────────────────────
+
+
+def test_contour_compute_caches():
+    """Contour (non-adaptive) compute nodes also cache. Under the
+    old model only AdaptiveClearingSpec opted in; under the new model
+    all compute nodes cache uniformly."""
     p = Pipeline()
-    spec = _adaptive_spec()
-    # Two distinct keys, both starting with the same transformers.
-    _run_pipeline(
-        p,
-        [
-            _adaptive_node("a", spec, transformers=[SmoothSpec(50, 30.0)]),
-            _adaptive_node("b", spec, transformers=[SmoothSpec(50, 30.0)]),
-        ],
-    )
-    baseline = p.cache_used_bytes
-    # Re-run 'a' with changed transformer; 'b' should still hit cache.
-    _run_pipeline(
-        p,
-        [
-            _adaptive_node("a", spec, transformers=[SmoothSpec(80, 30.0)]),
-            _adaptive_node("b", spec, transformers=[SmoothSpec(50, 30.0)]),
-        ],
-    )
-    # Only one new entry should have been added (for 'a' with the new
-    # transformer); 'b' should have hit the existing cache.
-    assert p.cache_used_bytes == baseline + (p.cache_used_bytes - baseline), (
-        "size grew by exactly one new cache entry"
-    )
-    # Actually just assert it grew (the LRU eviction makes exact
-    # accounting brittle). The key point: it grew, indicating a
-    # cache miss on the changed node.
-    assert p.cache_used_bytes >= baseline
+    _run_pipeline(p, [_contour_node("c")])
+    assert p.cache_used_bytes > 0, "contour compute should be cached"
+
+
+def test_contour_cache_hit_on_second_run():
+    """Second run of the same contour key hits cache (no growth)."""
+    p = Pipeline()
+    _run_pipeline(p, [_contour_node("c")])
+    after_first = p.cache_used_bytes
+    _run_pipeline(p, [_contour_node("c")])
+    assert p.cache_used_bytes == after_first
 
 
 def test_compute_cache_with_no_transformers_still_works():
-    """Smoke test: transformers=[] (the default) on a non-caching
-    assembler behaves identically to before."""
+    """Smoke test: transformers=[] (the default) works correctly."""
     p = Pipeline()
     out = _run_pipeline(p, [_contour_node("c", transformers=[])])
     assert out["c"].error is None

@@ -133,9 +133,16 @@ fn spawn_one(s: &Scope<'_>, shared: &Arc<SharedState>, key: String) {
         let NodeRequest {
             key: node_key,
             generation_id,
+            version_token: _,
             stage,
             callbacks,
         } = node;
+
+        let scheduled_epoch = shared
+            .cache
+            .lock()
+            .map(|c| c.get_epoch(&node_key))
+            .unwrap_or(0);
 
         let wrapper = ProgressWrapper {
             inner: &*callbacks,
@@ -148,31 +155,47 @@ fn spawn_one(s: &Scope<'_>, shared: &Arc<SharedState>, key: String) {
             dispatch_stage(stage, &wrapper, &shared, &node_key, &deps_lock)
         };
 
-        let output_arc = match result {
-            Err(e) => {
-                let cancelled = e == "cancelled";
-                if cancelled {
-                    shared.any_cancelled.store(true, Ordering::SeqCst);
+        let current_epoch = shared
+            .cache
+            .lock()
+            .map(|c| c.get_epoch(&node_key))
+            .unwrap_or(0);
+
+        let output_arc = if scheduled_epoch != current_epoch {
+            let node = CompletedNode::err(
+                node_key.clone(),
+                generation_id,
+                "superseded".to_string(),
+            );
+            (shared.on_completed)(node);
+            None
+        } else {
+            match result {
+                Err(e) => {
+                    let cancelled = e == "cancelled";
+                    if cancelled {
+                        shared.any_cancelled.store(true, Ordering::SeqCst);
+                    }
+                    let node =
+                        CompletedNode::err(node_key.clone(), generation_id, e);
+                    (shared.on_completed)(node);
+                    None
                 }
-                let node =
-                    CompletedNode::err(node_key.clone(), generation_id, e);
-                (shared.on_completed)(node);
-                None
-            }
-            Ok(boxed) => {
-                let arc: Arc<dyn Any + Send + Sync> = boxed.into();
-                shared
-                    .dep_map
-                    .lock()
-                    .unwrap()
-                    .insert(node_key.clone(), Arc::clone(&arc));
-                let node = CompletedNode::ok(
-                    node_key.clone(),
-                    generation_id,
-                    Arc::clone(&arc),
-                );
-                (shared.on_completed)(node);
-                Some(arc)
+                Ok(boxed) => {
+                    let arc: Arc<dyn Any + Send + Sync> = boxed.into();
+                    shared
+                        .dep_map
+                        .lock()
+                        .unwrap()
+                        .insert(node_key.clone(), Arc::clone(&arc));
+                    let node = CompletedNode::ok(
+                        node_key.clone(),
+                        generation_id,
+                        Arc::clone(&arc),
+                    );
+                    (shared.on_completed)(node);
+                    Some(arc)
+                }
             }
         };
 
@@ -236,9 +259,10 @@ fn dispatch_stage(
 ) -> Result<Box<dyn Any + Send + Sync>, String> {
     match stage {
         StageSpec::Compute { mut compute_fn } => {
-            if let Some(key) = compute_fn.cache_key(node_key) {
+            let cache_key = compute_fn.cache_key(node_key);
+            if let Some(key) = &cache_key {
                 let mut c = shared.cache.lock().map_err(|e| e.to_string())?;
-                if let Some(cached) = c.get(&key) {
+                if let Some(cached) = c.get(key) {
                     let restored = compute_fn.restore_from_cache(&**cached);
                     if let Ok(out) = restored {
                         return Ok(out);
@@ -250,12 +274,12 @@ fn dispatch_stage(
             let result = compute_fn.run(&mut ctx);
 
             if let Ok(ref out) = result {
-                if let Some(key) = compute_fn.cache_key(node_key) {
+                if let Some(key) = cache_key {
                     if let Some(entry) =
                         compute_fn.prepare_cache_entry(out.as_ref())
                     {
                         if let Ok(mut c) = shared.cache.lock() {
-                            let size = 1024; // approximate size; callers should be more precise
+                            let size = 1024;
                             c.insert(key, entry, size);
                         }
                     }
@@ -264,8 +288,33 @@ fn dispatch_stage(
             result
         }
         StageSpec::Aggregate { mut aggregate_fn } => {
+            let cache_key = aggregate_fn.cache_key(node_key);
+            if let Some(key) = &cache_key {
+                let mut c = shared.cache.lock().map_err(|e| e.to_string())?;
+                if let Some(cached) = c.get(key) {
+                    let restored = aggregate_fn.restore_from_cache(&**cached);
+                    if let Ok(out) = restored {
+                        return Ok(out);
+                    }
+                }
+            }
+
             let mut agg_ctx = AggregateCtx::new(callbacks);
-            aggregate_fn.run(&mut agg_ctx, deps)
+            let result = aggregate_fn.run(&mut agg_ctx, deps);
+
+            if let Ok(ref out) = result {
+                if let Some(key) = cache_key {
+                    if let Some(entry) =
+                        aggregate_fn.prepare_cache_entry(out.as_ref())
+                    {
+                        if let Ok(mut c) = shared.cache.lock() {
+                            let size = 1024;
+                            c.insert(key, entry, size);
+                        }
+                    }
+                }
+            }
+            result
         }
     }
 }

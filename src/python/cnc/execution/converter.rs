@@ -157,6 +157,7 @@ fn convert_node_request(
         return Ok(CoreNodeRequest::new(
             req.key.clone(),
             req.generation_id,
+            req.version_token,
             convert_stage(py, &stage)?,
             Box::new(callbacks),
         ));
@@ -173,6 +174,7 @@ fn convert_node_request(
         return Ok(CoreNodeRequest::new(
             req.key.clone(),
             req.generation_id,
+            req.version_token,
             stage,
             Box::new(callbacks),
         ));

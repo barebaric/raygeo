@@ -30,23 +30,6 @@ spec: Any
 The wrapped Python-side spec object. Type-erased here; dispatched to a concrete `Box<dyn Assembler>`
 by \[`PyAssembler::into_core`\].
 
-### `cache_key()`
-
-```python
-cache_key(part: part.Part, tag: str) -> Optional[tuple[str, int]]
-```
-
-Compute a cache key for this assembler against the given part.
-
-Returns `None` for assemblers that opt out of caching, or a `(tag, payload_hash)` tuple for
-assemblers that opt in.
-
-| Parameter | Type                        | Description |
-| --------- | --------------------------- | ----------- |
-| `part`    | `part.Part`                 |             |
-| `tag`     | `str`                       |             |
-| _Returns_ | `Optional[tuple[str, int]]` |             |
-
 ## AssemblyOutput
 
 The output of an assembler, packaged for caching.

@@ -3,7 +3,8 @@ use std::any::Any;
 use crate::cnc::execution::callbacks::OpsCallbacksAdapter;
 use crate::cnc::execution::specs::AggregateOutput;
 use crate::ops::assembly::AssemblyOutput;
-use crate::ops::convert::{EncodeCtx, Encoder};
+use crate::ops::convert::{EncodeCtx, EncodeOutput, Encoder};
+use crate::pipeline::cache::CacheKey;
 use crate::pipeline::compute::{Compute, ComputeCtx};
 
 pub struct EncoderCompute {
@@ -47,6 +48,29 @@ impl Compute for EncoderCompute {
 
     fn source_keys(&self) -> Vec<String> {
         vec![self.source_key.clone()]
+    }
+
+    fn cache_key(&self, tag: &str) -> Option<CacheKey> {
+        Some(CacheKey::new(tag))
+    }
+
+    fn restore_from_cache(
+        &mut self,
+        cached: &(dyn Any + Send + Sync),
+    ) -> Result<Box<dyn Any + Send + Sync>, String> {
+        let output =
+            cached.downcast_ref::<EncodeOutput>().ok_or_else(|| {
+                "cache type mismatch: expected EncodeOutput".to_string()
+            })?;
+        Ok(Box::new(output.clone()))
+    }
+
+    fn prepare_cache_entry(
+        &self,
+        output: &(dyn Any + Send + Sync),
+    ) -> Option<Box<dyn Any + Send + Sync>> {
+        let output = output.downcast_ref::<EncodeOutput>()?;
+        Some(Box::new(output.clone()))
     }
 
     fn name(&self) -> &'static str {

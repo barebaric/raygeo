@@ -145,54 +145,6 @@ impl crate::ops::assembly::Assembler for AdaptiveClearingSpec {
         "adaptive_clearing"
     }
 
-    fn cache_key_for_face(
-        &self,
-        face: &crate::ops::part::FaceState,
-    ) -> Option<u64> {
-        use std::hash::{Hash, Hasher};
-        let mut h = std::collections::hash_map::DefaultHasher::new();
-        self.tool_radius.to_bits().hash(&mut h);
-        self.step_over.to_bits().hash(&mut h);
-        self.step_length.to_bits().hash(&mut h);
-        self.target_z.to_bits().hash(&mut h);
-        self.safe_z.to_bits().hash(&mut h);
-        self.max_deflection_deg.to_bits().hash(&mut h);
-        self.wall_margin.to_bits().hash(&mut h);
-        self.area_tolerance.to_bits().hash(&mut h);
-        self.cut_direction.hash(&mut h);
-        match self.start_pos {
-            Some(p) => {
-                1u8.hash(&mut h);
-                p.x.to_bits().hash(&mut h);
-                p.y.to_bits().hash(&mut h);
-                p.z.to_bits().hash(&mut h);
-            }
-            None => 0u8.hash(&mut h),
-        }
-        match self.start_heading {
-            Some(v) => {
-                1u8.hash(&mut h);
-                v.to_bits().hash(&mut h);
-            }
-            None => 0u8.hash(&mut h),
-        }
-        self.expansion_batch_size.hash(&mut h);
-        self.tolerance.to_bits().hash(&mut h);
-        if let Some(geo) = &face.geometry {
-            geo.len().hash(&mut h);
-        } else {
-            0usize.hash(&mut h);
-        }
-        hash_polygons(&mut h, &face.stock_region.boundary);
-        for island in &face.stock_region.islands {
-            hash_polygons(&mut h, island);
-        }
-        for frag in face.cleared.fragments() {
-            hash_polygons(&mut h, frag);
-        }
-        Some(h.finish())
-    }
-
     fn restore_cache(
         &self,
         cached: &crate::ops::assembly::AssemblyOutput,
@@ -219,16 +171,6 @@ impl crate::ops::assembly::Assembler for AdaptiveClearingSpec {
 
     fn as_any(&self) -> &dyn std::any::Any {
         self
-    }
-}
-
-/// Hash a polygon's vertices into `h`.
-fn hash_polygons<H: std::hash::Hasher>(h: &mut H, poly: &Polygon) {
-    use std::hash::Hash;
-    poly.len().hash(h);
-    for p in poly {
-        p.x.to_bits().hash(h);
-        p.y.to_bits().hash(h);
     }
 }
 

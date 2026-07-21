@@ -158,8 +158,11 @@ def test_pipeline_instances_have_independent_caches():
     completed2 = _collect(p2, [_contour_request("k1")])
     assert len(completed1) == 1
     assert len(completed2) == 1
+    assert p1.cache_used_bytes > 0
+    assert p2.cache_used_bytes > 0
+    p1.clear_cache()
     assert p1.cache_used_bytes == 0
-    assert p2.cache_used_bytes == 0
+    assert p2.cache_used_bytes > 0
 
 
 def test_default_execute_stages_still_works():

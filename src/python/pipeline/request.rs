@@ -18,6 +18,8 @@ pub struct PyNodeRequest {
     #[pyo3(get)]
     pub generation_id: u64,
     #[pyo3(get)]
+    pub version_token: u64,
+    #[pyo3(get)]
     pub stage: Py<PyAny>,
     #[pyo3(get)]
     pub on_progress: Option<Py<PyAny>>,
@@ -31,12 +33,13 @@ pub struct PyNodeRequest {
 #[pyo3::pymethods]
 impl PyNodeRequest {
     #[new]
-    #[pyo3(signature = (key, generation_id, stage, on_progress=None, on_cancelled=None, on_chunk=None))]
+    #[pyo3(signature = (key, generation_id, stage, version_token=0, on_progress=None, on_cancelled=None, on_chunk=None))]
     #[allow(clippy::too_many_arguments)]
     fn new(
         key: String,
         generation_id: u64,
         stage: Py<PyAny>,
+        version_token: u64,
         on_progress: Option<Py<PyAny>>,
         on_cancelled: Option<Py<PyAny>>,
         on_chunk: Option<Py<PyAny>>,
@@ -44,6 +47,7 @@ impl PyNodeRequest {
         PyNodeRequest {
             key,
             generation_id,
+            version_token,
             stage,
             on_progress,
             on_cancelled,

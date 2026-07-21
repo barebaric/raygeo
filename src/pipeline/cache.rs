@@ -4,15 +4,11 @@ use std::collections::HashMap;
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct CacheKey {
     pub tag: String,
-    pub payload_hash: u64,
 }
 
 impl CacheKey {
-    pub fn new(tag: impl Into<String>, payload_hash: u64) -> Self {
-        CacheKey {
-            tag: tag.into(),
-            payload_hash,
-        }
+    pub fn new(tag: impl Into<String>) -> Self {
+        CacheKey { tag: tag.into() }
     }
 }
 
@@ -29,6 +25,7 @@ pub struct Cache {
     used_bytes: usize,
     clock: u64,
     insert_counter: u64,
+    node_epochs: HashMap<String, u64>,
 }
 
 impl std::fmt::Debug for Cache {
@@ -55,6 +52,7 @@ impl Cache {
             used_bytes: 0,
             clock: 0,
             insert_counter: 0,
+            node_epochs: HashMap::new(),
         }
     }
 
@@ -148,6 +146,24 @@ impl Cache {
             if let Some(entry) = self.entries.remove(&key) {
                 self.used_bytes -= entry.size_bytes;
             }
+        }
+    }
+
+    pub fn bump_epoch(&mut self, key: &str) {
+        let epoch = self.node_epochs.entry(key.to_string()).or_insert(0);
+        *epoch += 1;
+    }
+
+    pub fn get_epoch(&self, key: &str) -> u64 {
+        self.node_epochs.get(key).copied().unwrap_or(0)
+    }
+
+    pub fn remove_entry(&mut self, key: &str) {
+        let cache_key = CacheKey {
+            tag: key.to_string(),
+        };
+        if let Some(entry) = self.entries.remove(&cache_key) {
+            self.used_bytes -= entry.size_bytes;
         }
     }
 }

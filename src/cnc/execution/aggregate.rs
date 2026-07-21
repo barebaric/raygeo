@@ -12,6 +12,7 @@ use crate::ops::assembly::AssemblyOutput;
 use crate::ops::container::Ops;
 use crate::ops::transform::apply_transformers;
 use crate::pipeline::aggregate::{Aggregate, AggregateCtx, DepMap};
+use crate::pipeline::cache::CacheKey;
 use crate::types::Point3D;
 
 pub struct OpsAggregate {
@@ -234,6 +235,29 @@ impl Aggregate for OpsAggregate {
             }
         }
         keys.into_iter().collect()
+    }
+
+    fn cache_key(&self, tag: &str) -> Option<CacheKey> {
+        Some(CacheKey::new(tag))
+    }
+
+    fn restore_from_cache(
+        &mut self,
+        cached: &(dyn Any + Send + Sync),
+    ) -> Result<Box<dyn Any + Send + Sync>, String> {
+        let output =
+            cached.downcast_ref::<AggregateOutput>().ok_or_else(|| {
+                "cache type mismatch: expected AggregateOutput".to_string()
+            })?;
+        Ok(Box::new(output.clone()))
+    }
+
+    fn prepare_cache_entry(
+        &self,
+        output: &(dyn Any + Send + Sync),
+    ) -> Option<Box<dyn Any + Send + Sync>> {
+        let output = output.downcast_ref::<AggregateOutput>()?;
+        Some(Box::new(output.clone()))
     }
 
     fn name(&self) -> &'static str {

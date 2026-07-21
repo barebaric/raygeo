@@ -55,7 +55,6 @@ use crate::python::ops::assembly::spiral::PySpiralSpec;
 use crate::python::ops::assembly::toroid::{PyToroidSpec, PyToroidalClearSpec};
 use crate::python::ops::assembly::wavefront::PyAdaptiveWavefrontSpec;
 use crate::python::ops::container::PyOps;
-use crate::python::ops::part::part::PyPart;
 
 /// Try to extract an assembler spec from a Python object.
 ///
@@ -269,26 +268,6 @@ impl PyAssembler {
             .map(|s| s.to_string())
             .unwrap_or_else(|_| "<unknown>".to_string());
         format!("Assembler({name})")
-    }
-
-    /// Compute a cache key for this assembler against the given part.
-    ///
-    /// Returns ``None`` for assemblers that opt out of caching, or
-    /// a ``(tag, payload_hash)`` tuple for assemblers that opt in.
-    fn cache_key(
-        &self,
-        py: Python<'_>,
-        part: &PyPart,
-        tag: &str,
-    ) -> PyResult<Option<(String, u64)>> {
-        let core = self.into_core(py)?;
-        let face = part
-            .inner
-            .face("")
-            .unwrap_or_else(|| unreachable!("Part has no primary face"));
-        Ok(core
-            .cache_key_for_face(face)
-            .map(|hash| (tag.to_string(), hash)))
     }
 }
 

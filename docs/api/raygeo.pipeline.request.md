@@ -42,3 +42,9 @@ on_progress: Optional[Any]
 ```python
 stage: Any
 ```
+
+### `version_token`
+
+```python
+version_token: int
+```

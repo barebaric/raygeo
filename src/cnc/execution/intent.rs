@@ -67,6 +67,7 @@ pub fn create_intent(
         nodes.push(NodeRequest::new(
             key.clone(),
             generation_id,
+            0,
             StageSpec::Compute {
                 compute_fn: Box::new(compute),
             },
@@ -109,6 +110,7 @@ pub fn create_intent(
     nodes.push(NodeRequest::new(
         format!("aggregate:{}", generation_id),
         generation_id,
+        0,
         StageSpec::Aggregate {
             aggregate_fn: Box::new(aggregate),
         },

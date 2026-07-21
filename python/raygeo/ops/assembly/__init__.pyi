@@ -18,7 +18,6 @@ can drive it through the trait.
 import builtins
 from raygeo import ops
 from raygeo.ops.cut import search
-from raygeo.ops import part
 import typing
 from . import adaptive
 from . import contour
@@ -77,13 +76,6 @@ class Assembler:
             :class:`~raygeo.ops.assembly.contour.ContourSpec`).
         """
     def __repr__(self) -> builtins.str: ...
-    def cache_key(self, part: part.Part, tag: builtins.str) -> typing.Optional[tuple[builtins.str, builtins.int]]:
-        r"""
-        Compute a cache key for this assembler against the given part.
-        
-        Returns ``None`` for assemblers that opt out of caching, or
-        a ``(tag, payload_hash)`` tuple for assemblers that opt in.
-        """
 
 @typing.final
 class AssemblyOutput:

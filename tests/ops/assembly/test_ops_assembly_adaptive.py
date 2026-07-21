@@ -10,9 +10,7 @@ from raygeo.geo.shape.polygon import (
     offset_polygon,
 )
 from raygeo.ops import Ops
-from raygeo.ops.assembly import Assembler
 from raygeo.ops.assembly.adaptive import (
-    AdaptiveClearingSpec,
     adaptive_clearing,
     target_area_per_distance,
 )
@@ -404,28 +402,3 @@ def test_adaptive_clearing_renamed_fields():
         safe_z=2.0,
     )
     assert hasattr(result, "ops")
-
-
-def test_adaptive_clearing_cache_key():
-    """AdaptiveClearingSpec.cache_key returns a (tag, hash) tuple."""
-    boundary = _rect(0, 0, 80, 80)
-    seed = [_rect(35, 35, 10, 10)]
-    part = Part.from_polygons(boundary, initial=seed)
-    spec = AdaptiveClearingSpec(
-        tool_radius=3.0,
-        step_over=1.5,
-    )
-    asm = Assembler(spec)
-    result = asm.cache_key(part, "my-tag")
-    assert result is not None
-    tag, hash_val = result
-    assert tag == "my-tag"
-    assert isinstance(hash_val, int)
-    # Deterministic: same inputs => same hash
-    result2 = asm.cache_key(part, "my-tag")
-    assert result2 == result
-    # Different geometry => different hash
-    other = Part.from_polygons(_rect(0, 0, 100, 100))
-    result3 = asm.cache_key(other, "my-tag")
-    assert result3 is not None
-    assert result3[1] != hash_val

@@ -6,9 +6,7 @@ use crate::cnc::execution::callbacks::ScaledCallbacks;
 use crate::ops::assembly::{AssembleCtx, Assembler, AssemblyOutput, Tracelet};
 use crate::ops::part::{FaceState, Part, StockRegion};
 use crate::ops::state::State;
-use crate::ops::transform::{
-    apply_transformers, combine_cache_hashes, Transformer,
-};
+use crate::ops::transform::{apply_transformers, Transformer};
 use crate::pipeline::cache::CacheKey;
 use crate::pipeline::compute::{Compute, ComputeCtx};
 use crate::types::Polygon;
@@ -133,20 +131,8 @@ impl Compute for AssemblerCompute {
     }
 
     fn cache_key(&self, tag: &str) -> Option<CacheKey> {
-        let face = self.part.face(&self.face_id)?;
-        let assembler_hash = self.assembler.cache_key_for_face(face)?;
-        let transformer_hashes: Vec<u64> =
-            self.transformers.iter().map(|t| t.cache_key()).collect();
-        let combined =
-            combine_cache_hashes(assembler_hash, &transformer_hashes);
-        if self.state_source_keys.is_empty() {
-            return Some(CacheKey::new(tag, combined));
-        }
-        use std::hash::{Hash, Hasher};
-        let mut h = std::collections::hash_map::DefaultHasher::new();
-        combined.hash(&mut h);
-        self.state_source_keys.hash(&mut h);
-        Some(CacheKey::new(tag, h.finish()))
+        let _ = self.part.face(&self.face_id);
+        Some(CacheKey::new(tag))
     }
 
     fn restore_from_cache(
@@ -160,7 +146,7 @@ impl Compute for AssemblerCompute {
         let restored = self
             .assembler
             .restore_cache(assembly)
-            .ok_or_else(|| "cache restore returned None".to_string())?;
+            .unwrap_or_else(|| assembly.clone());
         if let Some(frags) = &restored.cleared_fragments {
             let face = self.part.face_mut(&self.face_id);
             face.cleared.set_fragments(frags.clone());
@@ -177,10 +163,11 @@ impl Compute for AssemblerCompute {
         let cleared_fragments = face.map(|f| f.cleared.fragments().to_vec());
         let mut with_fragments = assembly.clone();
         with_fragments.cleared_fragments = cleared_fragments;
-        if let Some(cached) = self.assembler.store_cache(&with_fragments) {
-            return Some(Box::new(cached));
-        }
-        None
+        let cached = self
+            .assembler
+            .store_cache(&with_fragments)
+            .unwrap_or(with_fragments);
+        Some(Box::new(cached))
     }
 
     fn source_keys(&self) -> Vec<String> {
