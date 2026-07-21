@@ -103,6 +103,21 @@ pub trait Transformer: Send + Sync {
     /// Short, human-readable name used in progress messages.
     fn name(&self) -> &'static str;
 
+    /// Whether this transformer's output depends on the absolute
+    /// placement of the source Ops.
+    ///
+    /// When `true`, callers must invalidate workpiece-level compute
+    /// on pure position changes (not just geometry changes). When
+    /// `false`, only geometry changes affect the compute output;
+    /// position changes can be handled by the aggregate stage alone.
+    ///
+    /// Default is `false`. Override on transformers whose result
+    /// changes with absolute position (e.g. crop, which clips to
+    /// world-space regions).
+    fn position_sensitive(&self) -> bool {
+        false
+    }
+
     /// Hash the parameters that affect this transformer's output.
     ///
     /// The returned hash is folded into the owning node's cache key

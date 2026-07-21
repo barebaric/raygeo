@@ -44,6 +44,10 @@ impl Transformer for CropSpec {
         "crop"
     }
 
+    fn position_sensitive(&self) -> bool {
+        true
+    }
+
     fn cache_key(&self) -> u64 {
         use std::hash::{Hash, Hasher};
         let mut h = std::collections::hash_map::DefaultHasher::new();

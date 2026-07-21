@@ -18,7 +18,7 @@
 
 use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;
-use pyo3_stub_gen::derive::gen_stub_pyclass_enum;
+use pyo3_stub_gen::derive::{gen_stub_pyclass_enum, gen_stub_pyfunction};
 
 use crate::ops::callbacks::Callbacks;
 use crate::ops::transform as core_transform;
@@ -47,6 +47,10 @@ pub(crate) fn register(ops_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let transform_mod = PyModule::new(ops_mod.py(), "transform")?;
 
     transform_mod.add_class::<PyExecutionPhase>()?;
+    transform_mod.add_function(wrap_pyfunction!(
+        is_position_sensitive,
+        transform_mod.clone()
+    )?)?;
     bidir_scan_offset::register(&transform_mod)?;
     clip::register(&transform_mod)?;
     lead_in_out::register(&transform_mod)?;
@@ -64,6 +68,22 @@ pub(crate) fn register(ops_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     sys_modules.set_item("raygeo.ops.transform", &transform_mod)?;
 
     Ok(())
+}
+
+/// Check whether a transformer spec is position-sensitive.
+///
+/// Returns ``True`` if the transformer's output depends on absolute
+/// placement (e.g. ``CropSpec``), ``False`` otherwise. Unknown types
+/// return ``False``.
+///
+/// :param spec: A transformer spec pyclass instance (e.g.
+///     ``CropSpec``, ``SmoothSpec``).
+#[gen_stub_pyfunction(module = "raygeo.ops.transform")]
+#[pyfunction]
+fn is_position_sensitive(ob: &Bound<PyAny>) -> bool {
+    extract_transformer(ob)
+        .map(|t| t.position_sensitive())
+        .unwrap_or(false)
 }
 
 /// Execution phase of a transformer.
