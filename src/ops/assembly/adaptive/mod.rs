@@ -212,6 +212,14 @@ impl crate::ops::assembly::Assembler for AdaptiveClearingSpec {
             meta: output.meta.clone(),
         })
     }
+
+    fn boxed_clone(&self) -> Box<dyn crate::ops::assembly::Assembler> {
+        Box::new(self.clone())
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
 }
 
 /// Hash a polygon's vertices into `h`.

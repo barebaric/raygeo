@@ -43,6 +43,14 @@ impl Assembler for RampSpec {
     fn name(&self) -> &'static str {
         "ramp"
     }
+
+    fn boxed_clone(&self) -> Box<dyn Assembler> {
+        Box::new(self.clone())
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
 }
 
 /// Generate a ramp entry path.

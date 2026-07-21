@@ -47,6 +47,14 @@ impl Assembler for SpiralSpec {
     fn name(&self) -> &'static str {
         "spiral"
     }
+
+    fn boxed_clone(&self) -> Box<dyn Assembler> {
+        Box::new(self.clone())
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
 }
 
 /// Generate a flat spiral entry path followed by a smoothing circular pass.

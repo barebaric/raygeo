@@ -104,6 +104,14 @@ impl Assembler for RasterSpec {
     fn name(&self) -> &'static str {
         "raster"
     }
+
+    fn boxed_clone(&self) -> Box<dyn Assembler> {
+        Box::new(self.clone())
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
 }
 
 /// Rasterise a part image into scan paths.

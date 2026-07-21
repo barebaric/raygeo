@@ -75,6 +75,14 @@ impl Assembler for ShrinkwrapSpec {
     fn name(&self) -> &'static str {
         "shrinkwrap"
     }
+
+    fn boxed_clone(&self) -> Box<dyn Assembler> {
+        Box::new(self.clone())
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
 }
 
 /// Convert hull points from pixel space to millimetre space.

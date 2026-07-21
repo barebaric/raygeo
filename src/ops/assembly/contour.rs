@@ -72,6 +72,14 @@ impl Assembler for ContourSpec {
     fn name(&self) -> &'static str {
         "contour"
     }
+
+    fn boxed_clone(&self) -> Box<dyn Assembler> {
+        Box::new(self.clone())
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
 }
 
 /// Compute the total offset from kerf, path offset, and cut side.

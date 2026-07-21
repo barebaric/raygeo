@@ -59,6 +59,14 @@ impl Assembler for FrameSpec {
     fn name(&self) -> &'static str {
         "frame"
     }
+
+    fn boxed_clone(&self) -> Box<dyn Assembler> {
+        Box::new(self.clone())
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
 }
 
 /// Generate a rectangular frame matching the part's `size_mm`,

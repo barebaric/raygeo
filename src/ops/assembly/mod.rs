@@ -35,6 +35,8 @@ pub mod wavefront;
 
 pub use tracelet::{write_polyline, ProgressEvent, Tracelet};
 
+use std::any::Any;
+
 use crate::ops::callbacks::Callbacks;
 use crate::ops::container::Ops;
 use crate::ops::part::FaceState;
@@ -159,4 +161,17 @@ pub trait Assembler: Send + Sync {
     fn store_cache(&self, _output: &AssemblyOutput) -> Option<AssemblyOutput> {
         None
     }
+
+    /// Clone the assembler spec into a new boxed trait object.
+    ///
+    /// Required so that `Arc<dyn Assembler>` (stored in `PlanStep`) can
+    /// produce independent `Box<dyn Assembler>` instances for each
+    /// `NodeRequest` in `cnc::execution::create_intent`.
+    fn boxed_clone(&self) -> Box<dyn Assembler>;
+
+    /// Downcast to `&dyn Any` for concrete-type inspection.
+    ///
+    /// Needed by `cnc::plan` Python bindings to read spec parameters
+    /// from a `Box<dyn Assembler>` trait object.
+    fn as_any(&self) -> &dyn Any;
 }

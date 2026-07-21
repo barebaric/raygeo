@@ -43,6 +43,14 @@ impl Assembler for ToroidSpec {
     fn name(&self) -> &'static str {
         "toroid"
     }
+
+    fn boxed_clone(&self) -> Box<dyn Assembler> {
+        Box::new(self.clone())
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
 }
 
 /// Spec for the toroidal-clear (ramped trochoid, Z-descending) assembler.
@@ -74,6 +82,14 @@ impl Assembler for ToroidalClearSpec {
 
     fn name(&self) -> &'static str {
         "toroidal_clear"
+    }
+
+    fn boxed_clone(&self) -> Box<dyn Assembler> {
+        Box::new(self.clone())
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
     }
 }
 

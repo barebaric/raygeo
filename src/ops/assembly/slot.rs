@@ -47,6 +47,14 @@ impl Assembler for SlotSpec {
     fn name(&self) -> &'static str {
         "slot"
     }
+
+    fn boxed_clone(&self) -> Box<dyn Assembler> {
+        Box::new(self.clone())
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
 }
 
 /// Generate a back-and-forth slot clearing path along a carrier.

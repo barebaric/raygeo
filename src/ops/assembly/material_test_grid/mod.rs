@@ -64,6 +64,14 @@ impl Assembler for MaterialTestGridSpec {
     fn name(&self) -> &'static str {
         "material_test_grid"
     }
+
+    fn boxed_clone(&self) -> Box<dyn Assembler> {
+        Box::new(self.clone())
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
 }
 
 /// Generate a material test grid with varying speed and power settings.
