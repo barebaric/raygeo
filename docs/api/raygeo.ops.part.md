@@ -174,8 +174,6 @@ Build a Part from a boundary polygon and optional islands.
 has_geometry() -> bool
 ```
 
-True if this Part has geometry.
-
 | Parameter | Type   | Description |
 | --------- | ------ | ----------- |
 | _Returns_ | `bool` |             |

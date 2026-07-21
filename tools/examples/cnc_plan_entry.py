@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Circle as CirclePatch
 from matplotlib.patches import Polygon as PolygonPatch
 
-from raygeo.cnc.machining.entry import build_entry_workplan
+from raygeo.cnc.plan.entry import plan_entry
 from raygeo.ops.feature.region import find_regions
 
 
@@ -18,7 +18,7 @@ def _build_entry(boundary, islands=None, **kwargs):
     if not regions:
         return []
     poly, _area, entry_pt, r_max = regions[0]
-    return build_entry_workplan(
+    return plan_entry(
         poly,
         entry_pt,
         r_max,
@@ -108,15 +108,16 @@ def _draw_carrier(ax, carrier, color):
 def _annotate_workplan(ax, workplan, palette):
     """Annotate each step kind and draw geometric primitives."""
     for step in workplan:
-        kind = step["kind"]
+        p = step.spec_params()
+        kind = step.kind
         color = palette[0]
-        if kind in ("HelixPlunge", "FlatSpiral"):
-            cx, cy = step["center"]
-            if kind == "HelixPlunge":
+        if kind in ("helix", "spiral"):
+            cx, cy = p["center"]
+            if kind == "helix":
                 ax.add_patch(
                     CirclePatch(
                         (cx, cy),
-                        step["helix_r"],
+                        p["start_radius"],
                         fill=False,
                         edgecolor=color,
                         linestyle=":",
@@ -126,7 +127,7 @@ def _annotate_workplan(ax, workplan, palette):
                     )
                 )
             else:
-                spir_r = step["end_radius"]
+                spir_r = p["end_radius"]
                 ax.add_patch(
                     CirclePatch(
                         (cx, cy),
@@ -142,12 +143,12 @@ def _annotate_workplan(ax, workplan, palette):
             label_xy = (cx, cy)
             label = (
                 "HelixPlunge"
-                if kind == "HelixPlunge"
-                else f"FlatSpiral (r={step['end_radius']:.1f})"
+                if kind == "helix"
+                else f"FlatSpiral (r={p['end_radius']:.1f})"
             )
-        elif kind == "RampEntry":
-            sx, sy = step["start"]
-            ex, ey = step["end"]
+        elif kind == "ramp":
+            sx, sy = p["start"]
+            ex, ey = p["end"]
             ax.plot(
                 [sx, ex],
                 [sy, ey],
@@ -159,8 +160,8 @@ def _annotate_workplan(ax, workplan, palette):
             ax.plot([sx, ex], [sy, ey], "o", color=color, ms=7, zorder=6)
             label_xy = ((sx + ex) / 2, (sy + ey) / 2)
             label = "RampEntry"
-        elif kind == "ToroidalClear":
-            carrier = step["carrier"]
+        elif kind == "toroidal_clear":
+            carrier = p["carrier"]
             _draw_carrier(ax, carrier, color)
             label_xy = (
                 (carrier[0][0] + carrier[-1][0]) / 2,
@@ -192,7 +193,7 @@ def _annotate_workplan(ax, workplan, palette):
         )
 
 
-def generate_entry_workplan():
+def generate_entry():
     """3-panel: Helix+Spiral, ToroidalClear, RampEntry."""
     tool_radius = 3.0
     step_over = 2.0
@@ -283,20 +284,20 @@ def generate_entry_workplan():
     return fig
 
 
-__docs_target__ = ["raygeo.cnc.machining.entry.md"]
+__docs_target__ = ["raygeo.cnc.plan.entry.md"]
 
 __images__ = [
     {
-        "heading": "build_entry_workplan",
+        "heading": "plan_entry",
         "caption": (
             "Entry workplan: rectangle (Helix+FlatSpiral),"
             " H-shape (ToroidalClear), cup (RampEntry)."
         ),
-        "function": generate_entry_workplan,
+        "function": generate_entry,
     },
 ]
 
 if __name__ == "__main__":
-    fig = generate_entry_workplan()
+    fig = generate_entry()
     fig.savefig("/tmp/cnc_machining_entry.png", dpi=150, bbox_inches="tight")
     print("Saved /tmp/cnc_machining_entry.png")

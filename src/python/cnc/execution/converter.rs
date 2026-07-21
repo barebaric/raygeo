@@ -8,6 +8,7 @@ use crate::cnc::execution::aggregate::OpsAggregate;
 use crate::cnc::execution::compute::AssemblerCompute;
 use crate::cnc::execution::encode::EncoderCompute;
 use crate::cnc::execution::specs::AggregateOutput;
+use crate::ops::assembly::Assembler;
 use crate::ops::assembly::AssemblyOutput;
 use crate::ops::convert::EncodeOutput;
 use crate::ops::part::Part;
@@ -74,7 +75,8 @@ fn convert_stage(
                         "assembler is not an Assembler",
                     )
                 })?;
-            let assembler = assembler.borrow().into_core(py)?;
+            let assembler: Arc<dyn Assembler> =
+                Arc::from(assembler.borrow().into_core(py)?);
             let transformers =
                 params_ref
                     .transformers
@@ -97,6 +99,7 @@ fn convert_stage(
                 transformers,
                 cut_state: Default::default(),
                 state_source_keys,
+                region_boundary: None,
             };
             CoreStageSpec::Compute {
                 compute_fn: Box::new(compute),
@@ -209,7 +212,7 @@ fn any_to_py(
 
 // ── CompletedNode conversion ──────────────────────────────────────
 
-fn completed_node_from_core(
+pub(crate) fn completed_node_from_core(
     py: Python<'_>,
     node: crate::pipeline::completed::CompletedNode,
 ) -> PyCompletedNode {

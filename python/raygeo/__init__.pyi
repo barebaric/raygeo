@@ -23,8 +23,11 @@ The crate is split into layers that depend only downward::
     representation (feed_rate, rapid_rate, …) but does NOT decide
     what values to use — those are passed in by the caller.
 
-``cnc`` — Orchestration.
-    Builds workplans, drives assemblers through the pipeline.
+``cnc`` — Orchestration (Plan → Intent → Execute).
+    Plan: descriptive Plans (sequences of PlanSteps, each an
+    Assembler spec).  Intent: create_intent() converts a Plan into
+    executable NodeRequests.  Execute: run_intent() runs the
+    pipeline and returns the final linked Ops.
 
 ``pipeline`` — Generic runtime.
     Runs an intent tree of nodes on a thread pool. Knows nothing
@@ -49,7 +52,7 @@ Submodules
 ----------
 - raygeo.geo — Geometry and path/shape/algo operations
 - raygeo.ops — Command sequence (Ops) manipulation and motion assembly
-- raygeo.cnc — CNC orchestration (workplans, pipeline glue)
+- raygeo.cnc — CNC orchestration (Plans, Intents, pipeline glue)
 - raygeo.pipeline — Generic runtime intent-tree executor
 
 Examples

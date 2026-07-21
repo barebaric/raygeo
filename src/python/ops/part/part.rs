@@ -157,7 +157,6 @@ impl PyPart {
         }
     }
 
-    /// True if this Part has geometry.
     fn has_geometry(&self) -> bool {
         self.inner.geometry().is_some()
     }

@@ -8,7 +8,7 @@ tool-aware State via StateStrategy, and drives the geo/ops primitives.
 ";
 
 pub(crate) mod execution;
-pub(crate) mod machining;
+pub(crate) mod plan;
 
 use pyo3::prelude::*;
 
@@ -17,7 +17,7 @@ pub(crate) fn register(parent: &Bound<'_, PyModule>) -> PyResult<()> {
     let cnc_mod = PyModule::new(py, "cnc")?;
     cnc_mod.setattr("__doc__", MODULE_DOC)?;
     execution::register(&cnc_mod)?;
-    machining::register(&cnc_mod)?;
+    plan::register(&cnc_mod)?;
     parent.add_submodule(&cnc_mod)?;
 
     let sys_modules = py.import("sys")?.getattr("modules")?;

@@ -150,10 +150,7 @@ class Part:
         :returns: A new ``Part`` with the geometry constructed from the
             given polygons.
         """
-    def has_geometry(self) -> builtins.bool:
-        r"""
-        True if this Part has geometry.
-        """
+    def has_geometry(self) -> builtins.bool: ...
     def add_face(self, id: builtins.str, geometry: typing.Optional[geo.Geometry]) -> None:
         r"""
         Add a new face. Panics if a face with the given ``id`` already

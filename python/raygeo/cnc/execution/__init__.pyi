@@ -4,8 +4,10 @@ r"""
 CNC execution orchestration.
 """
 
+from . import intent
 from . import specs
 __all__ = [
+    "intent",
     "specs",
 ]
 

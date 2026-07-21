@@ -1,18 +1,20 @@
 use std::any::Any;
+use std::sync::Arc;
 
 use crate::cnc::execution::callbacks::OpsCallbacksAdapter;
 use crate::cnc::execution::callbacks::ScaledCallbacks;
 use crate::ops::assembly::{AssembleCtx, Assembler, AssemblyOutput, Tracelet};
-use crate::ops::part::{FaceState, Part};
+use crate::ops::part::{FaceState, Part, StockRegion};
 use crate::ops::state::State;
 use crate::ops::transform::{
     apply_transformers, combine_cache_hashes, Transformer,
 };
 use crate::pipeline::cache::CacheKey;
 use crate::pipeline::compute::{Compute, ComputeCtx};
+use crate::types::Polygon;
 
 pub struct AssemblerCompute {
-    pub assembler: Box<dyn Assembler>,
+    pub assembler: Arc<dyn Assembler>,
     pub part: Part,
     pub face_id: String,
     pub transformers: Vec<Box<dyn Transformer>>,
@@ -20,6 +22,11 @@ pub struct AssemblerCompute {
     /// Keys of upstream compute nodes whose `cleared_fragments`
     /// should be restored into this node's face before assembly.
     pub state_source_keys: Vec<String>,
+    /// When set, temporarily replace the face's stock region with
+    /// this boundary + islands before running, then restore the
+    /// original after.  This lets each step see a different pocket
+    /// subset while still sharing the same face's cleared area.
+    pub region_boundary: Option<(Polygon, Vec<Polygon>)>,
 }
 
 impl Compute for AssemblerCompute {
@@ -58,6 +65,17 @@ impl Compute for AssemblerCompute {
         let adapter = OpsCallbacksAdapter {
             inner: ctx.callbacks,
         };
+
+        // Temporarily replace the face's stock region with a
+        // per-step boundary if one is set.  This lets each step
+        // see a different pocket subset (e.g. a single region)
+        // while sharing the same face's cleared area.
+        let saved_region = self.region_boundary.as_ref().map(|(bnd, isls)| {
+            let saved = face.stock_region.clone();
+            face.stock_region = StockRegion::new(bnd.clone(), isls.clone());
+            saved
+        });
+
         let mut assemble_ctx = AssembleCtx {
             face,
             trace: &mut trace,
@@ -68,6 +86,11 @@ impl Compute for AssemblerCompute {
             image_source,
         };
         let meta = self.assembler.assemble(&mut assemble_ctx)?;
+
+        // Restore the original stock region.
+        if let Some(saved) = saved_region {
+            assemble_ctx.face.stock_region = saved;
+        }
 
         if ctx.callbacks.is_cancelled() {
             return Err("cancelled".to_string());

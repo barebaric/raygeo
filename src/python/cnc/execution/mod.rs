@@ -3,6 +3,7 @@ pyo3_stub_gen::module_doc!("raygeo.cnc.execution", "{}", MODULE_DOC);
 pub(crate) const MODULE_DOC: &str = "CNC execution orchestration.";
 
 pub mod converter;
+pub(crate) mod intent;
 pub mod specs;
 
 use pyo3::prelude::*;
@@ -14,8 +15,8 @@ pub(crate) fn register(parent: &Bound<'_, PyModule>) -> PyResult<()> {
     let exec_mod = PyModule::new(py, "execution")?;
     exec_mod.setattr("__doc__", MODULE_DOC)?;
 
+    intent::register(&exec_mod)?;
     specs::register(&exec_mod)?;
-    // converter is internal-only (no Python exports)
 
     parent.add_submodule(&exec_mod)?;
 

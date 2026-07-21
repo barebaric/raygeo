@@ -8,4 +8,5 @@ pub mod aggregate;
 pub mod callbacks;
 pub mod compute;
 pub mod encode;
+pub mod intent;
 pub mod specs;

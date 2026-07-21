@@ -3,10 +3,11 @@
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon as PolygonPatch
 
-from raygeo.cnc.machining.adaptive import build_clearing_workplan
-from raygeo.cnc.machining.plan import Workplan
+from raygeo.cnc.execution.intent import create_intent, run_intent
+from raygeo.cnc.plan.clearing import plan_clearing
 from raygeo.ops.feature.narrow import analyze_pocket
 from raygeo.ops.feature.region import find_regions
+from raygeo.ops.part import Part
 from tools.plot import plot_ops_2d
 
 
@@ -50,19 +51,17 @@ def _dumbbell(corridor_w):
 
 def _build_and_execute(boundary, islands=None, **kwargs):
     islands = islands or []
-    steps = build_clearing_workplan(
-        pocket_boundary=boundary, islands=islands, **kwargs
-    )
-    wp = Workplan(boundary, islands=islands, safe_z=kwargs.get("safe_z", 2.0))
-    wp.extend(steps)
-    result = wp.execute()
-    return steps, result
+    part = Part.from_polygons(boundary, islands, (0.0, 0.0))
+    plan = plan_clearing(part, "", **kwargs)
+    intent = create_intent(plan, part, 0)
+    ops = run_intent(intent)
+    return plan, ops
 
 
 def _step_summary(steps):
     seen = []
     for s in steps:
-        k = s["kind"]
+        k = s.kind
         if k not in seen:
             seen.append(k)
     return " + ".join(seen)
@@ -73,7 +72,8 @@ def _annotate_regions(ax, boundary, islands, tool_radius):
     regions = find_regions(
         boundary=boundary, islands=islands, tool_radius=tool_radius
     )
-    for i, (poly, _area, entry_pt, r_max) in enumerate(regions):
+    for i, reg in enumerate(regions):
+        poly, area, entry_pt, r_max = reg
         patch = PolygonPatch(
             poly,
             facecolor="#4C72B0",
@@ -135,7 +135,7 @@ def _annotate_regions(ax, boundary, islands, tool_radius):
         )
 
 
-def generate_clearing_workplan():
+def generate_clearing():
     """2x3 grid: dumbbells (row 1), dead-end passages (row 2)."""
     common = dict(
         tool_radius=3.0,
@@ -149,40 +149,41 @@ def generate_clearing_workplan():
     )
 
     nar_db = _dumbbell(8.5)
-    nar_db_steps, nar_db_result = _build_and_execute(nar_db, **common)
+    nar_db_plan, nar_db_ops = _build_and_execute(nar_db, **common)
 
     slot_db = _dumbbell(6.2)
-    slot_db_steps, slot_db_result = _build_and_execute(slot_db, **common)
+    slot_db_plan, slot_db_ops = _build_and_execute(slot_db, **common)
 
     db_un = _dumbbell(5.0)
-    db_un_steps, db_un_result = _build_and_execute(db_un, **common)
+    db_un_plan, db_un_ops = _build_and_execute(db_un, **common)
 
     nar_de = _hshape(8.5)
-    nar_de_steps, nar_de_result = _build_and_execute(nar_de, **common)
+    nar_de_plan, nar_de_ops = _build_and_execute(nar_de, **common)
 
     slot_de = _hshape(6.2)
-    slot_de_steps, slot_de_result = _build_and_execute(slot_de, **common)
+    slot_de_plan, slot_de_ops = _build_and_execute(slot_de, **common)
 
     un_de = _hshape(5.0)
-    un_de_steps, un_de_result = _build_and_execute(un_de, **common)
+    un_de_plan, un_de_ops = _build_and_execute(un_de, **common)
 
     panels = [
-        (nar_db, nar_db_steps, nar_db_result, "Dumbbell narrow (8.5 mm)"),
-        (slot_db, slot_db_steps, slot_db_result, "Dumbbell slot (6.2 mm)"),
-        (db_un, db_un_steps, db_un_result, "Dumbbell unreachable (5 mm)"),
-        (nar_de, nar_de_steps, nar_de_result, "Dead-end narrow (8.5 mm)"),
-        (slot_de, slot_de_steps, slot_de_result, "Dead-end slot (6.2 mm)"),
-        (un_de, un_de_steps, un_de_result, "Dead-end unreachable (5 mm)"),
+        (nar_db, nar_db_plan, nar_db_ops, "Dumbbell narrow (8.5 mm)"),
+        (slot_db, slot_db_plan, slot_db_ops, "Dumbbell slot (6.2 mm)"),
+        (db_un, db_un_plan, db_un_ops, "Dumbbell unreachable (5 mm)"),
+        (nar_de, nar_de_plan, nar_de_ops, "Dead-end narrow (8.5 mm)"),
+        (slot_de, slot_de_plan, slot_de_ops, "Dead-end slot (6.2 mm)"),
+        (un_de, un_de_plan, un_de_ops, "Dead-end unreachable (5 mm)"),
     ]
 
     fig, axes = plt.subplots(2, 3, figsize=(18, 12))
 
-    for idx, (bnd, steps, result, title) in enumerate(panels):
+    for idx, (bnd, plan, ops, title) in enumerate(panels):
         row, col = divmod(idx, 3)
         ax = axes[row][col]
-        plot_ops_2d(ax, result.ops, boundary=bnd)
+        if ops is not None:
+            plot_ops_2d(ax, ops, boundary=bnd)
         _annotate_regions(ax, bnd, [], common["tool_radius"])
-        ax.set_title(f"{title}\n{_step_summary(steps)}", fontsize=9)
+        ax.set_title(f"{title}\n{_step_summary(plan.steps)}", fontsize=9)
 
     for row in axes:
         for ax in row:
@@ -197,21 +198,21 @@ def generate_clearing_workplan():
     return fig
 
 
-__docs_target__ = ["raygeo.cnc.machining.adaptive.md"]
+__docs_target__ = ["raygeo.cnc.plan.clearing.md"]
 
 __images__ = [
     {
-        "heading": "build_clearing_workplan",
+        "heading": "plan_clearing",
         "caption": (
             "Clearing workplan: narrow passage (ToroidalClear),"
             " slot (Slot), dual-entry dumbbell (Unreachable)."
         ),
-        "function": generate_clearing_workplan,
+        "function": generate_clearing,
     },
 ]
 
 if __name__ == "__main__":
-    fig = generate_clearing_workplan()
+    fig = generate_clearing()
     fig.savefig(
         "/tmp/cnc_machining_adaptive.png", dpi=150, bbox_inches="tight"
     )

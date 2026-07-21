@@ -2,10 +2,13 @@ import pathlib
 import sys
 
 from raygeo.cli.scenarios import SCENARIOS, build_scenario
-from raygeo.cnc.machining.entry import build_entry_workplan
-from raygeo.cnc.machining.plan import Workplan
+from raygeo.cnc.execution.intent import create_intent, run_intent
+from raygeo.cnc.plan import Plan
+from raygeo.cnc.plan.entry import plan_entry
 from raygeo.ops.assembly.adaptive import adaptive_clearing
-from raygeo.ops.assembly.material_test_grid import generate_material_test_grid
+from raygeo.ops.assembly.material_test_grid import (
+    generate_material_test_grid,
+)
 from raygeo.ops.assembly.profile import profile_inner, profile_outer
 from raygeo.ops.feature.region import find_regions
 from raygeo.ops.part import Part
@@ -114,12 +117,7 @@ def register(subparsers):
 
 
 def _entry_steps(args, scenario):
-    """Pick an island-free region and build the entry steps for it.
-
-    ``build_entry_workplan`` requires a single wide sub-region (not the
-    whole pocket), so decompose the pocket with ``find_regions`` and use
-    the region's own entry point / inscribed radius.
-    """
+    """Pick an island-free region and build the entry steps for it."""
     boundary = [tuple(p) for p in scenario.boundary]
     islands = [[tuple(q) for q in isl] for isl in scenario.islands]
     regions = find_regions(boundary, islands, scenario.tool_radius)
@@ -131,7 +129,7 @@ def _entry_steps(args, scenario):
         sys.exit(1)
     idx = max(0, min(args.region, len(regions) - 1))
     region_polygon, _area, entry_pt, r_max = regions[idx]
-    steps = build_entry_workplan(
+    steps = plan_entry(
         region_polygon,
         entry_pt,
         r_max,
@@ -287,7 +285,7 @@ def _run_entry(args, trace_path):
         args, scenario
     )
 
-    kinds = ", ".join(sorted({s["kind"] for s in steps})) or "(none)"
+    kinds = ", ".join(sorted({s.kind for s in steps})) or "(none)"
     print("Running entry workflow with tracing...")
     print(
         f"  tool_radius={scenario.tool_radius}  "
@@ -297,60 +295,47 @@ def _run_entry(args, trace_path):
     print(f"  boundary: {len(boundary)} verts  islands: {len(islands)}")
     print(f"  entry steps: {kinds}")
 
-    wp = Workplan(boundary, islands, scenario.safe_z)
-    wp.extend(steps)
-    tp = pathlib.Path(trace_path)
-    mtime_before = tp.stat().st_mtime_ns if tp.exists() else 0
-    result = wp.execute(
-        cut_feed_rate=scenario.cut_feed_rate,
-        cut_power=scenario.cut_power,
-        trace=trace_path,
-    )
-    print(f"  Entry: {result.ops.len()} ops")
-    _check_trace_written(tp, mtime_before)
+    plan = Plan(boundary, islands, scenario.safe_z)
+    plan.extend(steps)
+    part = Part.from_polygons(boundary, islands, (0.0, 0.0))
+    intent = create_intent(plan, part, 0)
+    ops = run_intent(intent)
+    print(f"  Entry: {ops.len()} ops")
 
 
 def _run_workplan(args, trace_path):
-    """Run entry + adaptive clearing (full workplan) with tracing."""
+    """Run full clearing workplan (entry + adaptive) with tracing."""
     scenario, _seed_polys, _entry_ops = build_scenario(args)
-    boundary, islands, entry_point, r_max, entry_steps, n_regions = (
-        _entry_steps(args, scenario)
-    )
 
     print("Running full workplan (entry + adaptive clear) with tracing...")
+    print(f"  tool_radius={scenario.tool_radius}")
     print(
-        f"  tool_radius={scenario.tool_radius}  "
-        f"entry_point={entry_point}  r_max={r_max}  "
-        f"region {args.region}/{n_regions}"
+        f"  boundary: {len(scenario.boundary)} verts  "
+        f"islands: {len(scenario.islands)}"
     )
-    print(f"  boundary: {len(boundary)} verts  islands: {len(islands)}")
 
-    adaptive_step = {
-        "kind": "AdaptiveClear",
-        "pocket_boundary": boundary,
-        "islands": islands,
-        "tool_radius": scenario.tool_radius,
-        "step_over": scenario.step_over,
-        "step_length": scenario.step_length,
-        "target_z": scenario.cut_z,
-        "safe_z": scenario.safe_z,
-        "max_deflection_deg": scenario.max_deflection_deg,
-        "wall_margin": scenario.wall_margin,
-        "area_tolerance": scenario.area_tolerance,
-        "angular_step": 0.1,
-    }
-    wp = Workplan(boundary, islands, scenario.safe_z)
-    wp.extend(entry_steps)
-    wp.extend([adaptive_step])
-    tp = pathlib.Path(trace_path)
-    mtime_before = tp.stat().st_mtime_ns if tp.exists() else 0
-    result = wp.execute(
-        cut_feed_rate=scenario.cut_feed_rate,
-        cut_power=scenario.cut_power,
-        trace=trace_path,
+    boundary = [tuple(p) for p in scenario.boundary]
+    islands = [list(isl) for isl in scenario.islands]
+    part = Part.from_polygons(boundary, islands, (0.0, 0.0))
+
+    from raygeo.cnc.plan.clearing import plan_clearing
+
+    plan = plan_clearing(
+        part,
+        "",
+        tool_radius=scenario.tool_radius,
+        step_over=scenario.step_over,
+        step_length=scenario.step_length,
+        target_z=scenario.cut_z,
+        safe_z=scenario.safe_z,
+        max_deflection_deg=scenario.max_deflection_deg,
+        wall_margin=scenario.wall_margin,
+        area_tolerance=scenario.area_tolerance,
+        finishing=False,
     )
-    print(f"  Workplan: {result.ops.len()} ops")
-    _check_trace_written(tp, mtime_before)
+    intent = create_intent(plan, part, 0)
+    ops = run_intent(intent)
+    print(f"  Workplan: {ops.len()} ops")
 
 
 def _run_material(args, trace_path):

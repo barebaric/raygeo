@@ -8,9 +8,9 @@ tool-aware State via StateStrategy, and drives the geo/ops primitives.
 """
 
 from . import execution
-from . import machining
+from . import plan
 __all__ = [
     "execution",
-    "machining",
+    "plan",
 ]
 

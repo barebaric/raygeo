@@ -149,6 +149,17 @@ pub struct Part {
     pub image_source: Option<Box<dyn ImageSource>>,
 }
 
+impl Clone for Part {
+    fn clone(&self) -> Self {
+        Part {
+            faces: self.faces.clone(),
+            size_mm: self.size_mm,
+            pixels_per_mm: self.pixels_per_mm,
+            image_source: None,
+        }
+    }
+}
+
 impl std::fmt::Debug for Part {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let img = match &self.image_source {

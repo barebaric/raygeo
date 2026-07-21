@@ -10,7 +10,7 @@
 //! The crate is split into layers that depend only downward:
 //!
 //! ```text
-//! geo  →  ops  ──────────→ cnc      (plan-time; Workplan, builders)
+//! geo  →  ops  ──────────→ cnc      (plan-time; Plan, Intent, builders)
 //!                           ↑
 //!          pipeline  ───────┘       (runtime; execute_stages, rayon::scope)
 //! ```
@@ -29,9 +29,15 @@
 //! those are passed in by the caller.
 //!
 //! **[`cnc`]** — Orchestration.
-//! Builds workplans, drives assemblers/encoders through the pipeline,
-//! and bridges domain types to the generic pipeline traits. Depends
-//! on both `ops` and `pipeline`.
+//! Follows a strict three-stage pipeline:
+//! 1. **Plan** (`cnc::plan`): descriptive `Plan` (a sequence of
+//!    `PlanStep`s, each carrying an `Assembler` spec).  Planners like
+//!    `plan_clearing` and `plan_entry` produce Plans.
+//! 2. **Intent** (`cnc::execution::intent`): `create_intent(plan, part)`
+//!    converts a Plan into executable `NodeRequest`s with state
+//!    threading and a final aggregate.
+//! 3. **Execute**: `run_intent(intent)` runs the pipeline and returns
+//!    the final linked [`Ops`].
 //!
 //! **[`pipeline`]** — Generic runtime executor.
 //! Executes an intent tree of `NodeRequest`s on a rayon thread pool.
@@ -163,8 +169,11 @@ pub(crate) const MODULE_DOC: &str = concat!(
     "    representation (feed_rate, rapid_rate, …) but does NOT decide\n",
     "    what values to use — those are passed in by the caller.\n",
     "\n",
-    "``cnc`` — Orchestration.\n",
-    "    Builds workplans, drives assemblers through the pipeline.\n",
+    "``cnc`` — Orchestration (Plan → Intent → Execute).\n",
+    "    Plan: descriptive Plans (sequences of PlanSteps, each an\n",
+    "    Assembler spec).  Intent: create_intent() converts a Plan into\n",
+    "    executable NodeRequests.  Execute: run_intent() runs the\n",
+    "    pipeline and returns the final linked Ops.\n",
     "\n",
     "``pipeline`` — Generic runtime.\n",
     "    Runs an intent tree of nodes on a thread pool. Knows nothing\n",
@@ -189,7 +198,7 @@ pub(crate) const MODULE_DOC: &str = concat!(
     "----------\n",
     "- raygeo.geo — Geometry and path/shape/algo operations\n",
     "- raygeo.ops — Command sequence (Ops) manipulation and motion assembly\n",
-    "- raygeo.cnc — CNC orchestration (workplans, pipeline glue)\n",
+    "- raygeo.cnc — CNC orchestration (Plans, Intents, pipeline glue)\n",
     "- raygeo.pipeline — Generic runtime intent-tree executor\n",
     "\n",
     "Examples\n",

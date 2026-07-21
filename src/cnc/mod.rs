@@ -13,4 +13,4 @@
 //! via `pipeline::execute_stages`.
 
 pub mod execution;
-pub mod machining;
+pub mod plan;

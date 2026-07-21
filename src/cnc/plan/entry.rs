@@ -1,20 +1,27 @@
 //! CNC entry strategy orchestration.
 //!
-//! [`build_entry_workplan`] takes a single [`Region`] (wide sub-region
-//! with an entry point and max inscribed radius) and produces the
-//! appropriate entry [`WorkplanStep`]s.  Region detection is the
-//! caller's responsibility — use [`find_regions`] to obtain regions.
+//! [`plan_entry`] takes a single [`Region`] (wide sub-region with an
+//! entry point and max inscribed radius) and produces the appropriate
+//! entry [`PlanStep`]s.  Region detection is the caller's
+//! responsibility — use [`find_regions`](crate::ops::feature::region::find_regions)
+//! to obtain regions.
 //!
-//! Execution is the job of the workplan executor
-//! ([`Workplan`](crate::cnc::machining::plan::Workplan)).
+//! Execution is the job of the pipeline — see
+//! [`create_intent`](crate::cnc::execution::intent::create_intent).
+
+use std::sync::Arc;
 
 use prof_macros::prof;
 
-use crate::cnc::machining::plan::WorkplanStep;
+use crate::cnc::plan::plan::PlanStep;
 use crate::error::RaygeoResult;
 use crate::geo::algo::helix::HelixDirection;
 use crate::geo::shape::line::longest_line_through_point;
 use crate::geo::shape::polygon::get_polygon_bounds;
+use crate::ops::assembly::helix::HelixSpec;
+use crate::ops::assembly::ramp::RampSpec;
+use crate::ops::assembly::spiral::SpiralSpec;
+use crate::ops::assembly::toroid::ToroidalClearSpec;
 use crate::ops::feature::ramp::find_ramp_carrier;
 use crate::ops::feature::region::Region;
 use crate::types::{Point3D, Polygon};
@@ -30,7 +37,7 @@ pub struct EntryWorkplanOptions {
     pub angular_step: f64,
 }
 
-/// Build an entry workplan for a single wide [`Region`].
+/// Plan entry steps for a single wide [`Region`].
 ///
 /// Strategy is chosen based on `region.r_max`:
 /// - **Helix + spiral** when `r_max >= 2 × tool_diameter` (room for a
@@ -38,25 +45,33 @@ pub struct EntryWorkplanOptions {
 /// - **Toroidal ramp** when [`find_ramp_carrier`] finds a usable
 ///   carrier line inside the region polygon.
 /// - **Zigzag ramp** as a last-resort fallback.
+///
+/// Each step targets the default face (`""`). The caller may change
+/// `face_id` on the returned steps for multi-face parts.
 #[prof]
-pub fn build_entry_workplan(
+pub fn plan_entry(
     region: &Region,
     opts: &EntryWorkplanOptions,
-) -> RaygeoResult<Vec<WorkplanStep>> {
+    face_id: &str,
+) -> RaygeoResult<Vec<PlanStep>> {
     let mut steps = Vec::new();
     let tool_diameter = 2.0 * opts.tool_radius;
 
     if region.r_max >= 2.0 * tool_diameter {
         let helix_r = (opts.tool_radius * 0.8).min(region.r_max * 0.5);
 
-        steps.push(WorkplanStep::HelixPlunge {
-            center: region.entry_pt,
-            helix_r,
-            z_start: opts.safe_z,
-            z_end: opts.target_z,
-            pitch: opts.plunge_pitch,
-            direction: HelixDirection::Cw,
-            angular_step: opts.angular_step,
+        steps.push(PlanStep {
+            face_id: face_id.to_string(),
+            spec: Arc::new(HelixSpec {
+                center: region.entry_pt,
+                start_radius: helix_r,
+                z_start: opts.safe_z,
+                z_end: opts.target_z,
+                pitch: opts.plunge_pitch,
+                direction: HelixDirection::Cw,
+                angular_step: opts.angular_step,
+            }),
+            region_boundary: None,
         });
 
         let spiral_max_r = (region.r_max - opts.tool_radius - opts.safe_margin)
@@ -64,15 +79,19 @@ pub fn build_entry_workplan(
         let radial_dist = spiral_max_r - helix_r;
         if radial_dist > 0.0 && opts.step_over > 0.0 {
             let revolutions = radial_dist / opts.step_over;
-            steps.push(WorkplanStep::FlatSpiral {
-                center: region.entry_pt,
-                z: opts.target_z,
-                start_radius: helix_r,
-                end_radius: spiral_max_r,
-                revolutions,
-                direction: HelixDirection::Cw,
-                angular_step: opts.angular_step,
-                start_angle: 0.0,
+            steps.push(PlanStep {
+                face_id: face_id.to_string(),
+                spec: Arc::new(SpiralSpec {
+                    center: region.entry_pt,
+                    z: opts.target_z,
+                    start_radius: helix_r,
+                    end_radius: spiral_max_r,
+                    revolutions,
+                    direction: HelixDirection::Cw,
+                    angular_step: opts.angular_step,
+                    start_angle: 0.0,
+                }),
+                region_boundary: None,
             });
         }
     } else if let Some((start, end)) = find_ramp_carrier(
@@ -81,15 +100,19 @@ pub fn build_entry_workplan(
         opts.tool_radius,
         45.0,
     ) {
-        steps.push(WorkplanStep::ToroidalClear {
-            carrier: vec![start, end],
-            start: Point3D::new(start.x, start.y, opts.safe_z),
-            target_z: opts.target_z,
-            tool_radius: opts.tool_radius,
-            step_over: opts.step_over,
-            max_ramp_angle_deg: 45.0,
-            direction: HelixDirection::Cw,
-            angular_step: opts.angular_step,
+        steps.push(PlanStep {
+            face_id: face_id.to_string(),
+            spec: Arc::new(ToroidalClearSpec {
+                carrier: vec![start, end],
+                start: Point3D::new(start.x, start.y, opts.safe_z),
+                target_z: opts.target_z,
+                tool_radius: opts.tool_radius,
+                step_over: opts.step_over,
+                max_ramp_angle_deg: 45.0,
+                direction: HelixDirection::Cw,
+                angular_step: opts.angular_step,
+            }),
+            region_boundary: None,
         });
     } else {
         let (start, end) = ramp_segment_in_region(
@@ -97,13 +120,18 @@ pub fn build_entry_workplan(
             &region.polygon,
             opts.tool_radius,
         );
-        steps.push(WorkplanStep::RampEntry {
-            start,
-            end,
-            z_start: opts.safe_z,
-            z_end: opts.target_z,
-            max_ramp_angle_deg: 45.0,
-            lateral_amplitude: opts.tool_radius * 0.8,
+        steps.push(PlanStep {
+            face_id: face_id.to_string(),
+            spec: Arc::new(RampSpec {
+                start,
+                end,
+                z_start: opts.safe_z,
+                z_end: opts.target_z,
+                max_ramp_angle_deg: 45.0,
+                style: crate::geo::algo::ramp::RampStyle::ZigZag,
+                lateral_amplitude: opts.tool_radius * 0.8,
+            }),
+            region_boundary: None,
         });
     }
 
@@ -123,10 +151,6 @@ fn ramp_segment_in_region(
 ) -> (crate::types::Point, crate::types::Point) {
     use crate::geo::shape::polygon::{offset_polygon, JoinStyle};
 
-    // Erode region by tool_radius (Miter join). Any tool disc centred
-    // inside the eroded region fits inside the original region. If
-    // erosion collapses (region narrower than 2*tool_radius), fall back
-    // to the AABB-spanning line — the caller can shorten or reject.
     let eroded = offset_polygon(region, -tool_radius, JoinStyle::Miter);
     let valid: &[Polygon] = if eroded.is_empty() {
         std::slice::from_ref(region)
@@ -136,7 +160,6 @@ fn ramp_segment_in_region(
 
     let bbox = crate::geo::shape::polygon::get_polygon_bounds(region);
 
-    // Try both axis-aligned orientations through entry_pt spanning the AABB.
     let candidates = [
         (
             crate::types::Point::new(bbox.min.x, entry_pt.y),

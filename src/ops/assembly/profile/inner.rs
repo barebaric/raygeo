@@ -1,4 +1,4 @@
-use crate::error::{RaygeoError, RaygeoResult};
+use crate::error::RaygeoResult;
 use crate::geo::shape::polygon::{
     get_polygon_area, get_polygon_centroid, get_polygon_heading_at,
     get_polygons_group_difference, is_point_in_polygon, offset_polygon,
@@ -17,19 +17,29 @@ use crate::types::{Point3D, Polygon};
 use glam::Vec3Swizzles;
 
 /// Profile the inner boundary of a pocket, extracting geometry from
-/// `face`.
+/// the face's [`StockRegion`](crate::ops::part::StockRegion) (which
+/// may be swapped per-step to scope the profile to a sub-region).
 pub fn profile_inner(
     face: &mut FaceState,
     trace: &mut Tracelet,
     opts: &ProfileSpec,
     cut_state: &State,
 ) -> RaygeoResult<AssemblyMeta> {
-    let (boundary_opt, islands) = face.extract_boundary();
-    let boundary = boundary_opt.ok_or_else(|| {
-        RaygeoError::DegenerateGeometry(
-            "Part has no extractable boundary geometry".into(),
-        )
-    })?;
+    if face.stock_region.boundary.len() < 3 {
+        let zero = Point3D::ZERO;
+        return Ok(AssemblyMeta {
+            start: ToolPose {
+                pos: zero,
+                heading: 0.0,
+            },
+            end: ToolPose {
+                pos: zero,
+                heading: 0.0,
+            },
+        });
+    }
+    let boundary = face.stock_region.boundary.clone();
+    let islands = face.stock_region.islands.clone();
 
     let offset_dist = opts.tool_radius + opts.wall_margin + opts.stock_to_leave;
 

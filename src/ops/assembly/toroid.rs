@@ -73,8 +73,27 @@ impl Assembler for ToroidalClearSpec {
         if ctx.callbacks.is_cancelled() {
             return Err("cancelled".to_string());
         }
+        // Extend the carrier with a plunge point in the cleared area,
+        // matching the original WorkplanStep::ToroidalClear behaviour.
+        // This ensures the toroid starts inside already-cleared stock
+        // (e.g. the adjacent region) rather than inside the passage.
+        let mut full_carrier = self.carrier.clone();
+        if let Some(&first) = self.carrier.first() {
+            if let Some(plunge) = ctx.face.cleared.find_plunge_point(
+                &ctx.face.stock_region,
+                first,
+                self.tool_radius,
+                self.tool_radius * 3.0,
+            ) {
+                full_carrier.insert(0, plunge);
+            }
+        }
+        let opts = ToroidalClearSpec {
+            carrier: full_carrier,
+            ..self.clone()
+        };
         let meta =
-            generate_toroidal_clear(ctx.face, ctx.trace, self, ctx.state)
+            generate_toroidal_clear(ctx.face, ctx.trace, &opts, ctx.state)
                 .map_err(|e| e.to_string())?;
         ctx.callbacks.report_progress(1.0, "toroidal_clear: done");
         Ok(meta)
