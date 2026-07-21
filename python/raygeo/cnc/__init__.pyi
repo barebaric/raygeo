@@ -7,8 +7,10 @@ Sequences machining operations (entry, clearing, finish), resolves
 tool-aware State via StateStrategy, and drives the geo/ops primitives.
 """
 
+from . import execution
 from . import machining
 __all__ = [
+    "execution",
     "machining",
 ]
 
