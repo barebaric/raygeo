@@ -90,7 +90,13 @@ fn clear_cache() {
     skip_from_py_object
 )]
 pub struct PyPipeline {
-    inner: CorePipeline,
+    pub(crate) inner: CorePipeline,
+}
+
+impl PyPipeline {
+    pub(crate) fn cache_handle(&self) -> Arc<Mutex<Cache>> {
+        self.inner.cache_handle()
+    }
 }
 
 #[gen_stub_pymethods]
@@ -161,6 +167,10 @@ impl PyPipeline {
 /// Process-global default pipeline, used by the bare
 /// `execute_stages` function. Per-document callers should construct
 /// their own `Pipeline` instance for independent cache pruning.
+pub(crate) fn default_cache_handle() -> Arc<Mutex<Cache>> {
+    default_pipeline().cache_handle()
+}
+
 fn default_pipeline() -> &'static CorePipeline {
     use std::sync::LazyLock;
     static DEFAULT: LazyLock<CorePipeline> =

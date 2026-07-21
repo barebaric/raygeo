@@ -320,10 +320,7 @@ fn dispatch_stage(
 }
 
 fn collect_deps(stage: &StageSpec) -> Vec<String> {
-    match stage {
-        StageSpec::Compute { compute_fn } => compute_fn.source_keys(),
-        StageSpec::Aggregate { aggregate_fn } => aggregate_fn.source_keys(),
-    }
+    stage.source_keys()
 }
 
 fn deliver_synthetic_completion(shared: &Arc<SharedState>, key: &str) {

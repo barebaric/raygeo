@@ -140,7 +140,7 @@ fn convert_encode_spec(
 
 // ── NodeRequest conversion ────────────────────────────────────────
 
-fn convert_node_request(
+pub(crate) fn convert_node_request(
     py: Python<'_>,
     req: &PyNodeRequest,
 ) -> PyResult<CoreNodeRequest> {

@@ -6,10 +6,12 @@ from raygeo.cnc import plan
 from raygeo import ops
 from raygeo.ops import part
 from raygeo.pipeline import execute
+from raygeo.pipeline import request
 import typing
 __all__ = [
     "Intent",
     "create_intent",
+    "create_intent_from_nodes",
     "run_intent",
 ]
 
@@ -19,7 +21,10 @@ class Intent:
     An executable Intent produced by [`create_intent`].
     
     Holds the raw [`NodeRequest`]s inside a shared container so that
-    [`run_intent`] can move them out at execution time.
+    [`run_intent`] can move them out at execution time. The
+    ``last_tokens`` map records each node's ``version_token`` from the
+    last [`update <PyIntent::__pyo3_get__update>`] call, enabling
+    diff-based cache invalidation.
     """
     @property
     def step_count(self) -> builtins.int:
@@ -27,10 +32,44 @@ class Intent:
         Number of compute nodes in this intent (excluding the final aggregate).
         """
     def __repr__(self) -> builtins.str: ...
+    def update(self, new_intent: Intent, pipeline: typing.Optional[execute.Pipeline] = None) -> None:
+        r"""
+        Diff this intent against ``new_intent`` and update internal
+        state, evicting stale cache entries.
+        
+        For each node whose ``version_token`` changed (or that was
+        removed), the corresponding cache entry is evicted and its
+        epoch bumped. Transitive dependents are invalidated too.
+        Unchanged nodes keep their cache entries.
+        
+        After ``update``, the old intent holds the new node list and
+        can be executed with :func:`run_intent`.
+        """
+    def invalidate(self, keys: typing.Sequence[builtins.str], pipeline: typing.Optional[execute.Pipeline] = None) -> None:
+        r"""
+        Manually invalidate specific node keys and their transitive
+        dependents.
+        
+        Cache entries for each key (and every node that depends on
+        them, transitively) are evicted and their epochs bumped.
+        The next :func:`run_intent` call recomputes them.
+        
+        This is the escape hatch for cases where node content changed
+        without a ``version_token`` change — e.g. an in-place raster
+        pixel edit.
+        """
 
 def create_intent(plan: plan.Plan, part: part.Part, generation_id: builtins.int) -> Intent:
     r"""
     Convert a Plan and Part into an executable Intent.
+    """
+
+def create_intent_from_nodes(nodes: typing.Sequence[request.NodeRequest]) -> Intent:
+    r"""
+    Build an Intent from a list of raw :class:`~raygeo.pipeline.request.NodeRequest` objects.
+    
+    Useful for callers (e.g. rayforge's IntentBuilder) that construct
+    their own node list without going through the Plan API.
     """
 
 def run_intent(intent: Intent, on_completed: typing.Optional[typing.Any] = None, on_batch_progress: typing.Optional[typing.Any] = None, pipeline: typing.Optional[execute.Pipeline] = None) -> ops.Ops:
