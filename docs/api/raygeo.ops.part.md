@@ -82,14 +82,14 @@ part as a `WholeImageSource` and is also accessible via the `image_source` prope
 ### `image_source`
 
 ```python
-image_source: Optional[image_source.WholeImageSource]
+image_source: Optional[Any]
 ```
 
-The lazy `WholeImageSource` backing this part, or `None` if no raster image has been attached.
+The lazy `ImageSource` backing this part, or `None` if no raster image has been attached.
 
-Reading this property returns the same `WholeImageSource` instance that was passed to the setter (or
-constructed implicitly by the `image` setter). Assigning `None` clears it; assigning a
-`WholeImageSource` instance replaces the current source.
+Reading this property returns the same instance that was passed to the setter (or constructed
+implicitly by the `image` setter). The returned object is either a `WholeImageSource` or a
+`VipsChunkSource`.
 
 Vector-only parts have `image_source = None`.
 

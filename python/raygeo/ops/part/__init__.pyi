@@ -108,23 +108,22 @@ class Part:
     @image.setter
     def image(self, value: typing.Optional[typing.Any]) -> None: ...
     @property
-    def image_source(self) -> typing.Optional[image_source.WholeImageSource]:
+    def image_source(self) -> typing.Optional[typing.Any]:
         r"""
-        The lazy `WholeImageSource` backing this part, or ``None``
+        The lazy `ImageSource` backing this part, or ``None``
         if no raster image has been attached.
         
-        Reading this property returns the same `WholeImageSource`
-        instance that was passed to the setter (or constructed
-        implicitly by the ``image`` setter). Assigning ``None``
-        clears it; assigning a `WholeImageSource` instance replaces
-        the current source.
+        Reading this property returns the same instance that was passed
+        to the setter (or constructed implicitly by the ``image``
+        setter).  The returned object is either a
+        `WholeImageSource` or a `VipsChunkSource`.
         
         Vector-only parts have ``image_source = None``.
         
-        :returns: `WholeImageSource` or ``None``.
+        :returns: `WholeImageSource`, `VipsChunkSource`, or ``None``.
         """
     @image_source.setter
-    def image_source(self, value: typing.Optional[image_source.WholeImageSource]) -> None: ...
+    def image_source(self, value: typing.Optional[typing.Any]) -> None: ...
     def __new__(cls, geometry: typing.Optional[geo.Geometry] = None, size_mm: tuple[builtins.float, builtins.float] = (0.0, 0.0), pixels_per_mm: typing.Optional[tuple[builtins.float, builtins.float]] = None) -> Part:
         r"""
         Create a new Part.

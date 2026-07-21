@@ -4,8 +4,84 @@
 import builtins
 import typing
 __all__ = [
+    "VipsChunkSource",
     "WholeImageSource",
 ]
+
+@typing.final
+class VipsChunkSource:
+    r"""
+    Lazy ``ImageSource`` wrapping a ``pyvips.Image`` for bounded peak RSS.
+    
+    Unlike [`WholeImageSource`], which eagerly copies the entire numpy
+    array into Rust memory, `VipsChunkSource` holds only a reference to
+    the pyvips image and materialises horizontal slabs on demand via
+    ``image.crop(0, y, w, h).write_to_memory()``.
+    
+    For images below *in_memory_threshold_mb* (default 256 MB),
+    [`read_all`][PyVipsChunkSource::read_all] materialises the full
+    buffer so callers that need random access (raster, shrinkwrap) work
+    unchanged. Above the threshold, `read_all` returns `None`, forcing
+    the caller to fall back to slab-by-slab reads.
+    
+    The pyvips image **must** be single-band uchar. Convert before
+    constructing:
+    
+    ```python
+    img = image.colourspace("b-w").cast("uchar")
+    src = VipsChunkSource(img)
+    ```
+    """
+    @property
+    def dimensions(self) -> tuple[builtins.int, builtins.int]:
+        r"""
+        Pixel dimensions as ``(width, height)``.
+        """
+    @property
+    def width(self) -> builtins.int:
+        r"""
+        Pixel width.
+        """
+    @property
+    def height(self) -> builtins.int:
+        r"""
+        Pixel height.
+        """
+    def __new__(cls, vips_image: typing.Any, in_memory_threshold_mb: builtins.int = 256) -> VipsChunkSource:
+        r"""
+        Build a `VipsChunkSource` from a single-band uchar ``pyvips.Image``.
+        
+        :param vips_image: A ``pyvips.Image`` with exactly one band and
+            8-bit unsigned interpretation. Convert with
+            ``image.colourspace("b-w").cast("uchar")`` if necessary.
+        :param in_memory_threshold_mb: Maximum image size (in MB) for
+            which `read_all` will materialise the full buffer. Defaults
+            to 256. Images above this threshold require slab-by-slab
+            access.
+        """
+    def read_slab(self, y_start: builtins.int, y_end: builtins.int) -> builtins.list[builtins.int]:
+        r"""
+        Pull a horizontal slab ``[y_start, y_end)`` and return it as
+        a flat ``bytes`` object of length ``rows * width``.
+        
+        :param y_start: First row to read (inclusive).
+        :param y_end:   Last row to read (exclusive); clipped to
+            image height.
+        :returns: ``bytes`` of length
+            ``(y_end_clamped - y_start) * width``.
+        """
+    def read_all(self) -> typing.Optional[builtins.list[builtins.int]]:
+        r"""
+        Return the full image as flat row-major ``bytes``, or ``None``
+        when the source cannot materialise the full buffer (image above
+        the configured threshold).
+        """
+    def is_cancelled(self) -> builtins.bool:
+        r"""
+        Cancellation probe. `VipsChunkSource` is never cancelled by
+        itself — the assembler polls its own callbacks.
+        """
+    def __repr__(self) -> builtins.str: ...
 
 @typing.final
 class WholeImageSource:

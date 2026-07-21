@@ -2,6 +2,7 @@ use std::any::Any;
 
 use pyo3::prelude::*;
 
+use crate::ops::callbacks::ChunkPayload;
 use crate::pipeline::callbacks::Callbacks;
 
 pub struct PyTaskCallbacks {
@@ -43,11 +44,16 @@ impl Callbacks for PyTaskCallbacks {
         })
     }
 
-    fn emit_chunk(&self, _chunk: Box<dyn Any + Send + Sync>) {
+    fn emit_chunk(&self, chunk: Box<dyn Any + Send + Sync>) {
         if let Some(ref cb) = self.on_chunk {
-            Python::attach(|py| {
-                let _ = cb.call0(py);
-            });
+            if let Some(payload) = chunk.downcast_ref::<ChunkPayload>() {
+                Python::attach(|py| {
+                    let _ = cb.call1(
+                        py,
+                        (payload.y_start, payload.y_end, &payload.message),
+                    );
+                });
+            }
         }
     }
 }

@@ -23,8 +23,27 @@ from raygeo.cnc.execution.specs import ComputePayload
 from raygeo.ops.assembly import Assembler
 from raygeo.ops.assembly.raster import RasterSpec, raster
 from raygeo.ops.part import Part
+from raygeo.ops.part.image_source import VipsChunkSource
 from raygeo.pipeline.request import NodeRequest
 from raygeo.pipeline.stage import StageSpec
+
+
+class _FakeVipsImage:
+    """Minimal duck-typed stand-in for ``pyvips.Image``."""
+
+    def __init__(self, data: np.ndarray):
+        self._data = data
+        self.width = data.shape[1]
+        self.height = data.shape[0]
+        self.bands = 1
+
+    def crop(self, left, top, width, height):
+        return _FakeVipsImage(
+            self._data[top : top + height, left : left + width]
+        )
+
+    def write_to_memory(self):
+        return self._data.tobytes()
 
 
 def _filled_part(fill: int = 255, size_mm=(10.0, 10.0), ppm=(10.0, 10.0)):
@@ -129,3 +148,90 @@ def test_raster_mode_changes_output():
         )
     ).to_dict()
     assert mask != multi
+
+
+# ---------------------------------------------------------------------------
+# Chunk delivery via VipsChunkSource (read_all returns None → slab path)
+# ---------------------------------------------------------------------------
+
+
+def _vips_part(fill=255, threshold_mb=0):
+    """Part with a VipsChunkSource so read_all() returns None."""
+    arr = np.full((100, 100), fill, dtype=np.uint8)
+    src = VipsChunkSource(
+        _FakeVipsImage(arr), in_memory_threshold_mb=threshold_mb
+    )
+    part = Part(size_mm=(10.0, 10.0), pixels_per_mm=(10.0, 10.0))
+    part.image_source = src
+    return part
+
+
+def test_raster_emits_chunks_for_chunked_source():
+    """When read_all() returns None, the raster assembler falls back
+    to slab-by-slab loading and emits on_chunk per slab.
+    """
+    chunks: list[tuple] = []
+    nr = NodeRequest(
+        key="chunked",
+        generation_id=1,
+        stage=StageSpec.Compute(
+            part=_vips_part(),
+            params=ComputePayload(
+                assembler=Assembler(RasterSpec(mode="mask_scan"))
+            ),
+        ),
+        on_chunk=lambda ys, ye, msg: chunks.append((ys, ye, msg)),
+    )
+    c = _run_one(nr)
+    assert c.error is None
+    assert len(chunks) > 0
+    assert chunks[0][0] == 0
+    assert chunks[-1][1] == 100
+    for _, _, msg in chunks:
+        assert "slab" in msg
+
+
+def test_raster_no_chunks_when_read_all_succeeds():
+    """When read_all() succeeds, no chunks are emitted."""
+    chunks: list[tuple] = []
+    nr = NodeRequest(
+        key="whole",
+        generation_id=1,
+        stage=StageSpec.Compute(
+            part=_vips_part(threshold_mb=256),
+            params=ComputePayload(
+                assembler=Assembler(RasterSpec(mode="mask_scan"))
+            ),
+        ),
+        on_chunk=lambda ys, ye, msg: chunks.append((ys, ye, msg)),
+    )
+    c = _run_one(nr)
+    assert c.error is None
+    assert chunks == []
+
+
+def test_raster_chunked_output_matches_non_chunked():
+    """Output is identical whether read_all succeeds or returns None."""
+    spec = RasterSpec(mode="mask_scan", line_interval_mm=1.0, step_power=0.2)
+
+    c_chunked = _run_one(
+        NodeRequest(
+            key="c1",
+            generation_id=1,
+            stage=StageSpec.Compute(
+                part=_vips_part(threshold_mb=0),
+                params=ComputePayload(assembler=Assembler(spec)),
+            ),
+        )
+    )
+    c_whole = _run_one(
+        NodeRequest(
+            key="c2",
+            generation_id=1,
+            stage=StageSpec.Compute(
+                part=_vips_part(threshold_mb=256),
+                params=ComputePayload(assembler=Assembler(spec)),
+            ),
+        )
+    )
+    assert result_ops(c_chunked).to_dict() == result_ops(c_whole).to_dict()

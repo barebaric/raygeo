@@ -12,6 +12,7 @@
 use crate::error::{RaygeoError, RaygeoResult};
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::{AssembleCtx, Assembler};
+use crate::ops::callbacks::{Callbacks, ChunkPayload};
 use crate::ops::container::Ops;
 use crate::ops::convert::image::ScanMode;
 use crate::ops::enums::{RasterMode, SectionType};
@@ -87,6 +88,7 @@ impl Assembler for RasterSpec {
             self.z_step_down,
             self.angle_increment,
             self.dot_width_correction_mm,
+            ctx.callbacks,
         )
         .map_err(|e| e.to_string())?;
         if ctx.callbacks.is_cancelled() {
@@ -150,16 +152,15 @@ pub fn assemble_raster(
     z_step_down: f64,
     angle_increment: f64,
     dot_width_correction_mm: f64,
+    callbacks: &dyn Callbacks,
 ) -> RaygeoResult<(Ops, AssemblyMeta)> {
     let (w, h) = image_src.dimensions();
-    let gray = image_src.read_all().ok_or_else(|| {
-        RaygeoError::ContourError(
-            "Part's image source cannot materialise a full buffer — \
-             raster requires an in-memory image"
-                .to_string(),
-        )
-    })?;
     let (h, w) = (h as usize, w as usize);
+
+    let gray = match image_src.read_all() {
+        Some(data) => data,
+        None => read_slab_by_slab(image_src, w, h, callbacks)?,
+    };
 
     let scan_mode_val = match scan_mode {
         "segmented" | "Segmented" => ScanMode::Segmented,
@@ -282,4 +283,59 @@ pub fn assemble_raster(
         },
     };
     Ok((combined, meta))
+}
+
+/// Target slab size for lazy image loading (≈ 8 MB per slab).
+const TARGET_SLAB_BYTES: usize = 8 * 1024 * 1024;
+
+/// Read an image slab-by-slub into a contiguous buffer when
+/// `read_all()` returns `None`.
+///
+/// Reports progress and emits chunks per slab so the caller can show
+/// incremental feedback during long image loads. Cancellation is
+/// polled between slabs.
+fn read_slab_by_slab(
+    image_src: &dyn ImageSource,
+    width: usize,
+    height: usize,
+    callbacks: &dyn Callbacks,
+) -> RaygeoResult<Vec<u8>> {
+    let mut buf = vec![0u8; width * height];
+    let slab_h = (TARGET_SLAB_BYTES / width.max(1)).max(1).min(height);
+    let num_slabs = height.div_ceil(slab_h);
+
+    let mut y = 0usize;
+    let mut slab_idx = 0u32;
+    while y < height {
+        if image_src.is_cancelled() || callbacks.is_cancelled() {
+            return Err(RaygeoError::ContourError("cancelled".to_string()));
+        }
+
+        let y_end = (y + slab_h).min(height);
+        let row_bytes = width * (y_end - y);
+        let rows = image_src.read_slab(
+            y as u32,
+            y_end as u32,
+            &mut buf[y * width..y * width + row_bytes],
+        ) as usize;
+        if rows == 0 {
+            return Err(RaygeoError::ContourError(format!(
+                "ImageSource::read_slab returned 0 rows at y={y}"
+            )));
+        }
+
+        slab_idx += 1;
+        let frac = y_end as f64 / height as f64;
+        let msg = format!("loading slab {slab_idx}/{num_slabs}");
+        callbacks.report_progress(frac * 0.5, &msg);
+        callbacks.emit_chunk(ChunkPayload {
+            y_start: y as u32,
+            y_end: (y + rows) as u32,
+            message: msg,
+        });
+
+        y += rows;
+    }
+
+    Ok(buf)
 }

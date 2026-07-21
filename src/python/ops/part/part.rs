@@ -1,3 +1,4 @@
+use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
@@ -7,7 +8,9 @@ use crate::ops::part::Part;
 use crate::python::geo::geometry::Geometry as PyGeometry;
 use crate::python::ops::part::cleared_area::PyClearedArea;
 use crate::python::ops::part::face_state::PyFaceState;
-use crate::python::ops::part::image_source::PyWholeImageSource;
+use crate::python::ops::part::image_source::{
+    PyVipsChunkSource, PyWholeImageSource,
+};
 use crate::python::ops::part::stock_region::PyStockRegion;
 use crate::types::{Point, Polygon};
 
@@ -37,10 +40,11 @@ fn extract_flat_u8(
 #[derive(Debug)]
 pub struct PyPart {
     pub inner: Part,
-    /// Python-visible [`WholeImageSource`] handle, kept in lock-step
-    /// with ``inner.image_source`` so callers see identity-preserving
+    /// Python-visible image-source handle (``WholeImageSource`` or
+    /// ``VipsChunkSource``), kept in lock-step with
+    /// ``inner.image_source`` so callers see identity-preserving
     /// round-trips on the ``image_source`` property.
-    py_image_source: Option<Py<PyWholeImageSource>>,
+    py_image_source: Option<Py<PyAny>>,
 }
 
 #[gen_stub_pymethods]
@@ -244,7 +248,7 @@ impl PyPart {
                     inner: inner.clone(),
                 };
                 self.inner.image_source = Some(Box::new(inner));
-                self.py_image_source = Some(Py::new(py, py_ws)?);
+                self.py_image_source = Some(Py::new(py, py_ws)?.into());
                 Ok(())
             }
             None => {
@@ -255,33 +259,49 @@ impl PyPart {
         }
     }
 
-    /// The lazy `WholeImageSource` backing this part, or ``None``
+    /// The lazy `ImageSource` backing this part, or ``None``
     /// if no raster image has been attached.
     ///
-    /// Reading this property returns the same `WholeImageSource`
-    /// instance that was passed to the setter (or constructed
-    /// implicitly by the ``image`` setter). Assigning ``None``
-    /// clears it; assigning a `WholeImageSource` instance replaces
-    /// the current source.
+    /// Reading this property returns the same instance that was passed
+    /// to the setter (or constructed implicitly by the ``image``
+    /// setter).  The returned object is either a
+    /// `WholeImageSource` or a `VipsChunkSource`.
     ///
     /// Vector-only parts have ``image_source = None``.
     ///
-    /// :returns: `WholeImageSource` or ``None``.
+    /// :returns: `WholeImageSource`, `VipsChunkSource`, or ``None``.
     #[getter]
-    fn image_source(&self, py: Python<'_>) -> Option<Py<PyWholeImageSource>> {
+    fn image_source(&self, py: Python<'_>) -> Option<Py<PyAny>> {
         self.py_image_source.as_ref().map(|ws| ws.clone_ref(py))
     }
 
     #[setter]
     fn set_image_source(
         &mut self,
-        source: Option<Bound<'_, PyWholeImageSource>>,
+        source: Option<&Bound<'_, PyAny>>,
     ) -> PyResult<()> {
         match source {
-            Some(s) => {
-                let inner = s.borrow().inner.clone();
-                self.inner.image_source = Some(Box::new(inner));
-                self.py_image_source = Some(s.unbind());
+            Some(obj) => {
+                if let Ok(whole) =
+                    obj.extract::<PyRef<'_, PyWholeImageSource>>()
+                {
+                    self.inner.image_source =
+                        Some(Box::new(whole.inner.clone()));
+                    drop(whole);
+                    self.py_image_source = Some(obj.clone().unbind());
+                } else if let Ok(vips) =
+                    obj.extract::<PyRef<'_, PyVipsChunkSource>>()
+                {
+                    self.inner.image_source =
+                        Some(Box::new(vips.inner.clone()));
+                    drop(vips);
+                    self.py_image_source = Some(obj.clone().unbind());
+                } else {
+                    return Err(PyTypeError::new_err(
+                        "Part.image_source expects a WholeImageSource \
+                         or VipsChunkSource",
+                    ));
+                }
                 Ok(())
             }
             None => {

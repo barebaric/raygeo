@@ -7,6 +7,7 @@ use pyo3_stub_gen::derive::{
 use crate::ops::assembly::raster::{
     assemble_raster, RasterSpec as CoreRasterSpec,
 };
+use crate::ops::callbacks::NoCallbacks;
 use crate::python::ops::assembly::result::PyAssemblyResult;
 use crate::python::ops::part::part::PyPart;
 
@@ -358,6 +359,7 @@ fn raster_py(
         z_step_down,
         angle_increment,
         dot_width_correction_mm,
+        &NoCallbacks,
     )?;
     Ok(PyAssemblyResult::from_parts(ops, meta, None, vec![]))
 }
