@@ -13,6 +13,7 @@ use crate::fstring::{
     parse_include_directive, render_named, resolve_path_vars, NamedVars,
 };
 use crate::ops::axis::Axis;
+use crate::ops::callbacks::Callbacks;
 use crate::ops::container::Ops;
 use crate::ops::convert::gcode_types::{
     EncodeContext, EncodeResult, GcodeDialectSpec, Macro, MacroTable,
@@ -1023,10 +1024,14 @@ pub fn encode_gcode(
     ops: &Ops,
     dialect: &GcodeDialectSpec,
     ctx: &EncodeContext,
-) -> EncodeResult {
+    callbacks: &dyn Callbacks,
+) -> Result<EncodeResult, String> {
     let mut enc = GcodeEncoder::new(dialect, ctx);
 
     for i in 0..ops.len() {
+        if i % 1000 == 0 && callbacks.is_cancelled() {
+            return Err("cancelled".to_string());
+        }
         let start_line = enc.gcode.len();
         enc.handle_command(ops, i);
         enc.record_op_lines(i, start_line);
@@ -1034,11 +1039,11 @@ pub fn encode_gcode(
 
     enc.finalize();
 
-    EncodeResult {
+    Ok(EncodeResult {
         text: enc.gcode.join("\n"),
         op_to_machine_code: enc.op_to_machine_code,
         machine_code_to_op: enc.machine_code_to_op,
-    }
+    })
 }
 
 /// Spec for the G-code encoder.
@@ -1062,7 +1067,8 @@ impl Encoder for GcodeSpec {
         let context: EncodeContext = parse_context(&self.context_json)?;
 
         ctx.callbacks.report_progress(0.5, "gcode: encode");
-        let result = encode_gcode(ctx.ops, &self.dialect, &context);
+        let result =
+            encode_gcode(ctx.ops, &self.dialect, &context, ctx.callbacks)?;
 
         ctx.callbacks.report_progress(1.0, "gcode: done");
         Ok(EncodeOutput::MachineCode {

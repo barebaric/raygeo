@@ -230,6 +230,9 @@ pub struct VertexSpec;
 
 impl Encoder for VertexSpec {
     fn encode(&self, ctx: &mut EncodeCtx<'_>) -> Result<EncodeOutput, String> {
+        if ctx.callbacks.is_cancelled() {
+            return Err("cancelled".to_string());
+        }
         ctx.callbacks.report_progress(0.0, "vertex: encode");
         let va = ctx.ops.to_vertex_arrays();
         ctx.callbacks.report_progress(1.0, "vertex: done");

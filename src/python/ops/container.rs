@@ -2951,7 +2951,13 @@ impl PyOps {
         use crate::ops::convert::gcode_types::EncodeContext;
 
         let context: EncodeContext = from_pydict(py, context_dict)?;
-        let result = encode_gcode_inner(&self.inner, &dialect.0, &context);
+        let result = encode_gcode_inner(
+            &self.inner,
+            &dialect.0,
+            &context,
+            &crate::ops::callbacks::NoCallbacks,
+        )
+        .map_err(pyo3::exceptions::PyRuntimeError::new_err)?;
         let dict = PyDict::new(py);
         dict.set_item("text", &result.text)?;
         dict.set_item(

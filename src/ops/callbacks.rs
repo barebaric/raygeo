@@ -37,6 +37,30 @@ pub struct ChunkPayload {
 /// transformers ([`crate::ops::transform::Transformer`]) so every
 /// long-running unit of work shares one progress / cancellation /
 /// chunk shape.
+///
+/// # Cancellation model
+///
+/// Cancellation is **cooperative**: long-running implementations poll
+/// [`is_cancelled`](Callbacks::is_cancelled) between meaningful units
+/// of work and return early (typically with an error) when it returns
+/// `true`.
+///
+/// rayon tasks **cannot be force-aborted**. The pipeline executor
+/// (`pipeline::execute`) runs each node on a rayon worker; once a
+/// node's `run()` has started, it runs to completion or until it
+/// voluntarily polls `is_cancelled()`. There is no `JoinHandle::abort`
+/// or thread-kill mechanism.
+///
+/// **Supersession** (a node invalidated while still computing) is
+/// handled separately by the per-node epoch counter on the pipeline
+/// cache: the in-flight task is allowed to finish, but its result is
+/// discarded at completion if the epoch has advanced. See
+/// `pipeline::execute::spawn_one`.
+///
+/// Long-running implementations should poll at a granularity that
+/// keeps cancellation latency under a few hundred milliseconds —
+/// typically every N loop iterations, where N is chosen so that N
+/// iterations of the inner loop complete in well under one second.
 pub trait Callbacks: Send {
     /// Report progress in `[0.0, 1.0]` with a short message.
     ///

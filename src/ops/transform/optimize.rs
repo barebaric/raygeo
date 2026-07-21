@@ -256,7 +256,10 @@ fn kdtree_order_workpieces(metas: &mut [WorkpieceMeta]) -> Vec<WorkpieceMeta> {
     ordered
 }
 
-fn two_opt_workpieces(ordered: &mut [WorkpieceMeta]) {
+fn two_opt_workpieces(
+    ordered: &mut [WorkpieceMeta],
+    callbacks: &dyn Callbacks,
+) {
     let n = ordered.len();
     if n < 3 {
         return;
@@ -266,6 +269,9 @@ fn two_opt_workpieces(ordered: &mut [WorkpieceMeta]) {
     let mut improved = true;
 
     while improved && iter_count < TWO_OPT_MAX_ITER {
+        if callbacks.is_cancelled() {
+            return;
+        }
         improved = false;
         for i in 0..n - 2 {
             for j in i + 2..n {
@@ -458,7 +464,7 @@ fn kdtree_order_segments(segments: &mut [Ops], allow_flip: bool) -> Vec<Ops> {
     ordered
 }
 
-fn two_opt(ordered: &mut [Ops], allow_flip: bool) {
+fn two_opt(ordered: &mut [Ops], allow_flip: bool, callbacks: &dyn Callbacks) {
     let n = ordered.len();
     if n < 3 {
         return;
@@ -468,6 +474,9 @@ fn two_opt(ordered: &mut [Ops], allow_flip: bool) {
     let mut improved = true;
 
     while improved && iter_count < TWO_OPT_MAX_ITER {
+        if callbacks.is_cancelled() {
+            return;
+        }
         improved = false;
         for i in 0..n - 2 {
             for j in i + 2..n {
@@ -720,7 +729,7 @@ fn optimize_workpiece_order(
     let ordered_metas = kdtree_order_workpieces(&mut reorderable_metas);
 
     let mut ordered_metas = ordered_metas;
-    two_opt_workpieces(&mut ordered_metas);
+    two_opt_workpieces(&mut ordered_metas, callbacks);
 
     report_progress(callbacks, 0.9, "Reassembling optimized workpieces...");
 
@@ -829,7 +838,7 @@ fn optimize_segments(
 
                 let final_segments = if matches!(job, OptJob::TwoOpt { .. }) {
                     let mut segs = ordered;
-                    two_opt(&mut segs, allow_flip);
+                    two_opt(&mut segs, allow_flip, callbacks);
                     segs
                 } else {
                     ordered

@@ -843,6 +843,13 @@ pub fn adaptive_clearing(
                 last_resume_point: &mut last_resume_point,
                 resume_candidate_pts: &mut resume_candidate_pts,
             };
+
+            if let Some(check) = opts.cancel_check {
+                if check() {
+                    return Err(RaygeoError::Cancelled);
+                }
+            }
+
             match handle_stall(
                 &mut stall,
                 stalled,

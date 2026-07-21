@@ -236,6 +236,9 @@ pub struct TextureSpec {
 
 impl Encoder for TextureSpec {
     fn encode(&self, ctx: &mut EncodeCtx<'_>) -> Result<EncodeOutput, String> {
+        if ctx.callbacks.is_cancelled() {
+            return Err("cancelled".to_string());
+        }
         ctx.callbacks.report_progress(0.0, "texture: encode");
         let buffer = ctx.ops.to_texture(
             self.width_px,
