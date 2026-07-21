@@ -148,6 +148,8 @@ impl PyAssemblyOutput {
         source_dimensions: Option<(f64, f64)>,
         cleared_fragments: Option<Vec<Vec<(f64, f64)>>>,
     ) -> Self {
+        use crate::ops::types::ToolPose;
+        use crate::types::Point3D;
         let frags = cleared_fragments.map(polygons_from_tuples);
         PyAssemblyOutput {
             inner: AssemblyOutput {
@@ -155,6 +157,16 @@ impl PyAssemblyOutput {
                 is_scalable,
                 source_dimensions,
                 cleared_fragments: frags,
+                meta: crate::ops::assembly::AssemblyMeta {
+                    start: ToolPose {
+                        pos: Point3D::ZERO,
+                        heading: 0.0,
+                    },
+                    end: ToolPose {
+                        pos: Point3D::ZERO,
+                        heading: 0.0,
+                    },
+                },
             },
         }
     }

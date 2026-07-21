@@ -93,6 +93,8 @@ pub struct AssemblyOutput {
     /// `FaceState.cleared`. `None` for assemblers that don't touch
     /// `cleared`.
     pub cleared_fragments: Option<Vec<Polygon>>,
+    /// Start/end tool poses returned by the assembler.
+    pub meta: AssemblyMeta,
 }
 
 impl AssemblyOutput {

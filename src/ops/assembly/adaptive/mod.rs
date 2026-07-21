@@ -209,6 +209,7 @@ impl crate::ops::assembly::Assembler for AdaptiveClearingSpec {
             is_scalable: output.is_scalable,
             source_dimensions: output.source_dimensions,
             cleared_fragments: output.cleared_fragments.clone(),
+            meta: output.meta.clone(),
         })
     }
 }
