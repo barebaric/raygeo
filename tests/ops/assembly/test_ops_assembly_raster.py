@@ -57,3 +57,29 @@ def test_mask_scan_default_step_power_matches_raster_default():
     result = raster(_part(), mode="mask_scan", line_interval_mm=1.0)
     (power,) = _linearized_powers(result.ops)
     assert power == pytest.approx(0.1, abs=_BYTE_TOL)
+
+
+def test_dot_width_correction_reaches_raster_entry_point():
+    """Must flow through raster() itself, not just Ops.from_mask_scan."""
+    baseline = raster(
+        _part(), mode="mask_scan", line_interval_mm=1.0, step_power=1.0
+    )
+    trimmed = raster(
+        _part(),
+        mode="mask_scan",
+        line_interval_mm=1.0,
+        step_power=1.0,
+        dot_width_correction_mm=0.2,
+    )
+
+    assert baseline.ops.len() == trimmed.ops.len()
+    for i in range(baseline.ops.len()):
+        assert baseline.ops.command_type(i) == trimmed.ops.command_type(i)
+        assert baseline.ops.endpoint(i) == trimmed.ops.endpoint(i)
+
+    sl_indices = trimmed.ops.indices_of(CommandType.SCAN_LINE)
+    assert sl_indices
+    data = trimmed.ops.scanline_data(sl_indices[0])
+    assert data[0] == 0
+    assert data[-1] == 0
+    assert any(v > 0 for v in data)

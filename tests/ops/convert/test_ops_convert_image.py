@@ -307,3 +307,167 @@ def test_from_mask_lines_empty():
 def test_scan_mode_enum():
     assert ScanMode.SEGMENTED is not None
     assert ScanMode.FULL_SWEEP is not None
+
+
+class TestDotWidthCorrection:
+    """Must never change toolpath geometry, only which power samples fire."""
+
+    def _endpoints(self, ops):
+        return [ops.endpoint(i) for i in range(ops.len())]
+
+    def _command_types(self, ops):
+        return [ops.command_type(i) for i in range(ops.len())]
+
+    def test_mask_scan_geometry_unchanged_segmented(self):
+        mask = np.ones((10, 10), dtype=np.uint8)
+        baseline = Ops.from_mask_scan(mask, (10.0, 10.0), 0.0, 0.0, 0.1, 1.0)
+        trimmed = Ops.from_mask_scan(
+            mask, (10.0, 10.0), 0.0, 0.0, 0.1, 1.0, dot_width_correction_mm=0.2
+        )
+        assert self._command_types(baseline) == self._command_types(trimmed)
+        for a, b in zip(self._endpoints(baseline), self._endpoints(trimmed)):
+            assert a == b
+
+    def test_mask_scan_geometry_unchanged_full_sweep(self):
+        mask = np.ones((10, 10), dtype=np.uint8)
+        baseline = Ops.from_mask_scan(
+            mask,
+            (10.0, 10.0),
+            0.0,
+            0.0,
+            0.1,
+            1.0,
+            scan_mode=ScanMode.FULL_SWEEP,
+        )
+        trimmed = Ops.from_mask_scan(
+            mask,
+            (10.0, 10.0),
+            0.0,
+            0.0,
+            0.1,
+            1.0,
+            scan_mode=ScanMode.FULL_SWEEP,
+            dot_width_correction_mm=0.2,
+        )
+        assert self._command_types(baseline) == self._command_types(trimmed)
+        for a, b in zip(self._endpoints(baseline), self._endpoints(trimmed)):
+            assert a == b
+
+    def test_mask_scan_trims_power_at_each_end(self):
+        mask = np.ones((10, 10), dtype=np.uint8)
+        # 10 px/mm, 0.2mm correction -> trim 2 samples off each end.
+        trimmed = Ops.from_mask_scan(
+            mask, (10.0, 10.0), 0.0, 0.0, 0.1, 1.0, dot_width_correction_mm=0.2
+        )
+        data = trimmed.scanline_data(1)
+        assert list(data[:2]) == [0, 0]
+        assert list(data[-2:]) == [0, 0]
+        assert all(v > 0 for v in data[2:-2])
+
+    def test_power_modulated_geometry_unchanged(self):
+        gray = np.full((10, 10), 0, dtype=np.uint8)
+        alpha = np.full((10, 10), 255, dtype=np.uint8)
+        baseline = Ops.from_power_modulated_image(
+            gray, alpha, (10.0, 10.0), 0.0, 0.0, 0.1, 0.02
+        )
+        trimmed = Ops.from_power_modulated_image(
+            gray,
+            alpha,
+            (10.0, 10.0),
+            0.0,
+            0.0,
+            0.1,
+            0.02,
+            dot_width_correction_mm=0.2,
+        )
+        assert self._command_types(baseline) == self._command_types(trimmed)
+        for a, b in zip(self._endpoints(baseline), self._endpoints(trimmed)):
+            assert a == b
+
+    def test_power_modulated_trims_power_at_each_end(self):
+        gray = np.full((10, 10), 0, dtype=np.uint8)
+        alpha = np.full((10, 10), 255, dtype=np.uint8)
+        trimmed = Ops.from_power_modulated_image(
+            gray,
+            alpha,
+            (10.0, 10.0),
+            0.0,
+            0.0,
+            0.1,
+            0.02,
+            dot_width_correction_mm=0.2,
+        )
+        data = trimmed.scanline_data(1)
+        assert list(data[:2]) == [0, 0]
+        assert list(data[-2:]) == [0, 0]
+
+    def test_zero_correction_is_no_op(self):
+        mask = np.ones((10, 10), dtype=np.uint8)
+        baseline = Ops.from_mask_scan(mask, (10.0, 10.0), 0.0, 0.0, 0.1, 1.0)
+        explicit_zero = Ops.from_mask_scan(
+            mask, (10.0, 10.0), 0.0, 0.0, 0.1, 1.0, dot_width_correction_mm=0.0
+        )
+        assert baseline.scanline_data(1) == explicit_zero.scanline_data(1)
+
+    def test_trim_larger_than_segment_zeroes_whole_run(self):
+        mask = np.ones((10, 10), dtype=np.uint8)
+        trimmed = Ops.from_mask_scan(
+            mask, (10.0, 10.0), 0.0, 0.0, 0.1, 1.0, dot_width_correction_mm=5.0
+        )
+        data = trimmed.scanline_data(1)
+        assert all(v == 0 for v in data)
+
+    def test_geometry_unchanged_at_nonzero_angle(self):
+        mask = np.ones((20, 20), dtype=np.uint8)
+        baseline = Ops.from_mask_scan(
+            mask, (10.0, 10.0), 0.0, 0.0, 0.2, 1.0, angle=30.0
+        )
+        trimmed = Ops.from_mask_scan(
+            mask,
+            (10.0, 10.0),
+            0.0,
+            0.0,
+            0.2,
+            1.0,
+            angle=30.0,
+            dot_width_correction_mm=0.2,
+        )
+        assert self._command_types(baseline) == self._command_types(trimmed)
+        for a, b in zip(self._endpoints(baseline), self._endpoints(trimmed)):
+            assert a == b
+
+        scan_indices = [
+            i
+            for i, ct in enumerate(self._command_types(trimmed))
+            if ct == CommandType.SCAN_LINE
+        ]
+        assert scan_indices
+        # Pick the longest line; corner ones can be fully trimmed away.
+        data = max((trimmed.scanline_data(i) for i in scan_indices), key=len)
+        assert len(data) > 4
+        assert data[0] == 0
+        assert data[-1] == 0
+        assert any(v > 0 for v in data)
+
+    def test_multiple_segments_trimmed_independently(self):
+        mask = np.zeros((20, 20), dtype=np.uint8)
+        mask[:, 0:8] = 1
+        mask[:, 12:20] = 1
+
+        trimmed = Ops.from_mask_scan(
+            mask, (10.0, 10.0), 0.0, 0.0, 0.2, 1.0, dot_width_correction_mm=0.1
+        )
+
+        scan_indices = [
+            i
+            for i in range(trimmed.len())
+            if trimmed.command_type(i) == CommandType.SCAN_LINE
+        ]
+        assert len(scan_indices) >= 2
+
+        first_seg = trimmed.scanline_data(scan_indices[0])
+        second_seg = trimmed.scanline_data(scan_indices[1])
+        for seg in (first_seg, second_seg):
+            assert seg[0] == 0
+            assert seg[-1] == 0
+            assert any(v > 0 for v in seg)

@@ -417,6 +417,29 @@ pub fn find_segments(values: &[u8]) -> Vec<(usize, usize)> {
     segments
 }
 
+/// Zeroes `trim_px` samples at each end of every contiguous nonzero run,
+/// shortening firing time without moving toolpath geometry.
+pub fn apply_dot_width_trim(values: &mut [u8], trim_px: usize) {
+    if trim_px == 0 {
+        return;
+    }
+    for (start, end) in find_segments(values) {
+        let len = end - start;
+        if len <= trim_px * 2 {
+            for v in &mut values[start..end] {
+                *v = 0;
+            }
+        } else {
+            for v in &mut values[start..start + trim_px] {
+                *v = 0;
+            }
+            for v in &mut values[end - trim_px..end] {
+                *v = 0;
+            }
+        }
+    }
+}
+
 pub struct DownsampledPower {
     pub power: Vec<u8>,
     pub x_mm: Vec<f64>,
