@@ -74,6 +74,9 @@ pub struct PyProfileSpec {
     pub engagement_area_threshold: f64,
     #[pyo3(get)]
     pub engagement_angle_threshold: f64,
+    /// Factor (0–1) by which feed is reduced on over-engagement.
+    #[pyo3(get)]
+    pub feed_reduction_factor: f64,
     /// Optional path to write a binary trace file.
     #[pyo3(get)]
     pub trace_path: Option<String>,
@@ -107,6 +110,7 @@ impl PyProfileSpec {
             cancel_check: None,
             engagement_area_threshold: self.engagement_area_threshold,
             engagement_angle_threshold: self.engagement_angle_threshold,
+            feed_reduction_factor: self.feed_reduction_factor,
             trace_path: self.trace_path.map(std::path::PathBuf::from),
         }
     }
@@ -130,6 +134,7 @@ impl PyProfileSpec {
         expansion_batch_size = 20,
         engagement_area_threshold = 0.0,
         engagement_angle_threshold = std::f64::consts::PI,
+        feed_reduction_factor = 0.5,
         trace_path = None,
     ))]
     #[allow(clippy::too_many_arguments)]
@@ -148,6 +153,7 @@ impl PyProfileSpec {
         expansion_batch_size: usize,
         engagement_area_threshold: f64,
         engagement_angle_threshold: f64,
+        feed_reduction_factor: f64,
         trace_path: Option<String>,
     ) -> Self {
         PyProfileSpec {
@@ -165,6 +171,7 @@ impl PyProfileSpec {
             expansion_batch_size,
             engagement_area_threshold,
             engagement_angle_threshold,
+            feed_reduction_factor,
             trace_path,
         }
     }
@@ -280,6 +287,7 @@ fn profile_outer_py(
         cancel_check: Some(check_cancel),
         engagement_area_threshold,
         engagement_angle_threshold,
+        feed_reduction_factor: 0.5,
         trace_path: trace_path.map(PathBuf::from),
     };
 
@@ -408,6 +416,7 @@ fn profile_inner_py(
         cancel_check: Some(check_cancel),
         engagement_area_threshold,
         engagement_angle_threshold,
+        feed_reduction_factor: 0.5,
         trace_path: trace_path.map(PathBuf::from),
     };
 

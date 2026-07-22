@@ -10,6 +10,7 @@ use crate::ops::assembly::material_test_grid::{
     generate_material_test_grid, MaterialTestGridSpec,
 };
 use crate::ops::assembly::tracelet::Tracelet;
+use crate::ops::state::State;
 use crate::python::ops::assembly::result::PyAssemblyResult;
 
 pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -334,7 +335,8 @@ fn generate_material_test_grid_py(
     };
 
     let mut trace = Tracelet::new();
-    let meta = generate_material_test_grid(&params, &mut trace)?;
+    let meta =
+        generate_material_test_grid(&params, &mut trace, &State::default())?;
     let trace_events = trace.drain();
     let trace_attrs = trace.attrs().cloned();
     let ops = trace.into_ops();
@@ -492,8 +494,11 @@ fn generate_material_test_grid_preview_py(
     // twice and get Y-up output — which matches the canvas coordinate
     // system used for ops rendering.
     let mut trace = Tracelet::new();
-    let _meta = generate_material_test_grid(&params, &mut trace)
-        .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+    let _meta =
+        generate_material_test_grid(&params, &mut trace, &State::default())
+            .map_err(|e| {
+                pyo3::exceptions::PyValueError::new_err(e.to_string())
+            })?;
     let ops = trace.into_ops();
     let geo = ops.to_geometry();
     let empty = Geometry::new();

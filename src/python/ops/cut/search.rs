@@ -65,7 +65,7 @@ fn search_frontier_engagement_py(
     min_cut_area: f64,
     max_cut_area: f64,
 ) -> Option<PyToolPose> {
-    let r = cut::search_frontier_engagement(
+    let r = cut::search::search_frontier_engagement(
         &cleared.inner,
         &region.inner,
         ToolPose {

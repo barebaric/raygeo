@@ -33,6 +33,14 @@ engagement_area_threshold: float
 expansion_batch_size: int
 ```
 
+### `feed_reduction_factor`
+
+```python
+feed_reduction_factor: float
+```
+
+Factor (0–1) by which feed is reduced on over-engagement.
+
 ### `kind`
 
 ```python

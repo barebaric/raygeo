@@ -53,6 +53,11 @@ class ProfileSpec:
     @property
     def engagement_angle_threshold(self) -> builtins.float: ...
     @property
+    def feed_reduction_factor(self) -> builtins.float:
+        r"""
+        Factor (0–1) by which feed is reduced on over-engagement.
+        """
+    @property
     def trace_path(self) -> typing.Optional[builtins.str]:
         r"""
         Optional path to write a binary trace file.

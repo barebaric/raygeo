@@ -5,6 +5,7 @@ use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::tracelet::Tracelet;
 use crate::ops::assembly::{AssembleCtx, Assembler};
 use crate::ops::container::Ops;
+use crate::ops::state::State;
 use crate::ops::types::{MoveCmd, OpCategory, ToolPose};
 use crate::trace_types::{Meta, MetaValue, MoveKind};
 use crate::types::{Point, Point3D};
@@ -54,7 +55,7 @@ impl Assembler for MaterialTestGridSpec {
         if ctx.callbacks.is_cancelled() {
             return Err("cancelled".to_string());
         }
-        let meta = generate_material_test_grid(self, ctx.trace)
+        let meta = generate_material_test_grid(self, ctx.trace, ctx.state)
             .map_err(|e| e.to_string())?;
         ctx.callbacks
             .report_progress(1.0, "material_test_grid: done");
@@ -82,6 +83,7 @@ impl Assembler for MaterialTestGridSpec {
 pub fn generate_material_test_grid(
     params: &MaterialTestGridSpec,
     trace: &mut Tracelet,
+    base_state: &State,
 ) -> Result<AssemblyMeta, crate::RaygeoError> {
     let size_mm = params.size_mm;
     let (_target_width, target_height) = size_mm;
@@ -179,6 +181,7 @@ pub fn generate_material_test_grid(
         generate_labels(
             &mut label_ops,
             params,
+            base_state,
             scale_x,
             scale_y,
             margin_left,
@@ -296,9 +299,12 @@ pub fn generate_material_test_grid(
     for (cell_idx, cell) in (0_u32..).zip(cells.iter()) {
         let cell_name = format!("cell-r{}-c{}", cell.row, cell.col);
         trace.state_block_start(Some(&cell_name));
-        trace.set_power(0.0);
-        trace.set_power(cell.power / 100.0);
-        trace.set_feed_rate(cell.speed as i32);
+        let cell_state = State {
+            power: cell.power / 100.0,
+            feed_rate: Some(cell.speed as i32),
+            ..base_state.clone()
+        };
+        trace.apply_state(&cell_state);
 
         let cell_meta = cell_cut_meta(
             cell_idx,
@@ -452,6 +458,7 @@ enum HAlign {
 fn generate_labels(
     ops: &mut Ops,
     params: &MaterialTestGridSpec,
+    base_state: &State,
     scale_x: f64,
     scale_y: f64,
     margin_left: f64,
@@ -474,8 +481,12 @@ fn generate_labels(
     let title_font =
         FontConfig::new("sans-serif", axis_font_mm / pt_to_mm).bold(true);
 
-    ops.set_power(params.label_power);
-    ops.set_feed_rate(params.label_speed);
+    let label_state = State {
+        power: params.label_power,
+        feed_rate: Some(params.label_speed),
+        ..base_state.clone()
+    };
+    ops.apply_state(&label_state);
 
     // Determine column/row range descriptors.
     let (col_title, row_title) = match params.grid_mode.as_str() {

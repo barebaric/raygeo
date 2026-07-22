@@ -10,9 +10,10 @@
 //! The crate is split into layers that depend only downward:
 //!
 //! ```text
-//! geo  →  ops  ──────────→ cnc      (plan-time; Plan, Intent, builders)
-//!                           ↑
-//!          pipeline  ───────┘       (runtime; execute_stages, rayon::scope)
+//!   geo   →   ops   →   cnc
+//!                        │
+//!                        ↓ depends on
+//!                    pipeline (generic runtime; std + rayon only)
 //! ```
 //!
 //! **[`geo`]** — Pure geometry.
@@ -36,8 +37,9 @@
 //! 2. **Intent** (`cnc::execution::intent`): `create_intent(plan, part)`
 //!    converts a Plan into executable `NodeRequest`s with state
 //!    threading and a final aggregate.
-//! 3. **Execute**: `run_intent(intent)` runs the pipeline and returns
-//!    the final linked [`Ops`].
+//! 3. **Execute** (`pipeline::execute`): `execute_stages` runs the
+//!    intent tree on a rayon thread pool; the final `Aggregate` node
+//!    produces the linked [`Ops`].
 //!
 //! **[`pipeline`]** — Generic runtime executor.
 //! Executes an intent tree of `NodeRequest`s on a rayon thread pool.

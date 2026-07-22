@@ -115,6 +115,7 @@ pub fn profile_inner(
         cancel_check: opts.cancel_check,
         engagement_area_threshold: opts.engagement_area_threshold,
         engagement_angle_threshold: opts.engagement_angle_threshold,
+        feed_reduction_factor: opts.feed_reduction_factor,
         stock_to_leave: opts.stock_to_leave,
     };
 

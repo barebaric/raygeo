@@ -223,14 +223,18 @@ fn adaptive_wavefronts_multi_pocket_py(
     let face = part.inner.face("").ok_or_else(|| {
         pyo3::exceptions::PyValueError::new_err("no default face")
     })?;
+    let cut_state = State {
+        power: cut_power,
+        feed_rate: Some(cut_feed_rate),
+        ..Default::default()
+    };
     let (ops, meta) = wavefront::adaptive_wavefronts_multi_pocket(
         face,
         step_over,
         offset_mm,
         area_tolerance,
         precision,
-        cut_feed_rate,
-        cut_power,
+        &cut_state,
     )?;
     if profile {
         prof_report();

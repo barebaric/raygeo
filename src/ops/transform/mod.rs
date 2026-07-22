@@ -45,16 +45,8 @@ pub mod smooth;
 pub mod split;
 pub mod tabs;
 
-pub use bidir_scan_offset::apply_bidir_scan_offset;
-pub use flip::flip_ops;
-pub use group::{group_by_auxiliary_state, without_state};
-pub use lead_in_out::apply_lead_in_out;
-pub use link::{link_passes, LinkStrategy};
-pub use merge_lines::merge_overlapping_lines;
-pub use multipass::apply_multipass;
-pub use optimize::optimize_travel;
-pub use overscan::apply_overscan;
-pub use tabs::{apply_tab_gaps, apply_tab_power, ClipPoint};
+pub use link::LinkStrategy;
+pub use tabs::ClipPoint;
 
 /// Execution phase of a transformer.
 ///

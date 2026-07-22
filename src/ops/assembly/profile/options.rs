@@ -41,6 +41,11 @@ pub struct ProfileSpec {
     pub cancel_check: Option<fn() -> bool>,
     pub engagement_area_threshold: f64,
     pub engagement_angle_threshold: f64,
+    /// Factor (0–1) by which feed is reduced on over-engagement, as a
+    /// runtime safety modulation of the caller-provided cut feed. The
+    /// base feed comes from the cut `State`; this is the only feed
+    /// value the profile engine derives itself.
+    pub feed_reduction_factor: f64,
     pub trace_path: Option<PathBuf>,
 }
 
@@ -62,6 +67,7 @@ impl Default for ProfileSpec {
             cancel_check: None,
             engagement_area_threshold: 0.0,
             engagement_angle_threshold: std::f64::consts::PI,
+            feed_reduction_factor: 0.5,
             trace_path: None,
         }
     }

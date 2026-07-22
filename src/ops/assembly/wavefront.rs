@@ -310,8 +310,7 @@ pub fn adaptive_wavefronts_multi_pocket(
     offset_mm: f64,
     area_tolerance: f64,
     precision: f64,
-    cut_feed_rate: i32,
-    cut_power: f64,
+    cut_state: &State,
 ) -> RaygeoResult<(Ops, AssemblyMeta)> {
     let src_geo = face.geometry.as_ref().ok_or_else(|| {
         crate::RaygeoError::ContourError(
@@ -385,11 +384,6 @@ pub fn adaptive_wavefronts_multi_pocket(
 
     // 6. Process each pocket
     let z = 0.0;
-    let cut_state = State {
-        power: cut_power,
-        feed_rate: Some(cut_feed_rate),
-        ..Default::default()
-    };
     let mut combined_ops = Ops::new();
     let mut trace = Tracelet::new();
     let mut first_point: Option<Point3D> = None;
@@ -409,7 +403,7 @@ pub fn adaptive_wavefronts_multi_pocket(
             pocket_part.face_mut(""),
             &mut trace,
             &wf_opts,
-            &cut_state,
+            cut_state,
         )?;
 
         if first_point.is_none() {

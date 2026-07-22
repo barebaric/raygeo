@@ -2,7 +2,9 @@
 //!
 //! Sequences machining operations (entry, clearing, finish), resolves
 //! tool-aware `State` via `StateStrategy`, and drives the `geo`/`ops`
-//! primitives.  Depends on `geo` and `ops` but not vice versa.
+//! primitives.  Depends on `geo`, `ops`, and `pipeline` (it implements
+//! the `pipeline::Compute`/`Aggregate` traits for ops types); not vice
+//! versa.
 //!
 //! ## Execution glue
 //!

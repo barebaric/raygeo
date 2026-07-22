@@ -18,7 +18,7 @@ use crate::geo::shape::polygon::{
 use crate::ops::assembly::Tracelet;
 use crate::ops::cut::interp::point_in_valid_area;
 use crate::ops::cut::search::walk_polygon_samples;
-use crate::ops::cut::step;
+use crate::ops::cut::stepper::step;
 use crate::ops::cut::StepStatus;
 use crate::ops::cut::StepperOptions;
 use crate::ops::part::ClearedArea;

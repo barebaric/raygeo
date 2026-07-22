@@ -35,7 +35,7 @@ use crate::geo::shape::arc::normalize_angle_signed;
 use crate::geo::shape::polygon::{get_polygon_area, get_polygon_centroid};
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::Tracelet;
-use crate::ops::cut::step;
+use crate::ops::cut::stepper::step;
 use crate::ops::cut::stepper::MAX_IT;
 use crate::ops::cut::StepStatus;
 use crate::ops::cut::StepperOptions;

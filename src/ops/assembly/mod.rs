@@ -33,7 +33,7 @@ pub(crate) mod trace_utils;
 pub mod tracelet;
 pub mod wavefront;
 
-pub use tracelet::{write_polyline, ProgressEvent, Tracelet};
+pub use tracelet::{ProgressEvent, Tracelet};
 
 use std::any::Any;
 

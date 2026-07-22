@@ -44,6 +44,7 @@ pub fn profile_outer(
         cancel_check: opts.cancel_check,
         engagement_area_threshold: opts.engagement_area_threshold,
         engagement_angle_threshold: opts.engagement_angle_threshold,
+        feed_reduction_factor: opts.feed_reduction_factor,
         stock_to_leave: opts.stock_to_leave,
     };
     let _heading = get_polygon_heading_at(&offset_polys[0], offset_polys[0][0])

@@ -113,6 +113,7 @@ pub(crate) struct ProfileCommon {
     pub cancel_check: Option<fn() -> bool>,
     pub engagement_area_threshold: f64,
     pub engagement_angle_threshold: f64,
+    pub feed_reduction_factor: f64,
     pub stock_to_leave: f64,
 }
 
@@ -280,7 +281,9 @@ pub(crate) fn run_profile(
                         effective_step,
                     );
                     if let Some(fr) = current_feed_rate {
-                        let reduced = (fr as f64 * 0.5).max(1.0) as i32;
+                        let reduced = (fr as f64 * common.feed_reduction_factor)
+                            .max(1.0)
+                            as i32;
                         trace.set_feed_rate(reduced);
                         trace.move_event(
                             MoveKind::Travel,

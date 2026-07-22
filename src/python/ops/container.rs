@@ -2775,7 +2775,7 @@ impl PyOps {
     /// :param offset_mm: Offset in millimeters to apply to RTL passes.
     /// :complexity: O(n) time, O(n) space
     fn apply_bidir_scan_offset(&mut self, offset_mm: f64) {
-        crate::ops::transform::apply_bidir_scan_offset(
+        crate::ops::transform::bidir_scan_offset::apply_bidir_scan_offset(
             &mut self.inner,
             offset_mm,
         );
@@ -2788,7 +2788,7 @@ impl PyOps {
     /// :param z_step_down: Z distance to move down after each pass.
     /// :complexity: O(n * passes) time, O(n * passes) space
     fn apply_multipass(&mut self, passes: u32, z_step_down: f64) {
-        crate::ops::transform::apply_multipass(
+        crate::ops::transform::multipass::apply_multipass(
             &mut self.inner,
             passes,
             z_step_down,

@@ -10,7 +10,7 @@ use crate::geo::algo::spiral::{
 use crate::geo::shape::polygon::get_circle_polygon;
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::trace_utils as tu;
-use crate::ops::assembly::write_polyline;
+use crate::ops::assembly::tracelet::write_polyline;
 use crate::ops::assembly::{AssembleCtx, Assembler, Tracelet};
 use crate::ops::part::FaceState;
 use crate::ops::state::State;

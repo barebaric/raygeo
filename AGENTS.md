@@ -33,14 +33,25 @@
 
 # Layering Rules Specification
 
-The crate is split into three layers that depend only downward:
-`geo` → `ops` → `cnc`. Never import upward.
+The crate is split into four layers. Three are domain layers that
+depend only downward (`geo` → `ops` → `cnc`); `pipeline` is a generic,
+domain-free runtime that `cnc` depends on (it sits below `cnc`,
+alongside `ops`). Total dependency order:
 
-| Layer | Owns                                                                                                                                     | Does NOT know                   |
-| ----- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
-| `geo` | Primitives & pure geometric algorithms. No "what-to-cut" decisions, no motion verbs, no machining terminology, no `Ops`.                 | machining, motion, tools, `Ops` |
-| `ops` | CNC and laser building blocks: clearing strategies, linking, classification, and Ops emission. All assemblers produce and consume `Ops`. | plans, intents                  |
-| `cnc` | Plan-time orchestration: build descriptive `Plan`s (sequences of `PlanStep`s) and convert them into executable `Intent`s.                | geometry algorithms             |
+```
+geo → ops \
+            → cnc
+pipeline -/
+```
+
+Never import upward.
+
+| Layer      | Owns                                                                                                                      | Does NOT know                                 |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| `geo`      | Primitives & pure geometric algorithms. No "what-to-cut" decisions, no motion verbs, no machining terminology, no `Ops`.  | machining, motion, tools, `Ops`, `pipeline`   |
+| `ops`      | CNC and laser building blocks: clearing strategies, linking, classification, and Ops emission.                            | plans, intents, `pipeline` runtime            |
+| `pipeline` | Generic runtime to execute machining agnostic intents in a rayon thread pool.                                             | geometry, machining, `Ops`, tools, any domain |
+| `cnc`      | Plan-time orchestration: build descriptive `Plan`s (sequences of `PlanStep`s) and convert them into executable `Intent`s. | geometry algorithms                           |
 
 # Export Policy: Explicit Paths
 
@@ -48,7 +59,7 @@ Every item has exactly one canonical path — its leaf module. Parent mod.rs
 must not re-export children's items (no namespace flattening).
 
 Exceptions: Primitive types, errors, classes and constants that are
-*public* AND *shared* within a submodule, such as an AssemblyResult.
+_public_ AND _shared_ within a submodule, such as an AssemblyResult.
 
 Python sub-modules mirror the Rust hierarchy - no aliases or re-exports
 at higher levels.
