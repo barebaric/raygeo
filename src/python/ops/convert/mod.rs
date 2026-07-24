@@ -8,12 +8,15 @@ use pyo3_stub_gen::derive::{
 
 use crate::ops::convert::{
     gcode::GcodeSpec, texture::TextureSpec, vertex_arrays::VertexSpec,
-    EncodeOutput, Encoder,
+    view::ViewSpec, EncodeOutput, Encoder,
 };
 
 pub(crate) mod dict;
 pub(crate) mod gcode_spec;
 pub(crate) mod numpy;
+pub(crate) mod view;
+
+pub(crate) use self::view::lut_to_array;
 
 pub(crate) use gcode_spec::PyGcodeDialectSpec;
 
@@ -33,6 +36,9 @@ pub fn extract_encoder(
         return Ok(Box::new(s.into_core()));
     }
     if let Ok(s) = ob.extract::<PyTextureSpec>() {
+        return Ok(Box::new(s.into_core()));
+    }
+    if let Ok(s) = ob.extract::<PyViewSpec>() {
         return Ok(Box::new(s.into_core()));
     }
     let type_name = ob
@@ -215,6 +221,127 @@ impl PyTextureSpec {
     }
 }
 
+/// Parameters for the view encoder.
+#[gen_stub_pyclass(module = "raygeo.ops.convert")]
+#[pyclass(
+    name = "ViewSpec",
+    module = "raygeo.ops.convert",
+    frozen,
+    from_py_object
+)]
+#[derive(Clone, Debug)]
+pub struct PyViewSpec {
+    #[pyo3(get)]
+    pub pixels_per_mm: (f64, f64),
+    #[pyo3(get)]
+    pub show_travel_moves: bool,
+    #[pyo3(get)]
+    pub render_bbox: (f64, f64, f64, f64),
+    #[pyo3(get)]
+    pub max_dimension_px: u32,
+    #[pyo3(get)]
+    pub max_total_pixels: u64,
+    #[pyo3(get)]
+    pub cut_color: [u8; 4],
+    #[pyo3(get)]
+    pub travel_color: [u8; 4],
+    #[pyo3(get)]
+    pub zero_power_color: [u8; 4],
+    #[pyo3(get)]
+    pub cut_lut: Vec<[u8; 4]>,
+    #[pyo3(get)]
+    pub engrave_lut: Vec<[u8; 4]>,
+}
+
+impl PyViewSpec {
+    #[allow(clippy::wrong_self_convention)]
+    pub fn into_core(self) -> ViewSpec {
+        let cut_lut = lut_to_array(self.cut_lut)
+            .expect("ViewSpec cut_lut validated at construction");
+        let engrave_lut = lut_to_array(self.engrave_lut)
+            .expect("ViewSpec engrave_lut validated at construction");
+        ViewSpec {
+            pixels_per_mm: self.pixels_per_mm,
+            show_travel_moves: self.show_travel_moves,
+            render_bbox: self.render_bbox,
+            max_dimension_px: self.max_dimension_px,
+            max_total_pixels: self.max_total_pixels,
+            cut_color: self.cut_color,
+            travel_color: self.travel_color,
+            zero_power_color: self.zero_power_color,
+            cut_lut,
+            engrave_lut,
+        }
+    }
+}
+
+#[gen_stub_pymethods]
+#[pymethods]
+impl PyViewSpec {
+    #[new]
+    #[allow(clippy::too_many_arguments)]
+    #[pyo3(signature = (
+        pixels_per_mm,
+        render_bbox,
+        cut_color,
+        travel_color,
+        zero_power_color,
+        cut_lut,
+        engrave_lut,
+        show_travel_moves = true,
+        max_dimension_px = 8192,
+        max_total_pixels = 8192 * 8192,
+    ))]
+    fn new(
+        pixels_per_mm: (f64, f64),
+        render_bbox: (f64, f64, f64, f64),
+        cut_color: [u8; 4],
+        travel_color: [u8; 4],
+        zero_power_color: [u8; 4],
+        cut_lut: Vec<[u8; 4]>,
+        engrave_lut: Vec<[u8; 4]>,
+        show_travel_moves: bool,
+        max_dimension_px: u32,
+        max_total_pixels: u64,
+    ) -> PyResult<Self> {
+        if cut_lut.len() != 256 {
+            return Err(pyo3::exceptions::PyValueError::new_err(
+                "cut_lut must have exactly 256 entries",
+            ));
+        }
+        if engrave_lut.len() != 256 {
+            return Err(pyo3::exceptions::PyValueError::new_err(
+                "engrave_lut must have exactly 256 entries",
+            ));
+        }
+        Ok(PyViewSpec {
+            pixels_per_mm,
+            show_travel_moves,
+            render_bbox,
+            max_dimension_px,
+            max_total_pixels,
+            cut_color,
+            travel_color,
+            zero_power_color,
+            cut_lut,
+            engrave_lut,
+        })
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "ViewSpec(ppm={:?}, render_bbox={:?}, travel={}, \
+             cut={:?}, travel_color={:?}, zero_color={:?})",
+            self.pixels_per_mm,
+            self.render_bbox,
+            self.show_travel_moves,
+            self.cut_color,
+            self.travel_color,
+            self.zero_power_color,
+        )
+    }
+}
+
 /// Non-Ops artifact produced by an Encode stage.
 #[gen_stub_pyclass_complex_enum]
 #[pyclass(
@@ -236,6 +363,13 @@ pub enum PyEncodeOutput {
         power_texture: Vec<u8>,
         width_px: u32,
         height_px: u32,
+    },
+    View {
+        buffer: Vec<u8>,
+        width: usize,
+        height: usize,
+        bbox_mm: (f64, f64, f64, f64),
+        effective_ppm: (f64, f64),
     },
 }
 
@@ -265,6 +399,19 @@ impl PyEncodeOutput {
                 width_px,
                 height_px,
             },
+            crate::ops::convert::EncodeOutput::View {
+                buffer,
+                width,
+                height,
+                bbox_mm,
+                effective_ppm,
+            } => PyEncodeOutput::View {
+                buffer,
+                width,
+                height,
+                bbox_mm,
+                effective_ppm,
+            },
         }
     }
 }
@@ -289,6 +436,9 @@ impl PyEncodeOutput {
             } => {
                 format!("EncodeOutput.Texture({}x{})", width_px, height_px)
             }
+            PyEncodeOutput::View { width, height, .. } => {
+                format!("EncodeOutput.View({}x{})", width, height)
+            }
         }
     }
 
@@ -300,6 +450,7 @@ impl PyEncodeOutput {
             PyEncodeOutput::MachineCode { .. } => "MachineCode",
             PyEncodeOutput::VertexArrays { .. } => "VertexArrays",
             PyEncodeOutput::Texture { .. } => "Texture",
+            PyEncodeOutput::View { .. } => "View",
         }
     }
 
@@ -404,6 +555,19 @@ impl From<EncodeOutput> for PyEncodeOutput {
                 width_px,
                 height_px,
             },
+            EncodeOutput::View {
+                buffer,
+                width,
+                height,
+                bbox_mm,
+                effective_ppm,
+            } => PyEncodeOutput::View {
+                buffer,
+                width,
+                height,
+                bbox_mm,
+                effective_ppm,
+            },
         }
     }
 }
@@ -416,6 +580,8 @@ pub(crate) fn register(ops_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     convert_mod.add_class::<PyGcodeSpec>()?;
     convert_mod.add_class::<PyVertexSpec>()?;
     convert_mod.add_class::<PyTextureSpec>()?;
+    convert_mod.add_class::<PyViewSpec>()?;
+    view::register(&convert_mod)?;
     ops_mod.add_submodule(&convert_mod)?;
 
     let sys_modules = ops_mod.py().import("sys")?.getattr("modules")?;

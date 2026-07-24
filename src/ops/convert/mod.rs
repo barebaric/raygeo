@@ -2,17 +2,17 @@
 //!
 //! This module groups all functions that convert between [`Ops`] and
 //! other representations — polylines, geometries, GPU vertex arrays,
-//! pixel textures, and images. Unlike the `transform` module, which
-//! produces new `Ops` from existing `Ops`, the converters here cross
-//! format boundaries.
+//! pixel textures, view bitmaps, and images. Unlike the `transform`
+//! module, which produces new `Ops` from existing `Ops`, the converters
+//! here cross format boundaries.
 //!
 //! ## The `Encoder` trait
 //!
 //! Each encoder under this module exposes a **spec struct** (e.g.
 //! [`gcode::GcodeSpec`], [`vertex_arrays::VertexSpec`],
-//! [`texture::TextureSpec`]) that implements [`Encoder`]. Callers
-//! drive any encoder through this trait, mirroring how
-//! `ops::assembly` drives assemblers through `Assembler` and
+//! [`texture::TextureSpec`], [`view::ViewSpec`]) that implements
+//! [`Encoder`]. Callers drive any encoder through this trait, mirroring
+//! how `ops::assembly` drives assemblers through `Assembler` and
 //! `ops::transform` drives transformers through `Transformer`. All
 //! three traits take their callbacks from [`crate::ops::callbacks`].
 
@@ -27,6 +27,7 @@ pub mod image;
 pub mod polyline;
 pub mod texture;
 pub mod vertex_arrays;
+pub mod view;
 
 use crate::ops::callbacks::Callbacks;
 
@@ -56,6 +57,20 @@ pub enum EncodeOutput {
         width_px: u32,
         /// Texture height in pixels.
         height_px: u32,
+    },
+    /// RGBA8 view bitmap + metadata.
+    View {
+        /// Flat row-major RGBA8 bytes of shape
+        /// ``height * width * 4``.
+        buffer: Vec<u8>,
+        /// Bitmap width in pixels.
+        width: usize,
+        /// Bitmap height in pixels.
+        height: usize,
+        /// Bounding box in mm: ``(min_x, min_y, max_x, max_y)``.
+        bbox_mm: (f64, f64, f64, f64),
+        /// Effective pixels-per-mm applied after clamping.
+        effective_ppm: (f64, f64),
     },
 }
 

@@ -79,6 +79,8 @@ Texture width in pixels. Returns `None` unless this is the `Texture` variant.
 
 ### VertexArrays
 
+### View
+
 ## Encoder
 
 Python-visible wrapper around an encoder spec.
@@ -150,3 +152,67 @@ width_px: int
 ## VertexSpec
 
 Parameters for the vertex-array encoder.
+
+## ViewSpec
+
+Parameters for the view encoder.
+
+### `cut_color`
+
+```python
+cut_color: list[int]
+```
+
+### `cut_lut`
+
+```python
+cut_lut: list[list[int]]
+```
+
+### `engrave_lut`
+
+```python
+engrave_lut: list[list[int]]
+```
+
+### `max_dimension_px`
+
+```python
+max_dimension_px: int
+```
+
+### `max_total_pixels`
+
+```python
+max_total_pixels: int
+```
+
+### `pixels_per_mm`
+
+```python
+pixels_per_mm: tuple[float, float]
+```
+
+### `render_bbox`
+
+```python
+render_bbox: tuple[float, float, float, float]
+```
+
+### `show_travel_moves`
+
+```python
+show_travel_moves: bool
+```
+
+### `travel_color`
+
+```python
+travel_color: list[int]
+```
+
+### `zero_power_color`
+
+```python
+zero_power_color: list[int]
+```
