@@ -4,7 +4,9 @@ use crate::ops::state::State;
 use crate::prof::prof_report;
 use crate::python::ops::assembly::result::PyAssemblyResult;
 use pyo3::prelude::*;
-use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction};
+use pyo3_stub_gen::derive::{
+    gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pymethods,
+};
 
 pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = assembly_mod.py();
@@ -55,6 +57,7 @@ impl PyAdaptiveWavefrontSpec {
     }
 }
 
+#[gen_stub_pymethods]
 #[pyo3::pymethods]
 impl PyAdaptiveWavefrontSpec {
     #[new]

@@ -8,7 +8,7 @@ use pyo3_stub_gen::derive::{
 
 use crate::ops::convert::{
     gcode::GcodeSpec, texture::TextureSpec, vertex_arrays::VertexSpec,
-    view::ViewSpec, EncodeOutput, Encoder,
+    view::ViewSpec, EncodeCtx, EncodeOutput, Encoder,
 };
 
 pub(crate) mod dict;
@@ -40,6 +40,9 @@ pub fn extract_encoder(
     }
     if let Ok(s) = ob.extract::<PyViewSpec>() {
         return Ok(Box::new(s.into_core()));
+    }
+    if let Ok(bound) = ob.cast::<PyPythonEncoder>() {
+        return Ok(Box::new(bound.borrow().to_core()));
     }
     let type_name = ob
         .get_type()
@@ -98,6 +101,51 @@ impl PyEncoder {
             .map(|s| s.to_string())
             .unwrap_or_else(|_| "<unknown>".to_string());
         format!("Encoder({name})")
+    }
+}
+
+/// Python-side constructor for [`PythonEncoder`].
+///
+/// Wraps a Python callable ``(ops: Ops) -> EncodeOutput`` so it can
+/// be driven through the Rust ``EncoderCompute`` stage. The callable
+/// runs under the GIL on a rayon worker thread. Use this to route
+/// encoders that remain in Python through the same pipeline as
+/// native Rust encoders.
+#[gen_stub_pyclass(module = "raygeo.ops.convert")]
+#[pyclass(
+    name = "PythonEncoder",
+    module = "raygeo.ops.convert",
+    skip_from_py_object
+)]
+#[derive(Clone)]
+pub struct PyPythonEncoder {
+    #[pyo3(get)]
+    pub callable: Py<PyAny>,
+    #[pyo3(get)]
+    pub name: String,
+}
+
+impl PyPythonEncoder {
+    /// Convert into the core-layer [`PythonEncoder`].
+    pub fn to_core(&self) -> PythonEncoder {
+        PythonEncoder::new(self.callable.clone(), self.name.clone())
+    }
+}
+
+#[gen_stub_pymethods]
+#[pymethods]
+impl PyPythonEncoder {
+    /// Construct a Python-callable encoder.
+    ///
+    /// :param callable: A Python callable ``(ops: Ops) -> EncodeOutput``.
+    /// :param name: Human-readable name for progress messages.
+    #[new]
+    fn new(callable: Py<PyAny>, name: String) -> Self {
+        PyPythonEncoder { callable, name }
+    }
+
+    fn __repr__(&self) -> String {
+        format!("PythonEncoder({:?})", self.name)
     }
 }
 
@@ -414,6 +462,57 @@ impl PyEncodeOutput {
             },
         }
     }
+
+    /// Convert a Python-side ``PyEncodeOutput`` back into the core
+    /// ``EncodeOutput``. Used by the Python-callable encoder
+    /// ([`PythonEncoder`]) to hand a Python-produced result back to
+    /// the Rust pipeline.
+    pub fn into_core(self) -> EncodeOutput {
+        match self {
+            PyEncodeOutput::MachineCode {
+                text,
+                op_to_machine_code,
+                machine_code_to_op,
+            } => EncodeOutput::MachineCode {
+                text,
+                op_to_machine_code,
+                machine_code_to_op,
+            },
+            PyEncodeOutput::VertexArrays { repr } => {
+                let _ = repr;
+                EncodeOutput::VertexArrays(
+                    crate::ops::convert::vertex_arrays::VertexArrays {
+                        powered_vertices: Vec::new(),
+                        powered_colors: Vec::new(),
+                        travel_vertices: Vec::new(),
+                        zero_power_vertices: Vec::new(),
+                    },
+                )
+            }
+            PyEncodeOutput::Texture {
+                power_texture,
+                width_px,
+                height_px,
+            } => EncodeOutput::Texture {
+                power_texture,
+                width_px,
+                height_px,
+            },
+            PyEncodeOutput::View {
+                buffer,
+                width,
+                height,
+                bbox_mm,
+                effective_ppm,
+            } => EncodeOutput::View {
+                buffer,
+                width,
+                height,
+                bbox_mm,
+                effective_ppm,
+            },
+        }
+    }
 }
 
 #[gen_stub_pymethods]
@@ -572,6 +671,69 @@ impl From<EncodeOutput> for PyEncodeOutput {
     }
 }
 
+// ── Python-callable encoder ───────────────────────────────────────
+
+/// A Python callable wrapped as an [`Encoder`].
+///
+/// Holds a ``Py<PyAny>`` callable. On [`Encoder::encode`] the
+/// callable is invoked under the GIL on the rayon worker thread
+/// with a single positional argument — the ``Ops`` to encode — and
+/// is expected to return a ``raygeo.ops.convert.EncodeOutput``
+/// instance, which is converted back to the core
+/// [`crate::ops::convert::EncodeOutput`].
+///
+/// This lets callers route Python-side encoders through the same
+/// ``EncoderCompute`` stage as native Rust encoders.
+pub struct PythonEncoder {
+    /// The Python callable ``(ops) -> EncodeOutput``.
+    callable: Py<PyAny>,
+    /// Human-readable name used in progress messages. Leaked at
+    /// construction so it satisfies the ``Encoder::name`` trait's
+    /// ``&'static str`` return type. The encoder lives only as long
+    /// as the Compute node that owns it, so this is bounded.
+    name: &'static str,
+}
+
+impl PythonEncoder {
+    /// Construct from a Python callable and a display name.
+    pub fn new(callable: Py<PyAny>, name: String) -> Self {
+        PythonEncoder {
+            callable,
+            name: name.leak(),
+        }
+    }
+}
+
+impl Encoder for PythonEncoder {
+    fn encode(&self, ctx: &mut EncodeCtx<'_>) -> Result<EncodeOutput, String> {
+        Python::attach(|py| {
+            if ctx.callbacks.is_cancelled() {
+                return Err("cancelled".to_string());
+            }
+            let py_ops = crate::python::ops::container::PyOps {
+                inner: ctx.ops.clone(),
+            };
+            let py_obj = Py::new(py, py_ops).map_err(|e| e.to_string())?;
+            let result = self
+                .callable
+                .call1(py, (py_obj,))
+                .map_err(|e| e.to_string())?;
+            let bound = result.into_bound(py);
+            let py_output = bound.cast::<PyEncodeOutput>().map_err(|_| {
+                "Python encoder callable must return an \
+                     EncodeOutput instance"
+                    .to_string()
+            })?;
+            let py_output = py_output.borrow();
+            Ok(py_output.clone().into_core())
+        })
+    }
+
+    fn name(&self) -> &'static str {
+        self.name
+    }
+}
+
 pub(crate) fn register(ops_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let convert_mod = PyModule::new(ops_mod.py(), "convert")?;
     convert_mod.add_class::<PyEncodeOutput>()?;
@@ -581,6 +743,7 @@ pub(crate) fn register(ops_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     convert_mod.add_class::<PyVertexSpec>()?;
     convert_mod.add_class::<PyTextureSpec>()?;
     convert_mod.add_class::<PyViewSpec>()?;
+    convert_mod.add_class::<PyPythonEncoder>()?;
     view::register(&convert_mod)?;
     ops_mod.add_submodule(&convert_mod)?;
 

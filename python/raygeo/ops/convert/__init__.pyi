@@ -9,6 +9,7 @@ __all__ = [
     "Encoder",
     "GcodeDialectSpec",
     "GcodeSpec",
+    "PythonEncoder",
     "TextureSpec",
     "VertexSpec",
     "ViewSpec",
@@ -164,6 +165,30 @@ class GcodeSpec:
     @property
     def context_json(self) -> builtins.str: ...
     def __new__(cls, dialect: GcodeDialectSpec, context_json: builtins.str) -> GcodeSpec: ...
+
+@typing.final
+class PythonEncoder:
+    r"""
+    Python-side constructor for [`PythonEncoder`].
+    
+    Wraps a Python callable ``(ops: Ops) -> EncodeOutput`` so it can
+    be driven through the Rust ``EncoderCompute`` stage. The callable
+    runs under the GIL on a rayon worker thread. Use this to route
+    encoders that remain in Python through the same pipeline as
+    native Rust encoders.
+    """
+    @property
+    def callable(self) -> typing.Any: ...
+    @property
+    def name(self) -> builtins.str: ...
+    def __new__(cls, callable: typing.Any, name: builtins.str) -> PythonEncoder:
+        r"""
+        Construct a Python-callable encoder.
+        
+        :param callable: A Python callable ``(ops: Ops) -> EncodeOutput``.
+        :param name: Human-readable name for progress messages.
+        """
+    def __repr__(self) -> builtins.str: ...
 
 @typing.final
 class TextureSpec:

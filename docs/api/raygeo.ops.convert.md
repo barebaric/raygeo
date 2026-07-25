@@ -121,6 +121,26 @@ context_json: str
 dialect: GcodeDialectSpec
 ```
 
+## PythonEncoder
+
+Python-side constructor for \[`PythonEncoder`\].
+
+Wraps a Python callable `(ops: Ops) -> EncodeOutput` so it can be driven through the Rust
+`EncoderCompute` stage. The callable runs under the GIL on a rayon worker thread. Use this to route
+encoders that remain in Python through the same pipeline as native Rust encoders.
+
+### `callable`
+
+```python
+callable: Any
+```
+
+### `name`
+
+```python
+name: str
+```
+
 ## TextureSpec
 
 Parameters for the texture encoder.
