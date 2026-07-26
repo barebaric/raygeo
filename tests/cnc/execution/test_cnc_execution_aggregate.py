@@ -151,7 +151,7 @@ def test_aggregate_two_inputs_concatenates_ops():
     ]
     completed, _ = collect_completions(nodes)
     out = aggregate_result(_by_key(completed)["agg"])
-    assert len(out.ops) == 10
+    assert len(out.ops) == 12
 
 
 # ── Markers are emitted in order ──────────────────────────────────
@@ -174,7 +174,7 @@ def test_job_markers_emitted_at_wrap_start_end():
     )
     completed, _ = collect_completions([src, agg])
     out = aggregate_result(_by_key(completed)["agg"])
-    assert len(out.ops) == 7
+    assert len(out.ops) == 8
     cmd_types = [c["type"] for c in out.ops.to_dict()["commands"]]
     assert cmd_types[0] == "JOB_START"
     assert cmd_types[-1] == "JOB_END"
@@ -222,8 +222,8 @@ def test_placement_matrix_translates_input():
     completed, _ = collect_completions([src, agg])
     src_ops = result_ops(_by_key(completed)["src"]).to_dict()
     agg_ops = result_ops(_by_key(completed)["agg"]).to_dict()
-    src_line_to = src_ops["commands"][1]["end"]
-    agg_line_to = agg_ops["commands"][1]["end"]
+    src_line_to = src_ops["commands"][2]["end"]
+    agg_line_to = agg_ops["commands"][2]["end"]
     assert src_line_to == (10.0, 0.0, 0.0)
     assert agg_line_to == (110.0, 50.0, 0.0)
 
@@ -244,8 +244,8 @@ def test_target_dimensions_triggers_uniform_scaling():
     completed, _ = collect_completions([src, agg])
     src_ops = result_ops(_by_key(completed)["src"]).to_dict()
     agg_ops = result_ops(_by_key(completed)["agg"]).to_dict()
-    assert src_ops["commands"][1]["end"] == (10.0, 0.0, 0.0)
-    assert agg_ops["commands"][1]["end"] == (20.0, 0.0, 0.0)
+    assert src_ops["commands"][2]["end"] == (10.0, 0.0, 0.0)
+    assert agg_ops["commands"][2]["end"] == (20.0, 0.0, 0.0)
 
 
 def test_no_scaling_when_target_dimensions_zero():
@@ -354,4 +354,4 @@ def test_aggregate_chains_through_other_aggregate():
     completed, _ = collect_completions([src, inner, outer])
     outer_out = aggregate_result(_by_key(completed)["outer"])
     assert outer_out is not None
-    assert len(outer_out.ops) == 5
+    assert len(outer_out.ops) == 6

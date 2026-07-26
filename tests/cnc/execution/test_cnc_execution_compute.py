@@ -142,7 +142,11 @@ def test_pipeline_matches_direct_contour_call():
     direct = contour(
         direct_part, kerf_mm=5.0, path_offset_mm=5.0, cut_side="outside"
     )
-    assert result_ops(c).to_dict() == direct.ops.to_dict()
+    pipe_ops = result_ops(c).to_dict()
+    direct_ops = direct.ops.to_dict()
+    assert pipe_ops["commands"][0] == {"type": "SET_POWER", "power": 0.0}
+    assert pipe_ops["commands"][1:] == direct_ops["commands"]
+    assert pipe_ops["last_move_to"] == direct_ops["last_move_to"]
 
 
 # ── Empty part produces empty Ops ─────────────────────────────────

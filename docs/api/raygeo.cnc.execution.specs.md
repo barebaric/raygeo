@@ -177,6 +177,30 @@ assembler: Any
 
 The assembler spec (e.g. `ContourSpec`, `AdaptiveClearingSpec`).
 
+### `cut_speed`
+
+```python
+cut_speed: int
+```
+
+Cut speed (mm/min) injected as `SetFeedRate`.
+
+### `head_uid`
+
+```python
+head_uid: Optional[str]
+```
+
+Active head/laser UID injected as `SetHead`.
+
+### `power`
+
+```python
+power: float
+```
+
+Laser power fraction (0.0 – 1.0) injected as `SetPower`.
+
 ### `state_source_keys`
 
 ```python

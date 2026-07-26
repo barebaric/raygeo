@@ -64,6 +64,10 @@ impl Compute for AssemblerCompute {
             inner: ctx.callbacks,
         };
 
+        // Emit cut-state commands (SET_POWER, etc.) before the
+        // assembler runs so they appear at the start of the ops.
+        trace.apply_state(&self.cut_state);
+
         // Temporarily replace the face's stock region with a
         // per-step boundary if one is set.  This lets each step
         // see a different pocket subset (e.g. a single region)

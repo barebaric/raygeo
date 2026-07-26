@@ -242,22 +242,37 @@ pub struct PyComputePayload {
     /// Source keys for cleared-area state threading (CNC only).
     #[pyo3(get)]
     pub state_source_keys: Vec<String>,
+    /// Laser power fraction (0.0 – 1.0) injected as ``SetPower``.
+    #[pyo3(get, set)]
+    pub power: f64,
+    /// Cut speed (mm/min) injected as ``SetFeedRate``.
+    #[pyo3(get, set)]
+    pub cut_speed: i32,
+    /// Active head/laser UID injected as ``SetHead``.
+    #[pyo3(get, set)]
+    pub head_uid: Option<String>,
 }
 
 #[gen_stub_pymethods]
 #[pyo3::pymethods]
 impl PyComputePayload {
     #[new]
-    #[pyo3(signature = (assembler, transformers=vec![], state_source_keys=vec![]))]
+    #[pyo3(signature = (assembler, transformers=vec![], state_source_keys=vec![], power=0.0, cut_speed=0, head_uid=None))]
     fn new(
         assembler: Py<PyAny>,
         transformers: Vec<Py<PyAny>>,
         state_source_keys: Vec<String>,
+        power: f64,
+        cut_speed: i32,
+        head_uid: Option<String>,
     ) -> Self {
         PyComputePayload {
             assembler,
             transformers,
             state_source_keys,
+            power,
+            cut_speed,
+            head_uid,
         }
     }
 }

@@ -97,7 +97,11 @@ def test_shrinkwrap_pipeline_matches_direct_call():
         allow_arcs=False,
         supports_curves=False,
     )
-    assert result_ops(c).to_dict() == direct.ops.to_dict()
+    pipe_ops = result_ops(c).to_dict()
+    direct_ops = direct.ops.to_dict()
+    assert pipe_ops["commands"][0] == {"type": "SET_POWER", "power": 0.0}
+    assert pipe_ops["commands"][1:] == direct_ops["commands"]
+    assert pipe_ops["last_move_to"] == direct_ops["last_move_to"]
 
 
 def test_shrinkwrap_gravity_changes_output():

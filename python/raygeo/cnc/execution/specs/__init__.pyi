@@ -177,7 +177,37 @@ class ComputePayload:
         r"""
         Source keys for cleared-area state threading (CNC only).
         """
-    def __new__(cls, assembler: typing.Any, transformers: typing.Sequence[typing.Any] = [], state_source_keys: typing.Sequence[builtins.str] = []) -> ComputePayload: ...
+    @property
+    def power(self) -> builtins.float:
+        r"""
+        Laser power fraction (0.0 – 1.0) injected as ``SetPower``.
+        """
+    @power.setter
+    def power(self, value: builtins.float) -> None:
+        r"""
+        Laser power fraction (0.0 – 1.0) injected as ``SetPower``.
+        """
+    @property
+    def cut_speed(self) -> builtins.int:
+        r"""
+        Cut speed (mm/min) injected as ``SetFeedRate``.
+        """
+    @cut_speed.setter
+    def cut_speed(self, value: builtins.int) -> None:
+        r"""
+        Cut speed (mm/min) injected as ``SetFeedRate``.
+        """
+    @property
+    def head_uid(self) -> typing.Optional[builtins.str]:
+        r"""
+        Active head/laser UID injected as ``SetHead``.
+        """
+    @head_uid.setter
+    def head_uid(self, value: typing.Optional[builtins.str]) -> None:
+        r"""
+        Active head/laser UID injected as ``SetHead``.
+        """
+    def __new__(cls, assembler: typing.Any, transformers: typing.Sequence[typing.Any] = [], state_source_keys: typing.Sequence[builtins.str] = [], power: builtins.float = 0.0, cut_speed: builtins.int = 0, head_uid: typing.Optional[builtins.str] = None) -> ComputePayload: ...
 
 @typing.final
 class EncodeSpec:

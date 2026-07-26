@@ -90,6 +90,16 @@ fn convert_stage(
                         Vec<Box<dyn crate::ops::transform::Transformer>>,
                     >>()?;
             let state_source_keys = params_ref.state_source_keys.clone();
+            let cut_state = crate::ops::state::State {
+                power: params_ref.power,
+                feed_rate: if params_ref.cut_speed > 0 {
+                    Some(params_ref.cut_speed)
+                } else {
+                    None
+                },
+                active_head_uid: params_ref.head_uid.clone(),
+                ..Default::default()
+            };
             drop(params_ref);
 
             let compute = AssemblerCompute {
@@ -97,7 +107,7 @@ fn convert_stage(
                 part: part_inner,
                 face_id: face_id.clone(),
                 transformers,
-                cut_state: Default::default(),
+                cut_state,
                 state_source_keys,
                 region_boundary: None,
             };

@@ -99,7 +99,11 @@ def test_raster_pipeline_matches_direct_call():
     direct = raster(
         direct_part, mode="mask_scan", line_interval_mm=1.0, step_power=0.2
     )
-    assert result_ops(c).to_dict() == direct.ops.to_dict()
+    pipe_ops = result_ops(c).to_dict()
+    direct_ops = direct.ops.to_dict()
+    assert pipe_ops["commands"][0] == {"type": "SET_POWER", "power": 0.0}
+    assert pipe_ops["commands"][1:] == direct_ops["commands"]
+    assert pipe_ops["last_move_to"] == direct_ops["last_move_to"]
 
 
 def test_raster_pipeline_matches_power_modulated():
@@ -123,7 +127,11 @@ def test_raster_pipeline_matches_power_modulated():
         sample_interval_mm=0.1,
         step_power=0.1,
     )
-    assert result_ops(c).to_dict() == direct.ops.to_dict()
+    pipe_ops = result_ops(c).to_dict()
+    direct_ops = direct.ops.to_dict()
+    assert pipe_ops["commands"][0] == {"type": "SET_POWER", "power": 0.0}
+    assert pipe_ops["commands"][1:] == direct_ops["commands"]
+    assert pipe_ops["last_move_to"] == direct_ops["last_move_to"]
 
 
 def test_raster_mode_changes_output():
