@@ -151,8 +151,18 @@ pub fn assemble_shrinkwrap(
     let flat: Vec<u8> =
         raw.iter().map(|&v| if v != 0 { 1 } else { 0 }).collect();
     if flat.iter().all(|&v| v == 0) {
-        return Err(RaygeoError::ContourError(
-            "Image is empty (all background)".to_string(),
+        return Ok((
+            Ops::new(),
+            AssemblyMeta {
+                start: ToolPose {
+                    pos: Point3D::ZERO,
+                    heading: 0.0,
+                },
+                end: ToolPose {
+                    pos: Point3D::ZERO,
+                    heading: 0.0,
+                },
+            },
         ));
     }
 

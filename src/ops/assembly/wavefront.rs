@@ -39,8 +39,16 @@ impl Assembler for AdaptiveWavefrontSpec {
         if ctx.callbacks.is_cancelled() {
             return Err("cancelled".to_string());
         }
-        let meta = adaptive_wavefronts(ctx.face, ctx.trace, self, ctx.state)
-            .map_err(|e| e.to_string())?;
+        let (ops, meta) = adaptive_wavefronts_multi_pocket(
+            ctx.face,
+            self.step_over,
+            self.z,
+            self.area_tolerance,
+            self.precision,
+            ctx.state,
+        )
+        .map_err(|e| e.to_string())?;
+        ctx.trace.append_ops(&ops);
         ctx.callbacks.report_progress(1.0, "wavefront: done");
         Ok(meta)
     }

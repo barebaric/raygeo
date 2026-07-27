@@ -111,7 +111,7 @@ pub fn compute_total_offset(
 /// applies overcut, optionally fits arcs and curves, and returns the
 /// result as an `(Ops, AssemblyMeta)` pair.
 ///
-/// Returns `Err` if the part has no geometry.
+/// Returns empty `Ops` if the part has no geometry.
 #[allow(clippy::too_many_arguments)]
 pub fn assemble_contour(
     face: &FaceState,
@@ -127,11 +127,24 @@ pub fn assemble_contour(
 ) -> RaygeoResult<(Ops, AssemblyMeta)> {
     let total_offset = compute_total_offset(kerf_mm, path_offset_mm, cut_side);
 
-    let source_geo = face.geometry.clone().ok_or_else(|| {
-        crate::error::RaygeoError::ContourError(
-            "Part has no geometry".to_string(),
-        )
-    })?;
+    let source_geo = match face.geometry.clone() {
+        Some(g) => g,
+        None => {
+            return Ok((
+                Ops::new(),
+                AssemblyMeta {
+                    start: ToolPose {
+                        pos: Point3D::ZERO,
+                        heading: 0.0,
+                    },
+                    end: ToolPose {
+                        pos: Point3D::ZERO,
+                        heading: 0.0,
+                    },
+                },
+            ))
+        }
+    };
 
     // 1. Split into contours, separate closed from open.
     let all_contours = split_into_contours(&source_geo);

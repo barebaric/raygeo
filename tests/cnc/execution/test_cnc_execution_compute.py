@@ -156,7 +156,8 @@ def test_empty_part_yields_empty_ops():
     empty_part = Part(geometry=None, size_mm=(0.0, 0.0))
     c = _run_one(make_contour_compute("e", part=empty_part))
     if c.error is None:
-        assert len(result_ops(c)) == 0
+        cmds = result_ops(c).to_dict()["commands"]
+        assert cmds == [{"type": "SET_POWER", "power": 0.0}]
 
 
 # ── Multiple Contour nodes run independently ──────────────────────
