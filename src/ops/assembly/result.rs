@@ -19,17 +19,6 @@ pub struct TraceEventData {
     pub(crate) meta: Option<Meta>,
 }
 
-/// Trace bundle: span attrs + ordered events.
-///
-/// Constructed by the caller from Tracelet data, not returned by
-/// assemblers.
-#[derive(Clone, Debug, Default)]
-#[allow(dead_code)]
-pub(crate) struct AssemblyTrace {
-    pub(crate) attrs: Option<Meta>,
-    pub(crate) events: Vec<TraceEventData>,
-}
-
 /// What an assembler returns alongside the ops/events written to the Tracelet.
 #[derive(Clone, Debug)]
 pub struct AssemblyMeta {
@@ -37,7 +26,7 @@ pub struct AssemblyMeta {
     pub end: ToolPose,
 }
 
-/// Emit trace events from an [`AssemblyTrace`] via the given [`Tracer`].
+/// Emit trace events from an assembly result via the given [`Tracer`].
 ///
 /// Maps each [`TraceEventData`] to the corresponding `tracer.*` call:
 ///

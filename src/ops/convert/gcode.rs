@@ -89,8 +89,6 @@ pub(crate) struct GcodeEncoder<'a> {
     pub(crate) cut_speed: Option<f64>,
     pub(crate) travel_speed: Option<f64>,
     pub(crate) emitted_speed: Option<f64>,
-    #[allow(dead_code)]
-    pub(crate) emitted_power: Option<f64>,
     pub(crate) emitted_cut_feed: Option<f64>,
     pub(crate) air_assist: bool,
     pub(crate) laser_active: bool,
@@ -120,7 +118,6 @@ impl<'a> GcodeEncoder<'a> {
             cut_speed: None,
             travel_speed: None,
             emitted_speed: None,
-            emitted_power: None,
             emitted_cut_feed: None,
             air_assist: false,
             laser_active: false,
