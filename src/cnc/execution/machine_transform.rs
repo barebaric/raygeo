@@ -6,6 +6,7 @@ use glam::{DMat4, DVec4};
 use crate::cnc::execution::specs::{
     AggregateOutput, MachineTransformSpec, RotaryMappingSpec,
 };
+use crate::ops::assembly::AssemblyOutput;
 use crate::ops::axis::Axis;
 use crate::ops::container::Ops;
 use crate::ops::types::{MarkerCmd, MoveCmd, OpCategory};
@@ -304,15 +305,25 @@ impl Compute for MachineTransformCompute {
                 format!("missing dependency: {}", self.spec.source_key)
             })?;
 
-        let agg_output = upstream
+        let agg_ops = upstream
+            .downcast_ref::<AssemblyOutput>()
+            .map(|a| &a.ops)
+            .or_else(|| {
+                upstream.downcast_ref::<AggregateOutput>().map(|a| &a.ops)
+            })
+            .ok_or_else(|| {
+                format!("cannot get Ops from dep: {}", self.spec.source_key)
+            })?;
+
+        let time_estimate = upstream
             .downcast_ref::<AggregateOutput>()
-            .ok_or_else(|| "expected AggregateOutput".to_string())?;
+            .and_then(|a| a.time_estimate);
 
         if ctx.callbacks.is_cancelled() {
             return Err("cancelled".to_string());
         }
 
-        let mut ops = agg_output.ops.clone();
+        let mut ops = agg_ops.clone();
 
         // 1. Linearize curves.
         if self.spec.linearize_curves {
@@ -377,10 +388,7 @@ impl Compute for MachineTransformCompute {
         // 4. AXIS_REPLACEMENT degrees→scaled-mu (per-layer, machine-space).
         self.apply_axis_replacement(&mut ops);
 
-        Ok(Box::new(AggregateOutput {
-            ops,
-            time_estimate: agg_output.time_estimate,
-        }))
+        Ok(Box::new(AggregateOutput { ops, time_estimate }))
     }
 
     fn source_keys(&self) -> Vec<String> {
@@ -477,6 +485,10 @@ fn set_axis_value(end: &mut Point3D, axis: &str, value: f64) {
         "X" => end.x = value,
         "Y" => end.y = value,
         "Z" => end.z = value,
-        _ => {}
+        // Non-XYZ axes (A/B/C/U) are replaced axes that map to the Y
+        // position in the 3-axis coordinate system, matching the
+        // Python KinematicMapping.degrees_to_scaled_mu_pass behaviour
+        // where _AXIS_TO_INDEX.get(non_xyz, 1) defaults to index 1 (Y).
+        _ => end.y = value,
     }
 }
