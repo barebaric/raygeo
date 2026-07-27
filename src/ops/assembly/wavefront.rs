@@ -53,7 +53,7 @@ impl Assembler for AdaptiveWavefrontSpec {
         Ok(meta)
     }
 
-    fn name(&self) -> &'static str {
+    fn name(&self) -> &str {
         "wavefront"
     }
 

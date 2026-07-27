@@ -98,7 +98,7 @@ impl Assembler for ProfileSpec {
         Ok(meta)
     }
 
-    fn name(&self) -> &'static str {
+    fn name(&self) -> &str {
         match self.kind {
             ProfileKind::Inner => "profile_inner",
             ProfileKind::Outer => "profile_outer",

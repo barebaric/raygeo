@@ -73,7 +73,7 @@ impl Compute for EncoderCompute {
         Some(Box::new(output.clone()))
     }
 
-    fn name(&self) -> &'static str {
+    fn name(&self) -> &str {
         self.encoder.name()
     }
 }

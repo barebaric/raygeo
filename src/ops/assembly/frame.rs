@@ -56,7 +56,7 @@ impl Assembler for FrameSpec {
         true
     }
 
-    fn name(&self) -> &'static str {
+    fn name(&self) -> &str {
         "frame"
     }
 

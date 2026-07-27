@@ -418,7 +418,7 @@ impl Compute for MachineTransformCompute {
         Some(Box::new(output.clone()))
     }
 
-    fn name(&self) -> &'static str {
+    fn name(&self) -> &str {
         "machine_transform"
     }
 }

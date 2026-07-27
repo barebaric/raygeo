@@ -1078,7 +1078,7 @@ impl Encoder for GcodeSpec {
         })
     }
 
-    fn name(&self) -> &'static str {
+    fn name(&self) -> &str {
         "gcode"
     }
 }

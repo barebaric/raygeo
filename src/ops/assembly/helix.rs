@@ -42,7 +42,7 @@ impl Assembler for HelixSpec {
         Ok(meta)
     }
 
-    fn name(&self) -> &'static str {
+    fn name(&self) -> &str {
         "helix"
     }
 

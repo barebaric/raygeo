@@ -40,7 +40,7 @@ impl Assembler for ToroidSpec {
         Ok(meta)
     }
 
-    fn name(&self) -> &'static str {
+    fn name(&self) -> &str {
         "toroid"
     }
 
@@ -99,7 +99,7 @@ impl Assembler for ToroidalClearSpec {
         Ok(meta)
     }
 
-    fn name(&self) -> &'static str {
+    fn name(&self) -> &str {
         "toroidal_clear"
     }
 

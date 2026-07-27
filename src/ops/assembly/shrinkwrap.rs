@@ -72,7 +72,7 @@ impl Assembler for ShrinkwrapSpec {
         false
     }
 
-    fn name(&self) -> &'static str {
+    fn name(&self) -> &str {
         "shrinkwrap"
     }
 

@@ -18,7 +18,7 @@ impl Transformer for BidirScanOffsetSpec {
         apply_bidir_scan_offset(ctx.ops, self.offset_mm);
     }
 
-    fn name(&self) -> &'static str {
+    fn name(&self) -> &str {
         "bidir_scan_offset"
     }
 

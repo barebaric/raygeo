@@ -62,7 +62,7 @@ impl Assembler for MaterialTestGridSpec {
         Ok(meta)
     }
 
-    fn name(&self) -> &'static str {
+    fn name(&self) -> &str {
         "material_test_grid"
     }
 

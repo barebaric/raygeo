@@ -140,7 +140,7 @@ pub trait Assembler: Send + Sync {
     }
 
     /// Short, human-readable name used in progress messages.
-    fn name(&self) -> &'static str;
+    fn name(&self) -> &str;
 
     /// Reconstruct the cached output from a stored entry.
     ///

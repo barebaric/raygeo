@@ -40,7 +40,7 @@ impl Assembler for RampSpec {
         Ok(meta)
     }
 
-    fn name(&self) -> &'static str {
+    fn name(&self) -> &str {
         "ramp"
     }
 

@@ -19,7 +19,7 @@ impl Transformer for MultiPassSpec {
         apply_multipass(ctx.ops, self.passes, self.z_step_down);
     }
 
-    fn name(&self) -> &'static str {
+    fn name(&self) -> &str {
         "multipass"
     }
 

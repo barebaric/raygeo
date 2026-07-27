@@ -178,7 +178,7 @@ impl Compute for AssemblerCompute {
         self.state_source_keys.clone()
     }
 
-    fn name(&self) -> &'static str {
+    fn name(&self) -> &str {
         self.assembler.name()
     }
 }

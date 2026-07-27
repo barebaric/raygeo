@@ -20,7 +20,7 @@ impl Transformer for OverscanSpec {
         apply_overscan(ctx.ops, self.distance_mm);
     }
 
-    fn name(&self) -> &'static str {
+    fn name(&self) -> &str {
         "overscan"
     }
 

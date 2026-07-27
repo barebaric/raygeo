@@ -108,7 +108,7 @@ pub enum CommandCategory {
 }
 
 impl CommandCategory {
-    pub fn name(&self) -> &'static str {
+    pub fn name(&self) -> &str {
         match self {
             CommandCategory::Moving => "MOVING",
             CommandCategory::State => "STATE",
@@ -125,7 +125,7 @@ pub enum SectionType {
 }
 
 impl SectionType {
-    pub fn name(&self) -> &'static str {
+    pub fn name(&self) -> &str {
         match self {
             SectionType::VectorOutline => "VECTOR_OUTLINE",
             SectionType::RasterFill => "RASTER_FILL",
@@ -147,7 +147,7 @@ pub enum RasterMode {
 }
 
 impl RasterMode {
-    pub fn name(&self) -> &'static str {
+    pub fn name(&self) -> &str {
         match self {
             RasterMode::VariablePower => "VARIABLE_POWER",
             RasterMode::ConstantPower => "CONSTANT_POWER",

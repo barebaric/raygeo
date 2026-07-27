@@ -695,6 +695,7 @@ impl PyMachineTransformSpec {
         reverse_z,
         rotary_mappings,
     ))]
+    #[allow(clippy::too_many_arguments)]
     fn new(
         _py: Python<'_>,
         source_key: String,
@@ -786,6 +787,7 @@ impl PyRotaryMappingSpec {
         replaced_axis,
         mu_per_rotation,
     ))]
+    #[allow(clippy::too_many_arguments)]
     fn new(
         layer_uid: String,
         diameter: f64,

@@ -239,7 +239,7 @@ impl Encoder for VertexSpec {
         Ok(EncodeOutput::VertexArrays(va))
     }
 
-    fn name(&self) -> &'static str {
+    fn name(&self) -> &str {
         "vertex"
     }
 }

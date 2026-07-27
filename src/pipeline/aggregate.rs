@@ -45,5 +45,5 @@ pub trait Aggregate: Send + Sync {
         None
     }
 
-    fn name(&self) -> &'static str;
+    fn name(&self) -> &str;
 }

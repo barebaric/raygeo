@@ -44,7 +44,7 @@ impl Assembler for SpiralSpec {
         Ok(meta)
     }
 
-    fn name(&self) -> &'static str {
+    fn name(&self) -> &str {
         "spiral"
     }
 

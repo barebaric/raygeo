@@ -93,7 +93,7 @@ pub trait Transformer: Send + Sync {
     fn apply(&self, ctx: &mut TransformCtx<'_>);
 
     /// Short, human-readable name used in progress messages.
-    fn name(&self) -> &'static str;
+    fn name(&self) -> &str;
 
     /// Whether this transformer's output depends on the absolute
     /// placement of the source Ops.

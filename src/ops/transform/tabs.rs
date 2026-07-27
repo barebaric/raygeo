@@ -61,7 +61,7 @@ impl Transformer for TabsSpec {
         }
     }
 
-    fn name(&self) -> &'static str {
+    fn name(&self) -> &str {
         "tabs"
     }
 

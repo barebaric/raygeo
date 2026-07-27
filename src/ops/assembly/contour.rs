@@ -69,7 +69,7 @@ impl Assembler for ContourSpec {
         Ok(meta)
     }
 
-    fn name(&self) -> &'static str {
+    fn name(&self) -> &str {
         "contour"
     }
 

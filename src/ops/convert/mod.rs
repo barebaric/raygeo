@@ -106,5 +106,5 @@ pub trait Encoder: Send + Sync {
     fn encode(&self, ctx: &mut EncodeCtx<'_>) -> Result<EncodeOutput, String>;
 
     /// Short, human-readable name used in progress messages.
-    fn name(&self) -> &'static str;
+    fn name(&self) -> &str;
 }

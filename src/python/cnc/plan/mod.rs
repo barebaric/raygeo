@@ -36,7 +36,7 @@ impl PyPlanStep {
 
     /// The assembler kind (e.g. ``"helix"``, ``"adaptive_clearing"``).
     #[getter]
-    fn kind(&self) -> &'static str {
+    fn kind(&self) -> &str {
         self.inner.spec.name()
     }
 

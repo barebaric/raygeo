@@ -141,7 +141,7 @@ impl crate::ops::assembly::Assembler for AdaptiveClearingSpec {
         Ok(meta)
     }
 
-    fn name(&self) -> &'static str {
+    fn name(&self) -> &str {
         "adaptive_clearing"
     }
 

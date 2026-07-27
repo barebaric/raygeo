@@ -40,7 +40,7 @@ impl Transformer for CropSpec {
         ctx.ops.clip_ops_to_regions(&self.regions, self.tolerance);
     }
 
-    fn name(&self) -> &'static str {
+    fn name(&self) -> &str {
         "crop"
     }
 

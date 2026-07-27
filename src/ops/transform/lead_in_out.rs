@@ -23,7 +23,7 @@ impl Transformer for LeadInOutSpec {
         apply_lead_in_out(ctx.ops, self.lead_in_mm, self.lead_out_mm);
     }
 
-    fn name(&self) -> &'static str {
+    fn name(&self) -> &str {
         "lead_in_out"
     }
 

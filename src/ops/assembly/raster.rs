@@ -103,7 +103,7 @@ impl Assembler for RasterSpec {
         false
     }
 
-    fn name(&self) -> &'static str {
+    fn name(&self) -> &str {
         "raster"
     }
 

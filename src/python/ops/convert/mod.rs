@@ -687,20 +687,14 @@ impl From<EncodeOutput> for PyEncodeOutput {
 pub struct PythonEncoder {
     /// The Python callable ``(ops) -> EncodeOutput``.
     callable: Py<PyAny>,
-    /// Human-readable name used in progress messages. Leaked at
-    /// construction so it satisfies the ``Encoder::name`` trait's
-    /// ``&'static str`` return type. The encoder lives only as long
-    /// as the Compute node that owns it, so this is bounded.
-    name: &'static str,
+    /// Human-readable name used in progress messages.
+    name: String,
 }
 
 impl PythonEncoder {
     /// Construct from a Python callable and a display name.
     pub fn new(callable: Py<PyAny>, name: String) -> Self {
-        PythonEncoder {
-            callable,
-            name: name.leak(),
-        }
+        PythonEncoder { callable, name }
     }
 }
 
@@ -729,8 +723,8 @@ impl Encoder for PythonEncoder {
         })
     }
 
-    fn name(&self) -> &'static str {
-        self.name
+    fn name(&self) -> &str {
+        &self.name
     }
 }
 

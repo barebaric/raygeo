@@ -61,7 +61,7 @@ impl Assembler for SlotSpec {
         Ok(meta)
     }
 
-    fn name(&self) -> &'static str {
+    fn name(&self) -> &str {
         "slot"
     }
 

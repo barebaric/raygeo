@@ -100,7 +100,7 @@ impl Encoder for ViewSpec {
         }
     }
 
-    fn name(&self) -> &'static str {
+    fn name(&self) -> &str {
         "view"
     }
 }

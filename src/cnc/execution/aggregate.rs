@@ -260,7 +260,7 @@ impl Aggregate for OpsAggregate {
         Some(Box::new(output.clone()))
     }
 
-    fn name(&self) -> &'static str {
+    fn name(&self) -> &str {
         "aggregate"
     }
 }

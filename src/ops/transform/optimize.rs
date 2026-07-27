@@ -45,7 +45,7 @@ impl Transformer for OptimizeSpec {
         );
     }
 
-    fn name(&self) -> &'static str {
+    fn name(&self) -> &str {
         "optimize"
     }
 

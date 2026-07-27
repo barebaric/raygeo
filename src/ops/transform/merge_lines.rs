@@ -27,7 +27,7 @@ impl Transformer for MergeLinesSpec {
         merge_overlapping_lines(ctx.ops, self.tolerance);
     }
 
-    fn name(&self) -> &'static str {
+    fn name(&self) -> &str {
         "merge_lines"
     }
 

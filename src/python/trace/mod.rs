@@ -116,7 +116,7 @@ impl PyMoveKind {
     }
 
     #[getter]
-    fn name(&self) -> &'static str {
+    fn name(&self) -> &str {
         match self.0 {
             RMoveKind::Cut => "CUT",
             RMoveKind::Travel => "TRAVEL",

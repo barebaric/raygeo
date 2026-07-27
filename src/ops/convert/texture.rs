@@ -254,7 +254,7 @@ impl Encoder for TextureSpec {
         })
     }
 
-    fn name(&self) -> &'static str {
+    fn name(&self) -> &str {
         "texture"
     }
 }

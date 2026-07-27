@@ -30,7 +30,7 @@ impl Transformer for SmoothSpec {
         ctx.ops.smooth(self.amount, self.corner_angle_threshold);
     }
 
-    fn name(&self) -> &'static str {
+    fn name(&self) -> &str {
         "smooth"
     }
 
