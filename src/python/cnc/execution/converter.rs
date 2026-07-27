@@ -7,6 +7,7 @@ use pyo3::types::PyAny;
 use crate::cnc::execution::aggregate::OpsAggregate;
 use crate::cnc::execution::compute::AssemblerCompute;
 use crate::cnc::execution::encode::EncoderCompute;
+use crate::cnc::execution::machine_transform::MachineTransformCompute;
 use crate::cnc::execution::specs::AggregateOutput;
 use crate::ops::assembly::Assembler;
 use crate::ops::assembly::AssemblyOutput;
@@ -27,6 +28,7 @@ type ExecuteFn = dyn Fn(
 use crate::pipeline::stage::StageSpec as CoreStageSpec;
 use crate::python::cnc::execution::specs::PyComputePayload;
 use crate::python::cnc::execution::specs::PyEncodeSpec;
+use crate::python::cnc::execution::specs::PyMachineTransformSpec;
 use crate::python::ops::assembly::PyAssemblyOutput;
 use crate::python::ops::convert::PyEncodeOutput;
 use crate::python::pipeline::callbacks::PyTaskCallbacks;
@@ -148,6 +150,20 @@ fn convert_encode_spec(
     })
 }
 
+// ── MachineTransformSpec conversion ───────────────────────────────
+
+fn convert_machine_transform_spec(
+    py: Python<'_>,
+    spec: &PyMachineTransformSpec,
+) -> PyResult<CoreStageSpec> {
+    let compute = MachineTransformCompute {
+        spec: spec.to_core(py),
+    };
+    Ok(CoreStageSpec::Compute {
+        compute_fn: Box::new(compute),
+    })
+}
+
 // ── NodeRequest conversion ────────────────────────────────────────
 
 pub(crate) fn convert_node_request(
@@ -190,8 +206,26 @@ pub(crate) fn convert_node_request(
         ));
     }
 
+    // Try MachineTransformSpec (wrapped as StageSpec.Compute).
+    if let Ok(mt_bound) = stage_any.cast::<PyMachineTransformSpec>() {
+        let mt_spec = mt_bound.borrow();
+        let stage = convert_machine_transform_spec(py, &mt_spec)?;
+        let callbacks = PyTaskCallbacks::new(
+            req.on_progress.clone(),
+            req.on_cancelled.clone(),
+            req.on_chunk.clone(),
+        );
+        return Ok(CoreNodeRequest::new(
+            req.key.clone(),
+            req.generation_id,
+            req.version_token,
+            stage,
+            Box::new(callbacks),
+        ));
+    }
+
     Err(pyo3::exceptions::PyTypeError::new_err(
-        "stage is not a StageSpec or EncodeSpec",
+        "stage is not a StageSpec, EncodeSpec, or MachineTransformSpec",
     ))
 }
 

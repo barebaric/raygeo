@@ -621,6 +621,197 @@ impl PyEncodeSpec {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// MachineTransformSpec  (machine coordinate transform stage)
+// ═══════════════════════════════════════════════════════════════════
+
+/// Configuration for the machine-transform pipeline stage.
+///
+/// Converts world-space Ops into machine-space Ops by applying
+/// curve linearization, per-layer rotary axis mapping, world→machine
+/// coordinate transforms, WCS offsets, Z-flip, and AXIS_REPLACEMENT
+/// downstream conversion.
+#[gen_stub_pyclass(module = "raygeo.cnc.execution.specs")]
+#[pyclass(
+    name = "MachineTransformSpec",
+    module = "raygeo.cnc.execution.specs",
+    skip_from_py_object
+)]
+#[derive(Debug, Clone)]
+pub struct PyMachineTransformSpec {
+    /// Key of the upstream node whose Ops to transform.
+    #[pyo3(get)]
+    pub source_key: String,
+    /// When true, linearize Bezier curves before other transforms.
+    #[pyo3(get)]
+    pub linearize_curves: bool,
+    /// 4×4 world→machine matrix (row-major).
+    #[pyo3(get)]
+    pub world_to_machine: [[f64; 4]; 4],
+    /// Default per-layer WCS command offset (x, y, z).
+    #[pyo3(get)]
+    pub default_wcs_offset: [f64; 3],
+    /// Per-layer WCS offsets, keyed by layer UID.
+    #[pyo3(get)]
+    pub layer_wcs_offsets: Vec<(String, [f64; 3])>,
+    /// When true, negate Z after transforms.
+    #[pyo3(get)]
+    pub reverse_z: bool,
+    /// Per-layer rotary mapping configs.
+    #[pyo3(get)]
+    pub rotary_mappings: Vec<Py<PyRotaryMappingSpec>>,
+}
+
+impl PyMachineTransformSpec {
+    pub fn to_core(
+        &self,
+        py: Python<'_>,
+    ) -> crate::cnc::execution::specs::MachineTransformSpec {
+        crate::cnc::execution::specs::MachineTransformSpec {
+            source_key: self.source_key.clone(),
+            linearize_curves: self.linearize_curves,
+            world_to_machine: self.world_to_machine,
+            default_wcs_offset: self.default_wcs_offset,
+            layer_wcs_offsets: self.layer_wcs_offsets.clone(),
+            reverse_z: self.reverse_z,
+            rotary_mappings: self
+                .rotary_mappings
+                .iter()
+                .map(|rm| rm.borrow(py).to_core())
+                .collect(),
+        }
+    }
+}
+
+#[gen_stub_pymethods]
+#[pyo3::pymethods]
+impl PyMachineTransformSpec {
+    #[new]
+    #[pyo3(signature = (
+        source_key,
+        linearize_curves,
+        world_to_machine,
+        default_wcs_offset,
+        layer_wcs_offsets,
+        reverse_z,
+        rotary_mappings,
+    ))]
+    fn new(
+        _py: Python<'_>,
+        source_key: String,
+        linearize_curves: bool,
+        world_to_machine: [[f64; 4]; 4],
+        default_wcs_offset: [f64; 3],
+        layer_wcs_offsets: Vec<(String, [f64; 3])>,
+        reverse_z: bool,
+        rotary_mappings: Vec<Py<PyRotaryMappingSpec>>,
+    ) -> Self {
+        PyMachineTransformSpec {
+            source_key,
+            linearize_curves,
+            world_to_machine,
+            default_wcs_offset,
+            layer_wcs_offsets,
+            reverse_z,
+            rotary_mappings,
+        }
+    }
+}
+
+/// Per-layer rotary axis mapping configuration.
+#[gen_stub_pyclass(module = "raygeo.cnc.execution.specs")]
+#[pyclass(
+    name = "RotaryMappingSpec",
+    module = "raygeo.cnc.execution.specs",
+    skip_from_py_object
+)]
+#[derive(Debug, Clone)]
+pub struct PyRotaryMappingSpec {
+    /// UID of the layer this rotary config applies to.
+    #[pyo3(get)]
+    pub layer_uid: String,
+    /// Rotary workpiece diameter (mm).
+    #[pyo3(get)]
+    pub diameter: f64,
+    /// Gear ratio.
+    #[pyo3(get)]
+    pub gear_ratio: f64,
+    /// When true, negate computed degree values.
+    #[pyo3(get)]
+    pub reverse: bool,
+    /// Axis mount position (x, y, z).
+    #[pyo3(get)]
+    pub axis_position_3d: [f64; 3],
+    /// Cylinder direction vector (x, y, z).
+    #[pyo3(get)]
+    pub cylinder_dir: [f64; 3],
+    /// Rotary axis name (e.g. "A", "B", "C").
+    #[pyo3(get)]
+    pub rotary_axis: String,
+    /// Replaced world axis name or None for TRUE_4TH_AXIS.
+    #[pyo3(get)]
+    pub replaced_axis: Option<String>,
+    /// Machine units per full rotation (0 = no conversion).
+    #[pyo3(get)]
+    pub mu_per_rotation: f64,
+}
+
+impl PyRotaryMappingSpec {
+    pub fn to_core(&self) -> crate::cnc::execution::specs::RotaryMappingSpec {
+        crate::cnc::execution::specs::RotaryMappingSpec {
+            layer_uid: self.layer_uid.clone(),
+            diameter: self.diameter,
+            gear_ratio: self.gear_ratio,
+            reverse: self.reverse,
+            axis_position_3d: self.axis_position_3d,
+            cylinder_dir: self.cylinder_dir,
+            rotary_axis: self.rotary_axis.clone(),
+            replaced_axis: self.replaced_axis.clone(),
+            mu_per_rotation: self.mu_per_rotation,
+        }
+    }
+}
+
+#[gen_stub_pymethods]
+#[pyo3::pymethods]
+impl PyRotaryMappingSpec {
+    #[new]
+    #[pyo3(signature = (
+        layer_uid,
+        diameter,
+        gear_ratio,
+        reverse,
+        axis_position_3d,
+        cylinder_dir,
+        rotary_axis,
+        replaced_axis,
+        mu_per_rotation,
+    ))]
+    fn new(
+        layer_uid: String,
+        diameter: f64,
+        gear_ratio: f64,
+        reverse: bool,
+        axis_position_3d: [f64; 3],
+        cylinder_dir: [f64; 3],
+        rotary_axis: String,
+        replaced_axis: Option<String>,
+        mu_per_rotation: f64,
+    ) -> Self {
+        PyRotaryMappingSpec {
+            layer_uid,
+            diameter,
+            gear_ratio,
+            reverse,
+            axis_position_3d,
+            cylinder_dir,
+            rotary_axis,
+            replaced_axis,
+            mu_per_rotation,
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // Module registration
 // ═══════════════════════════════════════════════════════════════════
 
@@ -638,6 +829,8 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     specs_mod.add_class::<PyAggregateGroup>()?;
     specs_mod.add_class::<PyAggregateInput>()?;
     specs_mod.add_class::<PyEncodeSpec>()?;
+    specs_mod.add_class::<PyMachineTransformSpec>()?;
+    specs_mod.add_class::<PyRotaryMappingSpec>()?;
 
     m.add_submodule(&specs_mod)?;
 

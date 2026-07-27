@@ -77,3 +77,58 @@ pub struct AggregateOutput {
     pub ops: Ops,
     pub time_estimate: Option<f64>,
 }
+
+// ── MachineTransformSpec ─────────────────────────────────────────────
+
+/// Configuration for the machine-transform pipeline stage.
+///
+/// Converts world-space Ops into machine-space Ops by applying:
+/// 1. Curve linearization (if the machine does not support curves)
+/// 2. Per-layer rotary axis mapping (Y→degrees)
+/// 3. World→machine coordinate transform (origin corner, reverse
+///    axes, Z-flip) combined with the default WCS offset
+/// 4. Per-layer WCS offset translation
+/// 5. AXIS_REPLACEMENT degrees→scaled-mu downstream pass
+#[derive(Debug, Clone)]
+pub struct MachineTransformSpec {
+    /// Key of the upstream node whose Ops to transform.
+    pub source_key: String,
+    /// When true, linearize Bezier curves before the other transforms.
+    pub linearize_curves: bool,
+    /// 4×4 world→machine matrix (row-major), including origin-corner
+    /// and reverse-X/Y sign flips.
+    pub world_to_machine: [[f64; 4]; 4],
+    /// Default per-layer WCS command offset (x, y, z), subtracted
+    /// from machine coords when a layer has no explicit entry.
+    pub default_wcs_offset: [f64; 3],
+    /// Per-layer WCS command offsets, keyed by layer UID.
+    pub layer_wcs_offsets: Vec<(String, [f64; 3])>,
+    /// When true, negate Z after the world→machine and WCS transforms.
+    pub reverse_z: bool,
+    /// Per-layer rotary mapping configs (empty when no rotary).
+    pub rotary_mappings: Vec<RotaryMappingSpec>,
+}
+
+#[derive(Debug, Clone)]
+pub struct RotaryMappingSpec {
+    /// UID of the layer that this rotary config applies to.
+    pub layer_uid: String,
+    /// Rotary workpiece diameter (mm).
+    pub diameter: f64,
+    /// Gear ratio (roller-drive compensation).
+    pub gear_ratio: f64,
+    /// When true, negate the computed degree value.
+    pub reverse: bool,
+    /// Axis mount position in 3D space (x, y, z).
+    pub axis_position_3d: [f64; 3],
+    /// Cylinder direction vector (x, y, z — unit length).
+    pub cylinder_dir: [f64; 3],
+    /// Name of the rotary axis (e.g. "A", "B", "C").
+    pub rotary_axis: String,
+    /// Name of the world axis the rotary replaces, or None for
+    /// TRUE_4TH_AXIS mode (e.g. "Y").
+    pub replaced_axis: Option<String>,
+    /// Machine units per full rotation (for AXIS_REPLACEMENT
+    /// degrees→scaled-mu conversion).  Zero means no conversion.
+    pub mu_per_rotation: f64,
+}

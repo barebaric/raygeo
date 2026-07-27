@@ -17,7 +17,9 @@ __all__ = [
     "EncodeSpec",
     "LinkMode",
     "MachineParams",
+    "MachineTransformSpec",
     "Marker",
+    "RotaryMappingSpec",
 ]
 
 @typing.final
@@ -299,6 +301,53 @@ class MachineParams:
         """
     def __new__(cls, default_feed_rate: builtins.float = 0.0, default_rapid_rate: builtins.float = 0.0, acceleration: builtins.float = 0.0) -> MachineParams: ...
 
+@typing.final
+class MachineTransformSpec:
+    r"""
+    Configuration for the machine-transform pipeline stage.
+    
+    Converts world-space Ops into machine-space Ops by applying
+    curve linearization, per-layer rotary axis mapping, world→machine
+    coordinate transforms, WCS offsets, Z-flip, and AXIS_REPLACEMENT
+    downstream conversion.
+    """
+    @property
+    def source_key(self) -> builtins.str:
+        r"""
+        Key of the upstream node whose Ops to transform.
+        """
+    @property
+    def linearize_curves(self) -> builtins.bool:
+        r"""
+        When true, linearize Bezier curves before other transforms.
+        """
+    @property
+    def world_to_machine(self) -> builtins.list[builtins.list[builtins.float]]:
+        r"""
+        4×4 world→machine matrix (row-major).
+        """
+    @property
+    def default_wcs_offset(self) -> builtins.list[builtins.float]:
+        r"""
+        Default per-layer WCS command offset (x, y, z).
+        """
+    @property
+    def layer_wcs_offsets(self) -> builtins.list[tuple[builtins.str, builtins.list[builtins.float]]]:
+        r"""
+        Per-layer WCS offsets, keyed by layer UID.
+        """
+    @property
+    def reverse_z(self) -> builtins.bool:
+        r"""
+        When true, negate Z after transforms.
+        """
+    @property
+    def rotary_mappings(self) -> builtins.list[RotaryMappingSpec]:
+        r"""
+        Per-layer rotary mapping configs.
+        """
+    def __new__(cls, source_key: builtins.str, linearize_curves: builtins.bool, world_to_machine: typing.Sequence[typing.Sequence[builtins.float]], default_wcs_offset: typing.Sequence[builtins.float], layer_wcs_offsets: typing.Sequence[tuple[builtins.str, typing.Sequence[builtins.float]]], reverse_z: builtins.bool, rotary_mappings: typing.Sequence[RotaryMappingSpec]) -> MachineTransformSpec: ...
+
 class Marker:
     r"""
     Declarative markers for aggregate groups.
@@ -379,4 +428,56 @@ class Marker:
         def __new__(cls, uid: builtins.str, _tag: builtins.bool) -> Marker.WorkpieceEnd: ...
     
     ...
+
+@typing.final
+class RotaryMappingSpec:
+    r"""
+    Per-layer rotary axis mapping configuration.
+    """
+    @property
+    def layer_uid(self) -> builtins.str:
+        r"""
+        UID of the layer this rotary config applies to.
+        """
+    @property
+    def diameter(self) -> builtins.float:
+        r"""
+        Rotary workpiece diameter (mm).
+        """
+    @property
+    def gear_ratio(self) -> builtins.float:
+        r"""
+        Gear ratio.
+        """
+    @property
+    def reverse(self) -> builtins.bool:
+        r"""
+        When true, negate computed degree values.
+        """
+    @property
+    def axis_position_3d(self) -> builtins.list[builtins.float]:
+        r"""
+        Axis mount position (x, y, z).
+        """
+    @property
+    def cylinder_dir(self) -> builtins.list[builtins.float]:
+        r"""
+        Cylinder direction vector (x, y, z).
+        """
+    @property
+    def rotary_axis(self) -> builtins.str:
+        r"""
+        Rotary axis name (e.g. "A", "B", "C").
+        """
+    @property
+    def replaced_axis(self) -> typing.Optional[builtins.str]:
+        r"""
+        Replaced world axis name or None for TRUE_4TH_AXIS.
+        """
+    @property
+    def mu_per_rotation(self) -> builtins.float:
+        r"""
+        Machine units per full rotation (0 = no conversion).
+        """
+    def __new__(cls, layer_uid: builtins.str, diameter: builtins.float, gear_ratio: builtins.float, reverse: builtins.bool, axis_position_3d: typing.Sequence[builtins.float], cylinder_dir: typing.Sequence[builtins.float], rotary_axis: builtins.str, replaced_axis: typing.Optional[builtins.str], mu_per_rotation: builtins.float) -> RotaryMappingSpec: ...
 

@@ -318,6 +318,70 @@ default_rapid_rate: float
 
 Default rapid rate (mm/min) for travel moves.
 
+## MachineTransformSpec
+
+Configuration for the machine-transform pipeline stage.
+
+Converts world-space Ops into machine-space Ops by applying curve linearization, per-layer rotary
+axis mapping, world→machine coordinate transforms, WCS offsets, Z-flip, and AXIS_REPLACEMENT
+downstream conversion.
+
+### `default_wcs_offset`
+
+```python
+default_wcs_offset: list[float]
+```
+
+Default per-layer WCS command offset (x, y, z).
+
+### `layer_wcs_offsets`
+
+```python
+layer_wcs_offsets: list[tuple[str, list[float]]]
+```
+
+Per-layer WCS offsets, keyed by layer UID.
+
+### `linearize_curves`
+
+```python
+linearize_curves: bool
+```
+
+When true, linearize Bezier curves before other transforms.
+
+### `reverse_z`
+
+```python
+reverse_z: bool
+```
+
+When true, negate Z after transforms.
+
+### `rotary_mappings`
+
+```python
+rotary_mappings: list[RotaryMappingSpec]
+```
+
+Per-layer rotary mapping configs.
+
+### `source_key`
+
+```python
+source_key: str
+```
+
+Key of the upstream node whose Ops to transform.
+
+### `world_to_machine`
+
+```python
+world_to_machine: list[list[float]]
+```
+
+4×4 world→machine matrix (row-major).
+
 ## Marker
 
 Declarative markers for aggregate groups.
@@ -351,3 +415,79 @@ Marks the end of a workpiece with the given UID.
 ### WorkpieceStart
 
 Marks the start of a workpiece with the given UID.
+
+## RotaryMappingSpec
+
+Per-layer rotary axis mapping configuration.
+
+### `axis_position_3d`
+
+```python
+axis_position_3d: list[float]
+```
+
+Axis mount position (x, y, z).
+
+### `cylinder_dir`
+
+```python
+cylinder_dir: list[float]
+```
+
+Cylinder direction vector (x, y, z).
+
+### `diameter`
+
+```python
+diameter: float
+```
+
+Rotary workpiece diameter (mm).
+
+### `gear_ratio`
+
+```python
+gear_ratio: float
+```
+
+Gear ratio.
+
+### `layer_uid`
+
+```python
+layer_uid: str
+```
+
+UID of the layer this rotary config applies to.
+
+### `mu_per_rotation`
+
+```python
+mu_per_rotation: float
+```
+
+Machine units per full rotation (0 = no conversion).
+
+### `replaced_axis`
+
+```python
+replaced_axis: Optional[str]
+```
+
+Replaced world axis name or None for TRUE_4TH_AXIS.
+
+### `reverse`
+
+```python
+reverse: bool
+```
+
+When true, negate computed degree values.
+
+### `rotary_axis`
+
+```python
+rotary_axis: str
+```
+
+Rotary axis name (e.g. "A", "B", "C").

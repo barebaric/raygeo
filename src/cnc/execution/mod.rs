@@ -9,4 +9,5 @@ pub mod callbacks;
 pub mod compute;
 pub mod encode;
 pub mod intent;
+pub mod machine_transform;
 pub mod specs;
