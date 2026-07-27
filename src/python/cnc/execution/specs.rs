@@ -237,7 +237,7 @@ pub struct PyComputePayload {
     #[pyo3(get)]
     pub assembler: Py<PyAny>,
     /// Optional list of transformer specs applied post-assembly.
-    #[pyo3(get)]
+    #[pyo3(get, set)]
     pub transformers: Vec<Py<PyAny>>,
     /// Source keys for cleared-area state threading (CNC only).
     #[pyo3(get)]
@@ -308,7 +308,7 @@ pub struct PyAggregateSpec {
     #[pyo3(get)]
     pub machine: PyMachineParams,
     /// Batch transformers applied to the aggregated Ops.
-    #[pyo3(get)]
+    #[pyo3(get, set)]
     pub transformers: Vec<Py<PyAny>>,
 }
 

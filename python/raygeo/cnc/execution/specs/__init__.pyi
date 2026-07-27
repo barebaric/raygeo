@@ -147,6 +147,11 @@ class AggregateSpec:
         r"""
         Batch transformers applied to the aggregated Ops.
         """
+    @transformers.setter
+    def transformers(self, value: typing.Sequence[typing.Any]) -> None:
+        r"""
+        Batch transformers applied to the aggregated Ops.
+        """
     def __new__(cls, wrap_start: typing.Sequence[Marker], groups: typing.Sequence[AggregateGroup], wrap_end: typing.Sequence[Marker], machine: MachineParams, transformers: typing.Sequence[typing.Any] = []) -> AggregateSpec: ...
 
 @typing.final
@@ -169,6 +174,11 @@ class ComputePayload:
         """
     @property
     def transformers(self) -> builtins.list[typing.Any]:
+        r"""
+        Optional list of transformer specs applied post-assembly.
+        """
+    @transformers.setter
+    def transformers(self, value: typing.Sequence[typing.Any]) -> None:
         r"""
         Optional list of transformer specs applied post-assembly.
         """
