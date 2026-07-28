@@ -161,7 +161,7 @@ impl Compute for AssemblerCompute {
     fn prepare_cache_entry(
         &self,
         output: &(dyn Any + Send + Sync),
-    ) -> Option<Box<dyn Any + Send + Sync>> {
+    ) -> Option<(Box<dyn Any + Send + Sync>, usize)> {
         let assembly = output.downcast_ref::<AssemblyOutput>()?;
         let face = self.part.face(&self.face_id);
         let cleared_fragments = face.map(|f| f.cleared.fragments().to_vec());
@@ -171,7 +171,17 @@ impl Compute for AssemblerCompute {
             .assembler
             .store_cache(&with_fragments)
             .unwrap_or(with_fragments);
-        Some(Box::new(cached))
+        let ops_heap = cached.ops.heap_size();
+        let fragments_heap = cached.cleared_fragments.as_ref().map_or(0, |f| {
+            let buf = f.capacity() * std::mem::size_of::<Polygon>();
+            let vertices: usize = f.iter().map(|p| p.capacity()).sum::<usize>()
+                * std::mem::size_of::<glam::DVec2>();
+            buf + vertices
+        });
+        Some((
+            Box::new(cached),
+            std::mem::size_of::<AssemblyOutput>() + ops_heap + fragments_heap,
+        ))
     }
 
     fn source_keys(&self) -> Vec<String> {

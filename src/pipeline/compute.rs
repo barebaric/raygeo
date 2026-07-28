@@ -43,7 +43,7 @@ pub trait Compute: Send + Sync {
     fn prepare_cache_entry(
         &self,
         _output: &(dyn Any + Send + Sync),
-    ) -> Option<Box<dyn Any + Send + Sync>> {
+    ) -> Option<(Box<dyn Any + Send + Sync>, usize)> {
         None
     }
 

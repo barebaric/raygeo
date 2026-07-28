@@ -256,6 +256,14 @@ class Ops:
         :returns: Number of commands in the container.
         :complexity: O(1) time, O(1) space
         """
+    def heap_size(self) -> builtins.int:
+        r"""
+        Estimated heap-allocated bytes for this Ops instance
+        (commands Vec buffer + scanline power data).
+        
+        :returns: Estimated heap memory usage in bytes.
+        :complexity: O(n) time, O(1) space
+        """
     def command_type(self, idx: builtins.int) -> types.CommandType:
         r"""
         Get the :class:`CommandType` at the given index.

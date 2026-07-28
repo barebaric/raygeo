@@ -68,9 +68,10 @@ impl Compute for EncoderCompute {
     fn prepare_cache_entry(
         &self,
         output: &(dyn Any + Send + Sync),
-    ) -> Option<Box<dyn Any + Send + Sync>> {
+    ) -> Option<(Box<dyn Any + Send + Sync>, usize)> {
         let output = output.downcast_ref::<EncodeOutput>()?;
-        Some(Box::new(output.clone()))
+        let size = std::mem::size_of::<EncodeOutput>() + output.heap_size();
+        Some((Box::new(output.clone()), size))
     }
 
     fn name(&self) -> &str {

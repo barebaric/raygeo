@@ -356,11 +356,10 @@ fn dispatch_stage(
 
             if let Ok(ref out) = result {
                 if let Some(key) = cache_key {
-                    if let Some(entry) =
+                    if let Some((entry, size)) =
                         compute_fn.prepare_cache_entry(out.as_ref())
                     {
                         if let Ok(mut c) = shared.cache.lock() {
-                            let size = 1024;
                             c.insert(key, entry, size);
                         }
                     }
@@ -385,11 +384,10 @@ fn dispatch_stage(
 
             if let Ok(ref out) = result {
                 if let Some(key) = cache_key {
-                    if let Some(entry) =
+                    if let Some((entry, size)) =
                         aggregate_fn.prepare_cache_entry(out.as_ref())
                     {
                         if let Ok(mut c) = shared.cache.lock() {
-                            let size = 1024;
                             c.insert(key, entry, size);
                         }
                     }

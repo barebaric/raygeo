@@ -160,6 +160,29 @@ impl Ops {
         total
     }
 
+    /// Estimated heap-allocated bytes for this Ops instance
+    /// (commands Vec buffer + scanline power data).
+    pub fn heap_size(&self) -> usize {
+        let commands_buf =
+            self.commands.capacity() * std::mem::size_of::<OpNode>();
+        let scanline_data: usize = self
+            .commands
+            .iter()
+            .filter_map(|node| {
+                if let OpCategory::Moving {
+                    cmd: MoveCmd::ScanLine { power_values },
+                    ..
+                } = &node.category
+                {
+                    Some(power_values.len())
+                } else {
+                    None
+                }
+            })
+            .sum();
+        commands_buf + scanline_data
+    }
+
     pub fn cut_distance(&self) -> f64 {
         let mut total = 0.0;
         let mut last: Option<Point3D> = None;

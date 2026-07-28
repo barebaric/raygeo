@@ -255,9 +255,11 @@ impl Aggregate for OpsAggregate {
     fn prepare_cache_entry(
         &self,
         output: &(dyn Any + Send + Sync),
-    ) -> Option<Box<dyn Any + Send + Sync>> {
+    ) -> Option<(Box<dyn Any + Send + Sync>, usize)> {
         let output = output.downcast_ref::<AggregateOutput>()?;
-        Some(Box::new(output.clone()))
+        let size =
+            std::mem::size_of::<AggregateOutput>() + output.ops.heap_size();
+        Some((Box::new(output.clone()), size))
     }
 
     fn name(&self) -> &str {

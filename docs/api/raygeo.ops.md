@@ -1199,6 +1199,19 @@ Get the head UID from a SetHead command.
 | _Returns_    | `str` | The head identifier.  |
 | _Complexity_ |       | O(1) time, O(1) space |
 
+### `heap_size()`
+
+```python
+heap_size() -> int
+```
+
+Estimated heap-allocated bytes for this Ops instance (commands Vec buffer + scanline power data).
+
+| Parameter    | Type  | Description                           |
+| ------------ | ----- | ------------------------------------- |
+| _Returns_    | `int` | Estimated heap memory usage in bytes. |
+| _Complexity_ |       | O(n) time, O(1) space                 |
+
 ### `indices_of()`
 
 ```python

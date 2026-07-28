@@ -571,6 +571,15 @@ impl PyOps {
         self.inner.len()
     }
 
+    /// Estimated heap-allocated bytes for this Ops instance
+    /// (commands Vec buffer + scanline power data).
+    ///
+    /// :returns: Estimated heap memory usage in bytes.
+    /// :complexity: O(n) time, O(1) space
+    fn heap_size(&self) -> usize {
+        self.inner.heap_size()
+    }
+
     /// Get the :class:`CommandType` at the given index.
     ///
     /// :param idx: Command index (negative = from end).

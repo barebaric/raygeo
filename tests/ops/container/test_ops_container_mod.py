@@ -793,3 +793,38 @@ def test_apply_state_accumulates():
     assert ops.command_type(1) == CommandType.LINE_TO
     assert ops.power(2) == pytest.approx(1.0)
     assert ops.rate(3) == 1000
+
+
+# ── Ops.heap_size ────────────────────────────────────────────────
+
+
+def test_ops_heap_size_empty():
+    """An empty Ops container has 0 heap bytes."""
+    o = Ops()
+    assert o.heap_size() == 0
+
+
+def test_ops_heap_size_grows_with_commands():
+    """heap_size increases as commands are added."""
+    o = Ops()
+    empty = o.heap_size()
+    o.move_to(0, 0)
+    o.line_to(10, 0)
+    o.line_to(10, 10)
+    o.line_to(0, 10)
+    o.close_path()
+    assert o.heap_size() > empty
+
+
+def test_ops_heap_size_reflects_command_count():
+    """Ops with more commands has a larger heap_size."""
+    few = Ops()
+    few.move_to(0, 0)
+    few.line_to(10, 10)
+
+    many = Ops()
+    many.move_to(0, 0)
+    for i in range(100):
+        many.line_to(float(i), float(i))
+
+    assert many.heap_size() > few.heap_size()

@@ -379,3 +379,92 @@ def test_compute_cache_with_no_transformers_still_works():
     out = _run_pipeline(p, [_contour_node("c", transformers=[])])
     assert out["c"].error is None
     assert out["c"].output is not None
+
+
+# ── Cache entry sizes reflect real output size ─────────────────────
+
+
+def test_cache_used_bytes_scales_with_ops_size():
+    """Different compute outputs consume different cache bytes,
+    proving prepare_cache_entry uses real entry sizes.
+
+    An adaptive clearing node with a complex pocket produces more Ops
+    commands than a simple square contour, so its cache entry must be
+    larger under the new sizing.
+    """
+    p = Pipeline()
+
+    contour = _contour_node("contour", ContourSpec())
+    p.execute([contour], lambda n: None, None)
+    contour_bytes = p.cache_used_bytes
+    p.clear_cache()
+
+    adaptive = _adaptive_node("adaptive", AdaptiveClearingSpec())
+    p.execute([adaptive], lambda n: None, None)
+    adaptive_bytes = p.cache_used_bytes
+
+    assert contour_bytes > 0
+    assert adaptive_bytes > 0
+    assert adaptive_bytes != contour_bytes, (
+        "different compute outputs should produce different cache byte counts"
+    )
+
+
+def test_cache_entry_size_not_hardcoded():
+    """The cache entry size is no longer hardcoded to 1024 bytes.
+
+    After running a single compute node, cache_used_bytes reflects the
+    real Ops data size rather than the old hardcoded constant.
+    Verifying by running the same node twice should produce the same
+    byte count (cache hit), and that count should not be a simple
+    multiple of 1024 for a single entry.
+    """
+    p = Pipeline()
+    out = _run_pipeline(p, [_contour_node("c", ContourSpec())])
+    assert out["c"].error is None
+    used = p.cache_used_bytes
+    assert used > 0
+    # With a single entry the byte count should not be 1024
+    # (the old hardcoded constant).
+    assert used != 1024, (
+        "cache entry size should not be the old hardcoded 1024"
+    )
+
+
+# ── Cache eviction enforces byte budget ──────────────────────────
+
+
+def test_cache_enforces_budget():
+    """When cache entries exceed the byte budget, older entries are
+    evicted so that used_bytes never exceeds budget_bytes."""
+    # Run enough compute nodes whose total would exceed a tight budget.
+    budget = 2000
+    p = Pipeline(budget_bytes=budget)
+    for i in range(5):
+        key = f"n{i}"
+        _run_pipeline(p, [_contour_node(key, ContourSpec())])
+        assert p.cache_used_bytes <= p.cache_budget_bytes, (
+            f"after inserting {key}, used_bytes {p.cache_used_bytes} "
+            f"exceeded budget {p.cache_budget_bytes}"
+        )
+
+
+def test_cache_eviction_reduces_usage():
+    """Inserting entries beyond the budget causes eviction and reduces
+    used_bytes compared to running with no budget limit."""
+    # Run with a generous budget (no eviction).
+    generous = Pipeline()
+    for i in range(3):
+        _run_pipeline(generous, [_contour_node(f"g{i}", ContourSpec())])
+    generous_bytes = generous.cache_used_bytes
+
+    # Run the same keys with a tight budget.
+    budget = 3000
+    tight = Pipeline(budget_bytes=budget)
+    for i in range(3):
+        _run_pipeline(tight, [_contour_node(f"t{i}", ContourSpec())])
+    tight_bytes = tight.cache_used_bytes
+
+    assert generous_bytes > tight_bytes, (
+        "tight budget should evict entries, resulting in less cache usage"
+    )
