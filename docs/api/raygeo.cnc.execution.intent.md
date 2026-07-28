@@ -19,6 +19,18 @@ step_count: int
 
 Number of compute nodes in this intent (excluding the final aggregate).
 
+### `cancel()`
+
+```python
+cancel() -> None
+```
+
+Signal the currently running execution of this intent to cancel cooperatively.
+
+| Parameter | Type   | Description |
+| --------- | ------ | ----------- |
+| _Returns_ | `None` |             |
+
 ### `invalidate()`
 
 ```python

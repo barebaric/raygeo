@@ -297,6 +297,7 @@ def test_cancel_propagates_to_dependent_aggregate():
     assert (
         "missing dependency" in by["agg"].error
         or "unsatisfiable" in by["agg"].error
+        or "upstream failed" in by["agg"].error
     )
 
 

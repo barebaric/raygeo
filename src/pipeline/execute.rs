@@ -92,7 +92,7 @@ pub fn execute_stages(
     let leftover: Vec<String> =
         shared.node_by_key.lock().unwrap().keys().cloned().collect();
     for key in leftover {
-        deliver_synthetic_completion(&shared, &key);
+        deliver_synthetic_completion(&shared, &key, "unsatisfiable dependency");
     }
 
     if let Some(cb) = &shared.on_batch {
@@ -244,10 +244,91 @@ fn spawn_one(s: &Scope<'_>, shared: &Arc<SharedState>, key: String) {
                 .collect()
         };
 
-        for dep_key in new_ready {
-            spawn_one(s, &shared, dep_key);
+        if output_arc.is_some() {
+            for dep_key in new_ready {
+                spawn_one(s, &shared, dep_key);
+            }
+        } else {
+            propagate_failure(
+                &shared,
+                new_ready,
+                "upstream failed".to_string(),
+            );
         }
     });
+}
+
+/// Mark a batch of dependents as failed because an upstream node
+/// produced no output. Each dependent is removed from `node_by_key`
+/// (mirroring `spawn_one`'s removal), emits a synthetic error
+/// completion with `reason`, fires its shadow completions with the
+/// same reason, updates the progress bookkeeping, and recurses into
+/// its own dependents — so a failure at any point in the DAG cascades
+/// to all transitive descendants with no work actually run on them.
+///
+/// This holds the rayon `Scope` argument `s` (when called from inside
+/// `spawn_one`) — but the cascade is fully synchronous (no new
+/// `spawn_one`s), so we don't need the scope here.
+fn propagate_failure(
+    shared: &Arc<SharedState>,
+    dependent_keys: Vec<String>,
+    reason: String,
+) {
+    for dep_key in dependent_keys {
+        let Some(node) = shared.node_by_key.lock().unwrap().remove(&dep_key)
+        else {
+            continue;
+        };
+        let generation_id = node.generation_id;
+        let shadows = shared.shadows.get(&dep_key).cloned().unwrap_or_default();
+
+        (shared.on_completed)(CompletedNode::err(
+            dep_key.clone(),
+            generation_id,
+            reason.clone(),
+        ));
+        for shadow_gen in shadows {
+            (shared.on_completed)(CompletedNode::err(
+                dep_key.clone(),
+                shadow_gen,
+                reason.clone(),
+            ));
+        }
+
+        {
+            let mut pm = shared.progress.lock().unwrap();
+            pm.remove(&dep_key);
+        }
+        {
+            let mut cc = shared.completed_count.lock().unwrap();
+            *cc += 1;
+        }
+        emit_batch_progress(shared);
+
+        let next_ready: Vec<String> = {
+            let mut dr = shared.deps_remaining.lock().unwrap();
+            shared
+                .dependents
+                .get(&dep_key)
+                .cloned()
+                .unwrap_or_default()
+                .into_iter()
+                .filter_map(|dep| {
+                    let count = dr.entry(dep.clone()).or_insert(0);
+                    if *count > 0 {
+                        *count -= 1;
+                    }
+                    if *count == 0 {
+                        Some(dep)
+                    } else {
+                        None
+                    }
+                })
+                .collect()
+        };
+
+        propagate_failure(shared, next_ready, reason.clone());
+    }
 }
 
 fn dispatch_stage(
@@ -323,7 +404,11 @@ fn collect_deps(stage: &StageSpec) -> Vec<String> {
     stage.source_keys()
 }
 
-fn deliver_synthetic_completion(shared: &Arc<SharedState>, key: &str) {
+fn deliver_synthetic_completion(
+    shared: &Arc<SharedState>,
+    key: &str,
+    reason: &str,
+) {
     let gen = shared
         .node_by_key
         .lock()
@@ -332,20 +417,13 @@ fn deliver_synthetic_completion(shared: &Arc<SharedState>, key: &str) {
         .map(|n| n.generation_id)
         .unwrap_or(0);
 
-    let node = CompletedNode::err(
-        key.to_string(),
-        gen,
-        "unsatisfiable dependency".to_string(),
-    );
+    let node = CompletedNode::err(key.to_string(), gen, reason.to_string());
     (shared.on_completed)(node);
 
     let shadows = shared.shadows.get(key).cloned().unwrap_or_default();
     for shadow_gen in shadows {
-        let node = CompletedNode::err(
-            key.to_string(),
-            shadow_gen,
-            "unsatisfiable dependency".to_string(),
-        );
+        let node =
+            CompletedNode::err(key.to_string(), shadow_gen, reason.to_string());
         (shared.on_completed)(node);
     }
 }
