@@ -1,4 +1,6 @@
 use std::any::Any;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 use pyo3::prelude::*;
 
@@ -9,6 +11,7 @@ pub struct PyTaskCallbacks {
     on_progress: Option<Py<PyAny>>,
     on_cancelled: Option<Py<PyAny>>,
     on_chunk: Option<Py<PyAny>>,
+    cancel_flag: Arc<AtomicBool>,
 }
 
 impl PyTaskCallbacks {
@@ -16,11 +19,13 @@ impl PyTaskCallbacks {
         on_progress: Option<Py<PyAny>>,
         on_cancelled: Option<Py<PyAny>>,
         on_chunk: Option<Py<PyAny>>,
+        cancel_flag: Arc<AtomicBool>,
     ) -> Self {
         PyTaskCallbacks {
             on_progress,
             on_cancelled,
             on_chunk,
+            cancel_flag,
         }
     }
 }
@@ -35,6 +40,10 @@ impl Callbacks for PyTaskCallbacks {
     }
 
     fn is_cancelled(&self) -> bool {
+        // No GIL, no Python callbacks from rayon workers.
+        if self.cancel_flag.load(Ordering::SeqCst) {
+            return true;
+        }
         self.on_cancelled.as_ref().is_some_and(|cb| {
             Python::attach(|py| {
                 cb.call0(py)

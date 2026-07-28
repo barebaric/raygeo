@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet, VecDeque};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
 use pyo3::exceptions::PyRuntimeError;
@@ -40,6 +41,7 @@ use crate::python::pipeline::request::PyNodeRequest;
 pub struct PyIntent {
     nodes: Arc<Mutex<Vec<NodeRequest>>>,
     last_tokens: Mutex<HashMap<String, u64>>,
+    cancel_flag: Mutex<Arc<AtomicBool>>,
 }
 
 impl PyIntent {
@@ -108,6 +110,15 @@ impl PyIntent {
         format!("Intent(nodes={n}, tracked={t})")
     }
 
+    /// Signal the currently running execution of this intent to cancel
+    /// cooperatively.
+    fn cancel(&self) {
+        self.cancel_flag
+            .lock()
+            .unwrap()
+            .store(true, Ordering::SeqCst);
+    }
+
     /// Diff this intent against ``new_intent`` and update internal
     /// state, evicting stale cache entries.
     ///
@@ -155,6 +166,13 @@ impl PyIntent {
         let removed_evict = Self::propagate(removed, &dependents);
         Self::evict_keys(&cache, &removed_evict);
 
+        // Transfer the cancel flag so future intent.cancel() sets the
+        // correct flag that the swapped-in nodes' callbacks reference.
+        {
+            let new_flag = new_intent.cancel_flag.lock().unwrap();
+            *self.cancel_flag.lock().unwrap() = new_flag.clone();
+        }
+
         *self.last_tokens.lock().unwrap() = new_tokens;
         *self.nodes.lock().unwrap() = new_nodes;
     }
@@ -194,6 +212,7 @@ fn create_intent(plan: &PyPlan, part: &PyPart, generation_id: u64) -> PyIntent {
     PyIntent {
         nodes: Arc::new(Mutex::new(nodes)),
         last_tokens: Mutex::new(last_tokens),
+        cancel_flag: Mutex::new(Arc::new(AtomicBool::new(false))),
     }
 }
 
@@ -207,14 +226,16 @@ fn create_intent_from_nodes(
     py: Python<'_>,
     nodes: Vec<Py<PyNodeRequest>>,
 ) -> PyResult<PyIntent> {
+    let cancel_flag = Arc::new(AtomicBool::new(false));
     let core_nodes: Vec<NodeRequest> = nodes
         .iter()
-        .map(|n| convert_node_request(py, &n.borrow(py)))
+        .map(|n| convert_node_request(py, &n.borrow(py), &cancel_flag))
         .collect::<PyResult<_>>()?;
     let last_tokens = PyIntent::extract_tokens(&core_nodes);
     Ok(PyIntent {
         nodes: Arc::new(Mutex::new(core_nodes)),
         last_tokens: Mutex::new(last_tokens),
+        cancel_flag: Mutex::new(cancel_flag),
     })
 }
 

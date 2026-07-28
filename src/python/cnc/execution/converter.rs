@@ -1,4 +1,5 @@
 use std::any::Any;
+use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 
 use pyo3::prelude::*;
@@ -169,6 +170,7 @@ fn convert_machine_transform_spec(
 pub(crate) fn convert_node_request(
     py: Python<'_>,
     req: &PyNodeRequest,
+    cancel_flag: &Arc<AtomicBool>,
 ) -> PyResult<CoreNodeRequest> {
     let stage_any = req.stage.bind(py);
 
@@ -179,6 +181,7 @@ pub(crate) fn convert_node_request(
             req.on_progress.clone(),
             req.on_cancelled.clone(),
             req.on_chunk.clone(),
+            Arc::clone(cancel_flag),
         );
         return Ok(CoreNodeRequest::new(
             req.key.clone(),
@@ -196,6 +199,7 @@ pub(crate) fn convert_node_request(
             req.on_progress.clone(),
             req.on_cancelled.clone(),
             req.on_chunk.clone(),
+            Arc::clone(cancel_flag),
         );
         return Ok(CoreNodeRequest::new(
             req.key.clone(),
@@ -214,6 +218,7 @@ pub(crate) fn convert_node_request(
             req.on_progress.clone(),
             req.on_cancelled.clone(),
             req.on_chunk.clone(),
+            Arc::clone(cancel_flag),
         );
         return Ok(CoreNodeRequest::new(
             req.key.clone(),
@@ -279,9 +284,12 @@ pub fn create_execute_hook() -> Box<ExecuteFn> {
               on_completed: Py<PyAny>,
               on_batch_progress: Option<Py<PyAny>>,
               cache: Option<Arc<Mutex<Cache>>>| {
+            // Nodes created via the bare execute() path don't belong
+            // to an Intent, so they get a dummy never-cancelled flag.
+            let default_flag = Arc::new(AtomicBool::new(false));
             let core_nodes: Vec<CoreNodeRequest> = nodes
                 .iter()
-                .map(|n| convert_node_request(py, &n.borrow(py)))
+                .map(|n| convert_node_request(py, &n.borrow(py), &default_flag))
                 .collect::<PyResult<_>>()?;
 
             let on_completed_cb = Arc::new(on_completed);

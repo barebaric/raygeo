@@ -32,6 +32,11 @@ class Intent:
         Number of compute nodes in this intent (excluding the final aggregate).
         """
     def __repr__(self) -> builtins.str: ...
+    def cancel(self) -> None:
+        r"""
+        Signal the currently running execution of this intent to cancel
+        cooperatively.
+        """
     def update(self, new_intent: Intent, pipeline: typing.Optional[execute.Pipeline] = None) -> None:
         r"""
         Diff this intent against ``new_intent`` and update internal
