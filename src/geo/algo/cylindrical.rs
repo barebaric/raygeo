@@ -84,21 +84,36 @@ fn subdivide_and_map(
     let mut result_colors: Option<Vec<f32>> =
         colors.map(|_| Vec::with_capacity(total * 8));
 
+    let full_src = if degrees_input { 360.0 } else { PI * diameter };
+
     for (pair, &subs_i32) in num_subs.iter().enumerate() {
         let subs = subs_i32 as usize;
         let d_cyl = pairs.cyl2[pair] - pairs.cyl1[pair];
-        let d_src = pairs.src2[pair] - pairs.src1[pair];
         let d_z = pairs.z2[pair] - pairs.z1[pair];
+
+        let src1 = pairs.src1[pair];
+        let src2 = pairs.src2[pair];
+        let theta1 = src_to_radians(src1, diameter, degrees_input);
+        let theta2 = src_to_radians(src2, diameter, degrees_input);
+
+        let mut d_src = src2 - src1;
+        let d_theta = theta2 - theta1;
+
+        if d_theta > PI {
+            d_src -= full_src;
+        } else if d_theta < -PI {
+            d_src += full_src;
+        }
 
         for seg in 0..subs {
             let prev_t = seg as f64 / subs as f64;
             let curr_t = (seg + 1) as f64 / subs as f64;
 
             let prev_cyl = pairs.cyl1[pair] + prev_t * d_cyl;
-            let prev_src = pairs.src1[pair] + prev_t * d_src;
+            let prev_src = src1 + prev_t * d_src;
             let prev_z = pairs.z1[pair] + prev_t * d_z;
             let curr_cyl = pairs.cyl1[pair] + curr_t * d_cyl;
-            let curr_src = pairs.src1[pair] + curr_t * d_src;
+            let curr_src = src1 + curr_t * d_src;
             let curr_z = pairs.z1[pair] + curr_t * d_z;
 
             let prev_eff_r = radius + prev_z;
