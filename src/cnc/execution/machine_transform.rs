@@ -108,12 +108,6 @@ impl MachineTransformCompute {
                                 rm.gear_ratio,
                                 rm.reverse,
                             );
-                            if let Some(ref replaced) = rm.replaced_axis {
-                                if replaced == "Y" {
-                                    control1.y = 0.0;
-                                    control2.y = 0.0;
-                                }
-                            }
                         }
                         MoveCmd::QuadraticBezierTo { control } => {
                             control.y = mu_to_degrees(
@@ -122,11 +116,6 @@ impl MachineTransformCompute {
                                 rm.gear_ratio,
                                 rm.reverse,
                             );
-                            if let Some(ref replaced) = rm.replaced_axis {
-                                if replaced == "Y" {
-                                    control.y = 0.0;
-                                }
-                            }
                         }
                         MoveCmd::ArcTo { center, .. } => {
                             center.y = mu_to_degrees(
@@ -135,11 +124,6 @@ impl MachineTransformCompute {
                                 rm.gear_ratio,
                                 rm.reverse,
                             );
-                            if let Some(ref replaced) = rm.replaced_axis {
-                                if replaced == "Y" {
-                                    center.y = 0.0;
-                                }
-                            }
                         }
                         _ => {}
                     }
@@ -164,7 +148,7 @@ impl MachineTransformCompute {
             self.spec
                 .rotary_mappings
                 .iter()
-                .filter(|rm| rm.mu_per_rotation > 0.0)
+                .filter(|rm| rm.replaced_axis.is_some())
                 .map(|rm| (rm.layer_uid.as_str(), rm))
                 .collect();
         if layer_map.is_empty() {
@@ -240,40 +224,49 @@ impl MachineTransformCompute {
                     match cmd {
                         MoveCmd::BezierTo { control1, control2 } => {
                             if let Some(ref replaced) = rm.replaced_axis {
+                                let v1 = degrees_to_scaled_mu(
+                                    control1.y,
+                                    rm.mu_per_rotation,
+                                    rm.reverse,
+                                );
+                                let v2 = degrees_to_scaled_mu(
+                                    control2.y,
+                                    rm.mu_per_rotation,
+                                    rm.reverse,
+                                );
                                 if replaced == "Y" {
-                                    control1.y = degrees_to_scaled_mu(
-                                        control1.y,
-                                        rm.mu_per_rotation,
-                                        rm.reverse,
-                                    );
-                                    control2.y = degrees_to_scaled_mu(
-                                        control2.y,
-                                        rm.mu_per_rotation,
-                                        rm.reverse,
-                                    );
+                                    control1.y = v1;
+                                    control2.y = v2;
+                                } else {
+                                    set_axis_value(control1, replaced, v1);
+                                    set_axis_value(control2, replaced, v2);
+                                    control1.y = 0.0;
+                                    control2.y = 0.0;
                                 }
                             }
                         }
                         MoveCmd::QuadraticBezierTo { control } => {
                             if let Some(ref replaced) = rm.replaced_axis {
+                                let v = degrees_to_scaled_mu(
+                                    control.y,
+                                    rm.mu_per_rotation,
+                                    rm.reverse,
+                                );
                                 if replaced == "Y" {
-                                    control.y = degrees_to_scaled_mu(
-                                        control.y,
-                                        rm.mu_per_rotation,
-                                        rm.reverse,
-                                    );
+                                    control.y = v;
+                                } else {
+                                    set_axis_value(control, replaced, v);
+                                    control.y = 0.0;
                                 }
                             }
                         }
                         MoveCmd::ArcTo { center, .. } => {
-                            if let Some(ref replaced) = rm.replaced_axis {
-                                if replaced == "Y" {
-                                    center.y = degrees_to_scaled_mu(
-                                        center.y,
-                                        rm.mu_per_rotation,
-                                        rm.reverse,
-                                    );
-                                }
+                            if let Some(ref _replaced) = rm.replaced_axis {
+                                center.y = degrees_to_scaled_mu(
+                                    center.y,
+                                    rm.mu_per_rotation,
+                                    rm.reverse,
+                                );
                             }
                         }
                         _ => {}
