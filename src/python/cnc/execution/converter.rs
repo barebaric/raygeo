@@ -261,17 +261,34 @@ fn any_to_py(
     Some(py.None())
 }
 
+use crate::python::pipeline::completed::PyErrorKind;
+
 // ── CompletedNode conversion ──────────────────────────────────────
 
 pub(crate) fn completed_node_from_core(
     py: Python<'_>,
     node: crate::pipeline::completed::CompletedNode,
 ) -> PyCompletedNode {
+    let error_kind = node.error.as_ref().map(|e| match e {
+        crate::pipeline::completed::PipelineError::Cancelled => {
+            PyErrorKind::Cancelled
+        }
+        crate::pipeline::completed::PipelineError::UpstreamFailed => {
+            PyErrorKind::UpstreamFailed
+        }
+        crate::pipeline::completed::PipelineError::CacheBudgetExceeded {
+            ..
+        } => PyErrorKind::CacheBudgetExceeded,
+        crate::pipeline::completed::PipelineError::Other(_) => {
+            PyErrorKind::Other
+        }
+    });
     PyCompletedNode {
         key: node.key,
         generation_id: node.generation_id,
         output: node.output.and_then(|arc| any_to_py(py, arc)),
-        error: node.error,
+        error: node.error.map(|e| e.to_string()),
+        error_kind,
     }
 }
 

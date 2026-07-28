@@ -27,7 +27,7 @@ def test_empty_batch_no_callback_is_ok():
 def test_pipeline_construct_default_budget():
     """Pipeline() constructs with the default 256 MiB budget."""
     p = Pipeline()
-    assert p.cache_budget_bytes == 268435456
+    assert p.cache_budget_bytes == 2147483648
     assert p.cache_used_bytes == 0
 
 

@@ -40,7 +40,7 @@ impl std::fmt::Debug for Cache {
 
 impl Default for Cache {
     fn default() -> Self {
-        Cache::new(256 * 1024 * 1024)
+        Cache::new(2 * 1024 * 1024 * 1024)
     }
 }
 
@@ -64,6 +64,16 @@ impl Cache {
         self.budget_bytes
     }
 
+    /// Update the byte budget and evict entries until usage fits.
+    pub fn set_budget_bytes(&mut self, new_budget: usize) {
+        self.budget_bytes = new_budget;
+        while self.used_bytes > self.budget_bytes {
+            if !self.evict_one() {
+                break;
+            }
+        }
+    }
+
     pub fn len(&self) -> usize {
         self.entries.len()
     }
@@ -83,19 +93,29 @@ impl Cache {
         Some(&entry.value)
     }
 
+    /// Insert a cache entry.
+    ///
+    /// Returns ``true`` if the entry was inserted, ``false`` if the
+    /// entry could not be stored because it exceeds the byte budget
+    /// and eviction could not free enough space.
     pub fn insert(
         &mut self,
         key: CacheKey,
         value: Box<dyn Any + Send + Sync>,
         size_bytes: usize,
-    ) {
+    ) -> bool {
+        let tag = key.tag.clone();
         if let Some(old) = self.entries.remove(&key) {
             self.used_bytes -= old.size_bytes;
         }
 
         while self.used_bytes + size_bytes > self.budget_bytes {
             if !self.evict_one() {
-                return;
+                eprintln!(
+                    "[raygeo] CACHE insert FAILED (eviction could not free enough) key={} size={} used={} budget={} entries={}",
+                    tag, size_bytes, self.used_bytes, self.budget_bytes, self.entries.len(),
+                );
+                return false;
             }
         }
 
@@ -110,6 +130,7 @@ impl Cache {
             },
         );
         self.used_bytes += size_bytes;
+        true
     }
 
     fn evict_one(&mut self) -> bool {

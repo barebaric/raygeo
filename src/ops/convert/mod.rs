@@ -83,23 +83,21 @@ impl EncodeOutput {
                 op_to_machine_code,
                 machine_code_to_op,
             } => {
-                let map_entries = op_to_machine_code.len();
                 let inner_vecs: usize = op_to_machine_code
                     .values()
-                    .map(|v| v.capacity() * std::mem::size_of::<usize>())
+                    .map(|v| v.len() * std::mem::size_of::<usize>())
                     .sum();
-                text.capacity()
-                    + map_entries * std::mem::size_of::<(usize, Vec<usize>)>()
+                text.len()
                     + inner_vecs
                     + machine_code_to_op.len()
                         * std::mem::size_of::<(usize, usize)>()
             }
             EncodeOutput::VertexArrays(va) => {
                 let f32_size = std::mem::size_of::<f32>();
-                va.powered_vertices.capacity() * f32_size
-                    + va.powered_colors.capacity() * f32_size
-                    + va.travel_vertices.capacity() * f32_size
-                    + va.zero_power_vertices.capacity() * f32_size
+                va.powered_vertices.len() * f32_size
+                    + va.powered_colors.len() * f32_size
+                    + va.travel_vertices.len() * f32_size
+                    + va.zero_power_vertices.len() * f32_size
             }
             EncodeOutput::Texture { power_texture, .. } => power_texture.len(),
             EncodeOutput::View { buffer, .. } => buffer.len(),

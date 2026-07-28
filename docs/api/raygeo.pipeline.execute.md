@@ -67,6 +67,22 @@ Run all nodes in a single `rayon::scope`.
 | `on_batch_progress` | `Optional[Any]`                 | Optional callable `(fraction: float, message: str) -> None`.   |
 | _Returns_           | `None`                          |                                                                |
 
+### `set_cache_budget_bytes()`
+
+```python
+set_cache_budget_bytes(budget: int) -> None
+```
+
+Override the cache byte budget at runtime.
+
+If the new budget is smaller than current usage, entries are evicted (oldest first) until usage fits
+within the new limit.
+
+| Parameter | Type   | Description |
+| --------- | ------ | ----------- |
+| `budget`  | `int`  |             |
+| _Returns_ | `None` |             |
+
 ## Functions
 
 ### `clear_cache()`

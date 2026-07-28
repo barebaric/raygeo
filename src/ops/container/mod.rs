@@ -163,8 +163,7 @@ impl Ops {
     /// Estimated heap-allocated bytes for this Ops instance
     /// (commands Vec buffer + scanline power data).
     pub fn heap_size(&self) -> usize {
-        let commands_buf =
-            self.commands.capacity() * std::mem::size_of::<OpNode>();
+        let commands_buf = self.commands.len() * std::mem::size_of::<OpNode>();
         let scanline_data: usize = self
             .commands
             .iter()

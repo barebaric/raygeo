@@ -11,6 +11,7 @@ use crate::ops::axis::Axis;
 use crate::ops::container::Ops;
 use crate::ops::types::{MarkerCmd, MoveCmd, OpCategory};
 use crate::pipeline::cache::CacheKey;
+use crate::pipeline::completed::PipelineError;
 use crate::pipeline::compute::{Compute, ComputeCtx};
 use crate::types::Point3D;
 
@@ -292,7 +293,7 @@ impl Compute for MachineTransformCompute {
     fn run(
         &mut self,
         ctx: &mut ComputeCtx,
-    ) -> Result<Box<dyn Any + Send + Sync>, String> {
+    ) -> Result<Box<dyn Any + Send + Sync>, PipelineError> {
         let upstream =
             ctx.deps.get(&self.spec.source_key).ok_or_else(|| {
                 format!("missing dependency: {}", self.spec.source_key)
@@ -313,7 +314,7 @@ impl Compute for MachineTransformCompute {
             .and_then(|a| a.time_estimate);
 
         if ctx.callbacks.is_cancelled() {
-            return Err("cancelled".to_string());
+            return Err(PipelineError::Cancelled);
         }
 
         let mut ops = agg_ops.clone();
@@ -395,10 +396,12 @@ impl Compute for MachineTransformCompute {
     fn restore_from_cache(
         &mut self,
         cached: &(dyn Any + Send + Sync),
-    ) -> Result<Box<dyn Any + Send + Sync>, String> {
+    ) -> Result<Box<dyn Any + Send + Sync>, PipelineError> {
         let output =
             cached.downcast_ref::<AggregateOutput>().ok_or_else(|| {
-                "cache type mismatch: expected AggregateOutput".to_string()
+                PipelineError::Other(
+                    "cache type mismatch: expected AggregateOutput".into(),
+                )
             })?;
         Ok(Box::new(output.clone()))
     }
@@ -408,9 +411,9 @@ impl Compute for MachineTransformCompute {
         output: &(dyn Any + Send + Sync),
     ) -> Option<(Box<dyn Any + Send + Sync>, usize)> {
         let output = output.downcast_ref::<AggregateOutput>()?;
-        let size =
+        let total =
             std::mem::size_of::<AggregateOutput>() + output.ops.heap_size();
-        Some((Box::new(output.clone()), size))
+        Some((Box::new(output.clone()), total))
     }
 
     fn name(&self) -> &str {

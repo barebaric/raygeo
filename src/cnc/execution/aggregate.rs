@@ -13,6 +13,7 @@ use crate::ops::container::Ops;
 use crate::ops::transform::apply_transformers;
 use crate::pipeline::aggregate::{Aggregate, AggregateCtx, DepMap};
 use crate::pipeline::cache::CacheKey;
+use crate::pipeline::completed::PipelineError;
 use crate::types::Point3D;
 
 pub struct OpsAggregate {
@@ -111,7 +112,7 @@ impl OpsAggregate {
         ops: &mut Ops,
         callbacks: &dyn crate::ops::callbacks::Callbacks,
         group: &AggregateGroup,
-    ) -> Result<(), String> {
+    ) -> Result<(), PipelineError> {
         for marker in &group.start_markers {
             Self::emit_marker(ops, marker);
         }
@@ -119,7 +120,7 @@ impl OpsAggregate {
         let mut prev_end_world: Option<Point3D> = None;
         for input in &group.inputs {
             if callbacks.is_cancelled() {
-                return Err("cancelled".to_string());
+                return Err(PipelineError::Cancelled);
             }
 
             // Look up world-space start/end positions for this input
@@ -165,7 +166,7 @@ impl Aggregate for OpsAggregate {
         &mut self,
         ctx: &mut AggregateCtx,
         deps: &DepMap,
-    ) -> Result<Box<dyn Any + Send + Sync>, String> {
+    ) -> Result<Box<dyn Any + Send + Sync>, PipelineError> {
         let adapter = OpsCallbacksAdapter {
             inner: ctx.callbacks,
         };
@@ -178,7 +179,7 @@ impl Aggregate for OpsAggregate {
 
         for (i, group) in self.spec.groups.iter().enumerate() {
             if ctx.callbacks.is_cancelled() {
-                return Err("cancelled".to_string());
+                return Err(PipelineError::Cancelled);
             }
             let frac = if total_groups > 0.0 {
                 i as f64 / total_groups
@@ -202,11 +203,11 @@ impl Aggregate for OpsAggregate {
 
         if !self.spec.transformers.is_empty() {
             if ctx.callbacks.is_cancelled() {
-                return Err("cancelled".to_string());
+                return Err(PipelineError::Cancelled);
             }
             let scaled = ScaledCallbacks::new(&adapter, 0.8, 0.2);
             apply_transformers(&mut ops, &mut self.spec.transformers, &scaled)
-                .map_err(|_| "cancelled".to_string())?;
+                .map_err(|_| PipelineError::Cancelled)?;
         }
 
         let time_estimate = {
@@ -244,10 +245,12 @@ impl Aggregate for OpsAggregate {
     fn restore_from_cache(
         &mut self,
         cached: &(dyn Any + Send + Sync),
-    ) -> Result<Box<dyn Any + Send + Sync>, String> {
+    ) -> Result<Box<dyn Any + Send + Sync>, PipelineError> {
         let output =
             cached.downcast_ref::<AggregateOutput>().ok_or_else(|| {
-                "cache type mismatch: expected AggregateOutput".to_string()
+                PipelineError::Other(
+                    "cache type mismatch: expected AggregateOutput".into(),
+                )
             })?;
         Ok(Box::new(output.clone()))
     }
@@ -257,9 +260,9 @@ impl Aggregate for OpsAggregate {
         output: &(dyn Any + Send + Sync),
     ) -> Option<(Box<dyn Any + Send + Sync>, usize)> {
         let output = output.downcast_ref::<AggregateOutput>()?;
-        let size =
+        let total =
             std::mem::size_of::<AggregateOutput>() + output.ops.heap_size();
-        Some((Box::new(output.clone()), size))
+        Some((Box::new(output.clone()), total))
     }
 
     fn name(&self) -> &str {

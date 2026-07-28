@@ -8,7 +8,7 @@ use rayon::Scope;
 use crate::pipeline::aggregate::{AggregateCtx, DepMap};
 use crate::pipeline::cache::Cache;
 use crate::pipeline::callbacks::Callbacks;
-use crate::pipeline::completed::CompletedNode;
+use crate::pipeline::completed::{CompletedNode, PipelineError};
 use crate::pipeline::compute::ComputeCtx;
 use crate::pipeline::request::NodeRequest;
 use crate::pipeline::stage::StageSpec;
@@ -92,7 +92,11 @@ pub fn execute_stages(
     let leftover: Vec<String> =
         shared.node_by_key.lock().unwrap().keys().cloned().collect();
     for key in leftover {
-        deliver_synthetic_completion(&shared, &key, "unsatisfiable dependency");
+        deliver_synthetic_completion(
+            &shared,
+            &key,
+            PipelineError::Other("unsatisfiable dependency".into()),
+        );
     }
 
     if let Some(cb) = &shared.on_batch {
@@ -165,14 +169,14 @@ fn spawn_one(s: &Scope<'_>, shared: &Arc<SharedState>, key: String) {
             let node = CompletedNode::err(
                 node_key.clone(),
                 generation_id,
-                "superseded".to_string(),
+                PipelineError::Other("superseded".into()),
             );
             (shared.on_completed)(node);
             None
         } else {
             match result {
                 Err(e) => {
-                    let cancelled = e == "cancelled";
+                    let cancelled = matches!(&e, PipelineError::Cancelled);
                     if cancelled {
                         shared.any_cancelled.store(true, Ordering::SeqCst);
                     }
@@ -252,7 +256,7 @@ fn spawn_one(s: &Scope<'_>, shared: &Arc<SharedState>, key: String) {
             propagate_failure(
                 &shared,
                 new_ready,
-                "upstream failed".to_string(),
+                PipelineError::UpstreamFailed,
             );
         }
     });
@@ -272,7 +276,7 @@ fn spawn_one(s: &Scope<'_>, shared: &Arc<SharedState>, key: String) {
 fn propagate_failure(
     shared: &Arc<SharedState>,
     dependent_keys: Vec<String>,
-    reason: String,
+    reason: PipelineError,
 ) {
     for dep_key in dependent_keys {
         let Some(node) = shared.node_by_key.lock().unwrap().remove(&dep_key)
@@ -337,12 +341,14 @@ fn dispatch_stage(
     shared: &Arc<SharedState>,
     node_key: &str,
     deps: &DepMap,
-) -> Result<Box<dyn Any + Send + Sync>, String> {
+) -> Result<Box<dyn Any + Send + Sync>, PipelineError> {
     match stage {
         StageSpec::Compute { mut compute_fn } => {
             let cache_key = compute_fn.cache_key(node_key);
             if let Some(key) = &cache_key {
-                let mut c = shared.cache.lock().map_err(|e| e.to_string())?;
+                let mut c = shared.cache.lock().map_err(|_| {
+                    PipelineError::Other("cache lock poisoned".into())
+                })?;
                 if let Some(cached) = c.get(key) {
                     let restored = compute_fn.restore_from_cache(&**cached);
                     if let Ok(out) = restored {
@@ -360,7 +366,16 @@ fn dispatch_stage(
                         compute_fn.prepare_cache_entry(out.as_ref())
                     {
                         if let Ok(mut c) = shared.cache.lock() {
-                            c.insert(key, entry, size);
+                            let node_tag = key.tag.clone();
+                            if !c.insert(key, entry, size) {
+                                return Err(
+                                    PipelineError::CacheBudgetExceeded {
+                                        node_key: node_tag,
+                                        size,
+                                        budget: c.budget_bytes(),
+                                    },
+                                );
+                            }
                         }
                     }
                 }
@@ -370,7 +385,9 @@ fn dispatch_stage(
         StageSpec::Aggregate { mut aggregate_fn } => {
             let cache_key = aggregate_fn.cache_key(node_key);
             if let Some(key) = &cache_key {
-                let mut c = shared.cache.lock().map_err(|e| e.to_string())?;
+                let mut c = shared.cache.lock().map_err(|_| {
+                    PipelineError::Other("cache lock poisoned".into())
+                })?;
                 if let Some(cached) = c.get(key) {
                     let restored = aggregate_fn.restore_from_cache(&**cached);
                     if let Ok(out) = restored {
@@ -388,7 +405,16 @@ fn dispatch_stage(
                         aggregate_fn.prepare_cache_entry(out.as_ref())
                     {
                         if let Ok(mut c) = shared.cache.lock() {
-                            c.insert(key, entry, size);
+                            let node_tag = key.tag.clone();
+                            if !c.insert(key, entry, size) {
+                                return Err(
+                                    PipelineError::CacheBudgetExceeded {
+                                        node_key: node_tag,
+                                        size,
+                                        budget: c.budget_bytes(),
+                                    },
+                                );
+                            }
                         }
                     }
                 }
@@ -405,7 +431,7 @@ fn collect_deps(stage: &StageSpec) -> Vec<String> {
 fn deliver_synthetic_completion(
     shared: &Arc<SharedState>,
     key: &str,
-    reason: &str,
+    reason: PipelineError,
 ) {
     let gen = shared
         .node_by_key
@@ -415,13 +441,13 @@ fn deliver_synthetic_completion(
         .map(|n| n.generation_id)
         .unwrap_or(0);
 
-    let node = CompletedNode::err(key.to_string(), gen, reason.to_string());
+    let node = CompletedNode::err(key.to_string(), gen, reason.clone());
     (shared.on_completed)(node);
 
     let shadows = shared.shadows.get(key).cloned().unwrap_or_default();
     for shadow_gen in shadows {
         let node =
-            CompletedNode::err(key.to_string(), shadow_gen, reason.to_string());
+            CompletedNode::err(key.to_string(), shadow_gen, reason.clone());
         (shared.on_completed)(node);
     }
 }

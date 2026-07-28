@@ -5,9 +5,11 @@ Completion record types.
 """
 
 import builtins
+import enum
 import typing
 __all__ = [
     "CompletedNode",
+    "ErrorKind",
 ]
 
 @typing.final
@@ -20,4 +22,28 @@ class CompletedNode:
     def output(self) -> typing.Optional[typing.Any]: ...
     @property
     def error(self) -> typing.Optional[builtins.str]: ...
+    @property
+    def error_kind(self) -> typing.Optional[ErrorKind]: ...
+
+@typing.final
+class ErrorKind(enum.Enum):
+    r"""
+    Machine-readable error category for a failed pipeline node.
+    """
+    CANCELLED = ...
+    r"""
+    Node was cancelled (normal during rapid rebuilds).
+    """
+    UPSTREAM_FAILED = ...
+    r"""
+    A dependency of this node failed.
+    """
+    CACHE_BUDGET_EXCEEDED = ...
+    r"""
+    The cache budget does not allow storing this node's output.
+    """
+    OTHER = ...
+    r"""
+    Any other execution failure.
+    """
 

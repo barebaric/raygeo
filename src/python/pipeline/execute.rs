@@ -103,9 +103,9 @@ impl PyPipeline {
 #[pyo3::pymethods]
 impl PyPipeline {
     /// Construct a pipeline with the given cache byte budget
-    /// (default 256 MiB).
+    /// (default 2 GiB).
     #[new]
-    #[pyo3(signature = (budget_bytes=268435456))]
+    #[pyo3(signature = (budget_bytes=2147483648))]
     fn new(budget_bytes: usize) -> Self {
         PyPipeline {
             inner: CorePipeline::new(budget_bytes),
@@ -161,6 +161,16 @@ impl PyPipeline {
     #[getter]
     fn cache_budget_bytes(&self) -> usize {
         self.inner.cache_budget_bytes()
+    }
+
+    /// Override the cache byte budget at runtime.
+    ///
+    /// If the new budget is smaller than current usage, entries are
+    /// evicted (oldest first) until usage fits within the new limit.
+    fn set_cache_budget_bytes(&self, budget: usize) {
+        if let Ok(mut c) = self.inner.cache_handle().lock() {
+            c.set_budget_bytes(budget);
+        }
     }
 }
 

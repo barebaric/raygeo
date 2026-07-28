@@ -8,6 +8,7 @@ use crate::ops::part::{FaceState, Part, StockRegion};
 use crate::ops::state::State;
 use crate::ops::transform::{apply_transformers, Transformer};
 use crate::pipeline::cache::CacheKey;
+use crate::pipeline::completed::PipelineError;
 use crate::pipeline::compute::{Compute, ComputeCtx};
 use crate::types::Polygon;
 
@@ -31,9 +32,9 @@ impl Compute for AssemblerCompute {
     fn run(
         &mut self,
         ctx: &mut ComputeCtx,
-    ) -> Result<Box<dyn Any + Send + Sync>, String> {
+    ) -> Result<Box<dyn Any + Send + Sync>, PipelineError> {
         if ctx.callbacks.is_cancelled() {
-            return Err("cancelled".to_string());
+            return Err(PipelineError::Cancelled);
         }
 
         let mut trace = Tracelet::new();
@@ -95,7 +96,7 @@ impl Compute for AssemblerCompute {
         }
 
         if ctx.callbacks.is_cancelled() {
-            return Err("cancelled".to_string());
+            return Err(PipelineError::Cancelled);
         }
 
         let mut ops = trace.into_ops();
@@ -103,7 +104,7 @@ impl Compute for AssemblerCompute {
         if !self.transformers.is_empty() {
             let scaled = ScaledCallbacks::new(&adapter, 0.8, 0.2);
             apply_transformers(&mut ops, &mut self.transformers, &scaled)
-                .map_err(|_| "cancelled".to_string())?;
+                .map_err(|_| PipelineError::Cancelled)?;
         }
 
         ctx.callbacks.report_progress(1.0, "compute: done");
@@ -142,15 +143,17 @@ impl Compute for AssemblerCompute {
     fn restore_from_cache(
         &mut self,
         cached: &(dyn Any + Send + Sync),
-    ) -> Result<Box<dyn Any + Send + Sync>, String> {
-        let assembly =
+    ) -> Result<Box<dyn Any + Send + Sync>, PipelineError> {
+        let output =
             cached.downcast_ref::<AssemblyOutput>().ok_or_else(|| {
-                "cache type mismatch: expected AssemblyOutput".to_string()
+                PipelineError::Other(
+                    "cache type mismatch: expected AssemblyOutput".into(),
+                )
             })?;
         let restored = self
             .assembler
-            .restore_cache(assembly)
-            .unwrap_or_else(|| assembly.clone());
+            .restore_cache(output)
+            .unwrap_or_else(|| output.clone());
         if let Some(frags) = &restored.cleared_fragments {
             let face = self.part.face_mut(&self.face_id);
             face.cleared.set_fragments(frags.clone());
@@ -172,16 +175,15 @@ impl Compute for AssemblerCompute {
             .store_cache(&with_fragments)
             .unwrap_or(with_fragments);
         let ops_heap = cached.ops.heap_size();
+        let struct_size = std::mem::size_of::<AssemblyOutput>();
         let fragments_heap = cached.cleared_fragments.as_ref().map_or(0, |f| {
-            let buf = f.capacity() * std::mem::size_of::<Polygon>();
-            let vertices: usize = f.iter().map(|p| p.capacity()).sum::<usize>()
+            let buf = f.len() * std::mem::size_of::<Polygon>();
+            let vertices: usize = f.iter().map(|p| p.len()).sum::<usize>()
                 * std::mem::size_of::<glam::DVec2>();
             buf + vertices
         });
-        Some((
-            Box::new(cached),
-            std::mem::size_of::<AssemblyOutput>() + ops_heap + fragments_heap,
-        ))
+        let total = struct_size + ops_heap + fragments_heap;
+        Some((Box::new(cached), total))
     }
 
     fn source_keys(&self) -> Vec<String> {

@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use crate::pipeline::cache::CacheKey;
 use crate::pipeline::callbacks::Callbacks;
+use crate::pipeline::completed::PipelineError;
 
 pub type DepMap = HashMap<String, Arc<dyn Any + Send + Sync>>;
 
@@ -22,7 +23,7 @@ pub trait Aggregate: Send + Sync {
         &mut self,
         ctx: &mut AggregateCtx,
         deps: &DepMap,
-    ) -> Result<Box<dyn Any + Send + Sync>, String>;
+    ) -> Result<Box<dyn Any + Send + Sync>, PipelineError>;
 
     fn source_keys(&self) -> Vec<String>;
 
@@ -33,9 +34,9 @@ pub trait Aggregate: Send + Sync {
     fn restore_from_cache(
         &mut self,
         cached: &(dyn Any + Send + Sync),
-    ) -> Result<Box<dyn Any + Send + Sync>, String> {
+    ) -> Result<Box<dyn Any + Send + Sync>, PipelineError> {
         let _ = cached;
-        Err("not cached".into())
+        Err(PipelineError::Other("not cached".into()))
     }
 
     fn prepare_cache_entry(

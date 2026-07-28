@@ -5,6 +5,7 @@ use crate::cnc::execution::specs::AggregateOutput;
 use crate::ops::assembly::AssemblyOutput;
 use crate::ops::convert::{EncodeCtx, EncodeOutput, Encoder};
 use crate::pipeline::cache::CacheKey;
+use crate::pipeline::completed::PipelineError;
 use crate::pipeline::compute::{Compute, ComputeCtx};
 
 pub struct EncoderCompute {
@@ -16,7 +17,7 @@ impl Compute for EncoderCompute {
     fn run(
         &mut self,
         ctx: &mut ComputeCtx,
-    ) -> Result<Box<dyn Any + Send + Sync>, String> {
+    ) -> Result<Box<dyn Any + Send + Sync>, PipelineError> {
         let upstream = ctx.deps.get(&self.source_key).ok_or_else(|| {
             format!("missing dependency: {}", self.source_key)
         })?;
@@ -32,7 +33,7 @@ impl Compute for EncoderCompute {
             })?;
 
         if ctx.callbacks.is_cancelled() {
-            return Err("cancelled".to_string());
+            return Err(PipelineError::Cancelled);
         }
 
         let adapter = OpsCallbacksAdapter {
@@ -57,10 +58,12 @@ impl Compute for EncoderCompute {
     fn restore_from_cache(
         &mut self,
         cached: &(dyn Any + Send + Sync),
-    ) -> Result<Box<dyn Any + Send + Sync>, String> {
+    ) -> Result<Box<dyn Any + Send + Sync>, PipelineError> {
         let output =
             cached.downcast_ref::<EncodeOutput>().ok_or_else(|| {
-                "cache type mismatch: expected EncodeOutput".to_string()
+                PipelineError::Other(
+                    "cache type mismatch: expected EncodeOutput".into(),
+                )
             })?;
         Ok(Box::new(output.clone()))
     }
@@ -70,8 +73,8 @@ impl Compute for EncoderCompute {
         output: &(dyn Any + Send + Sync),
     ) -> Option<(Box<dyn Any + Send + Sync>, usize)> {
         let output = output.downcast_ref::<EncodeOutput>()?;
-        let size = std::mem::size_of::<EncodeOutput>() + output.heap_size();
-        Some((Box::new(output.clone()), size))
+        let total = std::mem::size_of::<EncodeOutput>() + output.heap_size();
+        Some((Box::new(output.clone()), total))
     }
 
     fn name(&self) -> &str {

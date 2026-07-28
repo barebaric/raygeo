@@ -13,6 +13,12 @@ Completion record types.
 error: Optional[str]
 ```
 
+### `error_kind`
+
+```python
+error_kind: Optional[ErrorKind]
+```
+
 ### `generation_id`
 
 ```python
@@ -30,3 +36,7 @@ key: str
 ```python
 output: Optional[Any]
 ```
+
+## ErrorKind
+
+Machine-readable error category for a failed pipeline node.

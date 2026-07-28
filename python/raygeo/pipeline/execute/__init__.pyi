@@ -28,10 +28,10 @@ class Pipeline:
         r"""
         Configured byte budget.
         """
-    def __new__(cls, budget_bytes: builtins.int = 268435456) -> Pipeline:
+    def __new__(cls, budget_bytes: builtins.int = 2147483648) -> Pipeline:
         r"""
         Construct a pipeline with the given cache byte budget
-        (default 256 MiB).
+        (default 2 GiB).
         """
     def execute(self, nodes: typing.Sequence[request.NodeRequest], on_completed: typing.Any, on_batch_progress: typing.Optional[typing.Any]) -> None:
         r"""
@@ -51,6 +51,13 @@ class Pipeline:
     def clear_cache_prefix(self, prefix: builtins.str) -> None:
         r"""
         Clear all entries whose tag starts with ``prefix``.
+        """
+    def set_cache_budget_bytes(self, budget: builtins.int) -> None:
+        r"""
+        Override the cache byte budget at runtime.
+        
+        If the new budget is smaller than current usage, entries are
+        evicted (oldest first) until usage fits within the new limit.
         """
 
 def clear_cache() -> None: ...
