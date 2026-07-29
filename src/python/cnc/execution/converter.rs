@@ -246,16 +246,15 @@ fn any_to_py(
         };
         return Bound::new(py, py_ao).ok().map(|o| o.into_any().unbind());
     }
-    if let Some(agg) = output.downcast_ref::<AggregateOutput>() {
+    if output.downcast_ref::<AggregateOutput>().is_some() {
         let py_ao =
-            crate::python::cnc::execution::specs::PyAggregateOutput::from_core(
-                agg.clone(),
-                py,
+            crate::python::cnc::execution::specs::PyAggregateOutput::from_arc(
+                output, py,
             );
         return Bound::new(py, py_ao).ok().map(|o| o.into_any().unbind());
     }
-    if let Some(enc) = output.downcast_ref::<EncodeOutput>() {
-        let py_eo = PyEncodeOutput::from_core(enc.clone());
+    if output.downcast_ref::<EncodeOutput>().is_some() {
+        let py_eo = PyEncodeOutput::from_arc(output);
         return Bound::new(py, py_eo).ok().map(|o| o.into_any().unbind());
     }
     Some(py.None())

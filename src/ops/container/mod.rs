@@ -478,6 +478,16 @@ impl Ops {
         }
     }
 
+    /// Extract commands `[start, end)` into a new `Ops`.
+    pub fn extract_range(&self, start: usize, end: usize) -> Ops {
+        let mut result = Ops::new();
+        if start < end && end <= self.commands.len() {
+            result.commands = self.commands[start..end].to_vec();
+            result.invalidate_time_cache();
+        }
+        result
+    }
+
     pub fn replace_all(&mut self, source: &Ops) {
         self.commands.clear();
         for cmd in &source.commands {
@@ -748,6 +758,74 @@ impl Ops {
 
     pub fn group_by_auxiliary_state(&self) -> Vec<Ops> {
         super::transform::group::group_by_auxiliary_state(self)
+    }
+
+    /// Compute the 2D bounding box of all ScanLine commands.
+    ///
+    /// Returns `(min_x, min_y, width, height)` or `None` if there
+    /// are no scanlines. Uses visual endpoints (degrees in Y for
+    /// rotary axes).
+    pub fn scanline_bbox(&self) -> Option<(f64, f64, f64, f64)> {
+        let mut pos = Point3D::new(0.0, 0.0, 0.0);
+        let mut has = false;
+        let mut min_x = f64::INFINITY;
+        let mut min_y = f64::INFINITY;
+        let mut max_x = f64::NEG_INFINITY;
+        let mut max_y = f64::NEG_INFINITY;
+
+        for node in &self.commands {
+            let ct = node.command_type();
+            if ct == CommandType::MoveTo || ct == CommandType::ScanLine {
+                let end = node.end_point();
+                let deg =
+                    crate::ops::convert::scene::find_degrees_from_extra_pub(
+                        node.extra_axes(),
+                    );
+                let vis_y = deg.unwrap_or(end.y);
+                if ct == CommandType::ScanLine {
+                    min_x = min_x.min(pos.x).min(end.x);
+                    min_y = min_y.min(pos.y).min(vis_y);
+                    max_x = max_x.max(pos.x).max(end.x);
+                    max_y = max_y.max(pos.y).max(vis_y);
+                    has = true;
+                }
+                pos = Point3D::new(end.x, vis_y, end.z);
+            }
+        }
+
+        if has {
+            Some((min_x, min_y, max_x - min_x, max_y - min_y))
+        } else {
+            None
+        }
+    }
+
+    /// Bake visual positions: for every moving command, replace the
+    /// Y coordinate with the rotary degrees value from extra_axes
+    /// (if present). Non-moving commands are copied as-is.
+    pub fn bake_visual_positions(&self) -> Ops {
+        let mut baked = Ops::new();
+        baked.commands.reserve(self.commands.len());
+
+        for node in &self.commands {
+            if !node.is_moving() {
+                baked.commands.push(node.clone());
+                continue;
+            }
+            let end = node.end_point();
+            let deg = crate::ops::convert::scene::find_degrees_from_extra_pub(
+                node.extra_axes(),
+            );
+            if let Some(degrees) = deg {
+                let new_end = Point3D::new(end.x, degrees, end.z);
+                let mut new_node = node.clone();
+                new_node.set_endpoint(new_end);
+                baked.commands.push(new_node);
+            } else {
+                baked.commands.push(node.clone());
+            }
+        }
+        baked
     }
 }
 

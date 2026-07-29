@@ -50,6 +50,69 @@ fn from_pydict<T: serde::de::DeserializeOwned>(
     })
 }
 
+/// Convert [`CompiledSceneData`] into a Python dict using zero-copy
+/// `IntoPyArray` for all vertex buffers.
+fn py_scene_data_to_dict<'py>(
+    py: Python<'py>,
+    data: crate::ops::convert::scene::CompiledSceneData,
+) -> PyResult<Bound<'py, PyDict>> {
+    use numpy::IntoPyArray;
+
+    let result = PyDict::new(py);
+
+    let groups_list = PyList::empty(py);
+    for g in data.groups {
+        let gd = PyDict::new(py);
+        let to_f32 =
+            |v: Vec<f32>, py: Python<'py>| -> PyResult<Bound<'py, PyAny>> {
+                Ok(v.into_pyarray(py).into_any())
+            };
+        let to_i32 =
+            |v: Vec<i32>, py: Python<'py>| -> PyResult<Bound<'py, PyAny>> {
+                Ok(v.into_pyarray(py).into_any())
+            };
+        gd.set_item("is_rotary", g.is_rotary)?;
+        gd.set_item("powered_verts", to_f32(g.powered_verts, py)?)?;
+        gd.set_item("power_values", to_f32(g.power_values, py)?)?;
+        gd.set_item("laser_indices", to_f32(g.laser_indices, py)?)?;
+        gd.set_item("travel_verts", to_f32(g.travel_verts, py)?)?;
+        gd.set_item("zero_power_verts", to_f32(g.zero_power_verts, py)?)?;
+        gd.set_item("powered_cmd_offsets", to_i32(g.powered_cmd_offsets, py)?)?;
+        gd.set_item("travel_cmd_offsets", to_i32(g.travel_cmd_offsets, py)?)?;
+        gd.set_item("overlay_positions", to_f32(g.overlay_positions, py)?)?;
+        gd.set_item(
+            "overlay_power_values",
+            to_f32(g.overlay_power_values, py)?,
+        )?;
+        gd.set_item(
+            "overlay_laser_indices",
+            to_f32(g.overlay_laser_indices, py)?,
+        )?;
+        gd.set_item("overlay_cmd_offsets", to_i32(g.overlay_cmd_offsets, py)?)?;
+        groups_list.append(gd)?;
+    }
+    result.set_item("groups", groups_list)?;
+    result.set_item("laser_uid_order", data.laser_uid_order)?;
+
+    let infos_list = PyList::empty(py);
+    for li in data.layer_infos {
+        let id = PyDict::new(py);
+        id.set_item("cmd_start", li.cmd_start)?;
+        id.set_item("cmd_end", li.cmd_end)?;
+        id.set_item("is_rotary", li.is_rotary)?;
+        id.set_item("diameter", li.diameter)?;
+        id.set_item("has_scanlines", li.has_scanlines)?;
+        id.set_item("scanline_laser", li.scanline_laser)?;
+        id.set_item("activation_cmd_idx", li.activation_cmd_idx)?;
+        id.set_item("axis_position", li.axis_position)?;
+        id.set_item("reverse", li.reverse)?;
+        infos_list.append(id)?;
+    }
+    result.set_item("layer_infos", infos_list)?;
+
+    Ok(result)
+}
+
 /// Convert a Rust `usize`-keyed `HashMap` into a Python dict with
 /// integer keys.
 fn usize_hashmap_to_pydict<'py>(
@@ -2238,20 +2301,11 @@ impl PyOps {
             let py_layer_ops = Py::new(py, PyOps { inner: layer_ops })?;
             callback.call1(py, (layer_uid, &py_layer_ops))?;
             let layer_ops_ref = py_layer_ops.borrow(py);
-            let layer_ops = &layer_ops_ref.inner;
+            let new_cmds = layer_ops_ref.inner.commands.clone();
+            let new_len = new_cmds.len();
 
-            let mut new_cmds = Vec::new();
-            for j in 0..layer_start {
-                new_cmds.push(self.inner.commands[j].clone());
-            }
-            for j in 0..layer_ops.len() {
-                new_cmds.push(layer_ops.commands[j].clone());
-            }
-            for j in layer_end..self.inner.len() {
-                new_cmds.push(self.inner.commands[j].clone());
-            }
-            self.inner.commands = new_cmds;
-            i = layer_start + layer_ops.len();
+            self.inner.commands.splice(layer_start..layer_end, new_cmds);
+            i = layer_start + new_len;
         }
         self.inner.invalidate_time_cache();
         Ok(())
@@ -2938,6 +2992,92 @@ impl PyOps {
         Ok(tuple.unbind().into())
     }
 
+    /// Compile this Ops into GPU-ready 3D scene data.
+    ///
+    /// :param world_to_visual: 4x4 transform matrix as a list of lists.
+    /// :param layer_configs: Dict mapping layer UID to
+    ///     ``{"rotary_enabled": bool, "rotary_diameter": float,
+    ///       "axis_position": float, "reverse": bool}``.
+    /// :returns: Dict with keys ``"groups"``, ``"laser_uid_order"``,
+    ///     ``"layer_infos"``.
+    fn compile_scene_3d<'py>(
+        &self,
+        py: Python<'py>,
+        world_to_visual: &Bound<'py, PyAny>,
+        layer_configs: &Bound<'py, PyDict>,
+    ) -> PyResult<Bound<'py, PyDict>> {
+        use crate::ops::convert::scene::{LayerConfig, SceneSpec};
+
+        let mut w2v = [[0.0f32; 4]; 4];
+        let rows: Vec<Vec<f32>> = world_to_visual.extract()?;
+        for (i, row) in rows.iter().enumerate().take(4) {
+            for (j, &val) in row.iter().enumerate().take(4) {
+                w2v[i][j] = val;
+            }
+        }
+
+        let mut configs = std::collections::HashMap::new();
+        for (key, val) in layer_configs.iter() {
+            let key_str: String = key.extract()?;
+            let d = val.cast::<pyo3::types::PyDict>()?;
+            let cfg = LayerConfig {
+                rotary_enabled: d
+                    .get_item("rotary_enabled")?
+                    .and_then(|v| v.extract().ok())
+                    .unwrap_or(false),
+                rotary_diameter: d
+                    .get_item("rotary_diameter")?
+                    .and_then(|v| v.extract().ok())
+                    .unwrap_or(0.0),
+                axis_position: d
+                    .get_item("axis_position")?
+                    .and_then(|v| v.extract().ok())
+                    .unwrap_or(0.0),
+                reverse: d
+                    .get_item("reverse")?
+                    .and_then(|v| v.extract().ok())
+                    .unwrap_or(false),
+            };
+            configs.insert(key_str, cfg);
+        }
+
+        let spec = SceneSpec {
+            world_to_visual: w2v,
+            layer_configs: configs,
+        };
+
+        let data = self.inner.compile_scene_3d(&spec);
+        py_scene_data_to_dict(py, data)
+    }
+
+    /// Compute the 2D bounding box of all ScanLine commands.
+    ///
+    /// Returns ``None`` if there are no scanlines. Otherwise returns
+    /// ``(min_x, min_y, width, height)`` using visual endpoints.
+    fn scanline_bbox(&self) -> Option<(f64, f64, f64, f64)> {
+        self.inner.scanline_bbox()
+    }
+
+    /// Bake visual positions into a new Ops.
+    ///
+    /// For every moving command, replaces Y with the rotary degrees
+    /// value from extra_axes. Non-moving commands are copied as-is.
+    fn bake_visual_positions(&self, py: Python<'_>) -> PyResult<Py<PyOps>> {
+        let baked = self.inner.bake_visual_positions();
+        Py::new(py, PyOps { inner: baked })
+    }
+
+    /// Extract commands `[start, end)` into a new Ops.
+    fn extract_range(
+        &self,
+        py: Python<'_>,
+        start: usize,
+        end: usize,
+    ) -> PyResult<Py<PyOps>> {
+        let sub = self.inner.extract_range(start, end);
+        Py::new(py, PyOps { inner: sub })
+    }
+
     /// Encode this Ops sequence into G-code text.
     ///
     /// Takes a typed dialect specification and an encoding context as a
@@ -2960,13 +3100,18 @@ impl PyOps {
         use crate::ops::convert::gcode_types::EncodeContext;
 
         let context: EncodeContext = from_pydict(py, context_dict)?;
-        let result = encode_gcode_inner(
-            &self.inner,
-            &dialect.0,
-            &context,
-            &crate::ops::callbacks::NoCallbacks,
-        )
-        .map_err(pyo3::exceptions::PyRuntimeError::new_err)?;
+        let ops_clone = self.inner.clone();
+        let dialect_clone = dialect.0.clone();
+        let result = py
+            .detach(move || {
+                encode_gcode_inner(
+                    &ops_clone,
+                    &dialect_clone,
+                    &context,
+                    &crate::ops::callbacks::NoCallbacks,
+                )
+            })
+            .map_err(pyo3::exceptions::PyRuntimeError::new_err)?;
         let dict = PyDict::new(py);
         dict.set_item("text", &result.text)?;
         dict.set_item(

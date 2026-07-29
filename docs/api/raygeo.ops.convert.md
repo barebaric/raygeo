@@ -47,7 +47,8 @@ Raw texture bytes (row-major uint8 power map). Returns `None` unless this is the
 repr: Optional[str]
 ```
 
-The vertex-array debug repr. Returns `None` unless this is the `VertexArrays` variant.
+The vertex-array or scene debug repr. Returns `None` unless this is the `VertexArrays` or `Scene`
+variant.
 
 ### `text`
 
@@ -73,13 +74,23 @@ width_px: Optional[int]
 
 Texture width in pixels. Returns `None` unless this is the `Texture` variant.
 
-### MachineCode
+### `MachineCode()`
 
-### Texture
+```python
+@classmethod
+MachineCode(
+    text: str,
+    op_to_machine_code: Mapping[int, Sequence[int]],
+    machine_code_to_op: Mapping[int, int],
+) -> EncodeOutput
+```
 
-### VertexArrays
-
-### View
+| Parameter            | Type                          | Description |
+| -------------------- | ----------------------------- | ----------- |
+| `text`               | `str`                         |             |
+| `op_to_machine_code` | `Mapping[int, Sequence[int]]` |             |
+| `machine_code_to_op` | `Mapping[int, int]`           |             |
+| _Returns_            | `EncodeOutput`                |             |
 
 ## Encoder
 
@@ -121,6 +132,34 @@ context_json: str
 dialect: GcodeDialectSpec
 ```
 
+## LayerConfig
+
+Per-layer rendering configuration for the scene encoder.
+
+### `axis_position`
+
+```python
+axis_position: float
+```
+
+### `reverse`
+
+```python
+reverse: bool
+```
+
+### `rotary_diameter`
+
+```python
+rotary_diameter: float
+```
+
+### `rotary_enabled`
+
+```python
+rotary_enabled: bool
+```
+
 ## PythonEncoder
 
 Python-side constructor for \[`PythonEncoder`\].
@@ -139,6 +178,24 @@ callable: Any
 
 ```python
 name: str
+```
+
+## SceneSpec
+
+Parameters for the 3D scene encoder.
+
+### `layer_configs`
+
+```python
+layer_configs: list[tuple[str, LayerConfig]]
+```
+
+Stored as a list of (uid, config) pairs for hash-free equality.
+
+### `world_to_visual`
+
+```python
+world_to_visual: list[list[float]]
 ```
 
 ## TextureSpec

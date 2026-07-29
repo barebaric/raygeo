@@ -45,6 +45,16 @@ impl PyAggregateOutput {
             time_estimate: core.time_estimate,
         }
     }
+
+    pub fn from_arc(
+        arc: std::sync::Arc<dyn std::any::Any + Send + Sync>,
+        py: Python<'_>,
+    ) -> Self {
+        let agg = arc
+            .downcast_ref::<CoreAggregateOutput>()
+            .expect("PyAggregateOutput holds non-AggregateOutput");
+        Self::from_core(agg.clone(), py)
+    }
 }
 
 #[gen_stub_pymethods]

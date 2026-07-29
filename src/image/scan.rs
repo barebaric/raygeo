@@ -393,6 +393,91 @@ pub fn extract_zero_power_segments(
     result
 }
 
+/// Extract overlay (firing) segments from a scanline's power values.
+///
+/// Walks the power byte array and detects on→off and off→on
+/// transitions, emitting segment endpoint pairs with corresponding
+/// power values and laser indices.
+///
+/// Returns the number of vertices added (always even: 2 per
+/// segment).
+#[allow(clippy::too_many_arguments)]
+pub fn extract_overlay_segments(
+    start: (f64, f64, f64),
+    end: (f64, f64, f64),
+    power_values: &[u8],
+    laser_index: i32,
+    out_pos: &mut Vec<f32>,
+    out_pow: &mut Vec<f32>,
+    out_lid: &mut Vec<f32>,
+) -> usize {
+    let num_steps = power_values.len();
+    if num_steps == 0 {
+        return 0;
+    }
+
+    let (sx, sy, sz) = start;
+    let (ex, ey, ez) = end;
+    let dx = (ex - sx) / num_steps as f64;
+    let dy = (ey - sy) / num_steps as f64;
+    let dz = (ez - sz) / num_steps as f64;
+
+    let mut vertex_count: usize = 0;
+    let mut prev_power_on = false;
+    let mut seg_start_x = 0.0f64;
+    let mut seg_start_y = 0.0f64;
+    let mut seg_start_z = 0.0f64;
+    let mut seg_power = 0.0f32;
+
+    for (i, &power_byte) in power_values.iter().enumerate() {
+        let power_on = power_byte > 0;
+
+        if power_on && !prev_power_on {
+            seg_start_x = sx + i as f64 * dx;
+            seg_start_y = sy + i as f64 * dy;
+            seg_start_z = sz + i as f64 * dz;
+            seg_power = power_byte as f32 / 255.0;
+        } else if !power_on && prev_power_on {
+            let seg_end_x = sx + i as f64 * dx;
+            let seg_end_y = sy + i as f64 * dy;
+            let seg_end_z = sz + i as f64 * dz;
+            out_pos.extend([
+                seg_start_x as f32,
+                seg_start_y as f32,
+                seg_start_z as f32,
+                seg_end_x as f32,
+                seg_end_y as f32,
+                seg_end_z as f32,
+            ]);
+            out_pow.push(seg_power);
+            out_pow.push(seg_power);
+            out_lid.push(laser_index as f32);
+            out_lid.push(laser_index as f32);
+            vertex_count += 2;
+        }
+
+        prev_power_on = power_byte > 0;
+    }
+
+    if prev_power_on {
+        out_pos.extend([
+            seg_start_x as f32,
+            seg_start_y as f32,
+            seg_start_z as f32,
+            ex as f32,
+            ey as f32,
+            ez as f32,
+        ]);
+        out_pow.push(seg_power);
+        out_pow.push(seg_power);
+        out_lid.push(laser_index as f32);
+        out_lid.push(laser_index as f32);
+        vertex_count += 2;
+    }
+
+    vertex_count
+}
+
 pub fn find_segments(values: &[u8]) -> Vec<(usize, usize)> {
     if values.is_empty() {
         return Vec::new();

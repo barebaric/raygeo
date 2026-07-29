@@ -17,6 +17,7 @@
 //! three traits take their callbacks from [`crate::ops::callbacks`].
 
 use crate::ops::container::Ops;
+use crate::ops::convert::scene::CompiledSceneData;
 use crate::ops::convert::vertex_arrays::VertexArrays;
 
 pub mod dump;
@@ -25,6 +26,7 @@ pub mod gcode_types;
 pub mod geometry;
 pub mod image;
 pub mod polyline;
+pub mod scene;
 pub mod texture;
 pub mod vertex_arrays;
 pub mod view;
@@ -72,6 +74,8 @@ pub enum EncodeOutput {
         /// Effective pixels-per-mm applied after clamping.
         effective_ppm: (f64, f64),
     },
+    /// GPU-ready 3D scene data (vertex groups + layer metadata).
+    Scene(CompiledSceneData),
 }
 
 impl EncodeOutput {
@@ -101,6 +105,26 @@ impl EncodeOutput {
             }
             EncodeOutput::Texture { power_texture, .. } => power_texture.len(),
             EncodeOutput::View { buffer, .. } => buffer.len(),
+            EncodeOutput::Scene(data) => {
+                let f32_size = std::mem::size_of::<f32>();
+                let i32_size = std::mem::size_of::<i32>();
+                data.groups
+                    .iter()
+                    .map(|g| {
+                        g.powered_verts.len() * f32_size
+                            + g.power_values.len() * f32_size
+                            + g.laser_indices.len() * f32_size
+                            + g.travel_verts.len() * f32_size
+                            + g.zero_power_verts.len() * f32_size
+                            + g.powered_cmd_offsets.len() * i32_size
+                            + g.travel_cmd_offsets.len() * i32_size
+                            + g.overlay_positions.len() * f32_size
+                            + g.overlay_power_values.len() * f32_size
+                            + g.overlay_laser_indices.len() * f32_size
+                            + g.overlay_cmd_offsets.len() * i32_size
+                    })
+                    .sum()
+            }
         }
     }
 }

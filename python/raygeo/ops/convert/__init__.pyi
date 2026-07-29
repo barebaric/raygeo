@@ -9,13 +9,16 @@ __all__ = [
     "Encoder",
     "GcodeDialectSpec",
     "GcodeSpec",
+    "LayerConfig",
     "PythonEncoder",
+    "SceneSpec",
     "TextureSpec",
     "VertexSpec",
     "ViewSpec",
     "view",
 ]
 
+@typing.final
 class EncodeOutput:
     r"""
     Non-Ops artifact produced by an Encode stage.
@@ -47,8 +50,8 @@ class EncodeOutput:
     @property
     def repr(self) -> typing.Optional[builtins.str]:
         r"""
-        The vertex-array debug repr. Returns ``None`` unless this is
-        the ``VertexArrays`` variant.
+        The vertex-array or scene debug repr. Returns ``None``
+        unless this is the ``VertexArrays`` or ``Scene`` variant.
         """
     @property
     def power_texture(self) -> typing.Optional[builtins.list[builtins.int]]:
@@ -68,55 +71,9 @@ class EncodeOutput:
         Texture height in pixels. Returns ``None`` unless this is the
         ``Texture`` variant.
         """
-    def __repr__(self) -> builtins.str:
-        r"""
-        Variant name as a string: ``"MachineCode"``, ``"VertexArrays"``,
-        or ``"Texture"``.
-        """
-    @typing.final
-    class MachineCode(EncodeOutput):
-        __match_args__ = ("text", "op_to_machine_code", "machine_code_to_op",)
-        @property
-        def text(self) -> builtins.str: ...
-        @property
-        def op_to_machine_code(self) -> builtins.dict[builtins.int, builtins.list[builtins.int]]: ...
-        @property
-        def machine_code_to_op(self) -> builtins.dict[builtins.int, builtins.int]: ...
-        def __new__(cls, text: builtins.str, op_to_machine_code: typing.Mapping[builtins.int, typing.Sequence[builtins.int]], machine_code_to_op: typing.Mapping[builtins.int, builtins.int]) -> EncodeOutput.MachineCode: ...
-    
-    @typing.final
-    class VertexArrays(EncodeOutput):
-        __match_args__ = ("repr",)
-        @property
-        def repr(self) -> builtins.str: ...
-        def __new__(cls, repr: builtins.str) -> EncodeOutput.VertexArrays: ...
-    
-    @typing.final
-    class Texture(EncodeOutput):
-        __match_args__ = ("power_texture", "width_px", "height_px",)
-        @property
-        def power_texture(self) -> builtins.list[builtins.int]: ...
-        @property
-        def width_px(self) -> builtins.int: ...
-        @property
-        def height_px(self) -> builtins.int: ...
-        def __new__(cls, power_texture: typing.Sequence[builtins.int], width_px: builtins.int, height_px: builtins.int) -> EncodeOutput.Texture: ...
-    
-    @typing.final
-    class View(EncodeOutput):
-        __match_args__ = ("buffer", "width", "height", "bbox_mm", "effective_ppm",)
-        @property
-        def buffer(self) -> builtins.list[builtins.int]: ...
-        @property
-        def width(self) -> builtins.int: ...
-        @property
-        def height(self) -> builtins.int: ...
-        @property
-        def bbox_mm(self) -> tuple[builtins.float, builtins.float, builtins.float, builtins.float]: ...
-        @property
-        def effective_ppm(self) -> tuple[builtins.float, builtins.float]: ...
-        def __new__(cls, buffer: typing.Sequence[builtins.int], width: builtins.int, height: builtins.int, bbox_mm: tuple[builtins.float, builtins.float, builtins.float, builtins.float], effective_ppm: tuple[builtins.float, builtins.float]) -> EncodeOutput.View: ...
-    
+    @classmethod
+    def MachineCode(cls, text: builtins.str, op_to_machine_code: typing.Mapping[builtins.int, typing.Sequence[builtins.int]], machine_code_to_op: typing.Mapping[builtins.int, builtins.int]) -> EncodeOutput: ...
+    def __repr__(self) -> builtins.str: ...
 
 @typing.final
 class Encoder:
@@ -167,6 +124,22 @@ class GcodeSpec:
     def __new__(cls, dialect: GcodeDialectSpec, context_json: builtins.str) -> GcodeSpec: ...
 
 @typing.final
+class LayerConfig:
+    r"""
+    Per-layer rendering configuration for the scene encoder.
+    """
+    @property
+    def rotary_enabled(self) -> builtins.bool: ...
+    @property
+    def rotary_diameter(self) -> builtins.float: ...
+    @property
+    def axis_position(self) -> builtins.float: ...
+    @property
+    def reverse(self) -> builtins.bool: ...
+    def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
+    def __new__(cls, rotary_enabled: builtins.bool = False, rotary_diameter: builtins.float = 0.0, axis_position: builtins.float = 0.0, reverse: builtins.bool = False) -> LayerConfig: ...
+
+@typing.final
 class PythonEncoder:
     r"""
     Python-side constructor for [`PythonEncoder`].
@@ -189,6 +162,21 @@ class PythonEncoder:
         :param name: Human-readable name for progress messages.
         """
     def __repr__(self) -> builtins.str: ...
+
+@typing.final
+class SceneSpec:
+    r"""
+    Parameters for the 3D scene encoder.
+    """
+    @property
+    def world_to_visual(self) -> builtins.list[builtins.list[builtins.float]]: ...
+    @property
+    def layer_configs(self) -> builtins.list[tuple[builtins.str, LayerConfig]]:
+        r"""
+        Stored as a list of (uid, config) pairs for hash-free equality.
+        """
+    def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
+    def __new__(cls, world_to_visual: typing.Sequence[typing.Sequence[builtins.float]], layer_configs: dict) -> SceneSpec: ...
 
 @typing.final
 class TextureSpec:

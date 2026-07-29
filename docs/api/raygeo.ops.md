@@ -472,6 +472,21 @@ Add a circular arc to the given coordinates.
 | _Returns_    | `None`                  |                                              |
 | _Complexity_ |                         | O(1) time, O(1) space                        |
 
+### `bake_visual_positions()`
+
+```python
+bake_visual_positions() -> Ops
+```
+
+Bake visual positions into a new Ops.
+
+For every moving command, replaces Y with the rotary degrees value from extra_axes. Non-moving
+commands are copied as-is.
+
+| Parameter | Type  | Description |
+| --------- | ----- | ----------- |
+| _Returns_ | `Ops` |             |
+
 ### `bezier_params()`
 
 ```python
@@ -635,6 +650,20 @@ Get the **CommandType** at the given index.
 | `idx`        | `int`               | Command index (negative = from end). |
 | _Returns_    | `types.CommandType` | The **CommandType** of the command.  |
 | _Complexity_ |                     | O(1) time, O(1) space                |
+
+### `compile_scene_3d()`
+
+```python
+compile_scene_3d(world_to_visual: Any, layer_configs: dict) -> dict
+```
+
+Compile this Ops into GPU-ready 3D scene data.
+
+| Parameter         | Type   | Description                                                                                                              |
+| ----------------- | ------ | ------------------------------------------------------------------------------------------------------------------------ |
+| `world_to_visual` | `Any`  | 4x4 transform matrix as a list of lists.                                                                                 |
+| `layer_configs`   | `dict` | Dict mapping layer UID to `{"rotary_enabled": bool, "rotary_diameter": float, "axis_position": float, "reverse": bool}`. |
+| _Returns_         | `dict` | Dict with keys `"groups"`, `"laser_uid_order"`, `"layer_infos"`.                                                         |
 
 ### `coolant()`
 
@@ -879,6 +908,20 @@ Get the extra axes data for a moving command.
 | `idx`        | `int`            | Command index.                              |
 | _Returns_    | `Optional[dict]` | Dict mapping axis names to values, or None. |
 | _Complexity_ |                  | O(1) time, O(1) space                       |
+
+### `extract_range()`
+
+```python
+extract_range(start: int, end: int) -> Ops
+```
+
+Extract commands `[start, end)` into a new Ops.
+
+| Parameter | Type  | Description |
+| --------- | ----- | ----------- |
+| `start`   | `int` |             |
+| `end`     | `int` |             |
+| _Returns_ | `Ops` |             |
 
 ### `flip_ops()`
 
@@ -1802,6 +1845,21 @@ Add a scan-line move with per-pixel power values.
 | `extra`        | `Optional[dict] = None`          | Optional dict of extra axis values.    |
 | _Returns_      | `None`                           |                                        |
 | _Complexity_   |                                  | O(1) time, O(1) space                  |
+
+### `scanline_bbox()`
+
+```python
+scanline_bbox() -> Optional[tuple[float, float, float, float]]
+```
+
+Compute the 2D bounding box of all ScanLine commands.
+
+Returns `None` if there are no scanlines. Otherwise returns `(min_x, min_y, width, height)` using
+visual endpoints.
+
+| Parameter | Type                                          | Description |
+| --------- | --------------------------------------------- | ----------- |
+| _Returns_ | `Optional[tuple[float, float, float, float]]` |             |
 
 ### `scanline_data()`
 

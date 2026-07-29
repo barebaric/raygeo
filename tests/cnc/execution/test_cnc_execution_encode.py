@@ -12,6 +12,7 @@ All three are exercised through the pipeline as `StageSpec.Encode`
 nodes with `source_key` pointing at an upstream Compute node.
 """
 
+import numpy as np
 import pytest
 from conftest import (
     collect_completions,
@@ -19,16 +20,25 @@ from conftest import (
     make_square_part,
 )
 
-from raygeo.cnc.execution.specs import ComputePayload, EncodeSpec
+from raygeo.cnc.execution.specs import (
+    AggregateGroup,
+    AggregateInput,
+    AggregateSpec,
+    ComputePayload,
+    EncodeSpec,
+    MachineParams,
+)
 from raygeo.ops.assembly import Assembler
 from raygeo.ops.assembly.contour import ContourSpec
 from raygeo.ops.convert import (
     Encoder,
     GcodeDialectSpec,
     GcodeSpec,
+    SceneSpec,
     TextureSpec,
     VertexSpec,
 )
+from raygeo.pipeline.execute import execute_stages
 from raygeo.pipeline.request import NodeRequest
 from raygeo.pipeline.stage import StageSpec
 
@@ -243,13 +253,6 @@ def test_texture_encode_buffer_is_uint8():
 
 
 def test_encode_can_consume_aggregate():
-    from raygeo.cnc.execution.specs import (
-        AggregateGroup,
-        AggregateInput,
-        AggregateSpec,
-        MachineParams,
-    )
-
     IDENTITY = [
         [1.0, 0, 0, 0],
         [0, 1.0, 0, 0],
@@ -298,6 +301,37 @@ def test_encode_can_consume_aggregate():
     assert encode_result(c).variant == "MachineCode"
 
 
+# ── Scene encoder ─────────────────────────────────────────────────
+
+
+def _scene_spec():
+    return SceneSpec(
+        np.eye(4, dtype=np.float32).tolist(),
+        {},
+    )
+
+
+def test_scene_encode_succeeds():
+    src = _compute_src()
+    enc = _encode_node("enc", "src", Encoder(_scene_spec()))
+    completed, _ = collect_completions([src, enc])
+    out = encode_result(_by_key(completed)["enc"])
+    assert out.variant == "Scene"
+    assert out.repr is not None
+    assert out.text is None
+    assert out.power_texture is None
+
+
+def test_scene_encode_repr_contains_groups():
+    src = _compute_src()
+    enc = _encode_node("enc", "src", Encoder(_scene_spec()))
+    completed, _ = collect_completions([src, enc])
+    out = encode_result(_by_key(completed)["enc"])
+    assert out.repr is not None
+    assert "groups=" in out.repr
+    assert "layers=" in out.repr
+
+
 # ── Error cases ───────────────────────────────────────────────────
 
 
@@ -311,8 +345,6 @@ def test_encode_with_missing_source_yields_error():
 
 
 def test_encode_with_unknown_encoder_type_errors_at_construction():
-    from raygeo.pipeline.execute import execute_stages
-
     enc = NodeRequest(
         key="enc",
         generation_id=1,

@@ -1382,6 +1382,35 @@ class Ops:
             arrays.
         :complexity: O(n) time, O(n) space
         """
+    def compile_scene_3d(self, world_to_visual: typing.Any, layer_configs: dict) -> dict:
+        r"""
+        Compile this Ops into GPU-ready 3D scene data.
+        
+        :param world_to_visual: 4x4 transform matrix as a list of lists.
+        :param layer_configs: Dict mapping layer UID to
+            ``{"rotary_enabled": bool, "rotary_diameter": float,
+              "axis_position": float, "reverse": bool}``.
+        :returns: Dict with keys ``"groups"``, ``"laser_uid_order"``,
+            ``"layer_infos"``.
+        """
+    def scanline_bbox(self) -> typing.Optional[tuple[builtins.float, builtins.float, builtins.float, builtins.float]]:
+        r"""
+        Compute the 2D bounding box of all ScanLine commands.
+        
+        Returns ``None`` if there are no scanlines. Otherwise returns
+        ``(min_x, min_y, width, height)`` using visual endpoints.
+        """
+    def bake_visual_positions(self) -> Ops:
+        r"""
+        Bake visual positions into a new Ops.
+        
+        For every moving command, replaces Y with the rotary degrees
+        value from extra_axes. Non-moving commands are copied as-is.
+        """
+    def extract_range(self, start: builtins.int, end: builtins.int) -> Ops:
+        r"""
+        Extract commands `[start, end)` into a new Ops.
+        """
     def to_gcode(self, dialect: convert.GcodeDialectSpec, context_dict: dict) -> dict:
         r"""
         Encode this Ops sequence into G-code text.
