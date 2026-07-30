@@ -1,5 +1,7 @@
 use pyo3::prelude::*;
-use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction};
+use pyo3_stub_gen::derive::{
+    gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pymethods,
+};
 
 use crate::ops::assembly::profile::{self, ProfileKind, ProfileSpec};
 use crate::ops::assembly::Tracelet;
@@ -116,6 +118,7 @@ impl PyProfileSpec {
     }
 }
 
+#[gen_stub_pymethods]
 #[pyo3::pymethods]
 impl PyProfileSpec {
     #[new]

@@ -69,6 +69,7 @@ fn smooth_route_py(
         &raw_pts,
         &obstacles_pts,
         clearance,
+        None,
     )
     .into_iter()
     .map(|p| (p.x, p.y, p.z))

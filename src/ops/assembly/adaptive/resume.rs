@@ -25,6 +25,7 @@ use crate::ops::part::ClearedArea;
 use crate::ops::part::FaceState;
 use crate::ops::types::CutDirection;
 use crate::ops::types::ToolPose;
+use crate::trace_types::{MoveKind, ToolSnapshot};
 use crate::types::{Point, Point3D, Polygon};
 
 use super::routing;
@@ -194,9 +195,12 @@ pub(super) fn offset_and_probe(
             step,
             max_steps,
         ) {
-            if let Some(probed) =
-                probe(ctx, radius, Point3D::new(pos.x, pos.y, 0.0), heading)
-            {
+            if let Some(probed) = probe(
+                ctx,
+                radius,
+                Point3D::new(pos.x, pos.y, ctx.opts.target_z),
+                heading,
+            ) {
                 return Some(probed);
             }
         }
@@ -213,9 +217,12 @@ pub(super) fn offset_and_probe(
             step,
             max_steps,
         ) {
-            if let Some(probed) =
-                probe(ctx, radius, Point3D::new(pos.x, pos.y, 0.0), heading)
-            {
+            if let Some(probed) = probe(
+                ctx,
+                radius,
+                Point3D::new(pos.x, pos.y, ctx.opts.target_z),
+                heading,
+            ) {
                 return Some(probed);
             }
         }
@@ -350,7 +357,7 @@ pub(super) fn walk_and_probe(
                     probe(
                         ctx,
                         radius,
-                        Point3D::new(probe_pt.x, probe_pt.y, 0.0),
+                        Point3D::new(probe_pt.x, probe_pt.y, ctx.opts.target_z),
                         heading,
                     )
                 },
@@ -374,7 +381,12 @@ pub(super) fn walk_and_probe(
                             }
                         }
                     }
-                    probe(ctx, radius, Point3D::new(pt.x, pt.y, 0.0), heading)
+                    probe(
+                        ctx,
+                        radius,
+                        Point3D::new(pt.x, pt.y, ctx.opts.target_z),
+                        heading,
+                    )
                 },
             )
         };
@@ -535,11 +547,22 @@ pub fn emit_resume_travel(
     obstacles.extend(islands.iter().cloned());
     let obs_bounds = compute_polygon_bounds(&obstacles);
 
+    // Pocket boundary: checked via edge-proximity only (never point-in-region),
+    // so pass it separately from area obstacles.
+    let boundary = &face.stock_region.boundary;
+    let boundary_bounds = if boundary.len() >= 3 {
+        Some(compute_polygon_bounds(std::slice::from_ref(boundary))[0])
+    } else {
+        None
+    };
+
     let ctx = routing::RouteCtx {
         opts,
         mat,
         obstacles: &obstacles,
         obstacle_bounds: &obs_bounds,
+        boundary: Some(boundary),
+        boundary_bounds,
         part: face,
     };
 
@@ -553,8 +576,33 @@ pub fn emit_resume_travel(
             routing::source_label(source),
             path.len(),
         );
+        // Record each route waypoint as both an ops command (for the actual
+        // machine path) and a travel trace event (so the inspector can
+        // render the correct path instead of a straight line from/to).
+        let mut prev = from;
         for pt in &path[1..] {
             trace.move_to(pt.x, pt.y, pt.z, None);
+            let dx = pt.x - prev.x;
+            let dy = pt.y - prev.y;
+            let heading = if dx.abs() > 1e-12 || dy.abs() > 1e-12 {
+                dy.atan2(dx)
+            } else {
+                0.0
+            };
+            trace.move_event(
+                MoveKind::Travel,
+                ToolSnapshot {
+                    pos_x: pt.x,
+                    pos_y: pt.y,
+                    pos_z: pt.z,
+                    heading,
+                    prev_x: prev.x,
+                    prev_y: prev.y,
+                    prev_z: prev.z,
+                },
+                None,
+            );
+            prev = *pt;
         }
         if let Some(out) = out_route_details {
             *out = route_details;

@@ -43,6 +43,7 @@ from raygeo.geo.shape.polygon import (
     get_polyline_swept_polygon,
     get_signed_boundary_distance,
     is_almost_equal,
+    is_path_confined_to_boundary,
     is_point_inside_polygon,
     is_polygon_convex,
     normalize_polygons,
@@ -2560,3 +2561,76 @@ class TestFindEntryEdges:
         # Very large tolerance makes everything collinear
         entry = find_entry_edges(corridor, [pocket], 50.0)
         assert entry == []
+
+
+class TestIsPathConfinedToBoundary:
+    """Tests for is_path_confined_to_boundary."""
+
+    def test_inside_rect(self):
+        """Path fully inside a rect boundary with margin passes."""
+        boundary = P((0, 0), (100, 0), (100, 100), (0, 100))
+        path = P((10, 10), (90, 10), (90, 90), (10, 90))
+        assert is_path_confined_to_boundary(path, boundary, 5.0)
+
+    def test_vertex_outside(self):
+        """A vertex outside the boundary fails."""
+        boundary = P((0, 0), (100, 0), (100, 100), (0, 100))
+        path = P((10, 10), (110, 10))  # x=110 is outside
+        assert not is_path_confined_to_boundary(path, boundary, 5.0)
+
+    def test_segment_too_close_to_edge(self):
+        """A segment within clearance of a boundary edge fails."""
+        boundary = P((0, 0), (100, 0), (100, 100), (0, 100))
+        # Segment at y=2 is within clearance=5 of bottom edge y=0
+        path = P((10, 2), (90, 2))
+        assert not is_path_confined_to_boundary(path, boundary, 5.0)
+
+    def test_segment_exactly_at_clearance(self):
+        """A segment at exactly clearance distance passes."""
+        boundary = P((0, 0), (100, 0), (100, 100), (0, 100))
+        path = P((10, 5), (90, 5))  # y=5 is exactly clearance=5 from y=0
+        assert is_path_confined_to_boundary(path, boundary, 5.0)
+
+    def test_boundary_has_three_verts(self):
+        """Triangular boundary works."""
+        boundary = P((0, 0), (100, 0), (50, 100))
+        # All points well inside the triangle, segments far from edges
+        path = P((50, 10), (50, 50), (40, 60))
+        assert is_path_confined_to_boundary(path, boundary, 5.0)
+
+    def test_vertex_on_vertex_of_boundary(self):
+        """A vertex exactly on a boundary vertex fails (clearance=0 < r)."""
+        boundary = P((0, 0), (100, 0), (100, 100), (0, 100))
+        path = P((0, 0), (50, 50))
+        assert not is_path_confined_to_boundary(path, boundary, 5.0)
+
+    def test_vertex_near_but_not_on_boundary(self):
+        """A vertex very close to but inside the boundary passes."""
+        boundary = P((0, 0), (100, 0), (100, 100), (0, 100))
+        path = P((5.001, 5.001), (50, 50))
+        assert is_path_confined_to_boundary(path, boundary, 5.0)
+
+    def test_segment_crosses_boundary_edge(self):
+        """A segment that crosses a boundary edge fails."""
+        boundary = P((0, 0), (100, 0), (100, 100), (0, 100))
+        # Goes from inside to outside
+        path = P((50, 50), (150, 50))
+        assert not is_path_confined_to_boundary(path, boundary, 5.0)
+
+    def test_empty_path(self):
+        """Empty path is trivially confined."""
+        boundary = P((0, 0), (100, 0), (100, 100), (0, 100))
+        assert is_path_confined_to_boundary([], boundary, 5.0)
+
+    def test_single_point_path(self):
+        """Single-point path is confined if point is inside."""
+        boundary = P((0, 0), (100, 0), (100, 100), (0, 100))
+        assert is_path_confined_to_boundary(P((50, 50)), boundary, 5.0)
+        assert not is_path_confined_to_boundary(P((150, 50)), boundary, 5.0)
+
+    def test_clearance_larger_than_pocket(self):
+        """Clearance larger than the pocket still works (fails)."""
+        boundary = P((0, 0), (10, 0), (10, 10), (0, 10))
+        path = P((1, 1), (9, 1))
+        # clearance=20 is larger than the entire pocket; any path fails
+        assert not is_path_confined_to_boundary(path, boundary, 20.0)

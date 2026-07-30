@@ -1243,6 +1243,38 @@ pub fn is_point_inside_polygon(point: Point, polygon: &Polygon) -> bool {
     is_point_in_polygon(point, polygon)
 }
 
+/// True when every vertex of `path` lies inside `boundary` AND no
+/// path segment approaches within `clearance` of any boundary edge
+/// (i.e. the tool disc does not protrude past the wall).
+///
+/// `boundary` is the allowed-area polygon (interior = pocket).
+pub fn is_path_confined_to_boundary(
+    path: &[Point],
+    boundary: &Polygon,
+    clearance: f64,
+) -> bool {
+    if boundary.len() < 3 {
+        return true;
+    }
+    for &p in path {
+        if !is_point_in_polygon(p, boundary) {
+            return false;
+        }
+    }
+    for i in 0..path.len().saturating_sub(1) {
+        let a = path[i];
+        let b = path[i + 1];
+        for j in 0..boundary.len() {
+            let c = boundary[j];
+            let d = boundary[(j + 1) % boundary.len()];
+            if get_segment_segment_distance(a, b, c, d) < clearance {
+                return false;
+            }
+        }
+    }
+    true
+}
+
 /// Returns `true` if `polygon` fully encloses a circle of `radius` at `center`.
 ///
 /// Three checks are applied in increasing cost:

@@ -19,10 +19,11 @@ use crate::geo::shape::polygon::{
     get_polygons_group_difference, get_polygons_group_intersection,
     get_polygons_intersection, get_polygons_union, get_polyline_swept_polygon,
     get_segment_swept_polygon, get_signed_boundary_distance, is_almost_equal,
-    is_point_inside_polygon, is_polygon_clockwise, is_polygon_convex,
-    normalize_polygons, offset_polygon, resample_polygon, rotate_polygon,
-    rotate_polygons, scale_polygon, translate_bounds, translate_polygon,
-    translate_polygons, CornerType, JoinStyle,
+    is_path_confined_to_boundary, is_point_inside_polygon,
+    is_polygon_clockwise, is_polygon_convex, normalize_polygons,
+    offset_polygon, resample_polygon, rotate_polygon, rotate_polygons,
+    scale_polygon, translate_bounds, translate_polygon, translate_polygons,
+    CornerType, JoinStyle,
 };
 use crate::types::{Point, Rect};
 use numpy::{PyArray2, PyArrayMethods};
@@ -189,6 +190,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         get_polygons_union_py,
         get_signed_boundary_distance_py,
         is_almost_equal_py,
+        is_path_confined_to_boundary_py,
         is_point_inside_polygon_py,
         is_polygon_clockwise_py,
         is_polygon_convex_py,
@@ -955,6 +957,42 @@ fn is_point_inside_polygon_py(
     is_point_inside_polygon(
         Point::new(point.0, point.1),
         &poly_to_points(polygon),
+    )
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+    import raygeo.geo.types
+
+    def is_path_confined_to_boundary(
+        path: collections.abc.Sequence[types.Point],
+        boundary: collections.abc.Sequence[types.Point],
+        clearance: float,
+    ) -> bool:
+        """Check if a path stays within clearance of a pocket boundary.
+
+        Returns True when every vertex of *path* is inside *boundary* and
+        no segment approaches within *clearance* of any boundary edge.
+
+        :param path: Open polyline as (x, y) points.
+        :param boundary: Pocket boundary polygon as (x, y) points.
+        :param clearance: Minimum distance to boundary edges.
+        :returns: True if path is safely inside the boundary.
+        """
+    "#,
+    module = "raygeo.geo.shape.polygon"
+)]
+#[pyfunction(name = "is_path_confined_to_boundary")]
+fn is_path_confined_to_boundary_py(
+    path: Vec<PyPoint2D>,
+    boundary: Vec<PyPoint2D>,
+    clearance: f64,
+) -> bool {
+    is_path_confined_to_boundary(
+        &poly_to_points(path),
+        &poly_to_points(boundary),
+        clearance,
     )
 }
 

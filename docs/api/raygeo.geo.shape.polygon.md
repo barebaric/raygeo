@@ -751,6 +751,28 @@ Check if two floats are almost equal.
 | _Returns_    | `bool`                   | True if               |
 | _Complexity_ |                          | O(1)                  |
 
+### `is_path_confined_to_boundary()`
+
+```python
+is_path_confined_to_boundary(
+    path: Sequence[types.Point],
+    boundary: Sequence[types.Point],
+    clearance: float,
+) -> bool
+```
+
+Check if a path stays within clearance of a pocket boundary.
+
+Returns True when every vertex of *path* is inside *boundary* and no segment approaches within
+*clearance* of any boundary edge.
+
+| Parameter   | Type                    | Description                                 |
+| ----------- | ----------------------- | ------------------------------------------- |
+| `path`      | `Sequence[types.Point]` | Open polyline as (x, y) points.             |
+| `boundary`  | `Sequence[types.Point]` | Pocket boundary polygon as (x, y) points.   |
+| `clearance` | `float`                 | Minimum distance to boundary edges.         |
+| _Returns_   | `bool`                  | True if path is safely inside the boundary. |
+
 ### `is_point_inside_polygon()`
 
 ```python

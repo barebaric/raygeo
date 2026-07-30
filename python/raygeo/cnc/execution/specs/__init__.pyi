@@ -189,6 +189,11 @@ class ComputePayload:
         r"""
         Source keys for cleared-area state threading (CNC only).
         """
+    @state_source_keys.setter
+    def state_source_keys(self, value: typing.Sequence[builtins.str]) -> None:
+        r"""
+        Source keys for cleared-area state threading (CNC only).
+        """
     @property
     def power(self) -> builtins.float:
         r"""

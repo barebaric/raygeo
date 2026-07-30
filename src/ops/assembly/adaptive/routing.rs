@@ -10,6 +10,7 @@ use crate::geo::algo::medial_axis::MedialAxis;
 use crate::geo::algo::smooth::build_smoothed_path;
 use crate::geo::shape::polygon::compute_polygon_bounds;
 use crate::geo::shape::polygon::does_path_sweep_intersect_polygon;
+use crate::geo::shape::polygon::is_path_confined_to_boundary;
 use crate::ops::assembly::adaptive::AdaptiveClearingSpec;
 use crate::ops::part::FaceState;
 use crate::types::{Point, Point3D, Polygon, Rect};
@@ -29,6 +30,8 @@ pub struct RouteCtx<'a> {
     pub mat: Option<&'a MedialAxis>,
     pub obstacles: &'a [Polygon],
     pub obstacle_bounds: &'a [Rect],
+    pub boundary: Option<&'a Polygon>,
+    pub boundary_bounds: Option<Rect>,
     pub part: &'a FaceState,
 }
 
@@ -131,17 +134,33 @@ pub(crate) fn source_label(source: RouteSource) -> &'static str {
 /// obstacle polygon.  When there are no obstacles the path is always
 /// considered clear.
 pub(super) fn sweep_clear(path: &[Point3D], ctx: &RouteCtx) -> bool {
-    if ctx.obstacles.is_empty() {
-        return true;
-    }
     let path_2d: Vec<Point> =
         path.iter().map(|p| Point::new(p.x, p.y)).collect();
-    !does_path_sweep_intersect_polygon(
-        &path_2d,
-        ctx.opts.tool_radius,
-        ctx.obstacles,
-        ctx.obstacle_bounds,
-    )
+
+    // Area obstacles (remaining material + islands): full containment check.
+    if !ctx.obstacles.is_empty()
+        && does_path_sweep_intersect_polygon(
+            &path_2d,
+            ctx.opts.tool_radius,
+            ctx.obstacles,
+            ctx.obstacle_bounds,
+        )
+    {
+        return false;
+    }
+
+    // Pocket boundary: the tool disc must stay inside the pocket.
+    if let Some(boundary) = ctx.boundary {
+        if !is_path_confined_to_boundary(
+            &path_2d,
+            boundary,
+            ctx.opts.tool_radius,
+        ) {
+            return false;
+        }
+    }
+
+    true
 }
 
 // ── Smoothing ──────────────────────────────────────────────────────
@@ -150,12 +169,16 @@ pub(super) fn sweep_clear(path: &[Point3D], ctx: &RouteCtx) -> bool {
 ///
 /// `from` is the tool's current position (preserved as path start).
 /// `raw` is the waypoint list returned by a routing strategy.
+/// On failure to smooth or keep inside the pocket boundary the raw path
+/// is returned instead of a synthetic straight line, since the raw path
+/// already passed the `sweep_clear` obstacle + boundary checks.
 #[prof]
 pub(crate) fn smooth_route(
     from: Point3D,
     raw: &[Point3D],
     obstacles: &[Polygon],
     clearance: f64,
+    boundary: Option<&Polygon>,
 ) -> Vec<Point3D> {
     if raw.is_empty() {
         return vec![from];
@@ -180,14 +203,26 @@ pub(crate) fn smooth_route(
         120,
     );
     if smoothed_2d.is_empty() {
-        vec![from, last]
-    } else {
-        let z = from.z.max(last.z);
-        smoothed_2d
-            .iter()
-            .map(|p| Point3D::new(p.x, p.y, z))
-            .collect()
+        return [vec![from], raw.to_vec()].concat();
     }
+
+    // Verify the smoothed path keeps the tool disc inside the pocket.
+    // The boundary polygon represents the ALLOWED area (interior = pocket).
+    // We check:
+    //   1. All vertices are inside the boundary — catches centreline exit.
+    //   2. No segment approaches within clearance of any boundary edge —
+    //      ensures the tool disc does not protrude past the wall.
+    if let Some(boundary) = boundary {
+        if !is_path_confined_to_boundary(&smoothed_2d, boundary, clearance) {
+            return [vec![from], raw.to_vec()].concat();
+        }
+    }
+
+    let z = from.z.max(last.z);
+    smoothed_2d
+        .iter()
+        .map(|p| Point3D::new(p.x, p.y, z))
+        .collect()
 }
 
 // ── optimize_route orchestrator ────────────────────────────────────
@@ -224,11 +259,19 @@ pub fn optimize_route<'a>(
              detail: &mut u8,
              path: Vec<Point3D>|
              -> Option<Vec<Point3D>> {
+                // ZHop produces discrete Z levels (retract → travel
+                // at safe_z → plunge).  Smoothing in 2D would flatten
+                // Z and destroy the Z-hop — skip it.
+                if source == RouteSource::RoutingZHop {
+                    *detail = ROUTE_OK;
+                    return Some(path);
+                }
                 let smoothed = smooth_route(
                     from,
                     &path,
                     ctx.obstacles,
                     ctx.opts.tool_radius,
+                    ctx.boundary,
                 );
                 if smoothed.len() >= 2 {
                     *detail = ROUTE_OK; // success

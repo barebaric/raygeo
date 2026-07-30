@@ -250,7 +250,7 @@ pub struct PyComputePayload {
     #[pyo3(get, set)]
     pub transformers: Vec<Py<PyAny>>,
     /// Source keys for cleared-area state threading (CNC only).
-    #[pyo3(get)]
+    #[pyo3(get, set)]
     pub state_source_keys: Vec<String>,
     /// Laser power fraction (0.0 – 1.0) injected as ``SetPower``.
     #[pyo3(get, set)]

@@ -45,6 +45,7 @@ __all__ = [
     "get_segment_swept_polygon",
     "get_signed_boundary_distance",
     "is_almost_equal",
+    "is_path_confined_to_boundary",
     "is_point_inside_polygon",
     "is_polygon_clockwise",
     "is_polygon_convex",
@@ -482,6 +483,19 @@ def is_almost_equal(a: float, b: float, tolerance: typing.Optional[float] = None
     :param tolerance: Comparison tolerance.
     :returns: True if |a - b| < tolerance.
     :complexity: O(1)
+    """
+
+def is_path_confined_to_boundary(path: collections.abc.Sequence[types.Point], boundary: collections.abc.Sequence[types.Point], clearance: float) -> bool:
+    r"""
+    Check if a path stays within clearance of a pocket boundary.
+    
+    Returns True when every vertex of *path* is inside *boundary* and
+    no segment approaches within *clearance* of any boundary edge.
+    
+    :param path: Open polyline as (x, y) points.
+    :param boundary: Pocket boundary polygon as (x, y) points.
+    :param clearance: Minimum distance to boundary edges.
+    :returns: True if path is safely inside the boundary.
     """
 
 def is_point_inside_polygon(point: types.Point, polygon: collections.abc.Sequence[types.Point]) -> bool:
