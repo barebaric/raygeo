@@ -53,9 +53,10 @@ def test_line_to():
     assert np.allclose(pv[0], [0, 0, 0])
     assert np.allclose(pv[1], [10, 20, 0])
 
-    pvv = g.power_values
-    assert pvv.shape == (2,)
-    assert np.allclose(pvv, [0.5, 0.5])
+    pa = g.powered_attrib
+    assert pa.shape == (8,)
+    assert np.allclose(pa[0::4], [0.5, 0.5])
+    assert np.allclose(pa[1::4], [0.0, 0.0])
 
 
 def test_move_to_produces_travel():
@@ -102,9 +103,9 @@ def test_power_tracking():
     data = _compile(ops)
     g = _flat_group(data)
 
-    pvv = g.power_values
-    assert pvv.shape == (4,)
-    assert np.allclose(pvv, [0.3, 0.3, 0.8, 0.8])
+    pa = g.powered_attrib
+    assert pa.shape == (16,)
+    assert np.allclose(pa[0::4], [0.3, 0.3, 0.8, 0.8])
 
 
 # ── Laser index ─────────────────────────────────────────────────
@@ -124,8 +125,8 @@ def test_laser_index():
 
     assert data.laser_uid_order == ["laser_a", "laser_b"]
 
-    pvl = g.laser_indices
-    assert pvl.shape == (4,)
+    assert g.powered_attrib.shape == (16,)
+    pvl = g.powered_attrib[1::4]
     assert pvl[0] == 0 and pvl[1] == 0
     assert pvl[2] == 1 and pvl[3] == 1
 
@@ -190,9 +191,9 @@ def test_scan_line():
 
     ov_pos = g.overlay_positions.reshape(-1, 3)
     assert ov_pos.shape[0] >= 2
-    ov_pow = g.overlay_power_values
-    assert ov_pow.shape[0] >= 2
-    assert np.allclose(ov_pow, [1.0, 1.0])
+    oa = g.overlay_attrib
+    assert oa.shape[0] >= 8  # 2+ vertices * 4
+    assert np.allclose(oa[0::4], [1.0, 1.0])
 
 
 def test_scan_line_all_zero():
@@ -365,7 +366,7 @@ def test_overlay_all_zero():
     g = _flat_group(data)
 
     assert g.overlay_positions.size == 0
-    assert g.overlay_power_values.size == 0
+    assert g.overlay_attrib.size == 0
 
 
 def test_overlay_all_max():
@@ -382,9 +383,9 @@ def test_overlay_all_max():
     assert np.allclose(ov_pos[0], [0, 0, 0])
     assert np.allclose(ov_pos[1], [10, 0, 0])
 
-    ov_pow = g.overlay_power_values
-    assert ov_pow.shape == (2,)
-    assert np.allclose(ov_pow, [1.0, 1.0])
+    oa = g.overlay_attrib
+    assert oa.shape == (8,)
+    assert np.allclose(oa[0::4], [1.0, 1.0])
 
 
 def test_overlay_mixed():
@@ -417,10 +418,10 @@ def test_overlay_power_values():
     data = _compile(ops)
     g = _flat_group(data)
 
-    ov_pow = g.overlay_power_values
-    assert ov_pow.shape == (2,)
-    assert abs(ov_pow[0] - 128.0 / 255.0) < 0.01
-    assert abs(ov_pow[1] - 128.0 / 255.0) < 0.01
+    oa = g.overlay_attrib
+    assert oa.shape == (8,)
+    assert abs(oa[0] - 128.0 / 255.0) < 0.01
+    assert abs(oa[4] - 128.0 / 255.0) < 0.01
 
 
 def test_overlay_laser_index():
@@ -433,8 +434,8 @@ def test_overlay_laser_index():
     data = _compile(ops)
     g = _flat_group(data)
 
-    ov_lid = g.overlay_laser_indices
-    assert ov_lid.shape == (2,)
+    assert g.overlay_attrib.shape == (8,)
+    ov_lid = g.overlay_attrib[1::4]
     assert ov_lid[0] == 0
     assert ov_lid[1] == 0
 
@@ -485,13 +486,11 @@ def test_compile_returns_numpy_float32():
     g = _flat_group(data)
 
     assert g.powered_verts.dtype == np.float32
-    assert g.power_values.dtype == np.float32
-    assert g.laser_indices.dtype == np.float32
+    assert g.powered_attrib.dtype == np.float32
     assert g.travel_verts.dtype == np.float32
     assert g.zero_power_verts.dtype == np.float32
     assert g.overlay_positions.dtype == np.float32
-    assert g.overlay_power_values.dtype == np.float32
-    assert g.overlay_laser_indices.dtype == np.float32
+    assert g.overlay_attrib.dtype == np.float32
 
 
 def test_compile_returns_int32_offsets():
@@ -520,7 +519,7 @@ def test_numpy_arrays_contiguous():
     g = _flat_group(data)
 
     assert g.powered_verts.flags["C_CONTIGUOUS"]
-    assert g.power_values.flags["C_CONTIGUOUS"]
+    assert g.powered_attrib.flags["C_CONTIGUOUS"]
     assert g.powered_cmd_offsets.flags["C_CONTIGUOUS"]
 
 
@@ -536,8 +535,8 @@ def test_compile_array_shapes():
     g = _flat_group(data)
 
     assert g.powered_verts.shape == (12,)
-    assert g.power_values.shape == (4,)
-    assert g.laser_indices.shape == (4,)
+    assert g.powered_attrib.shape == (16,)
+    assert len(g.powered_attrib[0::4]) == 4
 
 
 def test_encode_output_scene_accessible():

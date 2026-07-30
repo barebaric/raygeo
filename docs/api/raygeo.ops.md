@@ -2792,10 +2792,10 @@ One rendering group (flat or rotary) with all vertex & overlay buffers.
 is_rotary: bool
 ```
 
-### `laser_indices`
+### `overlay_attrib`
 
 ```python
-laser_indices: numpy.NDArray[numpy.float32]
+overlay_attrib: numpy.NDArray[numpy.float32]
 ```
 
 ### `overlay_cmd_offsets`
@@ -2804,28 +2804,16 @@ laser_indices: numpy.NDArray[numpy.float32]
 overlay_cmd_offsets: numpy.NDArray[numpy.int32]
 ```
 
-### `overlay_laser_indices`
-
-```python
-overlay_laser_indices: numpy.NDArray[numpy.float32]
-```
-
 ### `overlay_positions`
 
 ```python
 overlay_positions: numpy.NDArray[numpy.float32]
 ```
 
-### `overlay_power_values`
+### `powered_attrib`
 
 ```python
-overlay_power_values: numpy.NDArray[numpy.float32]
-```
-
-### `power_values`
-
-```python
-power_values: numpy.NDArray[numpy.float32]
+powered_attrib: numpy.NDArray[numpy.float32]
 ```
 
 ### `powered_cmd_offsets`

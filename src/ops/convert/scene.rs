@@ -72,15 +72,13 @@ pub struct LayerInfo {
 pub struct VertexGroupData {
     pub is_rotary: bool,
     pub powered_verts: Vec<f32>,
-    pub power_values: Vec<f32>,
-    pub laser_indices: Vec<f32>,
+    pub powered_attrib: Vec<f32>,
     pub travel_verts: Vec<f32>,
     pub zero_power_verts: Vec<f32>,
     pub powered_cmd_offsets: Vec<i32>,
     pub travel_cmd_offsets: Vec<i32>,
     pub overlay_positions: Vec<f32>,
-    pub overlay_power_values: Vec<f32>,
-    pub overlay_laser_indices: Vec<f32>,
+    pub overlay_attrib: Vec<f32>,
     pub overlay_cmd_offsets: Vec<i32>,
 }
 
@@ -192,36 +190,6 @@ fn add_z_offset(verts: &mut [f32]) {
     }
 }
 
-fn pack_power_laser_vec4(power: &[f32], laser: &[f32]) -> Vec<f32> {
-    let n = power.len();
-    let mut r = Vec::with_capacity(n * 4);
-    for i in 0..n {
-        r.push(power[i]);
-        r.push(laser[i]);
-        r.push(0.0);
-        r.push(1.0);
-    }
-    r
-}
-
-fn unpack_power(colors: &[f32]) -> Vec<f32> {
-    let n = colors.len() / 4;
-    let mut r = Vec::with_capacity(n);
-    for i in 0..n {
-        r.push(colors[i * 4]);
-    }
-    r
-}
-
-fn unpack_laser(colors: &[f32]) -> Vec<f32> {
-    let n = colors.len() / 4;
-    let mut r = Vec::with_capacity(n);
-    for i in 0..n {
-        r.push(colors[i * 4 + 1]);
-    }
-    r
-}
-
 // ------------------------------------------------------------------
 // Rotary segment tracking
 // ------------------------------------------------------------------
@@ -254,13 +222,11 @@ struct RotarySeg {
 struct Accumulator {
     is_rotary: bool,
     pv: Vec<f32>,
-    pvv: Vec<f32>,
-    pvl: Vec<f32>,
+    pva: Vec<f32>,
     tv: Vec<f32>,
     zpv: Vec<f32>,
     ov_pos: Vec<f32>,
-    ov_pow: Vec<f32>,
-    ov_lid: Vec<f32>,
+    ov_attrib: Vec<f32>,
     pv_cum: usize,
     tv_cum: usize,
     ov_cum: usize,
@@ -279,13 +245,11 @@ impl Accumulator {
         Accumulator {
             is_rotary,
             pv: Vec::new(),
-            pvv: Vec::new(),
-            pvl: Vec::new(),
+            pva: Vec::new(),
             tv: Vec::new(),
             zpv: Vec::new(),
             ov_pos: Vec::new(),
-            ov_pow: Vec::new(),
-            ov_lid: Vec::new(),
+            ov_attrib: Vec::new(),
             pv_cum: 0,
             tv_cum: 0,
             ov_cum: 0,
@@ -388,23 +352,21 @@ fn remap_offsets(
 /// Result of wrapping rotary vertex data onto a cylinder.
 struct CylinderWrapped {
     pv: Vec<f32>,
-    pvv: Vec<f32>,
-    pvl: Vec<f32>,
+    pva: Vec<f32>,
     tv: Vec<f32>,
     zpv: Vec<f32>,
     ov_pos: Vec<f32>,
-    ov_pow: Vec<f32>,
-    ov_lid: Vec<f32>,
+    ov_attrib: Vec<f32>,
     pv_expansion: Vec<(usize, Vec<i32>)>,
 }
 
 fn finalize_rotary_cylinder(acc: &Accumulator) -> Option<CylinderWrapped> {
     let mut exp_pv: Vec<Vec<f32>> = Vec::new();
-    let mut exp_pvv4: Vec<Vec<f32>> = Vec::new();
+    let mut exp_pva: Vec<Vec<f32>> = Vec::new();
     let mut exp_tv: Vec<Vec<f32>> = Vec::new();
     let mut exp_zpv: Vec<Vec<f32>> = Vec::new();
     let mut exp_ov_pos: Vec<Vec<f32>> = Vec::new();
-    let mut exp_ov_pow4: Vec<Vec<f32>> = Vec::new();
+    let mut exp_ov_attrib: Vec<Vec<f32>> = Vec::new();
     let mut pv_expansion: Vec<(usize, Vec<i32>)> = Vec::new();
 
     for seg in &acc.rotary_segments {
@@ -415,14 +377,11 @@ fn finalize_rotary_cylinder(acc: &Accumulator) -> Option<CylinderWrapped> {
 
         if seg.pv_end > seg.pv_start {
             let slice = &acc.pv[seg.pv_start * 3..seg.pv_end * 3];
-            let colors = pack_power_laser_vec4(
-                &acc.pvv[seg.pv_start..seg.pv_end],
-                &acc.pvl[seg.pv_start..seg.pv_end],
-            );
+            let colors = &acc.pva[seg.pv_start * 4..seg.pv_end * 4];
             let (wv, wc, cum) =
-                transform_to_cylinder(slice, d, Some(&colors), true);
+                transform_to_cylinder(slice, d, Some(colors), true);
             exp_pv.push(wv);
-            exp_pvv4.push(wc.unwrap_or_default());
+            exp_pva.push(wc.unwrap_or_default());
             pv_expansion.push((seg.pv_start, cum));
         }
 
@@ -440,14 +399,11 @@ fn finalize_rotary_cylinder(acc: &Accumulator) -> Option<CylinderWrapped> {
 
         if seg.ov_end > seg.ov_start {
             let slice = &acc.ov_pos[seg.ov_start * 3..seg.ov_end * 3];
-            let colors = pack_power_laser_vec4(
-                &acc.ov_pow[seg.ov_start..seg.ov_end],
-                &acc.ov_lid[seg.ov_start..seg.ov_end],
-            );
+            let colors = &acc.ov_attrib[seg.ov_start * 4..seg.ov_end * 4];
             let (wv, wc, _) =
-                transform_to_cylinder(slice, d, Some(&colors), true);
+                transform_to_cylinder(slice, d, Some(colors), true);
             exp_ov_pos.push(wv);
-            exp_ov_pow4.push(wc.unwrap_or_default());
+            exp_ov_attrib.push(wc.unwrap_or_default());
         }
     }
 
@@ -460,26 +416,19 @@ fn finalize_rotary_cylinder(acc: &Accumulator) -> Option<CylinderWrapped> {
     }
 
     let pv: Vec<f32> = exp_pv.into_iter().flatten().collect();
-    let pvv4: Vec<f32> = exp_pvv4.into_iter().flatten().collect();
+    let pva: Vec<f32> = exp_pva.into_iter().flatten().collect();
     let tv: Vec<f32> = exp_tv.into_iter().flatten().collect();
     let zpv: Vec<f32> = exp_zpv.into_iter().flatten().collect();
     let ov_pos: Vec<f32> = exp_ov_pos.into_iter().flatten().collect();
-    let ov_pow4: Vec<f32> = exp_ov_pow4.into_iter().flatten().collect();
-
-    let pvv = unpack_power(&pvv4);
-    let pvl = unpack_laser(&pvv4);
-    let ov_pow = unpack_power(&ov_pow4);
-    let ov_lid = unpack_laser(&ov_pow4);
+    let ov_attrib: Vec<f32> = exp_ov_attrib.into_iter().flatten().collect();
 
     Some(CylinderWrapped {
         pv,
-        pvv,
-        pvl,
+        pva,
         tv,
         zpv,
         ov_pos,
-        ov_pow,
-        ov_lid,
+        ov_attrib,
         pv_expansion,
     })
 }
@@ -629,10 +578,8 @@ impl Ops {
                     if current_power > 0.0 {
                         push_segment(&mut acc.pv, current_pos_vis, vis_end);
                         let p = current_power as f32;
-                        acc.pvv.push(p);
-                        acc.pvv.push(p);
-                        acc.pvl.push(current_laser_index as f32);
-                        acc.pvl.push(current_laser_index as f32);
+                        let li = current_laser_index as f32;
+                        acc.pva.extend([p, li, 0.0, 1.0, p, li, 0.0, 1.0]);
                         acc.pv_cum += 2;
                     } else {
                         push_segment(&mut acc.zpv, current_pos_vis, vis_end);
@@ -697,12 +644,11 @@ impl Ops {
                             .collect();
                         if current_power > 0.0 {
                             let p = current_power as f32;
+                            let li = current_laser_index as f32;
                             for (ss, se) in &vis_segs {
                                 push_segment(&mut acc.pv, *ss, *se);
-                                acc.pvv.push(p);
-                                acc.pvv.push(p);
-                                acc.pvl.push(current_laser_index as f32);
-                                acc.pvl.push(current_laser_index as f32);
+                                acc.pva
+                                    .extend([p, li, 0.0, 1.0, p, li, 0.0, 1.0]);
                             }
                             acc.pv_cum += vis_segs.len() * 2;
                         } else {
@@ -721,12 +667,11 @@ impl Ops {
                         );
                         if current_power > 0.0 {
                             let p = current_power as f32;
+                            let li = current_laser_index as f32;
                             for &(ss, se) in &arc_buf {
                                 push_segment(&mut acc.pv, ss, se);
-                                acc.pvv.push(p);
-                                acc.pvv.push(p);
-                                acc.pvl.push(current_laser_index as f32);
-                                acc.pvl.push(current_laser_index as f32);
+                                acc.pva
+                                    .extend([p, li, 0.0, 1.0, p, li, 0.0, 1.0]);
                             }
                             acc.pv_cum += arc_buf.len() * 2;
                         } else {
@@ -787,16 +732,15 @@ impl Ops {
                             .collect();
                         if current_power > 0.0 {
                             let p = current_power as f32;
+                            let li = current_laser_index as f32;
                             for j in 0..vis_poly.len().saturating_sub(1) {
                                 push_segment(
                                     &mut acc.pv,
                                     vis_poly[j],
                                     vis_poly[j + 1],
                                 );
-                                acc.pvv.push(p);
-                                acc.pvv.push(p);
-                                acc.pvl.push(current_laser_index as f32);
-                                acc.pvl.push(current_laser_index as f32);
+                                acc.pva
+                                    .extend([p, li, 0.0, 1.0, p, li, 0.0, 1.0]);
                             }
                             acc.pv_cum +=
                                 (vis_poly.len().saturating_sub(1)) * 2;
@@ -819,12 +763,11 @@ impl Ops {
                         );
                         if current_power > 0.0 {
                             let p = current_power as f32;
+                            let li = current_laser_index as f32;
                             for j in 0..poly.len().saturating_sub(1) {
                                 push_segment(&mut acc.pv, poly[j], poly[j + 1]);
-                                acc.pvv.push(p);
-                                acc.pvv.push(p);
-                                acc.pvl.push(current_laser_index as f32);
-                                acc.pvl.push(current_laser_index as f32);
+                                acc.pva
+                                    .extend([p, li, 0.0, 1.0, p, li, 0.0, 1.0]);
                             }
                             acc.pv_cum += (poly.len().saturating_sub(1)) * 2;
                         } else {
@@ -884,8 +827,7 @@ impl Ops {
                             power_values,
                             current_laser_index,
                             &mut acc.ov_pos,
-                            &mut acc.ov_pow,
-                            &mut acc.ov_lid,
+                            &mut acc.ov_attrib,
                         );
                         acc.ov_cum += n;
                     }
@@ -949,15 +891,13 @@ fn finalize_acc(
             return VertexGroupData {
                 is_rotary: true,
                 powered_verts: w.pv,
-                power_values: w.pvv,
-                laser_indices: w.pvl,
+                powered_attrib: w.pva,
                 travel_verts: tv,
                 zero_power_verts: zpv,
                 powered_cmd_offsets: pv_off,
                 travel_cmd_offsets: acc.tv_off.clone(),
                 overlay_positions: w.ov_pos,
-                overlay_power_values: w.ov_pow,
-                overlay_laser_indices: w.ov_lid,
+                overlay_attrib: w.ov_attrib,
                 overlay_cmd_offsets: acc.ov_off.clone(),
             };
         }
@@ -974,15 +914,13 @@ fn finalize_acc(
     VertexGroupData {
         is_rotary: acc.is_rotary,
         powered_verts: std::mem::take(&mut acc.pv),
-        power_values: std::mem::take(&mut acc.pvv),
-        laser_indices: std::mem::take(&mut acc.pvl),
+        powered_attrib: std::mem::take(&mut acc.pva),
         travel_verts: std::mem::take(&mut acc.tv),
         zero_power_verts: std::mem::take(&mut acc.zpv),
         powered_cmd_offsets: acc.pv_off.clone(),
         travel_cmd_offsets: acc.tv_off.clone(),
         overlay_positions: std::mem::take(&mut acc.ov_pos),
-        overlay_power_values: std::mem::take(&mut acc.ov_pow),
-        overlay_laser_indices: std::mem::take(&mut acc.ov_lid),
+        overlay_attrib: std::mem::take(&mut acc.ov_attrib),
         overlay_cmd_offsets: acc.ov_off.clone(),
     }
 }

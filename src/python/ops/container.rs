@@ -62,9 +62,7 @@ pub struct PyVertexGroup {
     #[pyo3(get)]
     pub powered_verts: Py<PyArray1<f32>>,
     #[pyo3(get)]
-    pub power_values: Py<PyArray1<f32>>,
-    #[pyo3(get)]
-    pub laser_indices: Py<PyArray1<f32>>,
+    pub powered_attrib: Py<PyArray1<f32>>,
     #[pyo3(get)]
     pub travel_verts: Py<PyArray1<f32>>,
     #[pyo3(get)]
@@ -76,9 +74,7 @@ pub struct PyVertexGroup {
     #[pyo3(get)]
     pub overlay_positions: Py<PyArray1<f32>>,
     #[pyo3(get)]
-    pub overlay_power_values: Py<PyArray1<f32>>,
-    #[pyo3(get)]
-    pub overlay_laser_indices: Py<PyArray1<f32>>,
+    pub overlay_attrib: Py<PyArray1<f32>>,
     #[pyo3(get)]
     pub overlay_cmd_offsets: Py<PyArray1<i32>>,
 }
@@ -136,8 +132,7 @@ fn py_scene_data_to_object<'py>(
                 PyVertexGroup {
                     is_rotary: g.is_rotary,
                     powered_verts: g.powered_verts.into_pyarray(py).unbind(),
-                    power_values: g.power_values.into_pyarray(py).unbind(),
-                    laser_indices: g.laser_indices.into_pyarray(py).unbind(),
+                    powered_attrib: g.powered_attrib.into_pyarray(py).unbind(),
                     travel_verts: g.travel_verts.into_pyarray(py).unbind(),
                     zero_power_verts: g
                         .zero_power_verts
@@ -155,14 +150,7 @@ fn py_scene_data_to_object<'py>(
                         .overlay_positions
                         .into_pyarray(py)
                         .unbind(),
-                    overlay_power_values: g
-                        .overlay_power_values
-                        .into_pyarray(py)
-                        .unbind(),
-                    overlay_laser_indices: g
-                        .overlay_laser_indices
-                        .into_pyarray(py)
-                        .unbind(),
+                    overlay_attrib: g.overlay_attrib.into_pyarray(py).unbind(),
                     overlay_cmd_offsets: g
                         .overlay_cmd_offsets
                         .into_pyarray(py)

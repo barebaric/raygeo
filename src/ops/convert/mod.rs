@@ -112,15 +112,13 @@ impl EncodeOutput {
                     .iter()
                     .map(|g| {
                         g.powered_verts.len() * f32_size
-                            + g.power_values.len() * f32_size
-                            + g.laser_indices.len() * f32_size
+                            + g.powered_attrib.len() * f32_size
                             + g.travel_verts.len() * f32_size
                             + g.zero_power_verts.len() * f32_size
                             + g.powered_cmd_offsets.len() * i32_size
                             + g.travel_cmd_offsets.len() * i32_size
                             + g.overlay_positions.len() * f32_size
-                            + g.overlay_power_values.len() * f32_size
-                            + g.overlay_laser_indices.len() * f32_size
+                            + g.overlay_attrib.len() * f32_size
                             + g.overlay_cmd_offsets.len() * i32_size
                     })
                     .sum()

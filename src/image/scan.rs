@@ -408,8 +408,7 @@ pub fn extract_overlay_segments(
     power_values: &[u8],
     laser_index: i32,
     out_pos: &mut Vec<f32>,
-    out_pow: &mut Vec<f32>,
-    out_lid: &mut Vec<f32>,
+    out_attrib: &mut Vec<f32>,
 ) -> usize {
     let num_steps = power_values.len();
     if num_steps == 0 {
@@ -449,10 +448,9 @@ pub fn extract_overlay_segments(
                 seg_end_y as f32,
                 seg_end_z as f32,
             ]);
-            out_pow.push(seg_power);
-            out_pow.push(seg_power);
-            out_lid.push(laser_index as f32);
-            out_lid.push(laser_index as f32);
+            let li = laser_index as f32;
+            out_attrib
+                .extend([seg_power, li, 0.0, 1.0, seg_power, li, 0.0, 1.0]);
             vertex_count += 2;
         }
 
@@ -468,10 +466,8 @@ pub fn extract_overlay_segments(
             ey as f32,
             ez as f32,
         ]);
-        out_pow.push(seg_power);
-        out_pow.push(seg_power);
-        out_lid.push(laser_index as f32);
-        out_lid.push(laser_index as f32);
+        let li = laser_index as f32;
+        out_attrib.extend([seg_power, li, 0.0, 1.0, seg_power, li, 0.0, 1.0]);
         vertex_count += 2;
     }
 
