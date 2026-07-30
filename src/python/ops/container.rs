@@ -1,4 +1,5 @@
 use glam::{DMat4, DVec4};
+use numpy::PyArray1;
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict, PyList, PyType};
 use pyo3::{Bound, Py, PyAny, PyResult};
@@ -50,67 +51,156 @@ fn from_pydict<T: serde::de::DeserializeOwned>(
     })
 }
 
-/// Convert [`CompiledSceneData`] into a Python dict using zero-copy
-/// `IntoPyArray` for all vertex buffers.
-fn py_scene_data_to_dict<'py>(
+// ── Typed PyO3 objects replacing the dict handoff ──────────────
+
+/// One rendering group (flat or rotary) with all vertex & overlay buffers.
+#[gen_stub_pyclass]
+#[pyclass(module = "raygeo.ops", name = "VertexGroup", skip_from_py_object)]
+pub struct PyVertexGroup {
+    #[pyo3(get)]
+    pub is_rotary: bool,
+    #[pyo3(get)]
+    pub powered_verts: Py<PyArray1<f32>>,
+    #[pyo3(get)]
+    pub power_values: Py<PyArray1<f32>>,
+    #[pyo3(get)]
+    pub laser_indices: Py<PyArray1<f32>>,
+    #[pyo3(get)]
+    pub travel_verts: Py<PyArray1<f32>>,
+    #[pyo3(get)]
+    pub zero_power_verts: Py<PyArray1<f32>>,
+    #[pyo3(get)]
+    pub powered_cmd_offsets: Py<PyArray1<i32>>,
+    #[pyo3(get)]
+    pub travel_cmd_offsets: Py<PyArray1<i32>>,
+    #[pyo3(get)]
+    pub overlay_positions: Py<PyArray1<f32>>,
+    #[pyo3(get)]
+    pub overlay_power_values: Py<PyArray1<f32>>,
+    #[pyo3(get)]
+    pub overlay_laser_indices: Py<PyArray1<f32>>,
+    #[pyo3(get)]
+    pub overlay_cmd_offsets: Py<PyArray1<i32>>,
+}
+
+/// One layer's metadata from compilation.
+#[gen_stub_pyclass]
+#[pyclass(module = "raygeo.ops", name = "LayerInfo", skip_from_py_object)]
+pub struct PyLayerInfo {
+    #[pyo3(get)]
+    pub cmd_start: usize,
+    #[pyo3(get)]
+    pub cmd_end: usize,
+    #[pyo3(get)]
+    pub is_rotary: bool,
+    #[pyo3(get)]
+    pub diameter: f64,
+    #[pyo3(get)]
+    pub has_scanlines: bool,
+    #[pyo3(get)]
+    pub scanline_laser: String,
+    #[pyo3(get)]
+    pub activation_cmd_idx: usize,
+    #[pyo3(get)]
+    pub axis_position: f64,
+    #[pyo3(get)]
+    pub reverse: bool,
+}
+
+/// Top-level output of :meth:`Ops.compile_scene_3d`.
+#[gen_stub_pyclass]
+#[pyclass(module = "raygeo.ops", name = "CompiledScene3D", skip_from_py_object)]
+pub struct PyCompiledScene3D {
+    #[pyo3(get)]
+    pub groups: Vec<Py<PyVertexGroup>>,
+    #[pyo3(get)]
+    pub layer_infos: Vec<Py<PyLayerInfo>>,
+    #[pyo3(get)]
+    pub laser_uid_order: Vec<String>,
+}
+
+/// Build a :class:`CompiledScene3D` from the Rust data, converting
+/// plain `Vec<f32>`/`Vec<i32>` buffers into zero-copy numpy arrays.
+fn py_scene_data_to_object<'py>(
     py: Python<'py>,
     data: crate::ops::convert::scene::CompiledSceneData,
-) -> PyResult<Bound<'py, PyDict>> {
+) -> PyResult<Py<PyCompiledScene3D>> {
     use numpy::IntoPyArray;
 
-    let result = PyDict::new(py);
+    let groups: Vec<Py<PyVertexGroup>> = data
+        .groups
+        .into_iter()
+        .map(|g| {
+            Py::new(
+                py,
+                PyVertexGroup {
+                    is_rotary: g.is_rotary,
+                    powered_verts: g.powered_verts.into_pyarray(py).unbind(),
+                    power_values: g.power_values.into_pyarray(py).unbind(),
+                    laser_indices: g.laser_indices.into_pyarray(py).unbind(),
+                    travel_verts: g.travel_verts.into_pyarray(py).unbind(),
+                    zero_power_verts: g
+                        .zero_power_verts
+                        .into_pyarray(py)
+                        .unbind(),
+                    powered_cmd_offsets: g
+                        .powered_cmd_offsets
+                        .into_pyarray(py)
+                        .unbind(),
+                    travel_cmd_offsets: g
+                        .travel_cmd_offsets
+                        .into_pyarray(py)
+                        .unbind(),
+                    overlay_positions: g
+                        .overlay_positions
+                        .into_pyarray(py)
+                        .unbind(),
+                    overlay_power_values: g
+                        .overlay_power_values
+                        .into_pyarray(py)
+                        .unbind(),
+                    overlay_laser_indices: g
+                        .overlay_laser_indices
+                        .into_pyarray(py)
+                        .unbind(),
+                    overlay_cmd_offsets: g
+                        .overlay_cmd_offsets
+                        .into_pyarray(py)
+                        .unbind(),
+                },
+            )
+        })
+        .collect::<PyResult<Vec<_>>>()?;
 
-    let groups_list = PyList::empty(py);
-    for g in data.groups {
-        let gd = PyDict::new(py);
-        let to_f32 =
-            |v: Vec<f32>, py: Python<'py>| -> PyResult<Bound<'py, PyAny>> {
-                Ok(v.into_pyarray(py).into_any())
-            };
-        let to_i32 =
-            |v: Vec<i32>, py: Python<'py>| -> PyResult<Bound<'py, PyAny>> {
-                Ok(v.into_pyarray(py).into_any())
-            };
-        gd.set_item("is_rotary", g.is_rotary)?;
-        gd.set_item("powered_verts", to_f32(g.powered_verts, py)?)?;
-        gd.set_item("power_values", to_f32(g.power_values, py)?)?;
-        gd.set_item("laser_indices", to_f32(g.laser_indices, py)?)?;
-        gd.set_item("travel_verts", to_f32(g.travel_verts, py)?)?;
-        gd.set_item("zero_power_verts", to_f32(g.zero_power_verts, py)?)?;
-        gd.set_item("powered_cmd_offsets", to_i32(g.powered_cmd_offsets, py)?)?;
-        gd.set_item("travel_cmd_offsets", to_i32(g.travel_cmd_offsets, py)?)?;
-        gd.set_item("overlay_positions", to_f32(g.overlay_positions, py)?)?;
-        gd.set_item(
-            "overlay_power_values",
-            to_f32(g.overlay_power_values, py)?,
-        )?;
-        gd.set_item(
-            "overlay_laser_indices",
-            to_f32(g.overlay_laser_indices, py)?,
-        )?;
-        gd.set_item("overlay_cmd_offsets", to_i32(g.overlay_cmd_offsets, py)?)?;
-        groups_list.append(gd)?;
-    }
-    result.set_item("groups", groups_list)?;
-    result.set_item("laser_uid_order", data.laser_uid_order)?;
+    let layer_infos: Vec<Py<PyLayerInfo>> = data
+        .layer_infos
+        .into_iter()
+        .map(|li| {
+            Py::new(
+                py,
+                PyLayerInfo {
+                    cmd_start: li.cmd_start,
+                    cmd_end: li.cmd_end,
+                    is_rotary: li.is_rotary,
+                    diameter: li.diameter,
+                    has_scanlines: li.has_scanlines,
+                    scanline_laser: li.scanline_laser,
+                    activation_cmd_idx: li.activation_cmd_idx,
+                    axis_position: li.axis_position,
+                    reverse: li.reverse,
+                },
+            )
+        })
+        .collect::<PyResult<Vec<_>>>()?;
 
-    let infos_list = PyList::empty(py);
-    for li in data.layer_infos {
-        let id = PyDict::new(py);
-        id.set_item("cmd_start", li.cmd_start)?;
-        id.set_item("cmd_end", li.cmd_end)?;
-        id.set_item("is_rotary", li.is_rotary)?;
-        id.set_item("diameter", li.diameter)?;
-        id.set_item("has_scanlines", li.has_scanlines)?;
-        id.set_item("scanline_laser", li.scanline_laser)?;
-        id.set_item("activation_cmd_idx", li.activation_cmd_idx)?;
-        id.set_item("axis_position", li.axis_position)?;
-        id.set_item("reverse", li.reverse)?;
-        infos_list.append(id)?;
-    }
-    result.set_item("layer_infos", infos_list)?;
-
-    Ok(result)
+    Py::new(
+        py,
+        PyCompiledScene3D {
+            groups,
+            layer_infos,
+            laser_uid_order: data.laser_uid_order,
+        },
+    )
 }
 
 /// Convert a Rust `usize`-keyed `HashMap` into a Python dict with
@@ -2957,14 +3047,14 @@ impl PyOps {
     /// :param layer_configs: Dict mapping layer UID to
     ///     ``{"rotary_enabled": bool, "rotary_diameter": float,
     ///       "axis_position": float, "reverse": bool}``.
-    /// :returns: Dict with keys ``"groups"``, ``"laser_uid_order"``,
-    ///     ``"layer_infos"``.
+    /// :returns: A :class:`CompiledScene3D` containing vertex groups,
+    ///     layer infos, and laser UID order.
     fn compile_scene_3d<'py>(
         &self,
         py: Python<'py>,
         world_to_visual: &Bound<'py, PyAny>,
         layer_configs: &Bound<'py, PyDict>,
-    ) -> PyResult<Bound<'py, PyDict>> {
+    ) -> PyResult<Py<PyCompiledScene3D>> {
         use crate::ops::convert::scene::{LayerConfig, SceneSpec};
 
         let mut w2v = [[0.0f32; 4]; 4];
@@ -3006,7 +3096,7 @@ impl PyOps {
         };
 
         let data = self.inner.compile_scene_3d(&spec);
-        py_scene_data_to_dict(py, data)
+        py_scene_data_to_object(py, data)
     }
 
     /// Compute the 2D bounding box of all ScanLine commands.

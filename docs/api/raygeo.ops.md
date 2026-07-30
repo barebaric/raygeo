@@ -214,6 +214,86 @@ workpiece_uid: Optional[str]
 
 Unique identifier of the active workpiece, if a workpiece-start command.
 
+## CompiledScene3D
+
+Top-level output of **Ops.compile_scene_3d**.
+
+### `groups`
+
+```python
+groups: list[VertexGroup]
+```
+
+### `laser_uid_order`
+
+```python
+laser_uid_order: list[str]
+```
+
+### `layer_infos`
+
+```python
+layer_infos: list[LayerInfo]
+```
+
+## LayerInfo
+
+One layer's metadata from compilation.
+
+### `activation_cmd_idx`
+
+```python
+activation_cmd_idx: int
+```
+
+### `axis_position`
+
+```python
+axis_position: float
+```
+
+### `cmd_end`
+
+```python
+cmd_end: int
+```
+
+### `cmd_start`
+
+```python
+cmd_start: int
+```
+
+### `diameter`
+
+```python
+diameter: float
+```
+
+### `has_scanlines`
+
+```python
+has_scanlines: bool
+```
+
+### `is_rotary`
+
+```python
+is_rotary: bool
+```
+
+### `reverse`
+
+```python
+reverse: bool
+```
+
+### `scanline_laser`
+
+```python
+scanline_laser: str
+```
+
 ## Ops
 
 A sequence of machining operations (commands).
@@ -654,16 +734,16 @@ Get the **CommandType** at the given index.
 ### `compile_scene_3d()`
 
 ```python
-compile_scene_3d(world_to_visual: Any, layer_configs: dict) -> dict
+compile_scene_3d(world_to_visual: Any, layer_configs: dict) -> CompiledScene3D
 ```
 
 Compile this Ops into GPU-ready 3D scene data.
 
-| Parameter         | Type   | Description                                                                                                              |
-| ----------------- | ------ | ------------------------------------------------------------------------------------------------------------------------ |
-| `world_to_visual` | `Any`  | 4x4 transform matrix as a list of lists.                                                                                 |
-| `layer_configs`   | `dict` | Dict mapping layer UID to `{"rotary_enabled": bool, "rotary_diameter": float, "axis_position": float, "reverse": bool}`. |
-| _Returns_         | `dict` | Dict with keys `"groups"`, `"laser_uid_order"`, `"layer_infos"`.                                                         |
+| Parameter         | Type              | Description                                                                                                              |
+| ----------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `world_to_visual` | `Any`             | 4x4 transform matrix as a list of lists.                                                                                 |
+| `layer_configs`   | `dict`            | Dict mapping layer UID to `{"rotary_enabled": bool, "rotary_diameter": float, "axis_position": float, "reverse": bool}`. |
+| _Returns_         | `CompiledScene3D` | A **CompiledScene3D** containing vertex groups, layer infos, and laser UID order.                                        |
 
 ### `coolant()`
 
@@ -2701,3 +2781,79 @@ Extract the content commands of this section range from an Ops sequence.
 | `ops`        | `Ops` | The Ops sequence containing this section.                    |
 | _Returns_    | `Ops` | A new Ops containing only the content of this section range. |
 | _Complexity_ |       | O(n) time, O(n) space                                        |
+
+## VertexGroup
+
+One rendering group (flat or rotary) with all vertex & overlay buffers.
+
+### `is_rotary`
+
+```python
+is_rotary: bool
+```
+
+### `laser_indices`
+
+```python
+laser_indices: numpy.NDArray[numpy.float32]
+```
+
+### `overlay_cmd_offsets`
+
+```python
+overlay_cmd_offsets: numpy.NDArray[numpy.int32]
+```
+
+### `overlay_laser_indices`
+
+```python
+overlay_laser_indices: numpy.NDArray[numpy.float32]
+```
+
+### `overlay_positions`
+
+```python
+overlay_positions: numpy.NDArray[numpy.float32]
+```
+
+### `overlay_power_values`
+
+```python
+overlay_power_values: numpy.NDArray[numpy.float32]
+```
+
+### `power_values`
+
+```python
+power_values: numpy.NDArray[numpy.float32]
+```
+
+### `powered_cmd_offsets`
+
+```python
+powered_cmd_offsets: numpy.NDArray[numpy.int32]
+```
+
+### `powered_verts`
+
+```python
+powered_verts: numpy.NDArray[numpy.float32]
+```
+
+### `travel_cmd_offsets`
+
+```python
+travel_cmd_offsets: numpy.NDArray[numpy.int32]
+```
+
+### `travel_verts`
+
+```python
+travel_verts: numpy.NDArray[numpy.float32]
+```
+
+### `zero_power_verts`
+
+```python
+zero_power_verts: numpy.NDArray[numpy.float32]
+```

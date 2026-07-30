@@ -28,7 +28,10 @@ pub(crate) mod state;
 pub(crate) mod transform;
 pub(crate) mod types;
 
-pub use container::{PyCommandInfo, PyOps, PyOpsSection, PyOpsSectionRange};
+pub use container::{
+    PyCommandInfo, PyCompiledScene3D, PyLayerInfo, PyOps, PyOpsSection,
+    PyOpsSectionRange, PyVertexGroup,
+};
 
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = m.py();
@@ -74,6 +77,9 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     ops_mod.add_class::<PyCommandInfo>()?;
     ops_mod.add_class::<PyOpsSection>()?;
     ops_mod.add_class::<PyOpsSectionRange>()?;
+    ops_mod.add_class::<PyVertexGroup>()?;
+    ops_mod.add_class::<PyLayerInfo>()?;
+    ops_mod.add_class::<PyCompiledScene3D>()?;
 
     m.add_submodule(&ops_mod)?;
 

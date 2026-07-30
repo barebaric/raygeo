@@ -17,6 +17,8 @@ for multi-axis machines.
 """
 
 import builtins
+import numpy
+import numpy.typing
 import raygeo
 from raygeo import geo
 from raygeo.image import scan
@@ -32,9 +34,12 @@ from . import transform
 from . import types
 __all__ = [
     "CommandInfo",
+    "CompiledScene3D",
+    "LayerInfo",
     "Ops",
     "OpsSection",
     "OpsSectionRange",
+    "VertexGroup",
     "assembly",
     "axis",
     "convert",
@@ -175,6 +180,42 @@ class CommandInfo:
         Section type, if a section marker.
         """
     def __eq__(self, other: typing.Any) -> builtins.bool: ...
+
+@typing.final
+class CompiledScene3D:
+    r"""
+    Top-level output of :meth:`Ops.compile_scene_3d`.
+    """
+    @property
+    def groups(self) -> builtins.list[VertexGroup]: ...
+    @property
+    def layer_infos(self) -> builtins.list[LayerInfo]: ...
+    @property
+    def laser_uid_order(self) -> builtins.list[builtins.str]: ...
+
+@typing.final
+class LayerInfo:
+    r"""
+    One layer's metadata from compilation.
+    """
+    @property
+    def cmd_start(self) -> builtins.int: ...
+    @property
+    def cmd_end(self) -> builtins.int: ...
+    @property
+    def is_rotary(self) -> builtins.bool: ...
+    @property
+    def diameter(self) -> builtins.float: ...
+    @property
+    def has_scanlines(self) -> builtins.bool: ...
+    @property
+    def scanline_laser(self) -> builtins.str: ...
+    @property
+    def activation_cmd_idx(self) -> builtins.int: ...
+    @property
+    def axis_position(self) -> builtins.float: ...
+    @property
+    def reverse(self) -> builtins.bool: ...
 
 @typing.final
 class Ops:
@@ -1364,7 +1405,7 @@ class Ops:
         :raises TypeError: If any element is not a known spec type.
         :raises RuntimeError: If the loop was cancelled.
         """
-    def compile_scene_3d(self, world_to_visual: typing.Any, layer_configs: dict) -> dict:
+    def compile_scene_3d(self, world_to_visual: typing.Any, layer_configs: dict) -> CompiledScene3D:
         r"""
         Compile this Ops into GPU-ready 3D scene data.
         
@@ -1372,8 +1413,8 @@ class Ops:
         :param layer_configs: Dict mapping layer UID to
             ``{"rotary_enabled": bool, "rotary_diameter": float,
               "axis_position": float, "reverse": bool}``.
-        :returns: Dict with keys ``"groups"``, ``"laser_uid_order"``,
-            ``"layer_infos"``.
+        :returns: A :class:`CompiledScene3D` containing vertex groups,
+            layer infos, and laser UID order.
         """
     def scanline_bbox(self) -> typing.Optional[tuple[builtins.float, builtins.float, builtins.float, builtins.float]]:
         r"""
@@ -1610,4 +1651,34 @@ class OpsSectionRange:
         :complexity: O(n) time, O(n) space
         """
     def __repr__(self) -> builtins.str: ...
+
+@typing.final
+class VertexGroup:
+    r"""
+    One rendering group (flat or rotary) with all vertex & overlay buffers.
+    """
+    @property
+    def is_rotary(self) -> builtins.bool: ...
+    @property
+    def powered_verts(self) -> numpy.typing.NDArray[numpy.float32]: ...
+    @property
+    def power_values(self) -> numpy.typing.NDArray[numpy.float32]: ...
+    @property
+    def laser_indices(self) -> numpy.typing.NDArray[numpy.float32]: ...
+    @property
+    def travel_verts(self) -> numpy.typing.NDArray[numpy.float32]: ...
+    @property
+    def zero_power_verts(self) -> numpy.typing.NDArray[numpy.float32]: ...
+    @property
+    def powered_cmd_offsets(self) -> numpy.typing.NDArray[numpy.int32]: ...
+    @property
+    def travel_cmd_offsets(self) -> numpy.typing.NDArray[numpy.int32]: ...
+    @property
+    def overlay_positions(self) -> numpy.typing.NDArray[numpy.float32]: ...
+    @property
+    def overlay_power_values(self) -> numpy.typing.NDArray[numpy.float32]: ...
+    @property
+    def overlay_laser_indices(self) -> numpy.typing.NDArray[numpy.float32]: ...
+    @property
+    def overlay_cmd_offsets(self) -> numpy.typing.NDArray[numpy.int32]: ...
 
