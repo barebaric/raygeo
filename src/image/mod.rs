@@ -1,3 +1,4 @@
+pub mod composite;
 pub mod convert;
 pub mod dither;
 pub mod grayscale;

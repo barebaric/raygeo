@@ -9,6 +9,7 @@ Provides sRGB/linear color space conversions, RGBA-to-grayscale/binary conversio
 import numpy
 import numpy.typing
 from raygeo import ops
+from . import composite
 from . import convert
 from . import dither
 from . import grayscale
@@ -18,6 +19,7 @@ from . import scan
 from . import srgb
 from . import transparency
 __all__ = [
+    "composite",
     "convert",
     "dither",
     "grayscale",

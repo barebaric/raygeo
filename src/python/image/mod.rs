@@ -1,5 +1,6 @@
 use pyo3::prelude::*;
 
+mod composite;
 mod convert;
 mod dither;
 mod grayscale;
@@ -29,6 +30,7 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     image_mod.add(
         "__all__",
         vec![
+            "composite",
             "convert",
             "dither",
             "grayscale",
@@ -41,6 +43,7 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
         ],
     )?;
 
+    composite::register(&image_mod)?;
     convert::register(&image_mod)?;
     srgb::register(&image_mod)?;
     grayscale::register(&image_mod)?;
