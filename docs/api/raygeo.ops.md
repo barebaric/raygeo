@@ -2390,26 +2390,6 @@ Serialize this Ops sequence to numpy arrays.
 | _Returns_    | `dict` | A Python dict of numpy arrays. |
 | _Complexity_ |        | O(n) time, O(n) space          |
 
-### `to_vertex_arrays()`
-
-```python
-to_vertex_arrays() -> Any
-```
-
-Encode all commands into GPU-friendly vertex arrays.
-
-Returns four flat numpy arrays:
-`(powered_vertices, powered_colors, travel_vertices, zero_power_vertices)`.
-
-Powered vertices and colors are paired (2 vertices + 2 colors per segment). Travel and zero-power
-vertices are also paired (2 vertices per segment). All vertex data is 3-component (x, y, z); colors
-are 4-component (r, g, b, a).
-
-| Parameter    | Type  | Description                                                                                                                |
-| ------------ | ----- | -------------------------------------------------------------------------------------------------------------------------- |
-| _Returns_    | `Any` | Tuple of `(powered_vertices[N,3], powered_colors[N,4], travel_vertices[M,3], zero_power_vertices[K,3])` as float32 arrays. |
-| _Complexity_ |       | O(n) time, O(n) space                                                                                                      |
-
 ### `transfer_command_from()`
 
 ```python

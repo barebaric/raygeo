@@ -2951,47 +2951,6 @@ impl PyOps {
         Ok(())
     }
 
-    /// Encode all commands into GPU-friendly vertex arrays.
-    ///
-    /// Returns four flat numpy arrays:
-    /// ``(powered_vertices, powered_colors, travel_vertices,
-    /// zero_power_vertices)``.
-    ///
-    /// Powered vertices and colors are paired (2 vertices + 2 colors
-    /// per segment).  Travel and zero-power vertices are also paired
-    /// (2 vertices per segment).  All vertex data is 3-component
-    /// (x, y, z); colors are 4-component (r, g, b, a).
-    ///
-    /// :returns: Tuple of ``(powered_vertices[N,3], powered_colors[N,4],
-    ///     travel_vertices[M,3], zero_power_vertices[K,3])`` as float32
-    ///     arrays.
-    /// :complexity: O(n) time, O(n) space
-    fn to_vertex_arrays(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
-        let va = self.inner.to_vertex_arrays();
-        let numpy = py.import("numpy")?;
-
-        let powered_v = numpy
-            .call_method1("asarray", (va.powered_vertices,))?
-            .call_method1("reshape", (-1i32, 3i32))?;
-        let powered_c = numpy
-            .call_method1("asarray", (va.powered_colors,))?
-            .call_method1("reshape", (-1i32, 4i32))?;
-        let travel_v = numpy
-            .call_method1("asarray", (va.travel_vertices,))?
-            .call_method1("reshape", (-1i32, 3i32))?;
-        let zero_power_v = numpy
-            .call_method1("asarray", (va.zero_power_vertices,))?
-            .call_method1("reshape", (-1i32, 3i32))?;
-
-        let tuple = pyo3::types::PyTuple::new(
-            py,
-            [powered_v, powered_c, travel_v, zero_power_v]
-                .into_iter()
-                .map(|v| v.into_any()),
-        )?;
-        Ok(tuple.unbind().into())
-    }
-
     /// Compile this Ops into GPU-ready 3D scene data.
     ///
     /// :param world_to_visual: 4x4 transform matrix as a list of lists.

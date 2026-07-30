@@ -718,6 +718,23 @@ impl Ops {
                     }
                 }
 
+                if let MoveCmd::BezierTo { control1, control2 } = cmd {
+                    Self::update_bounds(
+                        &mut min_x, &mut min_y, &mut max_x, &mut max_y,
+                        control1.x, control1.y,
+                    );
+                    Self::update_bounds(
+                        &mut min_x, &mut min_y, &mut max_x, &mut max_y,
+                        control2.x, control2.y,
+                    );
+                }
+                if let MoveCmd::QuadraticBezierTo { control } = cmd {
+                    Self::update_bounds(
+                        &mut min_x, &mut min_y, &mut max_x, &mut max_y,
+                        control.x, control.y,
+                    );
+                }
+
                 curr_x = end_x;
                 curr_y = end_y;
             }

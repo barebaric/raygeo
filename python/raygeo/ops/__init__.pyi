@@ -1364,24 +1364,6 @@ class Ops:
         :raises TypeError: If any element is not a known spec type.
         :raises RuntimeError: If the loop was cancelled.
         """
-    def to_vertex_arrays(self) -> typing.Any:
-        r"""
-        Encode all commands into GPU-friendly vertex arrays.
-        
-        Returns four flat numpy arrays:
-        ``(powered_vertices, powered_colors, travel_vertices,
-        zero_power_vertices)``.
-        
-        Powered vertices and colors are paired (2 vertices + 2 colors
-        per segment).  Travel and zero-power vertices are also paired
-        (2 vertices per segment).  All vertex data is 3-component
-        (x, y, z); colors are 4-component (r, g, b, a).
-        
-        :returns: Tuple of ``(powered_vertices[N,3], powered_colors[N,4],
-            travel_vertices[M,3], zero_power_vertices[K,3])`` as float32
-            arrays.
-        :complexity: O(n) time, O(n) space
-        """
     def compile_scene_3d(self, world_to_visual: typing.Any, layer_configs: dict) -> dict:
         r"""
         Compile this Ops into GPU-ready 3D scene data.
