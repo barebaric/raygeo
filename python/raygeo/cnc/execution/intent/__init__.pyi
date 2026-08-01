@@ -73,8 +73,8 @@ def create_intent_from_nodes(nodes: typing.Sequence[request.NodeRequest]) -> Int
     r"""
     Build an Intent from a list of raw :class:`~raygeo.pipeline.request.NodeRequest` objects.
     
-    Useful for callers (e.g. rayforge's IntentBuilder) that construct
-    their own node list without going through the Plan API.
+    Useful for callers that construct their own node list without going
+    through the Plan API.
     """
 
 def run_intent(intent: Intent, on_completed: typing.Optional[typing.Any] = None, on_batch_progress: typing.Optional[typing.Any] = None, pipeline: typing.Optional[execute.Pipeline] = None) -> ops.Ops:

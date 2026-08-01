@@ -3,8 +3,8 @@
 r"""
 Plan-time description of machining operations.
 
-Plans are produced by planners and consumed by Rayforge to derive its
-own Step classes.  They are never executed directly.
+Plans are produced by planners and consumed by a downstream runtime
+to derive its own executable steps.  They are never executed directly.
 """
 
 import builtins

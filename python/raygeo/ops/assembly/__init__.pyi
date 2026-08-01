@@ -196,7 +196,7 @@ class AssemblyWarningKind(enum.Enum):
     Machine-readable category for a non-fatal :class:`AssemblyWarning`.
     
     Mirrors the Rust :class:`~raygeo.ops.assembly.AssemblyWarningKind`; the
-    consumer (rayforge) maps each variant to a translatable message template.
+    consumer maps each variant to a translatable message template.
     """
     FACE_FAILED = ...
     r"""

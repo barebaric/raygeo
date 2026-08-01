@@ -52,7 +52,7 @@ use crate::types::Polygon;
 /// and the [`Callbacks`] for progress reports and cancellation.
 /// Machine capability flags are intentionally NOT here — each
 /// assembler carries its own arc/curve parameters in its spec, and
-/// rayforge is responsible for resolving those before constructing
+/// the caller is responsible for resolving those before constructing
 /// the spec.
 pub struct AssembleCtx<'a> {
     /// The target face's state — geometry, stock region, and cleared
@@ -100,8 +100,8 @@ pub struct AssembleCtx<'a> {
 
 /// The kind of a non-fatal [`AssemblyWarning`] produced during assembly.
 ///
-/// Warnings are typed so the consumer (rayforge) can translate and surface
-/// them to the user. The raw, non-translatable detail string lives in
+/// Warnings are typed so the consumer can translate and surface them
+/// to the user. The raw, non-translatable detail string lives in
 /// [`AssemblyWarning::detail`].
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum AssemblyWarningKind {

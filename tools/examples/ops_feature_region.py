@@ -2,7 +2,7 @@
 
 The primary plot loads the ``barebaric`` text-as-path SVG (the exact
 geometry used for the multi-face adaptive-clearing testcases), builds a
-multi-face ``Part`` exactly like rayforge's ``WorkPiece.to_part``, and
+multi-face ``Part`` via ``Part.from_geometry_multi_face``, and
 marks every region that ``find_regions`` detects on each face.
 
 The SVG is loaded from the test assets at
@@ -51,11 +51,13 @@ def _svg_path():
 
 
 def _load_svg_part(size_mm=(408.080685314315, 88.80888415102355)):
-    """Build the multi-face ``Part`` from the SVG, matching ``to_part``.
+    """
+    Build the multi-face ``Part`` from the SVG via
+    ``from_geometry_multi_face``.
 
     The SVG is parsed to geometries, normalized to the unit square
     (content bounds → 0..1), then scaled by *size_mm* — the same
-    sequence rayforge applies in ``WorkPiece.to_part``.
+    sequence used by ``Part.from_geometry_multi_face``.
     """
     path = _svg_path()
     if not path.exists():
@@ -74,8 +76,7 @@ def _load_svg_part(size_mm=(408.080685314315, 88.80888415102355)):
         return None
     geo.transform(Matrix.translation(-x0, -y0))
     geo.transform(Matrix.scale(1.0 / w, 1.0 / h))
-    # SVG is Y-down; flip to Y-up exactly like rayforge's
-    # NormalizationEngine (flip_matrix = T(0,1) @ S(1,-1)).
+    # SVG is Y-down; flip to Y-up (flip_matrix = T(0,1) @ S(1,-1)).
     geo.transform(Matrix.scale(1.0, -1.0))
     geo.transform(Matrix.translation(0.0, 1.0))
     geo.transform(Matrix.scale(size_mm[0], size_mm[1]))

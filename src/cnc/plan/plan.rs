@@ -14,9 +14,9 @@ use crate::types::Polygon;
 pub struct PlanStep {
     /// Which face of the input `Part` this step operates on.
     pub face_id: String,
-    /// The assembler spec that Rayforge will read and map to its own
-    /// Step class, and that `create_intent` will clone into
-    /// `NodeRequest`s.
+    /// The assembler spec for this step. A downstream consumer maps
+    /// it to its own step representation, and `create_intent` clones
+    /// it into `NodeRequest`s.
     pub spec: Arc<dyn Assembler>,
     /// Optional per-step boundary + islands.  When set, the executor
     /// temporarily replaces the face's stock region with this boundary
@@ -36,8 +36,8 @@ impl std::fmt::Debug for PlanStep {
 /// A **descriptive** plan produced by a planner function.
 ///
 /// A `Plan` is never executed directly. Its sole purpose is to be
-/// inspected by a downstream consumer (e.g. Rayforge) that derives
-/// its own Step classes from the typed specs.
+/// inspected by a downstream consumer that derives its own step
+/// representation from the typed specs.
 pub struct Plan {
     /// Ordered list of steps.
     pub steps: Vec<PlanStep>,

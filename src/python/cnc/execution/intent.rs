@@ -218,8 +218,8 @@ fn create_intent(plan: &PyPlan, part: &PyPart, generation_id: u64) -> PyIntent {
 
 /// Build an Intent from a list of raw :class:`~raygeo.pipeline.request.NodeRequest` objects.
 ///
-/// Useful for callers (e.g. rayforge's IntentBuilder) that construct
-/// their own node list without going through the Plan API.
+/// Useful for callers that construct their own node list without going
+/// through the Plan API.
 #[gen_stub_pyfunction(module = "raygeo.cnc.execution.intent")]
 #[pyfunction]
 fn create_intent_from_nodes(

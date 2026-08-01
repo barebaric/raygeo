@@ -3,8 +3,8 @@ pyo3_stub_gen::module_doc!("raygeo.cnc.plan", "{}", MODULE_DOC);
 pub(crate) const MODULE_DOC: &str = "\
 Plan-time description of machining operations.
 
-Plans are produced by planners and consumed by Rayforge to derive its
-own Step classes.  They are never executed directly.
+Plans are produced by planners and consumed by a downstream runtime
+to derive its own executable steps.  They are never executed directly.
 ";
 
 pub(crate) mod clearing;

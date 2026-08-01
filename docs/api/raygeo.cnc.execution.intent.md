@@ -99,8 +99,7 @@ create_intent_from_nodes(nodes: Sequence[request.NodeRequest]) -> Intent
 
 Build an Intent from a list of raw **~raygeo.pipeline.request.NodeRequest** objects.
 
-Useful for callers (e.g. rayforge's IntentBuilder) that construct their own node list without going
-through the Plan API.
+Useful for callers that construct their own node list without going through the Plan API.
 
 | Parameter | Type                            | Description |
 | --------- | ------------------------------- | ----------- |

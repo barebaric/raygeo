@@ -123,7 +123,7 @@ pub fn extract_assembler(
 /// Machine-readable category for a non-fatal :class:`AssemblyWarning`.
 ///
 /// Mirrors the Rust :class:`~raygeo.ops.assembly.AssemblyWarningKind`; the
-/// consumer (rayforge) maps each variant to a translatable message template.
+/// consumer maps each variant to a translatable message template.
 #[gen_stub_pyclass_enum]
 #[pyclass(
     module = "raygeo.ops.assembly",

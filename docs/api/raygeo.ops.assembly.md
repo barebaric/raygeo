@@ -195,5 +195,5 @@ Region index within the face; `None` for whole-face failures.
 
 Machine-readable category for a non-fatal **AssemblyWarning**.
 
-Mirrors the Rust **~raygeo.ops.assembly.AssemblyWarningKind**; the consumer (rayforge) maps each
-variant to a translatable message template.
+Mirrors the Rust **~raygeo.ops.assembly.AssemblyWarningKind**; the consumer maps each variant to a
+translatable message template.
