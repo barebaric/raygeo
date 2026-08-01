@@ -85,7 +85,7 @@ impl PyPart {
     /// descending). A single-pocket part has exactly ``[""]``.
     #[getter]
     fn face_ids(&self) -> Vec<String> {
-        self.inner.faces.keys().cloned().collect()
+        self.inner.face_ids_ordered()
     }
 
     /// Pixel density ``(x, y)`` in px/mm, if set.

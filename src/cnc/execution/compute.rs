@@ -56,7 +56,7 @@ impl AssemblerCompute {
         let face_ids = if explicit_face {
             vec![self.face_id.clone()]
         } else {
-            self.part.faces.keys().cloned().collect()
+            self.part.face_ids_ordered()
         };
         (explicit_face, face_ids)
     }

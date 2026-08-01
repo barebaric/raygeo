@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::collections::HashMap;
 
 use crate::geo::shape::polygon::{
@@ -9,6 +10,29 @@ use crate::types::{Point, Polygon};
 use super::cleared_area::ClearedArea;
 use super::image_source::ImageSource;
 use super::stock_region::StockRegion;
+
+/// Order two face ids for deterministic processing.
+///
+/// The default face `""` sorts first, then numeric ids in ascending
+/// numeric order (so `"10"` comes after `"2"`), then non-numeric ids
+/// in lexicographic order.
+fn compare_face_ids(a: &str, b: &str) -> Ordering {
+    if a == b {
+        return Ordering::Equal;
+    }
+    if a.is_empty() {
+        return Ordering::Less;
+    }
+    if b.is_empty() {
+        return Ordering::Greater;
+    }
+    match (a.parse::<u64>(), b.parse::<u64>()) {
+        (Ok(na), Ok(nb)) => na.cmp(&nb),
+        (Ok(_), Err(_)) => Ordering::Less,
+        (Err(_), Ok(_)) => Ordering::Greater,
+        (Err(_), Err(_)) => a.cmp(b),
+    }
+}
 
 /// State for one face of a multi-face part.
 ///
@@ -417,6 +441,22 @@ impl Part {
     /// ids.
     pub fn face(&self, id: &str) -> Option<&FaceState> {
         self.faces.get(id)
+    }
+
+    /// All face ids in deterministic processing order.
+    ///
+    /// The default face `""` comes first, then numeric ids (`"1"`,
+    /// `"2"`, ...) in ascending numeric order — matching the
+    /// area-descending assignment in
+    /// [`Self::from_geometry_multi_face`] — then any remaining
+    /// non-numeric ids in lexicographic order.  Iterating this vector
+    /// (rather than the `HashMap` directly) keeps the face processing
+    /// order — and therefore the emitted toolpath order — stable across
+    /// runs, since `HashMap` iteration order is randomized per process.
+    pub fn face_ids_ordered(&self) -> Vec<String> {
+        let mut ids: Vec<&String> = self.faces.keys().collect();
+        ids.sort_by(|a, b| compare_face_ids(a, b));
+        ids.into_iter().cloned().collect()
     }
 
     /// Convenience: access the default face's geometry (for callers

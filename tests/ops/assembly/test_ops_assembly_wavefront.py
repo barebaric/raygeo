@@ -168,6 +168,45 @@ def test_adaptive_wavefronts_precision_with_islands():
     assert part.cleared.total_area() >= 0
 
 
+def test_wavefront_face_ids_deterministic_order():
+    """Face ids come back in a stable, canonical order regardless of
+    HashMap iteration order (which is randomized per process).
+    """
+    loops = [
+        [(-30.0, -20.0), (30.0, -20.0), (30.0, 20.0), (-30.0, 20.0)],
+        [(70.0, -20.0), (110.0, -20.0), (110.0, 20.0), (70.0, 20.0)],
+        [(130.0, -20.0), (190.0, -20.0), (190.0, 20.0), (130.0, 20.0)],
+    ]
+    part = Part.from_geometry_multi_face(
+        geometry=_geometry_from_loops(loops), size_mm=(220.0, 50.0)
+    )
+    assert part.face_ids == ["", "1", "2"], part.face_ids
+
+    part.add_face("10", None)
+    part.add_face("3", None)
+    part.add_face("b", None)
+    # Numeric ids sort numerically (so "10" after "3", not after "1"),
+    # and non-numeric ids come last in lexicographic order.
+    assert part.face_ids == ["", "1", "2", "3", "10", "b"], part.face_ids
+
+
+def test_wavefront_multi_face_compute_deterministic():
+    """Multi-face wavefront produces byte-identical ops across runs."""
+    loops = [
+        [(-30.0, -20.0), (30.0, -20.0), (30.0, 20.0), (-30.0, 20.0)],
+        [(70.0, -20.0), (110.0, -20.0), (110.0, 20.0), (70.0, 20.0)],
+    ]
+    part1 = Part.from_geometry_multi_face(
+        geometry=_geometry_from_loops(loops), size_mm=(160.0, 50.0)
+    )
+    node1 = _run_wavefront_compute(part1)
+    part2 = Part.from_geometry_multi_face(
+        geometry=_geometry_from_loops(loops), size_mm=(160.0, 50.0)
+    )
+    node2 = _run_wavefront_compute(part2)
+    assert node1.output.ops.dump() == node2.output.ops.dump()
+
+
 def test_wavefront_multi_face_compute_both_faces_clear():
     """A multi-face Part assembled through the compute stage clears
     both pockets.  Regression guard for the multi-pocket wrapper
