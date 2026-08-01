@@ -2,9 +2,18 @@
 
 import math
 
+from raygeo.cnc.execution.specs import ComputePayload
+from raygeo.geo import Geometry
 from raygeo.ops import Ops
-from raygeo.ops.assembly.wavefront import adaptive_wavefronts
+from raygeo.ops.assembly import Assembler
+from raygeo.ops.assembly.wavefront import (
+    AdaptiveWavefrontSpec,
+    adaptive_wavefronts,
+)
 from raygeo.ops.part import Part
+from raygeo.pipeline.execute import clear_cache, execute_stages
+from raygeo.pipeline.request import NodeRequest
+from raygeo.pipeline.stage import StageSpec
 
 
 def _seed_polygon(cx, cy, r, n=32):
@@ -16,6 +25,52 @@ def _seed_polygon(cx, cy, r, n=32):
         )
         for i in range(n)
     ]
+
+
+def _geometry_from_loops(loops):
+    """Build a :class:`Geometry` from closed ``(x, y)`` loops."""
+    geo = Geometry()
+    for poly in loops:
+        geo.move_to(poly[0][0], poly[0][1], 0.0)
+        for x, y in poly[1:]:
+            geo.line_to(x, y, 0.0)
+        geo.close_path()
+    return geo
+
+
+def _run_wavefront_compute(part, step_over=2.0, area_tolerance=1.0):
+    """Run an adaptive-wavefront compute stage on ``part`` and return
+    the completed pipeline node.
+    """
+    clear_cache()
+    node = NodeRequest(
+        key="c",
+        generation_id=1,
+        stage=StageSpec.Compute(
+            part=part,
+            params=ComputePayload(
+                assembler=Assembler(
+                    AdaptiveWavefrontSpec(
+                        step_over=step_over,
+                        z=-8.0,
+                        area_tolerance=area_tolerance,
+                    )
+                )
+            ),
+        ),
+    )
+    completed = []
+    execute_stages([node], completed.append, None)
+    assert len(completed) == 1, completed
+    return completed[0]
+
+
+def _cut_xs(node):
+    """Yield x-coordinates of cut-move endpoints from a completed node."""
+    ops = node.output.ops
+    for i in range(ops.len()):
+        if ops.is_cutting(i):
+            yield ops.endpoint(i)[0]
 
 
 def test_adaptive_wavefronts_simple():
@@ -111,3 +166,66 @@ def test_adaptive_wavefronts_precision_with_islands():
     assert isinstance(result_wf.ops, Ops)
     # Area should be tracked regardless of ops count
     assert part.cleared.total_area() >= 0
+
+
+def test_wavefront_multi_face_compute_both_faces_clear():
+    """A multi-face Part assembled through the compute stage clears
+    both pockets.  Regression guard for the multi-pocket wrapper
+    deletion: per-face iteration in ``AssemblerCompute::run`` is what
+    handles multiple pockets now.
+    """
+    loops = [
+        [(-30.0, -20.0), (30.0, -20.0), (30.0, 20.0), (-30.0, 20.0)],
+        [(70.0, -20.0), (110.0, -20.0), (110.0, 20.0), (70.0, 20.0)],
+    ]
+    part = Part.from_geometry_multi_face(
+        geometry=_geometry_from_loops(loops), size_mm=(160.0, 50.0)
+    )
+    assert len(part.face_ids) == 2, part.face_ids
+
+    node = _run_wavefront_compute(part)
+
+    assert node.error is None, node.error
+    assert node.output is not None
+    assert node.output.ops.len() > 0
+    assert not node.output.warnings
+
+    xs = list(_cut_xs(node))
+    assert xs, "expected cutting moves"
+    assert any(x < 0.0 for x in xs), "no cutting moves in the left pocket"
+    assert any(x > 40.0 for x in xs), "no cutting moves in the right pocket"
+
+
+def test_wavefront_single_face_compute_matches_low_level():
+    """A single-face Part assembled through the compute stage produces
+    the same clearing as the low-level ``adaptive_wavefronts`` helper
+    for the same pocket.  Guards that the ``assemble`` rewiring did not
+    change single-pocket behaviour.
+    """
+    boundary = [(0, 0), (160, 0), (160, 100), (0, 100)]
+    part = Part.from_geometry_multi_face(
+        geometry=_geometry_from_loops([boundary]), size_mm=(160.0, 100.0)
+    )
+    assert part.face_ids == [""], part.face_ids
+
+    node = _run_wavefront_compute(part, step_over=2.0, area_tolerance=1.0)
+    assert node.error is None, node.error
+    compute_ops = node.output.ops
+    assert compute_ops.len() > 0
+
+    # Low-level helper on the same pocket.
+    direct = Part.from_polygons(
+        boundary, initial=[_seed_polygon(80.0, 50.0, 15.0)]
+    )
+    result_wf = adaptive_wavefronts(
+        direct,
+        step_over=2.0,
+        z=-8.0,
+        area_tolerance=1.0,
+    )
+
+    assert compute_ops.count_cutting() == result_wf.ops.count_cutting()
+    assert node.output.cleared_fragments is not None, (
+        "expected cleared fragments in the compute output"
+    )
+    assert len(node.output.cleared_fragments) > 0

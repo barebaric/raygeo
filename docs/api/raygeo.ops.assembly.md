@@ -73,6 +73,15 @@ source_dimensions: Optional[tuple[float, float]]
 
 Source `(width_mm, height_mm)` of the part that produced the Ops.
 
+### `warnings`
+
+```python
+warnings: list[AssemblyWarning]
+```
+
+Non-fatal warnings emitted during assembly (`list[AssemblyWarning]`). Empty when assembly completed
+without per-face/region failures.
+
 ## AssemblyResult
 
 Universal return type for every assembly-level generator.
@@ -141,3 +150,50 @@ or a minimal init/exit pair.
 | `source`  | `str`  |             |
 | `label`   | `str`  |             |
 | _Returns_ | `None` |             |
+
+## AssemblyWarning
+
+A non-fatal warning emitted during assembly.
+
+Assemblers push these instead of aborting when a single face or region fails; the failed face/region
+is skipped and the rest of the part is still machined. Use **kind** to pick a translation template
+and **detail** for the raw, non-translatable diagnostic.
+
+### `detail`
+
+```python
+detail: str
+```
+
+Raw, non-translatable diagnostic (the assembler's error string).
+
+### `face_id`
+
+```python
+face_id: str
+```
+
+Face id; `""` is the default face, `"1"`, `"2"`, ... others.
+
+### `kind`
+
+```python
+kind: AssemblyWarningKind
+```
+
+What failed — determines the translation template.
+
+### `region`
+
+```python
+region: Optional[int]
+```
+
+Region index within the face; `None` for whole-face failures.
+
+## AssemblyWarningKind
+
+Machine-readable category for a non-fatal **AssemblyWarning**.
+
+Mirrors the Rust **~raygeo.ops.assembly.AssemblyWarningKind**; the consumer (rayforge) maps each
+variant to a translatable message template.

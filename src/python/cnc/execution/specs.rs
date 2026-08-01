@@ -261,13 +261,17 @@ pub struct PyComputePayload {
     /// Active head/laser UID injected as ``SetHead``.
     #[pyo3(get, set)]
     pub head_uid: Option<String>,
+    /// Print a profiling report to stdout after this node's faces have
+    /// been assembled (default False).
+    #[pyo3(get, set)]
+    pub profile: bool,
 }
 
 #[gen_stub_pymethods]
 #[pyo3::pymethods]
 impl PyComputePayload {
     #[new]
-    #[pyo3(signature = (assembler, transformers=vec![], state_source_keys=vec![], power=0.0, cut_speed=0, head_uid=None))]
+    #[pyo3(signature = (assembler, transformers=vec![], state_source_keys=vec![], power=0.0, cut_speed=0, head_uid=None, profile=false))]
     fn new(
         assembler: Py<PyAny>,
         transformers: Vec<Py<PyAny>>,
@@ -275,6 +279,7 @@ impl PyComputePayload {
         power: f64,
         cut_speed: i32,
         head_uid: Option<String>,
+        profile: bool,
     ) -> Self {
         PyComputePayload {
             assembler,
@@ -283,6 +288,7 @@ impl PyComputePayload {
             power,
             cut_speed,
             head_uid,
+            profile,
         }
     }
 }

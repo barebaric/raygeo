@@ -65,6 +65,15 @@ class Part:
         Physical size ``(width, height)`` in millimetres.
         """
     @property
+    def face_ids(self) -> builtins.list[builtins.str]:
+        r"""
+        All face ids in this part.
+        
+        The empty string ``""`` is the default (largest) face; other
+        faces are ``"1"``, ``"2"``, ... (sorted by pocket area
+        descending). A single-pocket part has exactly ``[""]``.
+        """
+    @property
     def pixels_per_mm(self) -> typing.Optional[tuple[builtins.float, builtins.float]]:
         r"""
         Pixel density ``(x, y)`` in px/mm, if set.
@@ -148,6 +157,23 @@ class Part:
             being empty.
         :returns: A new ``Part`` with the geometry constructed from the
             given polygons.
+        """
+    @staticmethod
+    def from_geometry_multi_face(geometry: geo.Geometry, size_mm: tuple[builtins.float, builtins.float] = (0.0, 0.0)) -> Part:
+        r"""
+        Build a Part from geometry, auto-detecting separate pockets.
+        
+        Each disconnected outer contour becomes its own face: the largest
+        pocket is the default face ``""``, the others get ids ``"1"``,
+        ``"2"``, ... (sorted by area descending). Island (inner) contours
+        are assigned to the outer that contains their centroid.
+        Single-pocket geometry produces a single face ``""`` (backward
+        compatible with the ``Part(...)`` constructor).
+        
+        :param geometry: Vector geometry with one outer contour per pocket.
+        :param size_mm: Physical size ``(width, height)`` in mm
+            (default ``(0, 0)``).
+        :returns: A new ``Part`` with one face per detected pocket.
         """
     def has_geometry(self) -> builtins.bool: ...
     def add_face(self, id: builtins.str, geometry: typing.Optional[geo.Geometry]) -> None:

@@ -18,9 +18,13 @@ can drive it through the trait.
 use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
-use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
+use pyo3_stub_gen::derive::{
+    gen_stub_pyclass, gen_stub_pyclass_enum, gen_stub_pymethods,
+};
 
-use crate::ops::assembly::{Assembler, ProgressEvent};
+use crate::ops::assembly::{
+    Assembler, AssemblyWarning, AssemblyWarningKind, ProgressEvent,
+};
 
 pub(crate) mod adaptive;
 pub(crate) mod contour;
@@ -116,6 +120,120 @@ pub fn extract_assembler(
     )))
 }
 
+/// Machine-readable category for a non-fatal :class:`AssemblyWarning`.
+///
+/// Mirrors the Rust :class:`~raygeo.ops.assembly.AssemblyWarningKind`; the
+/// consumer (rayforge) maps each variant to a translatable message template.
+#[gen_stub_pyclass_enum]
+#[pyclass(
+    module = "raygeo.ops.assembly",
+    name = "AssemblyWarningKind",
+    from_py_object
+)]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum PyAssemblyWarningKind {
+    /// A whole face's assembly failed; processing continued.
+    #[pyo3(name = "FACE_FAILED")]
+    FaceFailed,
+    /// A single region within a face failed; other regions cleared.
+    #[pyo3(name = "REGION_FAILED")]
+    RegionFailed,
+}
+
+#[pymethods]
+impl PyAssemblyWarningKind {
+    fn __repr__(&self) -> String {
+        match self {
+            PyAssemblyWarningKind::FaceFailed => {
+                "AssemblyWarningKind.FACE_FAILED".into()
+            }
+            PyAssemblyWarningKind::RegionFailed => {
+                "AssemblyWarningKind.REGION_FAILED".into()
+            }
+        }
+    }
+
+    fn __str__(&self) -> String {
+        self.__repr__()
+    }
+
+    #[getter]
+    fn value(&self) -> &str {
+        match self {
+            PyAssemblyWarningKind::FaceFailed => "face_failed",
+            PyAssemblyWarningKind::RegionFailed => "region_failed",
+        }
+    }
+}
+
+impl From<AssemblyWarningKind> for PyAssemblyWarningKind {
+    fn from(k: AssemblyWarningKind) -> Self {
+        match k {
+            AssemblyWarningKind::FaceFailed => {
+                PyAssemblyWarningKind::FaceFailed
+            }
+            AssemblyWarningKind::RegionFailed => {
+                PyAssemblyWarningKind::RegionFailed
+            }
+        }
+    }
+}
+
+/// A non-fatal warning emitted during assembly.
+///
+/// Assemblers push these instead of aborting when a single face or region
+/// fails; the failed face/region is skipped and the rest of the part is
+/// still machined. Use :attr:`kind` to pick a translation template and
+/// :attr:`detail` for the raw, non-translatable diagnostic.
+#[gen_stub_pyclass(module = "raygeo.ops.assembly")]
+#[pyclass(
+    name = "AssemblyWarning",
+    module = "raygeo.ops.assembly",
+    skip_from_py_object
+)]
+#[derive(Clone, Debug)]
+pub struct PyAssemblyWarning {
+    pub inner: AssemblyWarning,
+}
+
+#[gen_stub_pymethods]
+#[pymethods]
+impl PyAssemblyWarning {
+    /// What failed — determines the translation template.
+    #[getter]
+    fn kind(&self) -> PyAssemblyWarningKind {
+        PyAssemblyWarningKind::from(self.inner.kind.clone())
+    }
+
+    /// Face id; ``""`` is the default face, ``"1"``, ``"2"``, ... others.
+    #[getter]
+    fn face_id(&self) -> &str {
+        &self.inner.face_id
+    }
+
+    /// Region index within the face; ``None`` for whole-face failures.
+    #[getter]
+    fn region(&self) -> Option<usize> {
+        self.inner.region
+    }
+
+    /// Raw, non-translatable diagnostic (the assembler's error string).
+    #[getter]
+    fn detail(&self) -> &str {
+        &self.inner.detail
+    }
+
+    fn __repr__(&self) -> String {
+        let kind = PyAssemblyWarningKind::from(self.inner.kind.clone());
+        format!(
+            "AssemblyWarning(kind={}, face_id={:?}, region={:?})",
+            kind.__repr__(),
+            self.inner.face_id,
+            self.inner.region,
+        )
+    }
+}
+
 /// The output of an assembler, packaged for caching.
 ///
 /// Produced by
@@ -166,6 +284,7 @@ impl PyAssemblyOutput {
                         heading: 0.0,
                     },
                 },
+                warnings: Vec::new(),
             },
         }
     }
@@ -200,6 +319,17 @@ impl PyAssemblyOutput {
             .map(|frags| polygons_to_tuples(frags.clone()))
     }
 
+    /// Non-fatal warnings emitted during assembly (``list[AssemblyWarning]``).
+    /// Empty when assembly completed without per-face/region failures.
+    #[getter]
+    fn warnings(&self) -> Vec<PyAssemblyWarning> {
+        self.inner
+            .warnings
+            .iter()
+            .map(|w| PyAssemblyWarning { inner: w.clone() })
+            .collect()
+    }
+
     fn __repr__(&self) -> String {
         let n_frags = self
             .inner
@@ -208,11 +338,12 @@ impl PyAssemblyOutput {
             .map(|f| f.len())
             .unwrap_or(0);
         format!(
-            "AssemblyOutput(ops_len={}, is_scalable={}, source_dimensions={:?}, n_fragments={})",
+            "AssemblyOutput(ops_len={}, is_scalable={}, source_dimensions={:?}, n_fragments={}, n_warnings={})",
             self.inner.ops.len(),
             self.inner.is_scalable,
             self.inner.source_dimensions,
             n_frags,
+            self.inner.warnings.len(),
         )
     }
 }
@@ -309,6 +440,8 @@ pub(crate) fn register(ops_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     assembly_mod.setattr("__doc__", MODULE_DOC)?;
     assembly_mod.add_class::<PyAssembler>()?;
     assembly_mod.add_class::<PyAssemblyOutput>()?;
+    assembly_mod.add_class::<PyAssemblyWarningKind>()?;
+    assembly_mod.add_class::<PyAssemblyWarning>()?;
 
     adaptive::register(&assembly_mod)?;
     contour::register(&assembly_mod)?;

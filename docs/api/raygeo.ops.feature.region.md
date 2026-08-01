@@ -38,6 +38,10 @@ is entirely narrow/slot.
 | `tolerance`   | `float = 0.5`                                                               | Additional clearance tolerance in mm.              |
 | _Returns_     | `list[tuple[list[tuple[float, float]], float, tuple[float, float], float]]` | List of `(polygon, area, entry_pt, r_max)` tuples. |
 
+![The barebaric text SVG: each face's wide sub-regions, entry points, and largest inscribed circles](images/ops-feature-region-svg-regions.png)
+
+*The barebaric text SVG: each face's wide sub-regions, entry points, and largest inscribed circles*
+
 ![H-shape pocket: wide regions colored, entry points marked, narrow corridors shaded gray](images/ops-feature-region-find-regions.png)
 
 *H-shape pocket: wide regions colored, entry points marked, narrow corridors shaded gray*

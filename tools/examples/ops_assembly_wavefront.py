@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import Normalize
 
+from raygeo.cnc.execution.specs import ComputePayload
 from raygeo.geo import Geometry
 from raygeo.geo.algo.polylabel import find_largest_circle
 from raygeo.geo.shape.polygon import (
@@ -13,11 +14,15 @@ from raygeo.geo.shape.polygon import (
     get_polygon_centroid,
     get_polygon_signed_area,
 )
+from raygeo.ops.assembly import Assembler
 from raygeo.ops.assembly.wavefront import (
+    AdaptiveWavefrontSpec,
     adaptive_wavefronts,
-    adaptive_wavefronts_multi_pocket,
 )
 from raygeo.ops.part import Part
+from raygeo.pipeline.execute import clear_cache, execute_stages
+from raygeo.pipeline.request import NodeRequest
+from raygeo.pipeline.stage import StageSpec
 from raygeo.svg import svg_string_to_geometries
 
 
@@ -202,8 +207,8 @@ def generate_wavefront_svg():
     outer_polys = [p for p in all_polys if get_polygon_signed_area(p) < 0]
     inner_polys = [p for p in all_polys if get_polygon_signed_area(p) >= 0]
 
-    # Build a single geometry from all polygons so the multi-pocket
-    # assembler decomposes pockets internally.
+    # Build a single geometry from all polygons so the multi-face
+    # constructor decomposes pockets into per-face boundaries.
     geo = Geometry()
     for poly in all_polys:
         geo.move_to(poly[0][0], poly[0][1], 0.0)
@@ -211,13 +216,29 @@ def generate_wavefront_svg():
             geo.line_to(x, y, 0.0)
         geo.close_path()
 
-    result = adaptive_wavefronts_multi_pocket(
-        Part(geometry=geo, size_mm=(200, 100)),
-        step_over=0.5,
-        area_tolerance=0.2,
-    )
+    part = Part.from_geometry_multi_face(geometry=geo, size_mm=(200, 100))
 
-    n_sub = len(result.ops.split_into_subpaths())
+    clear_cache()
+    node = NodeRequest(
+        key="c",
+        generation_id=1,
+        stage=StageSpec.Compute(
+            part=part,
+            params=ComputePayload(
+                assembler=Assembler(
+                    AdaptiveWavefrontSpec(
+                        step_over=0.5,
+                        z=0.0,
+                        area_tolerance=0.2,
+                    )
+                )
+            ),
+        ),
+    )
+    completed = []
+    execute_stages([node], completed.append, None)
+    assert len(completed) == 1, completed
+    result_ops = completed[0].output.ops
 
     # Plot everything
     fig, ax = plt.subplots(figsize=(12, 6))
@@ -240,7 +261,8 @@ def generate_wavefront_svg():
         )
 
     # Plot all wavefronts with a single consistent colormap
-    subpaths = result.ops.split_into_subpaths()
+    subpaths = result_ops.split_into_subpaths()
+    n_sub = len(subpaths)
     for i, sub in enumerate(subpaths):
         color = cmap(i / max(n_sub - 1, 1))
         pts_list = _ops_to_points(sub)
@@ -313,7 +335,7 @@ __images__ = [
         "function": generate_wavefront_yshape,
     },
     {
-        "heading": "adaptive_wavefronts_multi_pocket",
+        "heading": "adaptive_wavefronts",
         "caption": (
             "Adaptive wavefronts in a complex SVG shape — contours"
             " adapt to the boundary and wrap around islands"

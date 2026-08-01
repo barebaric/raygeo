@@ -78,6 +78,16 @@ impl PyPart {
         self.inner.size_mm
     }
 
+    /// All face ids in this part.
+    ///
+    /// The empty string ``""`` is the default (largest) face; other
+    /// faces are ``"1"``, ``"2"``, ... (sorted by pocket area
+    /// descending). A single-pocket part has exactly ``[""]``.
+    #[getter]
+    fn face_ids(&self) -> Vec<String> {
+        self.inner.faces.keys().cloned().collect()
+    }
+
     /// Pixel density ``(x, y)`` in px/mm, if set.
     #[getter]
     fn pixels_per_mm(&self) -> Option<(f64, f64)> {
@@ -136,6 +146,33 @@ impl PyPart {
             } else {
                 Part::from_polygons_initial(&bnd, &isls, &init, size_mm)
             },
+            py_image_source: None,
+        }
+    }
+
+    /// Build a Part from geometry, auto-detecting separate pockets.
+    ///
+    /// Each disconnected outer contour becomes its own face: the largest
+    /// pocket is the default face ``""``, the others get ids ``"1"``,
+    /// ``"2"``, ... (sorted by area descending). Island (inner) contours
+    /// are assigned to the outer that contains their centroid.
+    /// Single-pocket geometry produces a single face ``""`` (backward
+    /// compatible with the ``Part(...)`` constructor).
+    ///
+    /// :param geometry: Vector geometry with one outer contour per pocket.
+    /// :param size_mm: Physical size ``(width, height)`` in mm
+    ///     (default ``(0, 0)``).
+    /// :returns: A new ``Part`` with one face per detected pocket.
+    #[staticmethod]
+    #[pyo3(signature = (geometry, size_mm=(0.0, 0.0)))]
+    fn from_geometry_multi_face(
+        geometry: Py<PyGeometry>,
+        size_mm: (f64, f64),
+        py: Python<'_>,
+    ) -> Self {
+        let geo = geometry.bind(py).borrow().inner.clone();
+        PyPart {
+            inner: Part::from_geometry_multi_face(geo, size_mm),
             py_image_source: None,
         }
     }

@@ -16,6 +16,7 @@ can drive it through the trait.
 """
 
 import builtins
+import enum
 from raygeo import ops
 from raygeo.ops.cut import search
 import typing
@@ -36,6 +37,8 @@ __all__ = [
     "Assembler",
     "AssemblyOutput",
     "AssemblyResult",
+    "AssemblyWarning",
+    "AssemblyWarningKind",
     "adaptive",
     "contour",
     "frame",
@@ -111,6 +114,12 @@ class AssemblyOutput:
         Post-assembly cleared fragments (``list[list[(x, y)]]``), or
         ``None`` for assemblers that don't touch ``FaceState.cleared``.
         """
+    @property
+    def warnings(self) -> builtins.list[AssemblyWarning]:
+        r"""
+        Non-fatal warnings emitted during assembly (``list[AssemblyWarning]``).
+        Empty when assembly completed without per-face/region failures.
+        """
     def __new__(cls, ops: ops.Ops, is_scalable: builtins.bool = False, source_dimensions: typing.Optional[tuple[builtins.float, builtins.float]] = None, cleared_fragments: typing.Optional[typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]] = None) -> AssemblyOutput: ...
     def __repr__(self) -> builtins.str: ...
 
@@ -148,4 +157,53 @@ class AssemblyResult:
         init/exit pair.
         """
     def __repr__(self) -> builtins.str: ...
+
+@typing.final
+class AssemblyWarning:
+    r"""
+    A non-fatal warning emitted during assembly.
+    
+    Assemblers push these instead of aborting when a single face or region
+    fails; the failed face/region is skipped and the rest of the part is
+    still machined. Use :attr:`kind` to pick a translation template and
+    :attr:`detail` for the raw, non-translatable diagnostic.
+    """
+    @property
+    def kind(self) -> AssemblyWarningKind:
+        r"""
+        What failed — determines the translation template.
+        """
+    @property
+    def face_id(self) -> builtins.str:
+        r"""
+        Face id; ``""`` is the default face, ``"1"``, ``"2"``, ... others.
+        """
+    @property
+    def region(self) -> typing.Optional[builtins.int]:
+        r"""
+        Region index within the face; ``None`` for whole-face failures.
+        """
+    @property
+    def detail(self) -> builtins.str:
+        r"""
+        Raw, non-translatable diagnostic (the assembler's error string).
+        """
+    def __repr__(self) -> builtins.str: ...
+
+@typing.final
+class AssemblyWarningKind(enum.Enum):
+    r"""
+    Machine-readable category for a non-fatal :class:`AssemblyWarning`.
+    
+    Mirrors the Rust :class:`~raygeo.ops.assembly.AssemblyWarningKind`; the
+    consumer (rayforge) maps each variant to a translatable message template.
+    """
+    FACE_FAILED = ...
+    r"""
+    A whole face's assembly failed; processing continued.
+    """
+    REGION_FAILED = ...
+    r"""
+    A single region within a face failed; other regions cleared.
+    """
 

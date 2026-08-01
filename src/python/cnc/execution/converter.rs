@@ -93,6 +93,7 @@ fn convert_stage(
                         Vec<Box<dyn crate::ops::transform::Transformer>>,
                     >>()?;
             let state_source_keys = params_ref.state_source_keys.clone();
+            let profile = params_ref.profile;
             let cut_state = crate::ops::state::State {
                 power: params_ref.power,
                 feed_rate: if params_ref.cut_speed > 0 {
@@ -113,6 +114,7 @@ fn convert_stage(
                 cut_state,
                 state_source_keys,
                 region_boundary: None,
+                profile,
             };
             CoreStageSpec::Compute {
                 compute_fn: Box::new(compute),

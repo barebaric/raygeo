@@ -77,12 +77,64 @@ pub struct AssembleCtx<'a> {
     /// by the Compute stage from `Part.image_source` before calling
     /// [`Assembler::assemble`].
     pub image_source: Option<&'a dyn ImageSource>,
+    /// Id of the face currently being assembled. `""` is the default
+    /// face, `"1"`, `"2"`, ... are additional faces detected by
+    /// `Part::from_geometry_multi_face`. Assemblers copy it into the
+    /// [`AssemblyWarning::face_id`] of any region/face-level warning
+    /// they emit; the Compute stage sets it from the active face id
+    /// before invoking [`Assembler::assemble`].
+    pub face_id: String,
+    /// When set, this call is scoped to a single sub-region of the face
+    /// (the plan-time path: one `assemble()` call per region).  The
+    /// face's `stock_region.boundary` has already been replaced with
+    /// this region boundary by the Compute stage, so the assembler must
+    /// clear just that region.  When `None`, the assembler operates on
+    /// the whole face and may split it into regions itself as a
+    /// runtime fallback.
+    pub region_boundary: Option<(Polygon, Vec<Polygon>)>,
+    /// Non-fatal warnings accumulated during this assembly. Assemblers push
+    /// [`AssemblyWarning`]s here instead of aborting; the Compute stage moves
+    /// the vec into [`AssemblyOutput::warnings`] after `assemble` returns.
+    pub warnings: &'a mut Vec<AssemblyWarning>,
+}
+
+/// The kind of a non-fatal [`AssemblyWarning`] produced during assembly.
+///
+/// Warnings are typed so the consumer (rayforge) can translate and surface
+/// them to the user. The raw, non-translatable detail string lives in
+/// [`AssemblyWarning::detail`].
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum AssemblyWarningKind {
+    /// A whole face's assembly failed; processing continued with other faces.
+    FaceFailed,
+    /// A single region within a face failed; other regions still cleared.
+    RegionFailed,
+}
+
+/// A non-fatal warning emitted by an assembler.
+///
+/// Assemblers push these into [`AssembleCtx::warnings`] during assembly; the
+/// Compute stage collects them into [`AssemblyOutput::warnings`] so the
+/// consumer can translate and surface them. Unlike an error, a warning does
+/// not abort the pipeline — the affected face/region is skipped and the
+/// rest of the part is still machined.
+#[derive(Clone, Debug)]
+pub struct AssemblyWarning {
+    /// What failed, determining the translation template.
+    pub kind: AssemblyWarningKind,
+    /// Face id; `""` is the default face, `"1"`, `"2"`, ... others.
+    pub face_id: String,
+    /// Region index within the face; `None` for whole-face failures.
+    pub region: Option<usize>,
+    /// Raw, non-translatable diagnostic (the assembler's error string).
+    pub detail: String,
 }
 
 /// The output of an assembler, packaged for caching.
 ///
 /// Carries the assembled `Ops`, metadata, and optional post-assembly
-/// cleared fragments for face-state restoration on cache hit.
+/// cleared fragments for face-state restoration on cache hit, plus any
+/// non-fatal [`AssemblyWarning`]s encountered along the way.
 #[derive(Debug, Clone)]
 pub struct AssemblyOutput {
     /// The assembled `Ops` (with transformers already applied).
@@ -97,6 +149,10 @@ pub struct AssemblyOutput {
     pub cleared_fragments: Option<Vec<Polygon>>,
     /// Start/end tool poses returned by the assembler.
     pub meta: AssemblyMeta,
+    /// Non-fatal warnings emitted while assembling this output. The
+    /// Compute stage fills this from [`AssembleCtx::warnings`]; cache
+    /// store/restore preserve it.
+    pub warnings: Vec<AssemblyWarning>,
 }
 
 impl AssemblyOutput {

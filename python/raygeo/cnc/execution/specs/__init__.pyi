@@ -224,7 +224,19 @@ class ComputePayload:
         r"""
         Active head/laser UID injected as ``SetHead``.
         """
-    def __new__(cls, assembler: typing.Any, transformers: typing.Sequence[typing.Any] = [], state_source_keys: typing.Sequence[builtins.str] = [], power: builtins.float = 0.0, cut_speed: builtins.int = 0, head_uid: typing.Optional[builtins.str] = None) -> ComputePayload: ...
+    @property
+    def profile(self) -> builtins.bool:
+        r"""
+        Print a profiling report to stdout after this node's faces have
+        been assembled (default False).
+        """
+    @profile.setter
+    def profile(self, value: builtins.bool) -> None:
+        r"""
+        Print a profiling report to stdout after this node's faces have
+        been assembled (default False).
+        """
+    def __new__(cls, assembler: typing.Any, transformers: typing.Sequence[typing.Any] = [], state_source_keys: typing.Sequence[builtins.str] = [], power: builtins.float = 0.0, cut_speed: builtins.int = 0, head_uid: typing.Optional[builtins.str] = None, profile: builtins.bool = False) -> ComputePayload: ...
 
 @typing.final
 class EncodeSpec:

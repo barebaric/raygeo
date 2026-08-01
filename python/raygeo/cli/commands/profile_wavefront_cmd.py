@@ -5,11 +5,14 @@ from raygeo.cli.scenarios import (
     SCENARIOS,
     build_scenario,
 )
+from raygeo.cnc.execution.specs import ComputePayload
 from raygeo.geo import Geometry
-from raygeo.ops.assembly.wavefront import (
-    adaptive_wavefronts_multi_pocket,
-)
+from raygeo.ops.assembly import Assembler
+from raygeo.ops.assembly.wavefront import AdaptiveWavefrontSpec
 from raygeo.ops.part import Part
+from raygeo.pipeline.execute import clear_cache, execute_stages
+from raygeo.pipeline.request import NodeRequest
+from raygeo.pipeline.stage import StageSpec
 from raygeo.svg import svg_string_to_geometries
 
 
@@ -28,7 +31,6 @@ def _add_scenario_args(p):
     )
     p.add_argument("--step-over", type=float, default=None)
     p.add_argument("--area-tolerance", type=float, default=None)
-    p.add_argument("--offset", type=float, default=None)
     p.add_argument("--precision", type=float, default=None)
     p.add_argument("--cut-feed-rate", type=int, default=None)
     p.add_argument("--cut-power", type=float, default=None)
@@ -37,7 +39,7 @@ def _add_scenario_args(p):
 def register(subparsers):
     p = subparsers.add_parser(
         "profile-wavefront",
-        help=("Profile adaptive_wavefronts_multi_pocket performance."),
+        help=("Profile adaptive_wavefronts performance."),
     )
     _add_scenario_args(p)
     p.set_defaults(func=run)
@@ -91,25 +93,42 @@ def _build_geometry(args):
 
 def run(args):
     geo, name, step, tol = _build_geometry(args)
-    part = Part(geometry=geo, size_mm=(200, 100))
+    part = Part.from_geometry_multi_face(geometry=geo, size_mm=(200, 100))
+
+    clear_cache()
+    node = NodeRequest(
+        key="c",
+        generation_id=1,
+        stage=StageSpec.Compute(
+            part=part,
+            params=ComputePayload(
+                assembler=Assembler(
+                    AdaptiveWavefrontSpec(
+                        step_over=step,
+                        z=0.0,
+                        area_tolerance=tol,
+                        precision=args.precision or 0.0,
+                    )
+                ),
+                power=args.cut_power or 1.0,
+                cut_speed=args.cut_feed_rate or 500,
+                profile=True,
+            ),
+        ),
+    )
+    completed = []
 
     t0 = time.perf_counter()
-    result = adaptive_wavefronts_multi_pocket(
-        part,
-        step_over=step,
-        offset_mm=args.offset or 0.0,
-        area_tolerance=tol,
-        precision=args.precision or 0.0,
-        cut_feed_rate=args.cut_feed_rate or 500,
-        cut_power=args.cut_power or 1.0,
-        profile=True,
-    )
+    execute_stages([node], completed.append, None)
     t1 = time.perf_counter()
+    assert len(completed) == 1, completed
+    result_ops = completed[0].output.ops
 
-    cut = result.ops.count_cutting()
-    travel = result.ops.count_travel()
+    cut = result_ops.count_cutting()
+    travel = result_ops.count_travel()
 
-    print(f"\n--- adaptive_wavefronts_multi_pocket profile ({name}) ---")
+    print(f"\n--- adaptive_wavefronts profile ({name}) ---")
+    print(f"Faces:        {len(part.face_ids)}")
     print(f"Wall clock:  {t1 - t0:.2f}s")
     print(f"Cut points:  {cut}")
     print(f"Travel ops:  {travel}")

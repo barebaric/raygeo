@@ -201,6 +201,14 @@ power: float
 
 Laser power fraction (0.0 – 1.0) injected as `SetPower`.
 
+### `profile`
+
+```python
+profile: bool
+```
+
+Print a profiling report to stdout after this node's faces have been assembled (default False).
+
 ### `state_source_keys`
 
 ```python

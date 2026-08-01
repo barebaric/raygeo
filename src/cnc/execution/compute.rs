@@ -3,14 +3,19 @@ use std::sync::Arc;
 
 use crate::cnc::execution::callbacks::OpsCallbacksAdapter;
 use crate::cnc::execution::callbacks::ScaledCallbacks;
-use crate::ops::assembly::{AssembleCtx, Assembler, AssemblyOutput, Tracelet};
+use crate::ops::assembly::{
+    AssembleCtx, Assembler, AssemblyMeta, AssemblyOutput, AssemblyWarning,
+    AssemblyWarningKind, Tracelet,
+};
 use crate::ops::part::{FaceState, Part, StockRegion};
 use crate::ops::state::State;
 use crate::ops::transform::{apply_transformers, Transformer};
+use crate::ops::types::ToolPose;
 use crate::pipeline::cache::CacheKey;
 use crate::pipeline::completed::PipelineError;
 use crate::pipeline::compute::{Compute, ComputeCtx};
-use crate::types::Polygon;
+use crate::prof::prof_report;
+use crate::types::{Point3D, Polygon};
 
 pub struct AssemblerCompute {
     pub assembler: Arc<dyn Assembler>,
@@ -26,6 +31,11 @@ pub struct AssemblerCompute {
     /// original after.  This lets each step see a different pocket
     /// subset while still sharing the same face's cleared area.
     pub region_boundary: Option<(Polygon, Vec<Polygon>)>,
+    /// Print a profiling report to stdout once the node's faces have
+    /// all been assembled.  Emitted from `run()` so it runs on the
+    /// same rayon worker that executed the assemblers, where the
+    /// thread-local profiler data lives.
+    pub profile: bool,
 }
 
 impl Compute for AssemblerCompute {
@@ -37,66 +47,157 @@ impl Compute for AssemblerCompute {
             return Err(PipelineError::Cancelled);
         }
 
-        let mut trace = Tracelet::new();
-        let face_id = self.face_id.clone();
         let size_mm = self.part.size_mm;
         let pixels_per_mm = self.part.pixels_per_mm;
         let image_source = self.part.image_source.as_deref();
-        let face = self
-            .part
-            .faces
-            .entry(face_id)
-            .or_insert_with(|| FaceState::new(None));
 
-        // Thread cleared state from upstream source nodes.
-        for source_key in &self.state_source_keys {
-            if let Some(dep) = ctx.deps.get(source_key) {
-                if let Some(dep_output) = dep.downcast_ref::<AssemblyOutput>() {
-                    if let Some(frags) = &dep_output.cleared_fragments {
-                        if !frags.is_empty() {
-                            face.cleared.set_fragments(frags.clone());
+        // Determine target faces. An explicit (non-empty) `face_id`
+        // processes only that face (the historical single-face
+        // behaviour, including upstream state threading). An empty
+        // `face_id` iterates every face of the part — the multi-face
+        // path introduced for multi-pocket parts.
+        let explicit_face = !self.face_id.is_empty();
+        let face_ids: Vec<String> = if explicit_face {
+            vec![self.face_id.clone()]
+        } else {
+            self.part.faces.keys().cloned().collect()
+        };
+
+        let adapter = OpsCallbacksAdapter {
+            inner: ctx.callbacks,
+        };
+
+        let mut trace = Tracelet::new();
+        // Emit cut-state commands (SET_POWER, etc.) once, before the
+        // first assembler runs, so they appear at the start of the ops.
+        trace.apply_state(&self.cut_state);
+
+        // Thread cleared state from upstream source nodes into the
+        // target face, exactly as the historic single-face path did.
+        //
+        // `AssemblyOutput.cleared_fragments` is a flat, unattributed
+        // list, so predecessors can only be restored to one specific
+        // face: the explicit `face_id` when set, otherwise the default
+        // face `""`. (For a single-face part this is identical to the
+        // old behaviour; for a multi-face part the default face — the
+        // largest pocket — is the natural threading target.)
+        if !self.state_source_keys.is_empty() {
+            let target = if explicit_face {
+                self.face_id.clone()
+            } else {
+                String::new()
+            };
+            let face = self
+                .part
+                .faces
+                .entry(target)
+                .or_insert_with(|| FaceState::new(None));
+            for source_key in &self.state_source_keys {
+                if let Some(dep) = ctx.deps.get(source_key) {
+                    if let Some(dep_output) =
+                        dep.downcast_ref::<AssemblyOutput>()
+                    {
+                        if let Some(frags) = &dep_output.cleared_fragments {
+                            if !frags.is_empty() {
+                                face.cleared.set_fragments(frags.clone());
+                            }
                         }
                     }
                 }
             }
         }
 
-        let adapter = OpsCallbacksAdapter {
-            inner: ctx.callbacks,
-        };
+        let mut warnings: Vec<AssemblyWarning> = Vec::new();
+        let mut combined_start: Option<ToolPose> = None;
+        let mut combined_end: Option<ToolPose> = None;
+        let mut processed_face_ids: Vec<String> = Vec::new();
 
-        // Emit cut-state commands (SET_POWER, etc.) before the
-        // assembler runs so they appear at the start of the ops.
-        trace.apply_state(&self.cut_state);
+        for fid in face_ids {
+            // Lazy-init the face (matches the single-face `entry`
+            // behaviour for an unknown id).
+            let face = self
+                .part
+                .faces
+                .entry(fid.clone())
+                .or_insert_with(|| FaceState::new(None));
 
-        // Temporarily replace the face's stock region with a
-        // per-step boundary if one is set.  This lets each step
-        // see a different pocket subset (e.g. a single region)
-        // while sharing the same face's cleared area.
-        let saved_region = self.region_boundary.as_ref().map(|(bnd, isls)| {
-            let saved = face.stock_region.clone();
-            face.stock_region = StockRegion::new(bnd.clone(), isls.clone());
-            saved
-        });
+            // Temporarily replace the face's stock region with a
+            // per-step boundary if one is set.  This lets each step
+            // see a different pocket subset (e.g. a single region)
+            // while sharing the same face's cleared area.
+            let saved_region =
+                self.region_boundary.as_ref().map(|(bnd, isls)| {
+                    let saved = face.stock_region.clone();
+                    face.stock_region =
+                        StockRegion::new(bnd.clone(), isls.clone());
+                    saved
+                });
 
-        let mut assemble_ctx = AssembleCtx {
-            face,
-            trace: &mut trace,
-            state: &self.cut_state,
-            callbacks: &adapter,
-            size_mm,
-            pixels_per_mm,
-            image_source,
-        };
-        let meta = self.assembler.assemble(&mut assemble_ctx)?;
+            let mut assemble_ctx = AssembleCtx {
+                face,
+                trace: &mut trace,
+                state: &self.cut_state,
+                callbacks: &adapter,
+                size_mm,
+                pixels_per_mm,
+                image_source,
+                face_id: fid.clone(),
+                region_boundary: self.region_boundary.clone(),
+                warnings: &mut warnings,
+            };
+            let result = self.assembler.assemble(&mut assemble_ctx);
 
-        // Restore the original stock region.
-        if let Some(saved) = saved_region {
-            assemble_ctx.face.stock_region = saved;
+            // Restore the original stock region before looking at the
+            // result, so an error still leaves the face intact.
+            if let Some(saved) = saved_region {
+                assemble_ctx.face.stock_region = saved;
+            }
+
+            match result {
+                Ok(meta) => {
+                    if combined_start.is_none() {
+                        combined_start = Some(meta.start);
+                    }
+                    combined_end = Some(meta.end);
+                    processed_face_ids.push(fid);
+                }
+                Err(e) if e == "cancelled" => {
+                    return Err(PipelineError::Cancelled);
+                }
+                Err(e) => {
+                    // Don't fail the whole part yet — warn and continue
+                    // to the next face. Partial ops already emitted into
+                    // the shared trace are kept. If *every* attempted face
+                    // fails, the loop-bottom check below turns this into a
+                    // hard error so the pipeline's failure cascade still
+                    // fires (existing `test_pipeline_failure_propagation`
+                    // contract). Recovery is only for partial success.
+                    warnings.push(AssemblyWarning {
+                        kind: AssemblyWarningKind::FaceFailed,
+                        face_id: fid.clone(),
+                        region: None,
+                        detail: e,
+                    });
+                }
+            }
         }
 
         if ctx.callbacks.is_cancelled() {
             return Err(PipelineError::Cancelled);
+        }
+
+        // Every attempted face failed (no successful `Ok(meta)`): surface
+        // a hard error instead of an empty success, so the scheduler
+        // reattaches this node with `error` and `output = None` and
+        // propagates the synthetic "upstream failed" to dependents.
+        // Matches the pre-multi-face behaviour of `assemble()?`.
+        if processed_face_ids.is_empty() && !warnings.is_empty() {
+            let detail = warnings
+                .iter()
+                .map(|w| w.detail.clone())
+                .collect::<Vec<_>>()
+                .join("; ");
+            return Err(PipelineError::Other(detail));
         }
 
         let mut ops = trace.into_ops();
@@ -116,14 +217,34 @@ impl Compute for AssemblerCompute {
                 None
             };
 
-        let cleared_fragments = self.part.face(&self.face_id).and_then(|f| {
-            let frags = f.cleared.fragments();
-            if frags.is_empty() {
-                None
-            } else {
-                Some(frags.to_vec())
+        // Collect cleared fragments from every face that was actually
+        // processed (single-face mode: just that face; multi-face mode:
+        // the union across all faces). Empty when nothing was cleared.
+        let mut cleared_fragments: Vec<Polygon> = Vec::new();
+        for fid in &processed_face_ids {
+            if let Some(f) = self.part.face(fid) {
+                let frags = f.cleared.fragments();
+                if !frags.is_empty() {
+                    cleared_fragments.extend(frags.iter().cloned());
+                }
             }
-        });
+        }
+        let cleared_fragments = if cleared_fragments.is_empty() {
+            None
+        } else {
+            Some(cleared_fragments)
+        };
+
+        let meta = AssemblyMeta {
+            start: combined_start.unwrap_or(ToolPose {
+                pos: Point3D::ZERO,
+                heading: 0.0,
+            }),
+            end: combined_end.unwrap_or(ToolPose {
+                pos: Point3D::ZERO,
+                heading: 0.0,
+            }),
+        };
 
         let output = AssemblyOutput {
             ops,
@@ -131,7 +252,11 @@ impl Compute for AssemblerCompute {
             source_dimensions,
             cleared_fragments,
             meta,
+            warnings,
         };
+        if self.profile {
+            prof_report();
+        }
         Ok(Box::new(output))
     }
 

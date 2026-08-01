@@ -57,6 +57,17 @@ Accumulated cleared-area state — what has been cut so far.
 Read-only snapshot. Assemblers mutate this internally; use it after an assembler returns to inspect
 remaining material, fragments, etc.
 
+### `face_ids`
+
+```python
+face_ids: list[str]
+```
+
+All face ids in this part.
+
+The empty string `""` is the default (largest) face; other faces are `"1"`, `"2"`, ... (sorted by
+pocket area descending). A single-pocket part has exactly `[""]`.
+
 ### `geometry`
 
 ```python
@@ -146,6 +157,28 @@ Returns `None` if the given id does not exist. Use the empty string `""` to get 
 | --------- | --------------------- | ------------------------------------ |
 | `id`      | `str`                 | Face identifier string.              |
 | _Returns_ | `Optional[FaceState]` | A **FaceState** snapshot, or `None`. |
+
+### `from_geometry_multi_face()`
+
+```python
+from_geometry_multi_face(
+    geometry: geo.Geometry,
+    size_mm: tuple[float, float] = (0.0, 0.0),
+) -> Part
+```
+
+Build a Part from geometry, auto-detecting separate pockets.
+
+Each disconnected outer contour becomes its own face: the largest pocket is the default face `""`,
+the others get ids `"1"`, `"2"`, ... (sorted by area descending). Island (inner) contours are
+assigned to the outer that contains their centroid. Single-pocket geometry produces a single face
+`""` (backward compatible with the `Part(...)` constructor).
+
+| Parameter  | Type                               | Description                                               |
+| ---------- | ---------------------------------- | --------------------------------------------------------- |
+| `geometry` | `geo.Geometry`                     | Vector geometry with one outer contour per pocket.        |
+| `size_mm`  | `tuple[float, float] = (0.0, 0.0)` | Physical size `(width, height)` in mm (default `(0, 0)`). |
+| _Returns_  | `Part`                             | A new `Part` with one face per detected pocket.           |
 
 ### `from_polygons()`
 

@@ -12,7 +12,7 @@ use rstar::{PointDistance, RTree, RTreeObject, AABB};
 
 use crate::geo::shape::polygon::{
     clean_polygon, get_polygon_convex_hull, get_polygons_group_difference,
-    get_polygons_group_intersection, resample_polygon,
+    get_polygons_group_intersection, is_point_inside_polygon, resample_polygon,
 };
 use crate::types::{Point, Polygon};
 
@@ -224,6 +224,27 @@ pub fn find_narrow_passages(
             if d2 < best_dist2 {
                 best_dist2 = d2;
                 best = Some(candidate);
+            }
+        }
+
+        // A genuine passage is bounded by pocket material on both sides.
+        // Two edges that "face" each other across open space (e.g. the
+        // gap between two arms of a U-shape, or a concave wall bulging
+        // into a neighbouring arm) must NOT be paired: their convex hull
+        // would bridge the gap and, when clipped to the pocket, carve a
+        // sliver off the wall.  Check that the line between the two edge
+        // midpoints stays inside the pocket; if it exits, the pair spans
+        // open space, not a narrow passage.
+        if let Some(nb) = &best {
+            let a = entry.midpoint;
+            let b = nb.midpoint;
+            let mid = Point::new((a.x + b.x) * 0.5, (a.y + b.y) * 0.5);
+            let outside_hole =
+                holes.iter().any(|h| is_point_inside_polygon(mid, h));
+            let in_pocket =
+                is_point_inside_polygon(mid, polygon) && !outside_hole;
+            if !in_pocket {
+                best = None;
             }
         }
 

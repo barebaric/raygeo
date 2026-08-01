@@ -5,7 +5,10 @@ use crate::geo::algo::fitting::linearize_data;
 use crate::geo::algo::topology::{
     split_inner_and_outer_contours, split_into_contours,
 };
-use crate::geo::shape::polygon::clean_polygon;
+use crate::geo::shape::polygon::{
+    clean_polygon, get_polygon_area, get_polygon_centroid,
+    is_point_inside_polygon,
+};
 use crate::geo::Geometry;
 use crate::types::{Point, Polygon};
 
@@ -184,6 +187,148 @@ impl Part {
     pub fn new(geometry: Option<Geometry>, size_mm: (f64, f64)) -> Self {
         let mut faces = HashMap::new();
         faces.insert(String::new(), FaceState::new(geometry));
+        Part {
+            faces,
+            size_mm,
+            pixels_per_mm: None,
+            image_source: None,
+        }
+    }
+
+    /// Create a `Part` from geometry, auto-detecting separate pockets
+    /// (disconnected outer contours) and creating one face per pocket.
+    ///
+    /// The largest pocket becomes the default face `""`; the others get
+    /// ids `"1"`, `"2"`, ... (sorted by area descending). Island (inner)
+    /// contours are assigned to the outer that contains their centroid.
+    /// Single-pocket geometry produces a single face `""` — backward
+    /// compatible with [`Part::new`].
+    ///
+    /// Each face's [`StockRegion`] is set directly from its outer +
+    /// islands and `ClearedArea` starts empty. When `geometry` is empty
+    /// or has no contours, a single empty default face is produced
+    /// (matching [`Part::new`]'s behaviour).
+    pub fn from_geometry_multi_face(
+        geometry: Geometry,
+        size_mm: (f64, f64),
+    ) -> Self {
+        // 1. Linearize + split into contours.
+        let mut linearized = geometry.copy();
+        if !linearized.data.is_empty() {
+            linearized.data =
+                linearize_data(&linearized.data, EPSILON_BOUNDARY);
+        }
+        let contours = split_into_contours(&linearized);
+        if contours.is_empty() {
+            return Part::new(Some(geometry), size_mm);
+        }
+
+        // 2. Split inner / outer contours.
+        let refs: Vec<&Geometry> = contours.iter().collect();
+        let (inner_indices, outer_indices) =
+            split_inner_and_outer_contours(&refs);
+
+        // 3. Convert each contour to a polygon (reuse the boundary
+        //    extraction logic). `contour_to_poly` mirrors
+        //    `FaceState::extract_boundary_from_geometry`.
+        let contour_to_poly = |i: usize| -> Option<Polygon> {
+            let segs = contours[i].segments();
+            for seg in &segs {
+                if seg.len() < 3 {
+                    continue;
+                }
+                let poly: Polygon =
+                    seg.iter().map(|p| Point::new(p.x, p.y)).collect();
+                if let Some(cleaned) =
+                    clean_polygon(&poly, 0.01 * EPSILON_MERGE)
+                {
+                    return Some(cleaned);
+                }
+                if poly.len() >= 3 {
+                    return Some(poly);
+                }
+            }
+            None
+        };
+
+        let outers: Vec<Polygon> = outer_indices
+            .iter()
+            .filter_map(|&i| contour_to_poly(i))
+            .collect();
+        let inners: Vec<Polygon> = inner_indices
+            .iter()
+            .filter_map(|&i| contour_to_poly(i))
+            .collect();
+
+        // 4. Sort outers by area descending so the largest becomes "".
+        let mut sorted_outers = outers;
+        sorted_outers.sort_by(|a, b| {
+            let aa = get_polygon_area(a);
+            let ab = get_polygon_area(b);
+            ab.partial_cmp(&aa).unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+        if sorted_outers.is_empty() {
+            return Part::new(Some(geometry), size_mm);
+        }
+
+        // 5. Associate each island with the containing outer (centroid
+        //    test). An island goes to the first (largest) outer that
+        //    contains it, so nested islands stay with their pocket.
+        let mut used_inner = vec![false; inners.len()];
+        let mut faces = HashMap::new();
+
+        for (face_idx, outer_poly) in sorted_outers.iter().enumerate() {
+            let mut islands = Vec::new();
+            for (j, inner_poly) in inners.iter().enumerate() {
+                if used_inner[j] || inner_poly.len() < 3 {
+                    continue;
+                }
+                let cx = get_polygon_centroid(inner_poly);
+                if is_point_inside_polygon(cx, outer_poly) {
+                    islands.push(inner_poly.clone());
+                    used_inner[j] = true;
+                }
+            }
+
+            let face_id = if face_idx == 0 {
+                String::new()
+            } else {
+                face_idx.to_string()
+            };
+
+            // Build the geometry for this face (outer + islands) so
+            // assemblers that read `FaceState::geometry` see the same
+            // pocket.
+            let mut face_geo = Geometry::new();
+            if let Some(first) = outer_poly.first() {
+                face_geo.move_to(first.x, first.y, 0.0);
+                for p in outer_poly.iter().skip(1) {
+                    face_geo.line_to(p.x, p.y, 0.0);
+                }
+                face_geo.close_path();
+            }
+            for island in &islands {
+                if let Some(first) = island.first() {
+                    face_geo.move_to(first.x, first.y, 0.0);
+                    for p in island.iter().skip(1) {
+                        face_geo.line_to(p.x, p.y, 0.0);
+                    }
+                    face_geo.close_path();
+                }
+            }
+
+            let stock_region = StockRegion::new(outer_poly.clone(), islands);
+            faces.insert(
+                face_id,
+                FaceState {
+                    geometry: Some(face_geo),
+                    stock_region,
+                    cleared: ClearedArea::new(),
+                },
+            );
+        }
+
         Part {
             faces,
             size_mm,

@@ -3,21 +3,14 @@
 use prof_macros::prof;
 
 use crate::error::RaygeoResult;
-use crate::geo::algo::offset::grow_geometry;
 use crate::geo::algo::polylabel::find_largest_circle;
-use crate::geo::algo::topology::{
-    split_inner_and_outer_contours, split_into_contours,
-};
-use crate::geo::geometry::Geometry;
 use crate::geo::shape::polygon::{
     get_circle_polygon, get_polygon_area, get_polygon_centroid,
-    get_polygon_signed_area, get_polygons_closest_point,
-    is_point_inside_polygon, resample_polygon,
+    get_polygon_signed_area, get_polygons_closest_point, resample_polygon,
 };
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::{AssembleCtx, Assembler, Tracelet};
-use crate::ops::container::Ops;
-use crate::ops::part::{FaceState, Part};
+use crate::ops::part::FaceState;
 use crate::ops::state::State;
 use crate::ops::types::ToolPose;
 use crate::types::{Point, Point3D, Polygon};
@@ -39,16 +32,13 @@ impl Assembler for AdaptiveWavefrontSpec {
         if ctx.callbacks.is_cancelled() {
             return Err("cancelled".to_string());
         }
-        let (ops, meta) = adaptive_wavefronts_multi_pocket(
-            ctx.face,
-            self.step_over,
-            self.z,
-            self.area_tolerance,
-            self.precision,
-            ctx.state,
-        )
-        .map_err(|e| e.to_string())?;
-        ctx.trace.append_ops(&ops);
+        // Wavefront seeds itself via the largest inscribed circle and
+        // clips to the tool-centre envelope, so a single face is the
+        // right unit of work.  Multi-face iteration lives in
+        // `AssemblerCompute::run` (one call per face); narrow pockets
+        // are handled natively, so there is no multi-region split.
+        let meta = adaptive_wavefronts(ctx.face, ctx.trace, self, ctx.state)
+            .map_err(|e| e.to_string())?;
         ctx.callbacks.report_progress(1.0, "wavefront: done");
         Ok(meta)
     }
@@ -300,142 +290,4 @@ pub fn adaptive_wavefronts(
             heading: 0.0,
         },
     })
-}
-
-// ── Multi-pocket wrapper ───────────────────────────────────────────
-
-/// Multi-pocket adaptive wavefronts.
-///
-/// Extracts all pockets from `part.geometry`, optionally offsets the
-/// boundary inward, seeds each pocket with concentric rings spaced
-/// `step_over` apart, and runs wavefront expansion inside each.
-/// Returns the combined `Ops`.
-#[allow(clippy::too_many_arguments)]
-#[prof]
-pub fn adaptive_wavefronts_multi_pocket(
-    face: &FaceState,
-    step_over: f64,
-    offset_mm: f64,
-    area_tolerance: f64,
-    precision: f64,
-    cut_state: &State,
-) -> RaygeoResult<(Ops, AssemblyMeta)> {
-    let src_geo = face.geometry.as_ref().ok_or_else(|| {
-        crate::RaygeoError::ContourError(
-            "adaptive_wavefronts_multi_pocket requires a part with geometry"
-                .to_string(),
-        )
-    })?;
-
-    // 1. Apply optional inward offset
-    let geo = if offset_mm > 0.0 {
-        grow_geometry(src_geo, -offset_mm)
-    } else {
-        src_geo.copy()
-    };
-
-    // 2. Split into contours, keep only closed ones
-    let contours = split_into_contours(&geo);
-    let closed: Vec<Geometry> =
-        contours.into_iter().filter(|c| c.is_closed(1e-6)).collect();
-    if closed.is_empty() {
-        return Err(crate::RaygeoError::ContourError(
-            "No closed contours found in workpiece geometry".to_string(),
-        ));
-    }
-
-    let closed_refs: Vec<&Geometry> = closed.iter().collect();
-
-    // 3. Split inner / outer
-    let (inner_idx, outer_idx) = split_inner_and_outer_contours(&closed_refs);
-    if outer_idx.is_empty() {
-        return Err(crate::RaygeoError::ContourError(
-            "No outer boundary contour found in workpiece geometry".to_string(),
-        ));
-    }
-
-    // 4. Convert to polygons for pocket association
-    let to_poly = |idx: &[usize]| -> Vec<(Geometry, Polygon)> {
-        idx.iter()
-            .map(|&i| {
-                let geo = closed[i].copy();
-                let poly = geo
-                    .to_polygons(0.01)
-                    .into_iter()
-                    .next()
-                    .unwrap_or_default();
-                (geo, poly)
-            })
-            .collect()
-    };
-    let outer_pairs = to_poly(&outer_idx);
-    let inner_pairs = to_poly(&inner_idx);
-
-    // 5. Associate pockets
-    let mut used_inner = vec![false; inner_pairs.len()];
-    let mut pockets: Vec<(Polygon, Vec<Polygon>)> = Vec::new();
-
-    for (_, outer_poly) in &outer_pairs {
-        let mut islands: Vec<Polygon> = Vec::new();
-        for (j, (_, inner_poly)) in inner_pairs.iter().enumerate() {
-            if used_inner[j] || inner_poly.len() < 3 {
-                continue;
-            }
-            let cx = get_polygon_centroid(inner_poly);
-            if is_point_inside_polygon(cx, outer_poly) {
-                islands.push(inner_poly.clone());
-                used_inner[j] = true;
-            }
-        }
-        pockets.push((outer_poly.clone(), islands));
-    }
-
-    // 6. Process each pocket
-    let z = 0.0;
-    let mut combined_ops = Ops::new();
-    let mut trace = Tracelet::new();
-    let mut first_point: Option<Point3D> = None;
-    let mut last_point: Option<Point3D> = None;
-
-    for (boundary, islands) in &pockets {
-        let mut pocket_part =
-            Part::from_polygons(boundary, islands, (0.0, 0.0));
-
-        let wf_opts = AdaptiveWavefrontSpec {
-            step_over,
-            z,
-            area_tolerance,
-            precision,
-        };
-        let meta = adaptive_wavefronts(
-            pocket_part.face_mut(""),
-            &mut trace,
-            &wf_opts,
-            cut_state,
-        )?;
-
-        if first_point.is_none() {
-            first_point = Some(meta.start.pos);
-        }
-        last_point = Some(meta.end.pos);
-    }
-
-    combined_ops.extend(trace.ops());
-
-    let start_pos = first_point.unwrap_or(Point3D::ZERO);
-    let end_pos = last_point.unwrap_or(Point3D::ZERO);
-
-    Ok((
-        combined_ops,
-        AssemblyMeta {
-            start: ToolPose {
-                pos: start_pos,
-                heading: 0.0,
-            },
-            end: ToolPose {
-                pos: end_pos,
-                heading: 0.0,
-            },
-        },
-    ))
 }

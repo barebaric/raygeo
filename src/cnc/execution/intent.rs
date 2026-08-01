@@ -62,6 +62,7 @@ pub fn create_intent(
             cut_state: State::default(),
             state_source_keys,
             region_boundary: step.region_boundary.clone(),
+            profile: false,
         };
 
         nodes.push(NodeRequest::new(

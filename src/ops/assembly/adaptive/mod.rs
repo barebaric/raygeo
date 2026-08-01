@@ -31,15 +31,20 @@ use crate::dbg_log;
 use crate::error::{RaygeoError, RaygeoResult};
 use crate::geo::algo::medial_axis::MedialAxis;
 use crate::geo::algo::offset::compute_inset_region;
+use crate::geo::algo::polylabel::find_largest_circle;
 use crate::geo::shape::arc::normalize_angle_signed;
-use crate::geo::shape::polygon::{get_polygon_area, get_polygon_centroid};
+use crate::geo::shape::polygon::{
+    get_circle_polygon, get_polygon_area, get_polygon_centroid,
+    get_polygon_signed_area, is_point_inside_polygon,
+};
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::Tracelet;
 use crate::ops::cut::stepper::step;
 use crate::ops::cut::stepper::MAX_IT;
 use crate::ops::cut::StepStatus;
 use crate::ops::cut::StepperOptions;
-use crate::ops::part::FaceState;
+use crate::ops::feature::region::find_regions;
+use crate::ops::part::{ClearedArea, FaceState, StockRegion};
 use crate::ops::state::State;
 use crate::ops::types::CutDirection;
 use crate::ops::types::ToolPose;
@@ -134,11 +139,157 @@ impl crate::ops::assembly::Assembler for AdaptiveClearingSpec {
         if ctx.callbacks.is_cancelled() {
             return Err("cancelled".to_string());
         }
-        let meta = adaptive_clearing(ctx.face, ctx.trace, self, ctx.state)
-            .map_err(|e| e.to_string())?;
-        ctx.callbacks
-            .report_progress(1.0, "adaptive_clearing: done");
-        Ok(meta)
+
+        // Plan-time path: the intent calls this assembler once per
+        // region, and the Compute stage has already swapped the face's
+        // stock region for the region boundary.  Clear exactly that
+        // region — no internal splitting.
+        if ctx.region_boundary.is_some() {
+            let meta = adaptive_clearing(ctx.face, ctx.trace, self, ctx.state)
+                .map_err(|e| e.to_string())?;
+            ctx.callbacks
+                .report_progress(1.0, "adaptive_clearing: done");
+            return Ok(meta);
+        }
+
+        // Runtime fallback: the whole face is the unit of work.  Try to
+        // clear it in one pass first.  If that stalls (e.g. because a
+        // narrow passage splits the face into wide sub-pockets the tool
+        // cannot cross), fall back to processing each region separately
+        // so each wide area is seeded and cleared independently.
+        if ctx.face.cleared.is_empty() {
+            if let Some((entry_pt, r_max)) = find_largest_circle(
+                &ctx.face.stock_region.boundary,
+                &ctx.face.stock_region.islands,
+                0.1,
+            ) {
+                if r_max > 0.0 {
+                    let seed_r = (r_max * 0.25).max(self.tool_radius);
+                    let seed = get_circle_polygon(entry_pt, seed_r, 32);
+                    ctx.face.cleared.set_fragments(vec![seed]);
+                }
+            }
+        }
+        let whole_meta =
+            adaptive_clearing(ctx.face, ctx.trace, self, ctx.state);
+        if let Ok(meta) = whole_meta {
+            ctx.callbacks
+                .report_progress(1.0, "adaptive_clearing: done");
+            return Ok(meta);
+        }
+
+        // Whole-face pass stalled.  Split into disconnected wide
+        // sub-regions and clear each one independently, preserving the
+        // partial fragments already cleared by the whole-face attempt.
+        let regions = find_regions(
+            &ctx.face.stock_region.boundary,
+            &ctx.face.stock_region.islands,
+            self.tool_radius,
+            self.area_tolerance,
+        );
+        if regions.is_empty() {
+            // Cannot split — propagate the whole-face failure.
+            return Err(whole_meta.unwrap_err().to_string());
+        }
+
+        let crate::ops::assembly::AssembleCtx {
+            face,
+            trace,
+            state,
+            callbacks,
+            face_id,
+            warnings,
+            ..
+        } = ctx;
+
+        let islands = face.stock_region.islands.clone();
+        let initial_fragments = face.cleared.fragments().to_vec();
+
+        let mut all_fragments: Vec<Polygon> = Vec::new();
+        let mut combined_start: Option<ToolPose> = None;
+        let mut combined_end: Option<ToolPose> = None;
+
+        for (i, region) in regions.iter().enumerate() {
+            let region_frags: Vec<Polygon> = initial_fragments
+                .iter()
+                .filter(|f| {
+                    let c = get_polygon_centroid(f);
+                    is_point_inside_polygon(c, &region.polygon)
+                })
+                .cloned()
+                .collect();
+
+            let region_islands: Vec<Polygon> = islands
+                .iter()
+                .filter(|isl| {
+                    let c = get_polygon_centroid(isl);
+                    is_point_inside_polygon(c, &region.polygon)
+                })
+                .cloned()
+                .collect();
+
+            let mut region_face = FaceState {
+                geometry: None,
+                stock_region: StockRegion::new(
+                    region.polygon.clone(),
+                    region_islands,
+                ),
+                cleared: ClearedArea::with_fragments(&region_frags),
+            };
+
+            // Auto-seed an empty region from the largest inscribed
+            // circle (already computed by `find_regions`).  The seed
+            // must be large enough to give the stepper meaningful
+            // engagement: use 25% of `r_max` (down from a naive 10%),
+            // floored at `tool_radius` so the tool's own disk fits
+            // inside the seed.
+            if region_face.cleared.is_empty() && region.r_max > 0.0 {
+                let seed_r = (region.r_max * 0.25).max(self.tool_radius);
+                let seed = get_circle_polygon(region.entry_pt, seed_r, 32);
+                region_face.cleared.set_fragments(vec![seed]);
+            }
+
+            match adaptive_clearing(&mut region_face, trace, self, state) {
+                Ok(meta) => {
+                    if combined_start.is_none() {
+                        combined_start = Some(meta.start);
+                    }
+                    combined_end = Some(meta.end);
+                }
+                Err(e) => {
+                    warnings.push(crate::ops::assembly::AssemblyWarning {
+                        kind: crate::ops::assembly::AssemblyWarningKind::RegionFailed,
+                        face_id: face_id.clone(),
+                        region: Some(i),
+                        detail: e.to_string(),
+                    });
+                }
+            }
+            all_fragments
+                .extend(region_face.cleared.fragments().iter().cloned());
+
+            if callbacks.is_cancelled() {
+                face.cleared.set_fragments(all_fragments);
+                return Err("cancelled".to_string());
+            }
+        }
+
+        // Merge every region's fragments back into the face's cleared
+        // area so downstream stages see the union.
+        face.cleared.set_fragments(all_fragments);
+
+        callbacks.report_progress(1.0, "adaptive_clearing: done");
+
+        Ok(crate::ops::assembly::AssemblyMeta {
+            start: combined_start.unwrap_or(ToolPose {
+                pos: Point3D::ZERO,
+                heading: 0.0,
+            }),
+            end: combined_end.unwrap_or(ToolPose {
+                pos: Point3D::ZERO,
+                heading: 0.0,
+            }),
+        })
     }
 
     fn name(&self) -> &str {
@@ -162,6 +313,7 @@ impl crate::ops::assembly::Assembler for AdaptiveClearingSpec {
             source_dimensions: output.source_dimensions,
             cleared_fragments: output.cleared_fragments.clone(),
             meta: output.meta.clone(),
+            warnings: output.warnings.clone(),
         })
     }
 
@@ -517,8 +669,18 @@ pub fn adaptive_clearing(
     opts: &AdaptiveClearingSpec,
     cut_state: &State,
 ) -> RaygeoResult<AssemblyMeta> {
-    let pocket_boundary = face.stock_region.boundary.clone();
+    let mut pocket_boundary = face.stock_region.boundary.clone();
     let islands = face.stock_region.islands.clone();
+
+    // The rest of the algorithm (envelope computation, cleared-area
+    // frontier, bites) assumes a CCW (positive-signed-area) boundary.
+    // A CW boundary (as produced by e.g. `Part::from_geometry_multi_face`
+    // for the default face) would make the envelope/frontier degenerate
+    // and the tool would never expand past the seed.  Normalise here so
+    // `adaptive_clearing` is winding-agnostic.
+    if get_polygon_signed_area(&pocket_boundary) < 0.0 {
+        pocket_boundary.reverse();
+    }
 
     // ── 1. Pre-process ────────────────────────────────────────────
     let (valid_tool_area, valid_total) =
