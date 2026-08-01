@@ -1,18 +1,21 @@
-//! Narrow-passage detection via clustered edge-pair convex hulls.
+//! Narrow-passage detection via clustered edge-pair hulls.
 //!
 //! For each edge in the pocket boundary (outer + holes), the nearest
 //! non-excluded edge within `max_width` is found.  Edge pairs are then
 //! grouped into connected clusters: two pairs are connected when their
-//! edges are adjacent (share a vertex) on the same polygon.  One convex
-//! hull is computed per cluster from all collected endpoint vertices.
-//! Each hull is clipped to the pocket (outer − holes) to produce the
-//! final narrow-region polygon.
+//! edges are adjacent (share a vertex) on the same polygon.  Per cluster,
+//! each pair contributes the convex hull of its four endpoint vertices — a
+//! tight, wall-bounded quad (the boundary is resampled into short
+//! sub-segments so per-pair hulls stay small) — and these are unioned and
+//! clipped to the pocket (outer − holes) to produce the final narrow-region
+//! polygon.
 
 use rstar::{PointDistance, RTree, RTreeObject, AABB};
 
 use crate::geo::shape::polygon::{
     clean_polygon, get_polygon_convex_hull, get_polygons_group_difference,
-    get_polygons_group_intersection, is_point_inside_polygon, resample_polygon,
+    get_polygons_group_intersection, get_polygons_union,
+    is_point_inside_polygon, resample_polygon,
 };
 use crate::types::{Point, Polygon};
 
@@ -235,6 +238,15 @@ pub fn find_narrow_passages(
         // sliver off the wall.  Check that the line between the two edge
         // midpoints stays inside the pocket; if it exits, the pair spans
         // open space, not a narrow passage.
+        //
+        // Corner test (outer-boundary pairs only): a passage is bounded by
+        // two roughly *parallel* walls whose lines never meet (slot,
+        // corridor).  Two edges that meet at a convex corner have lines
+        // that intersect at the shared vertex, within `max_width` of the
+        // pair — such pairs are corners, not passages, and would otherwise
+        // inflate the narrow area at sharp corners.  Pairs spanning two
+        // different boundaries (island flanks, island-to-wall) are always
+        // genuine passages, so they are exempt.
         if let Some(nb) = &best {
             let a = entry.midpoint;
             let b = nb.midpoint;
@@ -243,7 +255,32 @@ pub fn find_narrow_passages(
                 holes.iter().any(|h| is_point_inside_polygon(mid, h));
             let in_pocket =
                 is_point_inside_polygon(mid, polygon) && !outside_hole;
-            if !in_pocket {
+            let is_corner =
+                in_pocket && entry.poly_id == 0 && nb.poly_id == 0 && {
+                    let dax = entry.b.x - entry.a.x;
+                    let day = entry.b.y - entry.a.y;
+                    let dbx = nb.b.x - nb.a.x;
+                    let dby = nb.b.y - nb.a.y;
+                    let cr = dax * dby - day * dbx;
+                    let mag = (dax * dax + day * day).sqrt()
+                        * (dbx * dbx + dby * dby).sqrt();
+                    if mag <= 1e-12 || cr.abs() <= 1e-9 * mag {
+                        false
+                    } else {
+                        let wx = nb.a.x - entry.a.x;
+                        let wy = nb.a.y - entry.a.y;
+                        let t = (wx * dby - wy * dbx) / cr;
+                        let px = entry.a.x + t * dax;
+                        let py = entry.a.y + t * day;
+                        let mw2 = max_width * max_width;
+                        let dla2 =
+                            (px - a.x) * (px - a.x) + (py - a.y) * (py - a.y);
+                        let dlb2 =
+                            (px - b.x) * (px - b.x) + (py - b.y) * (py - b.y);
+                        dla2 < mw2 && dlb2 < mw2
+                    }
+                };
+            if !in_pocket || is_corner {
                 best = None;
             }
         }
@@ -382,28 +419,35 @@ pub fn find_narrow_passages(
     for c in clusters.iter_mut() {
         *c = uf.find(*c);
     }
-    // Collect vertices per cluster.
-    let mut cluster_vertices: std::collections::BTreeMap<usize, Vec<Point>> =
+    // Group pair indices by cluster.
+    let mut cluster_pairs: std::collections::BTreeMap<usize, Vec<usize>> =
         std::collections::BTreeMap::new();
-    for (i, p) in pairs.iter().enumerate() {
-        let v = cluster_vertices.entry(clusters[i]).or_default();
-        v.extend_from_slice(&p.pts);
+    for (i, _p) in pairs.iter().enumerate() {
+        cluster_pairs.entry(clusters[i]).or_default().push(i);
     }
 
-    // Compute one convex hull per cluster, then clip to pocket.
+    // Build one passage polygon per cluster as the union of per-pair convex
+    // hulls.  Each edge pair (ea, eb) contributes the convex hull of its four
+    // endpoint vertices — a tight quad that touches both walls.  Because the
+    // boundary is resampled into short sub-segments, each per-pair hull is
+    // small and wall-bounded; unioning them across the cluster follows the
+    // actual wall contour.  This avoids the bulging of a single convex hull
+    // taken over all cluster vertices, which at concave corners or diverging
+    // flanks would span wide area that is not genuinely narrow.
     let mut hulls: Vec<Polygon> = Vec::new();
-    for (_, mut verts) in cluster_vertices {
-        verts.sort_by(|a, b| {
-            a.x.partial_cmp(&b.x)
-                .unwrap()
-                .then(a.y.partial_cmp(&b.y).unwrap())
-        });
-        verts.dedup_by(|a, b| {
-            (a.x - b.x).abs() < 1e-10 && (a.y - b.y).abs() < 1e-10
-        });
-        let hull = get_polygon_convex_hull(&verts);
-        if hull.len() >= 3 {
-            hulls.push(hull);
+    for (_, idxs) in cluster_pairs {
+        let mut pieces: Vec<Polygon> = Vec::new();
+        for &i in &idxs {
+            let p = &pairs[i];
+            let h = get_polygon_convex_hull(&p.pts.to_vec());
+            if h.len() >= 3 {
+                pieces.push(h);
+            }
+        }
+        for q in get_polygons_union(&pieces) {
+            if q.len() >= 3 {
+                hulls.push(q);
+            }
         }
     }
 
