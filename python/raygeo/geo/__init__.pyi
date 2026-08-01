@@ -602,6 +602,15 @@ class Geometry:
         :returns: List of polygons, each a list of ``(x, y)`` vertices.
         :complexity: O(n) time, O(n) space
         """
+    def split_inner_and_outer_polygons(self) -> tuple[builtins.list[builtins.list[tuple[builtins.float, builtins.float]]], builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]]:
+        r"""
+        Split the geometry into its closed contours, classified into
+        outer boundaries and inner islands.
+        
+        :returns: ``(outers, islands)`` — two lists of polygons, each a
+            list of ``(x, y)`` vertices.
+        :complexity: O(n) time, O(n) space
+        """
     def reverse_contour(self) -> Geometry:
         r"""
         Reverse the winding direction of all contours.

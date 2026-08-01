@@ -906,6 +906,20 @@ Split contours into inner and outer groups.
 | _Returns_    | `tuple[list[Geometry], list[Geometry]]` | Tuple of `(inner_contours, outer_contours)`, each a list of Geometry. |
 | _Complexity_ |                                         | O(n log n) average time, O(n) space                                   |
 
+### `split_inner_and_outer_polygons()`
+
+```python
+split_inner_and_outer_polygons(
+) -> tuple[list[list[tuple[float, float]]], list[list[tuple[float, float]]]]
+```
+
+Split the geometry into its closed contours, classified into outer boundaries and inner islands.
+
+| Parameter    | Type                                                                      | Description                                                                    |
+| ------------ | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| _Returns_    | `tuple[list[list[tuple[float, float]]], list[list[tuple[float, float]]]]` | `(outers, islands)` — two lists of polygons, each a list of `(x, y)` vertices. |
+| _Complexity_ |                                                                           | O(n) time, O(n) space                                                          |
+
 ### `split_into_components()`
 
 ```python

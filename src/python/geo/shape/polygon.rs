@@ -13,12 +13,13 @@ use crate::geo::shape::polygon::{
     get_miter_offset_intersection, get_point_line_distance,
     get_polygon_boundary_distance, get_polygon_bounds, get_polygon_centroid,
     get_polygon_closest_point, get_polygon_convex_hull, get_polygon_edges,
-    get_polygon_group_bounds, get_polygon_heading_at, get_polygon_perimeter,
-    get_polygon_signed_area, get_polygon_vertex_centroid,
-    get_polygons_closest_point, get_polygons_difference,
-    get_polygons_group_difference, get_polygons_group_intersection,
-    get_polygons_intersection, get_polygons_union, get_polyline_swept_polygon,
-    get_segment_swept_polygon, get_signed_boundary_distance, is_almost_equal,
+    get_polygon_from_points, get_polygon_group_bounds, get_polygon_heading_at,
+    get_polygon_perimeter, get_polygon_signed_area,
+    get_polygon_vertex_centroid, get_polygons_closest_point,
+    get_polygons_difference, get_polygons_group_difference,
+    get_polygons_group_intersection, get_polygons_intersection,
+    get_polygons_union, get_polyline_swept_polygon, get_segment_swept_polygon,
+    get_signed_boundary_distance, is_almost_equal,
     is_path_confined_to_boundary, is_point_inside_polygon,
     is_polygon_clockwise, is_polygon_convex, normalize_polygons,
     offset_polygon, resample_polygon, rotate_polygon, rotate_polygons,
@@ -173,8 +174,9 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         get_polygon_bounds_py,
         get_polygon_boundary_distance_py,
         get_polygon_centroid_py,
-        get_polygon_vertex_centroid_py,
         get_polygon_closest_point_py,
+        get_polygon_from_points_py,
+        get_polygon_vertex_centroid_py,
         get_polygons_closest_point_py,
         get_polyline_swept_polygon_py,
         get_segment_swept_polygon_py,
@@ -254,6 +256,37 @@ fn clean_polygon_py(
     tolerance: Option<f64>,
 ) -> Option<Vec<(f64, f64)>> {
     clean_polygon(&poly_to_points(polygon), tolerance.unwrap_or(1e-6))
+        .map(points_to_tuples)
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+    import typing
+    import raygeo.geo.types
+
+    def get_polygon_from_points(
+        points: collections.abc.Sequence[types.Point],
+        tolerance: typing.Optional[float] = None,
+    ) -> typing.Optional[types.Polygon]:
+        """Convert a run of points into a cleaned polygon.
+
+        :param points: Vertices as (x, y) points.
+        :param tolerance: Cleaning tolerance.
+        :returns: Cleaned polygon or the raw points if cleaning fails,
+            or None for fewer than 3 points.
+        :complexity: O(n)
+        """
+"#,
+    module = "raygeo.geo.shape.polygon"
+)]
+#[pyfunction(name = "get_polygon_from_points")]
+#[pyo3(signature = (points, tolerance=None))]
+fn get_polygon_from_points_py(
+    points: Vec<PyPoint2D>,
+    tolerance: Option<f64>,
+) -> Option<Vec<(f64, f64)>> {
+    get_polygon_from_points(&poly_to_points(points), tolerance.unwrap_or(1e-6))
         .map(points_to_tuples)
 }
 

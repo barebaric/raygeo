@@ -459,6 +459,24 @@ Get the edges of a polygon.
 | _Returns_    | `list[tuple[types.Point, types.Point]]` | List of ((x1, y1), (x2, y2)) edges. |
 | _Complexity_ |                                         | O(n)                                |
 
+### `get_polygon_from_points()`
+
+```python
+get_polygon_from_points(
+    points: Sequence[types.Point],
+    tolerance: Optional[float] = None,
+) -> Optional[types.Polygon]
+```
+
+Convert a run of points into a cleaned polygon.
+
+| Parameter    | Type                      | Description                                                                           |
+| ------------ | ------------------------- | ------------------------------------------------------------------------------------- |
+| `points`     | `Sequence[types.Point]`   | Vertices as (x, y) points.                                                            |
+| `tolerance`  | `Optional[float] = None`  | Cleaning tolerance.                                                                   |
+| _Returns_    | `Optional[types.Polygon]` | Cleaned polygon or the raw points if cleaning fails, or None for fewer than 3 points. |
+| _Complexity_ |                           | O(n)                                                                                  |
+
 ### `get_polygon_group_bounds()`
 
 ```python

@@ -8,11 +8,15 @@
 
 use glam::DMat4;
 
+use crate::constants::{EPSILON_BOUNDARY, EPSILON_MERGE};
 use crate::geo::algo::fitting::{
     convert_arc_to_beziers_from_array, linearize_data,
 };
+use crate::geo::algo::topology::{
+    split_inner_and_outer_contours, split_into_contours,
+};
 use crate::geo::query::get_positions_at_distances_from_array;
-use crate::geo::shape::polygon::clean_polygon;
+use crate::geo::shape::polygon::get_polygon_from_points;
 use crate::types::{Command, Point, Point3D, Polygon, Rect};
 
 /// A geometric path consisting of move, line, arc, and bezier commands.
@@ -445,18 +449,65 @@ impl Geometry {
         let segs = linearized.segments();
         let mut result = Vec::new();
         for seg in &segs {
-            if seg.len() < 3 {
-                continue;
-            }
-            let poly: Polygon =
+            let poly_2d: Polygon =
                 seg.iter().map(|p| Point::new(p.x, p.y)).collect();
-            if let Some(cleaned) = clean_polygon(&poly, 0.01 * tolerance) {
+            if let Some(cleaned) =
+                get_polygon_from_points(&poly_2d, 0.01 * tolerance)
+            {
                 result.push(cleaned);
-            } else if poly.len() >= 3 {
-                result.push(poly);
             }
         }
         result
+    }
+
+    /// Split the geometry into its closed contours, classified into
+    /// outer boundaries and inner islands.
+    ///
+    /// Linearises arcs/beziers, decomposes the command stream into
+    /// individual closed contours, classifies each contour as outer or
+    /// inner using the contour nesting hierarchy, and converts each
+    /// contour to a cleaned polygon.  Returns `(outers, islands)`.
+    pub fn split_inner_and_outer_polygons(
+        &self,
+    ) -> (Vec<Polygon>, Vec<Polygon>) {
+        let mut linearized = self.copy();
+        if !linearized.data.is_empty() {
+            linearized.data =
+                linearize_data(&linearized.data, EPSILON_BOUNDARY);
+        }
+        let contours = split_into_contours(&linearized);
+        if contours.is_empty() {
+            return (vec![], vec![]);
+        }
+
+        let refs: Vec<&Geometry> = contours.iter().collect();
+        let (inner_indices, outer_indices) =
+            split_inner_and_outer_contours(&refs);
+
+        let contour_to_poly = |i: usize| -> Option<Polygon> {
+            let segs = contours[i].segments();
+            for seg in &segs {
+                let poly_2d: Polygon =
+                    seg.iter().map(|p| Point::new(p.x, p.y)).collect();
+                if let Some(cleaned) =
+                    get_polygon_from_points(&poly_2d, 0.01 * EPSILON_MERGE)
+                {
+                    return Some(cleaned);
+                }
+            }
+            None
+        };
+
+        let outers: Vec<Polygon> = outer_indices
+            .iter()
+            .filter_map(|&i| contour_to_poly(i))
+            .collect();
+        let islands: Vec<Polygon> = inner_indices
+            .iter()
+            .filter_map(|&i| contour_to_poly(i))
+            .collect();
+
+        (outers, islands)
     }
 
     /// Returns a reference to the command at the given index, if it exists.

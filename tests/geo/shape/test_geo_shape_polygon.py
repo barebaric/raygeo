@@ -29,6 +29,7 @@ from raygeo.geo.shape.polygon import (
     get_polygon_closest_point,
     get_polygon_convex_hull,
     get_polygon_edges,
+    get_polygon_from_points,
     get_polygon_group_bounds,
     get_polygon_heading_at,
     get_polygon_perimeter,
@@ -700,6 +701,53 @@ class TestCleanPolygon:
         original_area = abs(get_polygon_signed_area(polygon))
         cleaned_area = abs(get_polygon_signed_area(cleaned))
         assert abs(original_area - cleaned_area) < 0.5
+
+
+class TestGetPolygonFromPoints:
+    def test_valid_triangle(self):
+        points = [(0, 0), (10, 0), (5, 5)]
+        result = get_polygon_from_points(points)
+        assert result is not None
+        assert len(result) == 3
+
+    def test_empty(self):
+        assert get_polygon_from_points([]) is None
+
+    def test_single_point(self):
+        assert get_polygon_from_points([(0, 0)]) is None
+
+    def test_two_points(self):
+        assert get_polygon_from_points([(0, 0), (1, 1)]) is None
+
+    def test_cleans_collinear_points(self):
+        """Redundant collinear bumps are cleaned out."""
+        points = [(0, 0), (5, 5), (10, 0), (15, 8), (20, 0), (20, 10), (0, 10)]
+        result = get_polygon_from_points(points, tolerance=0.5)
+        assert result is not None
+        assert len(result) >= 4
+
+    def test_area_preserved_within_tolerance(self):
+        points = [(0, 0), (10, 0), (10, 10), (0, 10)]
+        result = get_polygon_from_points(points, tolerance=0.01)
+        assert result is not None
+        original_area = abs(get_polygon_signed_area(points))
+        cleaned_area = abs(get_polygon_signed_area(result))
+        assert abs(original_area - cleaned_area) < 0.01
+
+    def test_returns_raw_points_when_cleaning_fails(self):
+        """
+        A valid polygon that cannot be cleaned falls back to the raw points.
+        """
+        points = [(0, 0), (10, 0), (5, 10)]
+        result = get_polygon_from_points(points)
+        assert result == [(0.0, 0.0), (10.0, 0.0), (5.0, 10.0)]
+
+    def test_points_are_float_pairs(self):
+        points = [(0, 0), (10, 0), (5, 5)]
+        result = get_polygon_from_points(points)
+        assert result is not None
+        assert all(len(p) == 2 for p in result)
+        assert all(isinstance(x, float) for p in result for x in p)
 
 
 class TestPolygonOffset:

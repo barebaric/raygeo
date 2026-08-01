@@ -1029,6 +1029,125 @@ class TestToPolygons:
         assert len(polygons) == 2
 
 
+class TestSplitInnerAndOuterPolygons:
+    def test_empty_geometry(self):
+        geo = Geometry()
+        outers, islands = geo.split_inner_and_outer_polygons()
+        assert outers == []
+        assert islands == []
+
+    def test_single_outer_no_islands(self):
+        geo = Geometry()
+        geo.move_to(0, 0)
+        geo.line_to(10, 0)
+        geo.line_to(10, 10)
+        geo.line_to(0, 10)
+        geo.close_path()
+
+        outers, islands = geo.split_inner_and_outer_polygons()
+        assert len(outers) == 1
+        assert islands == []
+
+    def test_outer_with_island(self):
+        geo = Geometry()
+        geo.move_to(0, 0)
+        geo.line_to(20, 0)
+        geo.line_to(20, 20)
+        geo.line_to(0, 20)
+        geo.close_path()
+        geo.move_to(5, 5)
+        geo.line_to(15, 5)
+        geo.line_to(15, 15)
+        geo.line_to(5, 15)
+        geo.close_path()
+
+        outers, islands = geo.split_inner_and_outer_polygons()
+        assert len(outers) == 1
+        assert len(islands) == 1
+
+    def test_multiple_outers(self):
+        geo = Geometry()
+        geo.move_to(0, 0)
+        geo.line_to(10, 0)
+        geo.line_to(10, 10)
+        geo.line_to(0, 10)
+        geo.close_path()
+        geo.move_to(20, 0)
+        geo.line_to(30, 0)
+        geo.line_to(30, 10)
+        geo.line_to(20, 10)
+        geo.close_path()
+
+        outers, islands = geo.split_inner_and_outer_polygons()
+        assert len(outers) == 2
+        assert islands == []
+
+    def test_winding_agnostic(self):
+        # A CW-wound outer with a CCW island is still classified by the
+        # contour nesting hierarchy, not by signed area alone.
+        geo = Geometry()
+        geo.move_to(0, 0)
+        geo.line_to(0, 20)
+        geo.line_to(20, 20)
+        geo.line_to(20, 0)
+        geo.close_path()
+        geo.move_to(5, 5)
+        geo.line_to(15, 5)
+        geo.line_to(15, 15)
+        geo.line_to(5, 15)
+        geo.close_path()
+
+        outers, islands = geo.split_inner_and_outer_polygons()
+        assert len(outers) == 1
+        assert len(islands) == 1
+
+    def test_outer_containing_island_with_second_outer(self):
+        # An island belongs to no specific outer here; the classification
+        # just separates boundary contours from island contours.
+        geo = Geometry()
+        geo.move_to(0, 0)
+        geo.line_to(20, 0)
+        geo.line_to(20, 20)
+        geo.line_to(0, 20)
+        geo.close_path()
+        geo.move_to(5, 5)
+        geo.line_to(15, 5)
+        geo.line_to(15, 15)
+        geo.line_to(5, 15)
+        geo.close_path()
+        geo.move_to(30, 30)
+        geo.line_to(40, 30)
+        geo.line_to(40, 40)
+        geo.line_to(30, 40)
+        geo.close_path()
+
+        outers, islands = geo.split_inner_and_outer_polygons()
+        assert len(outers) == 2
+        assert len(islands) == 1
+
+    def test_open_path_is_ignored(self):
+        geo = Geometry()
+        geo.move_to(0, 0)
+        geo.line_to(10, 0)
+        geo.line_to(10, 10)
+
+        outers, islands = geo.split_inner_and_outer_polygons()
+        assert outers == []
+        assert islands == []
+
+    def test_vertices_are_2d_pairs(self):
+        geo = Geometry()
+        geo.move_to(0, 0)
+        geo.line_to(10, 0)
+        geo.line_to(10, 10)
+        geo.line_to(0, 10)
+        geo.close_path()
+
+        outers, _ = geo.split_inner_and_outer_polygons()
+        assert all(len(p) == 2 for p in outers[0])
+        assert all(isinstance(x, float) for p in outers[0] for x in p)
+
+
 class TestFilter:
     def test_filter_keep_all(self):
         geo = Geometry()

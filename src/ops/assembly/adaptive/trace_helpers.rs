@@ -2,12 +2,14 @@ use std::collections::BTreeMap;
 
 use crate::geo::algo::medial_axis::MedialAxis;
 use crate::ops::assembly::trace_utils as tu;
+use crate::ops::assembly::Tracelet;
 use crate::ops::part::ClearedArea;
 use crate::ops::part::StockRegion;
 use crate::trace_types::{Meta, MetaValue, ToolSnapshot};
 use crate::types::{Point3D, Polygon};
 
 use super::tool::Tool;
+use super::wallhug::WallHugTracker;
 use super::AdaptiveClearingSpec;
 
 pub(super) fn make_tool_snapshot(
@@ -95,6 +97,45 @@ pub(super) fn init_meta(cleared: &ClearedArea, region: &StockRegion) -> Meta {
         cleared.remaining_area(region),
     );
     m
+}
+
+/// Emit a terminal `exit` event with the standard resume/route metadata.
+///
+/// Every terminal event in the adaptive loop (converged, max-resumes,
+/// resume-failed, cancelled, and the normal end-of-run) carries the same
+/// exit payload: the resume/route reason bitfields, the last resume
+/// point, the candidate list, and the wall-hug summaries.  This helper
+/// centralises that emission so the individual exit sites stay minimal.
+#[allow(clippy::too_many_arguments)]
+pub(super) fn emit_exit(
+    trace: &mut Tracelet,
+    tool: &Tool,
+    prev_pos: Point3D,
+    cleared: &ClearedArea,
+    region: &StockRegion,
+    resume_reasons: &[u8; 6],
+    resume_details: &[u8; 6],
+    route_details: &[u8; 4],
+    last_resume_point: Point3D,
+    resume_candidate_pts: &[Option<Point3D>; 6],
+    hug_tracker: &WallHugTracker,
+) {
+    trace.exit(
+        make_tool_snapshot(tool, prev_pos),
+        Some(resume_exit_meta(
+            cleared,
+            region,
+            resume_reasons,
+            resume_details,
+            route_details,
+            last_resume_point,
+            resume_candidate_pts,
+            &hug_tracker.wall_hug_ref(),
+            &hug_tracker.segment_counts_ref(),
+            None,
+            None,
+        )),
+    );
 }
 
 #[allow(clippy::too_many_arguments)]

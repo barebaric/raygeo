@@ -1,13 +1,7 @@
 use std::collections::HashMap;
 
-use crate::constants::{EPSILON_BOUNDARY, EPSILON_MERGE};
-use crate::geo::algo::fitting::linearize_data;
-use crate::geo::algo::topology::{
-    split_inner_and_outer_contours, split_into_contours,
-};
 use crate::geo::shape::polygon::{
-    clean_polygon, get_polygon_area, get_polygon_centroid,
-    is_point_inside_polygon,
+    get_polygon_area, get_polygon_centroid, is_point_inside_polygon,
 };
 use crate::geo::Geometry;
 use crate::types::{Point, Polygon};
@@ -32,11 +26,20 @@ pub struct FaceState {
 }
 
 impl FaceState {
+    /// Boundary + islands for a face: the largest outer contour as the
+    /// boundary and every inner contour as an island.
+    fn boundary_and_islands(geo: &Geometry) -> (Option<Polygon>, Vec<Polygon>) {
+        let (outers, islands) = geo.split_inner_and_outer_polygons();
+        let boundary = outers.into_iter().max_by(|a, b| {
+            crate::utils::sort_f64(get_polygon_area(a), get_polygon_area(b))
+        });
+        (boundary, islands)
+    }
+
     pub fn new(geometry: Option<Geometry>) -> Self {
         let stock_region = match &geometry {
-            Some(_) => {
-                let (boundary, islands) =
-                    Self::extract_boundary_from_geometry(geometry.as_ref());
+            Some(geo) => {
+                let (boundary, islands) = Self::boundary_and_islands(geo);
                 StockRegion::new(boundary.unwrap_or_default(), islands)
             }
             None => StockRegion::empty(),
@@ -50,70 +53,75 @@ impl FaceState {
 
     /// Extract boundary + islands from this face's geometry.
     pub fn extract_boundary(&self) -> (Option<Polygon>, Vec<Polygon>) {
-        Self::extract_boundary_from_geometry(self.geometry.as_ref())
+        match &self.geometry {
+            Some(geo) => Self::boundary_and_islands(geo),
+            None => (None, vec![]),
+        }
     }
 
-    /// Standalone boundary extraction from a geometry reference.
-    pub(crate) fn extract_boundary_from_geometry(
-        geo: Option<&Geometry>,
-    ) -> (Option<Polygon>, Vec<Polygon>) {
-        let geo = match geo {
-            Some(g) => g,
-            None => return (None, vec![]),
-        };
-
-        let mut linearized = geo.copy();
-        if !linearized.data.is_empty() {
-            linearized.data =
-                linearize_data(&linearized.data, EPSILON_BOUNDARY);
+    /// Seed the cleared area with a circle at `entry_pt` when empty.
+    ///
+    /// The seed radius is 25% of `r_max`, floored at `tool_radius` so
+    /// the tool's own disk fits inside the seed and the stepper has
+    /// meaningful engagement on the first step.
+    pub fn seed_circle(
+        &mut self,
+        entry_pt: Point,
+        r_max: f64,
+        tool_radius: f64,
+    ) {
+        if !self.cleared.is_empty() || r_max <= 0.0 {
+            return;
         }
-        let contours = split_into_contours(&linearized);
-        if contours.is_empty() {
-            return (None, vec![]);
-        }
+        let seed_r = (r_max * 0.25).max(tool_radius);
+        let seed = crate::geo::shape::polygon::get_circle_polygon(
+            entry_pt, seed_r, 32,
+        );
+        self.cleared.set_fragments(vec![seed]);
+    }
 
-        let refs: Vec<&Geometry> = contours.iter().collect();
-        let (inner_indices, outer_indices) =
-            split_inner_and_outer_contours(&refs);
-
-        let contour_to_poly = |i: usize| -> Option<Polygon> {
-            let segs = contours[i].segments();
-            for seg in &segs {
-                if seg.len() < 3 {
-                    continue;
-                }
-                let poly: Polygon =
-                    seg.iter().map(|p| Point::new(p.x, p.y)).collect();
-                if let Some(cleaned) =
-                    clean_polygon(&poly, 0.01 * EPSILON_MERGE)
-                {
-                    return Some(cleaned);
-                }
-                if poly.len() >= 3 {
-                    return Some(poly);
-                }
-            }
-            None
-        };
-
-        let outers: Vec<Polygon> = outer_indices
-            .iter()
-            .filter_map(|&i| contour_to_poly(i))
-            .collect();
-
-        let islands: Vec<Polygon> = inner_indices
-            .iter()
-            .filter_map(|&i| contour_to_poly(i))
-            .collect();
-
-        let boundary = outers.into_iter().max_by(|a, b| {
-            crate::utils::sort_f64(
-                crate::geo::shape::polygon::get_polygon_area(a),
-                crate::geo::shape::polygon::get_polygon_area(b),
+    /// Seed the cleared area from the largest inscribed circle of the
+    /// stock region when empty.
+    pub fn seed_from_largest_circle(&mut self, tool_radius: f64) {
+        let (entry_pt, r_max) =
+            crate::geo::algo::polylabel::find_largest_circle(
+                &self.stock_region.boundary,
+                &self.stock_region.islands,
+                0.1,
             )
-        });
+            .unwrap_or_default();
+        self.seed_circle(entry_pt, r_max, tool_radius);
+    }
 
-        (boundary, islands)
+    /// Build a face scoped to `boundary`, keeping only the stock
+    /// islands and cleared fragments whose centroid lies inside
+    /// `boundary`.
+    pub fn scoped_to(&self, boundary: Polygon) -> FaceState {
+        let islands = self
+            .stock_region
+            .islands
+            .iter()
+            .filter(|isl| {
+                let c = get_polygon_centroid(isl);
+                is_point_inside_polygon(c, &boundary)
+            })
+            .cloned()
+            .collect();
+        let fragments = self
+            .cleared
+            .fragments()
+            .iter()
+            .filter(|f| {
+                let c = get_polygon_centroid(f);
+                is_point_inside_polygon(c, &boundary)
+            })
+            .cloned()
+            .collect::<Vec<Polygon>>();
+        FaceState {
+            geometry: None,
+            stock_region: StockRegion::new(boundary, islands),
+            cleared: ClearedArea::with_fragments(&fragments),
+        }
     }
 }
 
@@ -212,55 +220,14 @@ impl Part {
         geometry: Geometry,
         size_mm: (f64, f64),
     ) -> Self {
-        // 1. Linearize + split into contours.
-        let mut linearized = geometry.copy();
-        if !linearized.data.is_empty() {
-            linearized.data =
-                linearize_data(&linearized.data, EPSILON_BOUNDARY);
-        }
-        let contours = split_into_contours(&linearized);
-        if contours.is_empty() {
+        // 1. Linearize + split into contours, classified by nesting
+        //    depth into outers and inners.
+        let (outers, inners) = geometry.split_inner_and_outer_polygons();
+        if outers.is_empty() {
             return Part::new(Some(geometry), size_mm);
         }
 
-        // 2. Split inner / outer contours.
-        let refs: Vec<&Geometry> = contours.iter().collect();
-        let (inner_indices, outer_indices) =
-            split_inner_and_outer_contours(&refs);
-
-        // 3. Convert each contour to a polygon (reuse the boundary
-        //    extraction logic). `contour_to_poly` mirrors
-        //    `FaceState::extract_boundary_from_geometry`.
-        let contour_to_poly = |i: usize| -> Option<Polygon> {
-            let segs = contours[i].segments();
-            for seg in &segs {
-                if seg.len() < 3 {
-                    continue;
-                }
-                let poly: Polygon =
-                    seg.iter().map(|p| Point::new(p.x, p.y)).collect();
-                if let Some(cleaned) =
-                    clean_polygon(&poly, 0.01 * EPSILON_MERGE)
-                {
-                    return Some(cleaned);
-                }
-                if poly.len() >= 3 {
-                    return Some(poly);
-                }
-            }
-            None
-        };
-
-        let outers: Vec<Polygon> = outer_indices
-            .iter()
-            .filter_map(|&i| contour_to_poly(i))
-            .collect();
-        let inners: Vec<Polygon> = inner_indices
-            .iter()
-            .filter_map(|&i| contour_to_poly(i))
-            .collect();
-
-        // 4. Sort outers by area descending so the largest becomes "".
+        // 2. Sort outers by area descending so the largest becomes "".
         let mut sorted_outers = outers;
         sorted_outers.sort_by(|a, b| {
             let aa = get_polygon_area(a);
@@ -268,11 +235,7 @@ impl Part {
             ab.partial_cmp(&aa).unwrap_or(std::cmp::Ordering::Equal)
         });
 
-        if sorted_outers.is_empty() {
-            return Part::new(Some(geometry), size_mm);
-        }
-
-        // 5. Associate each island with the containing outer (centroid
+        // 3. Associate each island with the containing outer (centroid
         //    test). An island goes to the first (largest) outer that
         //    contains it, so nested islands stay with their pocket.
         let mut used_inner = vec![false; inners.len()];

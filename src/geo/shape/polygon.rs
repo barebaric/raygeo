@@ -987,6 +987,25 @@ pub fn clean_polygon(polygon: &Polygon, tolerance: f64) -> Option<Polygon> {
     Some(result)
 }
 
+/// Convert a run of points into a polygon, cleaning out duplicate and
+/// near-collinear vertices.
+///
+/// Falls back to the raw points when cleaning fails but they still form
+/// a valid (3+ vertex) polygon.
+pub fn get_polygon_from_points(
+    points: &[Point],
+    tolerance: f64,
+) -> Option<Polygon> {
+    let poly: Polygon = points.to_vec();
+    if let Some(cleaned) = clean_polygon(&poly, tolerance) {
+        Some(cleaned)
+    } else if poly.len() >= 3 {
+        Some(poly)
+    } else {
+        None
+    }
+}
+
 /// Offset (inflate/deflate) a polygon with a specific join style.
 ///
 /// **Planar (XY-plane only).** Z is not modeled.

@@ -38,6 +38,7 @@ use crate::geo::query::find_closest_point_on_path_from_array;
 use crate::python::geo::flex_point::{
     point3d_to_tuple, points_to_tuples, polygons_to_tuples,
 };
+use crate::types::GeometryPair;
 use crate::types::{Command as CoreCommand, Point, Point3D};
 
 /// A rapid-move command with an endpoint but no cutting.
@@ -1581,6 +1582,17 @@ impl Geometry {
     #[pyo3(signature = (tolerance=0.01))]
     fn to_polygons(&self, tolerance: f64) -> Vec<Vec<(f64, f64)>> {
         polygons_to_tuples(self.inner.to_polygons(tolerance))
+    }
+
+    /// Split the geometry into its closed contours, classified into
+    /// outer boundaries and inner islands.
+    ///
+    /// :returns: ``(outers, islands)`` — two lists of polygons, each a
+    ///     list of ``(x, y)`` vertices.
+    /// :complexity: O(n) time, O(n) space
+    fn split_inner_and_outer_polygons(&self) -> GeometryPair<Vec<(f64, f64)>> {
+        let (outers, islands) = self.inner.split_inner_and_outer_polygons();
+        (polygons_to_tuples(outers), polygons_to_tuples(islands))
     }
 
     /// Reverse the winding direction of all contours.

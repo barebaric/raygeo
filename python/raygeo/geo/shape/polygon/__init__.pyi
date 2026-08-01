@@ -30,6 +30,7 @@ __all__ = [
     "get_polygon_closest_point",
     "get_polygon_convex_hull",
     "get_polygon_edges",
+    "get_polygon_from_points",
     "get_polygon_group_bounds",
     "get_polygon_heading_at",
     "get_polygon_perimeter",
@@ -329,6 +330,17 @@ def get_polygon_edges(polygon: collections.abc.Sequence[types.Point]) -> list[tu
     
     :param polygon: Polygon as (x, y) points.
     :returns: List of ((x1, y1), (x2, y2)) edges.
+    :complexity: O(n)
+    """
+
+def get_polygon_from_points(points: collections.abc.Sequence[types.Point], tolerance: typing.Optional[float] = None) -> typing.Optional[types.Polygon]:
+    r"""
+    Convert a run of points into a cleaned polygon.
+    
+    :param points: Vertices as (x, y) points.
+    :param tolerance: Cleaning tolerance.
+    :returns: Cleaned polygon or the raw points if cleaning fails,
+        or None for fewer than 3 points.
     :complexity: O(n)
     """
 
