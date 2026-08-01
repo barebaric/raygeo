@@ -26,12 +26,6 @@ pub fn register(py_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 
     let sys_modules = py.import("sys")?.getattr("modules")?;
     sys_modules.set_item("raygeo.mesh", &m)?;
-    sys_modules.set_item("raygeo.mesh.build", &m.getattr("build")?)?;
-    sys_modules.set_item("raygeo.mesh.gradient", &m.getattr("gradient")?)?;
-    sys_modules.set_item("raygeo.mesh.laplace", &m.getattr("laplace")?)?;
-    sys_modules.set_item("raygeo.mesh.pde", &m.getattr("pde")?)?;
-    sys_modules.set_item("raygeo.mesh.remesh", &m.getattr("remesh")?)?;
-    sys_modules.set_item("raygeo.mesh.types", &m.getattr("types")?)?;
 
     Ok(())
 }

@@ -115,5 +115,7 @@ pub(crate) fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     )?;
     register_functions!(m, py_transform_to_cylinder);
     algo_mod.add_submodule(&m)?;
+    let sys_modules = algo_mod.py().import("sys")?.getattr("modules")?;
+    sys_modules.set_item("raygeo.geo.algo.cylindrical", &m)?;
     Ok(())
 }

@@ -86,6 +86,8 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyRasterMode>()?;
     m.add_class::<PyStateBlock>()?;
     m.add_function(wrap_pyfunction!(py_category, m)?)?;
+    let sys_modules = m.py().import("sys")?.getattr("modules")?;
+    sys_modules.set_item("raygeo.ops.types", m)?;
     Ok(())
 }
 

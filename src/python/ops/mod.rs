@@ -85,12 +85,6 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     let sys_modules = py.import("sys")?.getattr("modules")?;
     sys_modules.set_item("raygeo.ops", &ops_mod)?;
-    sys_modules.set_item("raygeo.ops.cut", &ops_mod.getattr("cut")?)?;
-    sys_modules.set_item("raygeo.ops.part", &ops_mod.getattr("part")?)?;
-    sys_modules.set_item("raygeo.ops.types", &types_mod)?;
-    sys_modules.set_item("raygeo.ops.axis", &axis_mod)?;
-    sys_modules.set_item("raygeo.ops.state", &state_mod)?;
-    sys_modules.set_item("raygeo.ops.feature", &ops_mod.getattr("feature")?)?;
 
     Ok(())
 }

@@ -114,5 +114,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(inner_fit_polygon_py, m)?)?;
     m.add_function(wrap_pyfunction!(build_no_go_zones_py, m)?)?;
     m.add_function(wrap_pyfunction!(sweep_hull_for_edge_py, m)?)?;
+    let sys_modules = m.py().import("sys")?.getattr("modules")?;
+    sys_modules.set_item("raygeo.geo.algo.nest2d.ifp", m)?;
     Ok(())
 }

@@ -108,5 +108,7 @@ pub fn register(parent: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(pyo3::wrap_pyfunction!(build_triangle_mesh_py, m.clone())?)?;
     m.add_function(pyo3::wrap_pyfunction!(build_uniform_mesh_py, m.clone())?)?;
     parent.add_submodule(&m)?;
+    let sys_modules = parent.py().import("sys")?.getattr("modules")?;
+    sys_modules.set_item("raygeo.mesh.build", &m)?;
     Ok(())
 }

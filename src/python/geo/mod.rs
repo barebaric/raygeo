@@ -50,11 +50,9 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     geo_mod.add_submodule(&types_mod)?;
 
     m.add_submodule(&geo_mod)?;
-    let sys_modules = py.import("sys")?.getattr("modules")?;
-    // Do NOT register raygeo.geo in sys.modules — the Python
-    // __init__.py at python/raygeo/geo/__init__.py serves as
+    // Note: raygeo.geo is intentionally NOT registered in sys.modules —
+    // the Python __init__.py at python/raygeo/geo/__init__.py serves as
     // the package and delegates to this Rust module.
-    sys_modules.set_item("raygeo.geo.types", &types_mod)?;
 
     Ok(())
 }

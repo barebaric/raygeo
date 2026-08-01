@@ -46,5 +46,7 @@ pub fn register(parent: &Bound<'_, PyModule>) -> PyResult<()> {
         m.clone()
     )?)?;
     parent.add_submodule(&m)?;
+    let sys_modules = parent.py().import("sys")?.getattr("modules")?;
+    sys_modules.set_item("raygeo.mesh.gradient", &m)?;
     Ok(())
 }

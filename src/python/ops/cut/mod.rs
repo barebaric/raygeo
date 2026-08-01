@@ -23,5 +23,7 @@ pub fn register(ops_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     stepper::register(&m)?;
 
     ops_mod.add_submodule(&m)?;
+    let sys_modules = py.import("sys")?.getattr("modules")?;
+    sys_modules.set_item("raygeo.ops.cut", &m)?;
     Ok(())
 }

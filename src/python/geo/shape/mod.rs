@@ -43,22 +43,6 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     let sys_modules = py.import("sys")?.getattr("modules")?;
     sys_modules.set_item("raygeo.geo.shape", &shape_mod)?;
-    sys_modules.set_item("raygeo.geo.shape.arc", &shape_mod.getattr("arc")?)?;
-    sys_modules
-        .set_item("raygeo.geo.shape.bezier", &shape_mod.getattr("bezier")?)?;
-    sys_modules
-        .set_item("raygeo.geo.shape.circle", &shape_mod.getattr("circle")?)?;
-    sys_modules
-        .set_item("raygeo.geo.shape.polygon", &shape_mod.getattr("polygon")?)?;
-    sys_modules.set_item(
-        "raygeo.geo.shape.polyline",
-        &shape_mod.getattr("polyline")?,
-    )?;
-    sys_modules
-        .set_item("raygeo.geo.shape.line", &shape_mod.getattr("line")?)?;
-    sys_modules
-        .set_item("raygeo.geo.shape.rect", &shape_mod.getattr("rect")?)?;
-    sys_modules
-        .set_item("raygeo.geo.shape.point", &shape_mod.getattr("point")?)?;
+
     Ok(())
 }

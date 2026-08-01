@@ -150,5 +150,8 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     ))?;
     m.add("Rect3D", rect3d)?;
 
+    let sys_modules = py.import("sys")?.getattr("modules")?;
+    sys_modules.set_item("raygeo.geo.types", m)?;
+
     Ok(())
 }

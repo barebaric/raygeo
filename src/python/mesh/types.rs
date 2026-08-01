@@ -70,5 +70,7 @@ pub fn register(parent: &Bound<'_, PyModule>) -> PyResult<()> {
     m.setattr("__doc__", "Mesh data types (TriangleMesh).")?;
     m.add_class::<TriangleMesh>()?;
     parent.add_submodule(&m)?;
+    let sys_modules = parent.py().import("sys")?.getattr("modules")?;
+    sys_modules.set_item("raygeo.mesh.types", &m)?;
     Ok(())
 }

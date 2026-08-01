@@ -23,6 +23,8 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     );
 
     algo_mod.add_submodule(&m)?;
+    let sys_modules = algo_mod.py().import("sys")?.getattr("modules")?;
+    sys_modules.set_item("raygeo.geo.algo.hull", &m)?;
     Ok(())
 }
 

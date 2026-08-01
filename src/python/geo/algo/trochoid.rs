@@ -27,6 +27,8 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     register_functions!(m, trochoid_along_py, trochoid_ramped_py,);
 
     algo_mod.add_submodule(&m)?;
+    let sys_modules = algo_mod.py().import("sys")?.getattr("modules")?;
+    sys_modules.set_item("raygeo.geo.algo.trochoid", &m)?;
     Ok(())
 }
 

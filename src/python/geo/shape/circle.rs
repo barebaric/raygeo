@@ -38,6 +38,8 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     );
 
     shape_mod.add_submodule(&m)?;
+    let sys_modules = shape_mod.py().import("sys")?.getattr("modules")?;
+    sys_modules.set_item("raygeo.geo.shape.circle", &m)?;
     Ok(())
 }
 

@@ -46,20 +46,6 @@ pub(crate) fn register(parent: &Bound<'_, PyModule>) -> PyResult<()> {
 
     let sys_modules = py.import("sys")?.getattr("modules")?;
     sys_modules.set_item("raygeo.pipeline", &pipeline_mod)?;
-    sys_modules
-        .set_item("raygeo.pipeline.stage", &pipeline_mod.getattr("stage")?)?;
-    sys_modules.set_item(
-        "raygeo.pipeline.request",
-        &pipeline_mod.getattr("request")?,
-    )?;
-    sys_modules.set_item(
-        "raygeo.pipeline.completed",
-        &pipeline_mod.getattr("completed")?,
-    )?;
-    sys_modules.set_item(
-        "raygeo.pipeline.execute",
-        &pipeline_mod.getattr("execute")?,
-    )?;
 
     Ok(())
 }

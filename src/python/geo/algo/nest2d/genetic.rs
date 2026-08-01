@@ -153,5 +153,7 @@ impl GeneticAlgorithm {
 
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<GeneticAlgorithm>()?;
+    let sys_modules = m.py().import("sys")?.getattr("modules")?;
+    sys_modules.set_item("raygeo.geo.algo.nest2d.genetic", m)?;
     Ok(())
 }

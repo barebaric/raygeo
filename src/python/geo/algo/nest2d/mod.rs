@@ -47,12 +47,6 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     let sys_modules = py.import("sys")?.getattr("modules")?;
     sys_modules.set_item("raygeo.geo.algo.nest2d", &nest_mod)?;
-    sys_modules.set_item("raygeo.geo.algo.nest2d.nfp", &nfp_mod)?;
-    sys_modules.set_item("raygeo.geo.algo.nest2d.ifp", &ifp_mod)?;
-    sys_modules.set_item("raygeo.geo.algo.nest2d.placement", &placement_mod)?;
-    sys_modules.set_item("raygeo.geo.algo.nest2d.gravity", &gravity_mod)?;
-    sys_modules.set_item("raygeo.geo.algo.nest2d.genetic", &genetic_mod)?;
-    sys_modules.set_item("raygeo.geo.algo.nest2d.collision", &collision_mod)?;
 
     Ok(())
 }

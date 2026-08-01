@@ -53,5 +53,7 @@ pub fn register(parent: &Bound<'_, PyModule>) -> PyResult<()> {
     m.setattr("__doc__", "Uniform mesh refinement.")?;
     register_functions!(m, remesh_py);
     parent.add_submodule(&m)?;
+    let sys_modules = py.import("sys")?.getattr("modules")?;
+    sys_modules.set_item("raygeo.mesh.remesh", &m)?;
     Ok(())
 }

@@ -55,5 +55,7 @@ pub fn register(parent: &Bound<'_, PyModule>) -> PyResult<()> {
     )?;
     m.add_function(pyo3::wrap_pyfunction!(trace_spiral_py, m.clone())?)?;
     parent.add_submodule(&m)?;
+    let sys_modules = parent.py().import("sys")?.getattr("modules")?;
+    sys_modules.set_item("raygeo.mesh.pde", &m)?;
     Ok(())
 }

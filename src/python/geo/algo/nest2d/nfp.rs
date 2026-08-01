@@ -124,5 +124,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(nfp_minkowski_py, m)?)?;
     m.add_function(wrap_pyfunction!(normalize_polygon_py, m)?)?;
     m.add_function(wrap_pyfunction!(polygon_to_key_py, m)?)?;
+    let sys_modules = m.py().import("sys")?.getattr("modules")?;
+    sys_modules.set_item("raygeo.geo.algo.nest2d.nfp", m)?;
     Ok(())
 }

@@ -639,5 +639,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(find_valid_position_nfp_py, m)?)?;
     m.add_function(wrap_pyfunction!(place_parts_py, m)?)?;
     m.add_function(wrap_pyfunction!(calculate_fitness_py, m)?)?;
+    let sys_modules = m.py().import("sys")?.getattr("modules")?;
+    sys_modules.set_item("raygeo.geo.algo.nest2d.placement", m)?;
     Ok(())
 }

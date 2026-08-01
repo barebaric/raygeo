@@ -130,5 +130,7 @@ fn apply_gravity_py(
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(find_max_slide_py, m)?)?;
     m.add_function(wrap_pyfunction!(apply_gravity_py, m)?)?;
+    let sys_modules = m.py().import("sys")?.getattr("modules")?;
+    sys_modules.set_item("raygeo.geo.algo.nest2d.gravity", m)?;
     Ok(())
 }

@@ -21,6 +21,8 @@ participate in a coordinated move or transformation.
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.setattr("__doc__", MODULE_DOC)?;
     m.add_class::<PyAxis>()?;
+    let sys_modules = m.py().import("sys")?.getattr("modules")?;
+    sys_modules.set_item("raygeo.ops.axis", m)?;
     Ok(())
 }
 
