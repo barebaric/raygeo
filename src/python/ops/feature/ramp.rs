@@ -1,8 +1,8 @@
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
+use crate::geo::types::Point;
 use crate::ops::feature::ramp::find_ramp_carrier;
-use crate::types::Point;
 
 #[gen_stub_pyfunction(
     python = r#"

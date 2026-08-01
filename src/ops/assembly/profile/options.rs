@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 
+use crate::geo::types::Point3D;
 use crate::ops::assembly::{result::AssemblyMeta, AssembleCtx, Assembler};
 use crate::ops::types::CutDirection;
-use crate::types::Point3D;
 
 /// Which boundary the [`ProfileSpec`] walks.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

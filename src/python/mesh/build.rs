@@ -1,8 +1,8 @@
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
+use crate::geo::types::Point;
 use crate::mesh::build;
-use crate::types::Point;
 
 use super::types::TriangleMesh;
 

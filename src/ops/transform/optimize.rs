@@ -8,12 +8,12 @@ use std::collections::HashSet;
 use rstar::{PointDistance, RTree, RTreeObject, AABB};
 
 use super::link::{find_pass_entry, find_pass_exit};
+use crate::geo::types::Point3D;
 use crate::ops::callbacks::Callbacks;
 use crate::ops::container::Ops;
 use crate::ops::enums::{CommandCategory, CommandType};
 use crate::ops::state::State;
 use crate::ops::transform::{Phase, TransformCtx, Transformer};
-use crate::types::Point3D;
 
 const TWO_OPT_SEGMENT_THRESHOLD: usize = 1000;
 const TWO_OPT_COMMAND_LIMIT: usize = 10000;

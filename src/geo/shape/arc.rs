@@ -17,7 +17,7 @@ use crate::geo::shape::line::{
     does_line_segment_intersect_rect, get_line_segment_closest_point,
 };
 use crate::geo::shape::polygon::is_point_inside_polygon;
-use crate::types::{Point, Point3D, Polygon, Rect};
+use crate::geo::types::{Point, Point3D, Polygon, Rect};
 
 /// Normal for a CCW arc in the XY plane (G17 G03).
 pub const XY_NORMAL_CCW: Point3D = Point3D::new(0.0, 0.0, 1.0);

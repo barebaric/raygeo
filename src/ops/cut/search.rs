@@ -6,10 +6,10 @@ use crate::geo::shape::polygon::{
     get_polygons_closest_point, get_polygons_group_intersection,
     walk_polygon_vertices,
 };
+use crate::geo::types::{Point, Point3D, Polygon};
 use crate::ops::part::ClearedArea;
 use crate::ops::part::StockRegion;
 use crate::ops::types::ToolPose;
-use crate::types::{Point, Point3D, Polygon};
 
 /// Compute the inward offset position from a frontier vertex.
 ///
@@ -163,7 +163,7 @@ pub fn search_frontier_engagement(
         get_polygons_group_intersection(&frontier, &envelope)
     };
     if !polys.is_empty() {
-        let start_2d = crate::types::Point::new(start.pos.x, start.pos.y);
+        let start_2d = crate::geo::types::Point::new(start.pos.x, start.pos.y);
         if let Some((closest_poly_idx, _t, _closest_pt, _d2)) =
             get_polygons_closest_point(&polys, start_2d)
         {

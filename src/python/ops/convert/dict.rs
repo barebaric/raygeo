@@ -6,8 +6,8 @@ use crate::ops::{
     HeadCoolantMode, MarkerCmd, MoveCmd, OpCategory, RasterMode, StateCmd,
 };
 
+use crate::geo::types::Point3D;
 use crate::python::ops::axis::PyAxis;
-use crate::types::Point3D;
 
 pub fn py_to_axis_map_helper(
     dict: &Bound<'_, PyDict>,

@@ -2,8 +2,8 @@ use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
 use crate::geo::algo::nest2d::gravity;
+use crate::geo::types::{Polygon, Rect};
 use crate::python::geo::flex_point::{poly_to_points, PyPoint2D};
-use crate::types::{Polygon, Rect};
 
 pyo3_stub_gen::module_doc!("raygeo.geo.algo.nest2d.gravity", "{}", MODULE_DOC);
 

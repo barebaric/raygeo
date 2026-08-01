@@ -1,4 +1,4 @@
-use crate::types::{Command, Point, Point3D};
+use crate::geo::types::{Command, Point, Point3D};
 
 /// Simplify a sequence of 2D points using the Ramer-Douglas-Peucker algorithm.
 pub fn simplify_polyline(points: &[Point], tolerance: f64) -> Vec<Point> {

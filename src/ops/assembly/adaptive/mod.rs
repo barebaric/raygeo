@@ -35,6 +35,7 @@ use crate::geo::shape::arc::normalize_angle_signed;
 use crate::geo::shape::polygon::{
     get_polygon_area, get_polygon_centroid, get_polygon_signed_area,
 };
+use crate::geo::types::{Point3D, Polygon};
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::Tracelet;
 use crate::ops::cut::stepper::step;
@@ -46,7 +47,6 @@ use crate::ops::part::FaceState;
 use crate::ops::state::State;
 use crate::ops::types::CutDirection;
 use crate::ops::types::ToolPose;
-use crate::types::{Point3D, Polygon};
 use prof_macros::prof;
 
 use std::path::PathBuf;
@@ -702,7 +702,7 @@ pub fn adaptive_clearing(
             crate::utils::sort_f64(ab, aa)
         })
         .map(get_polygon_centroid)
-        .unwrap_or(crate::types::Point::ZERO);
+        .unwrap_or(crate::geo::types::Point::ZERO);
 
     // Use caller-provided position/heading when available (e.g. the
     // tool is already in motion after an entry strategy).  Otherwise
@@ -861,14 +861,14 @@ pub fn adaptive_clearing(
         let predicted = tool.predicted_angle(max_def);
         let result = step(
             &face.cleared,
-            crate::types::Point::new(tool.pos.x, tool.pos.y),
+            crate::geo::types::Point::new(tool.pos.x, tool.pos.y),
             heading,
             predicted,
             &step_opts,
         );
         let status = result.status;
         if result.status == StepStatus::Ok {
-            let dir = crate::types::Point::new(
+            let dir = crate::geo::types::Point::new(
                 result.heading.cos(),
                 result.heading.sin(),
             );
@@ -893,8 +893,8 @@ pub fn adaptive_clearing(
             stuck::wrong_side_safehold(
                 &face.cleared,
                 dir_sign,
-                crate::types::Point::new(prev_pos.x, prev_pos.y),
-                crate::types::Point::new(tool.pos.x, tool.pos.y),
+                crate::geo::types::Point::new(prev_pos.x, prev_pos.y),
+                crate::geo::types::Point::new(tool.pos.x, tool.pos.y),
                 opts.tool_radius,
                 target_area_pd,
                 step_length,
@@ -1008,8 +1008,8 @@ pub fn adaptive_clearing(
             face.cleared.begin_batch();
         }
         face.cleared.expand_batched(
-            crate::types::Point::new(prev_pos.x, prev_pos.y),
-            crate::types::Point::new(tool.pos.x, tool.pos.y),
+            crate::geo::types::Point::new(prev_pos.x, prev_pos.y),
+            crate::geo::types::Point::new(tool.pos.x, tool.pos.y),
             opts.tool_radius,
         );
         steps_since_batch += 1;
@@ -1022,12 +1022,12 @@ pub fn adaptive_clearing(
         }
 
         let eng = face.cleared.get_point_engagement(
-            crate::types::Point::new(tool.pos.x, tool.pos.y),
+            crate::geo::types::Point::new(tool.pos.x, tool.pos.y),
             opts.tool_radius,
         );
         let ca = face.cleared.cut_area(
-            crate::types::Point::new(prev_pos.x, prev_pos.y),
-            crate::types::Point::new(tool.pos.x, tool.pos.y),
+            crate::geo::types::Point::new(prev_pos.x, prev_pos.y),
+            crate::geo::types::Point::new(tool.pos.x, tool.pos.y),
             opts.tool_radius,
         );
         trace.cut(
@@ -1092,7 +1092,7 @@ pub fn adaptive_clearing(
 #[prof]
 fn initial_pose(
     frontier: &[Polygon],
-    centre: crate::types::Point,
+    centre: crate::geo::types::Point,
     z: f64,
 ) -> (Point3D, f64) {
     let mut best_poly: Option<&Polygon> = None;

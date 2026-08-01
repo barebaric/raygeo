@@ -8,7 +8,7 @@ use super::axis::Axis;
 use super::enums::{CommandCategory, CommandType, RasterMode, SectionType};
 use super::state::{AirAssistMode, CoolantMode, HeadCoolantMode, State};
 use super::types::{MarkerCmd, MoveCmd, OpCategory, OpNode, StateCmd};
-use crate::types::{Point, Point3D, Rect};
+use crate::geo::types::{Point, Point3D, Rect};
 
 #[derive(Clone, Debug)]
 pub struct Ops {

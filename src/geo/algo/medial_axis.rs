@@ -10,7 +10,7 @@ use crate::geo::shape::point::get_circumcenter;
 use crate::geo::shape::polygon::{
     clean_polygon, is_point_in_polygon, resample_polygon,
 };
-use crate::types::{Point, Polygon};
+use crate::geo::types::{Point, Polygon};
 
 type Cdt = ConstrainedDelaunayTriangulation<Point2<f64>>;
 

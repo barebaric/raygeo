@@ -38,7 +38,7 @@ use crate::geo::shape::polygon::{
     get_polygon_group_bounds, get_polygons_group_intersection, offset_polygon,
     JoinStyle,
 };
-use crate::types::{Point, Polygon};
+use crate::geo::types::{Point, Polygon};
 
 const CIRCLE_N: usize = 24;
 const MAX_STEPS: usize = 512;

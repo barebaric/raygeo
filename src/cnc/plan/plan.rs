@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
+use crate::geo::types::Polygon;
 use crate::ops::assembly::Assembler;
-use crate::types::Polygon;
 
 /// One step in a [`Plan`]: a typed assembler spec targeting a face.
 ///

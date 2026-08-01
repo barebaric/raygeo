@@ -26,7 +26,7 @@ use crate::geo::shape::polygon::{
     scale_polygon, translate_bounds, translate_polygon, translate_polygons,
     CornerType, JoinStyle,
 };
-use crate::types::{Point, Rect};
+use crate::geo::types::{Point, Rect};
 use numpy::{PyArray2, PyArrayMethods};
 use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyList};

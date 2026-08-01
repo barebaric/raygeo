@@ -1,10 +1,10 @@
 use prof_macros::prof;
 
+use crate::geo::types::{Point, Point3D};
 use crate::ops::assembly::adaptive::routing::{
     sweep_clear, RouteCtx, RoutingStrategy, ROUTE_MAT_NO_AXIS,
     ROUTE_MAT_NO_CLEARED, ROUTE_MAT_NO_PATH, ROUTE_MAT_SWEEP_COLLIDE,
 };
-use crate::types::{Point, Point3D};
 
 /// MAT-guided routing: use the pocket-wide MAT (built once at startup) to
 /// find a path through cleared territory via the medial-axis skeleton.

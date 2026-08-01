@@ -22,7 +22,7 @@ use crate::geo::shape::arc::{
     is_arc_inside_polygons, linearize_arc, normalize_angle,
     normalize_angle_signed,
 };
-use crate::types::{Point, Point3D, Rect};
+use crate::geo::types::{Point, Point3D, Rect};
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 

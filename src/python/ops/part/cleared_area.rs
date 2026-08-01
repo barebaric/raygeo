@@ -1,9 +1,9 @@
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
+use crate::geo::types::Point;
+use crate::geo::types::Rect;
 use crate::ops::part::ClearedArea;
-use crate::types::Point;
-use crate::types::Rect;
 
 use super::stock_region::PyStockRegion;
 
@@ -32,7 +32,7 @@ impl PyClearedArea {
     pub fn new(initial: Option<Vec<Vec<(f64, f64)>>>) -> Self {
         match initial {
             Some(polys) => {
-                let polygons: Vec<crate::types::Polygon> = polys
+                let polygons: Vec<crate::geo::types::Polygon> = polys
                     .into_iter()
                     .map(|v| {
                         v.into_iter().map(|(x, y)| Point::new(x, y)).collect()
@@ -98,7 +98,7 @@ impl PyClearedArea {
     ///                  vertices) to add.
     /// :complexity: O(n) where n = total vertices across all polygons
     pub fn cut(&mut self, polygons: Vec<Vec<(f64, f64)>>) {
-        let polys: Vec<crate::types::Polygon> = polygons
+        let polys: Vec<crate::geo::types::Polygon> = polygons
             .into_iter()
             .map(|v| v.into_iter().map(|(x, y)| Point::new(x, y)).collect())
             .collect();
@@ -149,7 +149,7 @@ impl PyClearedArea {
         &mut self,
         polygons: Vec<Vec<(f64, f64)>>,
     ) -> Vec<Vec<(f64, f64)>> {
-        let polys: Vec<crate::types::Polygon> = polygons
+        let polys: Vec<crate::geo::types::Polygon> = polygons
             .into_iter()
             .map(|v| v.into_iter().map(|(x, y)| Point::new(x, y)).collect())
             .collect();

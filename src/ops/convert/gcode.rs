@@ -12,6 +12,7 @@ use serde::de::DeserializeOwned;
 use crate::fstring::{
     parse_include_directive, render_named, resolve_path_vars, NamedVars,
 };
+use crate::geo::types::Point3D;
 use crate::ops::axis::Axis;
 use crate::ops::callbacks::Callbacks;
 use crate::ops::container::Ops;
@@ -22,7 +23,6 @@ use crate::ops::convert::{EncodeCtx, EncodeOutput, Encoder};
 use crate::ops::enums::CommandType;
 use crate::ops::state::{AirAssistMode, CoolantMode};
 use crate::ops::types::MoveCmd;
-use crate::types::Point3D;
 
 const COORD_TOLERANCE: f64 = 1e-6;
 

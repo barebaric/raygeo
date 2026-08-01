@@ -9,7 +9,7 @@ pub enum BoundaryTag {
 
 #[derive(Clone, Debug)]
 pub struct TriangleMesh {
-    pub vertices: Vec<crate::types::Point>,
+    pub vertices: Vec<crate::geo::types::Point>,
     pub triangles: Vec<Triangle>,
     pub adjacency: Vec<isize>,
     pub boundary_tags: Vec<BoundaryTag>,

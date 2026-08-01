@@ -2,6 +2,7 @@ use prof_macros::prof;
 
 use crate::dbg_log;
 use crate::geo::shape::polygon::get_polygon_signed_area;
+use crate::geo::types::{Point, Polygon};
 use crate::ops::assembly::adaptive::resume::{
     probe, walk_and_probe, ResumeCtx, ResumeStrategy, WalkProbeOptions,
     DETAIL_NO_ENGAGEMENT, DETAIL_NO_HOLES,
@@ -9,7 +10,6 @@ use crate::ops::assembly::adaptive::resume::{
 use crate::ops::assembly::adaptive::tool::Tool;
 use crate::ops::cut::interp::point_in_valid_area;
 use crate::ops::types::ToolPose;
-use crate::types::{Point, Polygon};
 
 pub struct ResumeIsland;
 

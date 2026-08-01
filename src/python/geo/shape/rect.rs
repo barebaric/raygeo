@@ -11,7 +11,7 @@ the union bounding rectangle of multiple geometries.
 use crate::geo::shape::line::is_point_inside_rect;
 use crate::geo::shape::rect::do_rects_intersect;
 use crate::geo::shape::rect::does_rect_contain_rect;
-use crate::types::{Point, Rect};
+use crate::geo::types::{Point, Rect};
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 

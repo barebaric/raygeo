@@ -1,4 +1,4 @@
-use crate::types::Polygon;
+use crate::geo::types::Polygon;
 
 /// Boundary and islands of a workpiece — the geometric input to
 /// clearing operations. Extracted once from geometry and cached on

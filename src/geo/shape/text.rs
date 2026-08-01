@@ -440,9 +440,9 @@ impl<'a> zeno::PathBuilder for GeoPathBuilder<'a> {
         let py = p.y + self.origin_y;
         self.current_point = zeno::Point::new(px, py);
         self.geo.bezier_to(
-            crate::types::Point3D::new(c1x as f64, c1y as f64, 0.0),
-            crate::types::Point3D::new(c2x as f64, c2y as f64, 0.0),
-            crate::types::Point3D::new(px as f64, py as f64, 0.0),
+            crate::geo::types::Point3D::new(c1x as f64, c1y as f64, 0.0),
+            crate::geo::types::Point3D::new(c2x as f64, c2y as f64, 0.0),
+            crate::geo::types::Point3D::new(px as f64, py as f64, 0.0),
         );
         self
     }
@@ -467,9 +467,9 @@ impl<'a> zeno::PathBuilder for GeoPathBuilder<'a> {
         let c1y = (2.0 * ctrl.y + end.y) / 3.0;
         self.current_point = end;
         self.geo.bezier_to(
-            crate::types::Point3D::new(c0x as f64, c0y as f64, 0.0),
-            crate::types::Point3D::new(c1x as f64, c1y as f64, 0.0),
-            crate::types::Point3D::new(end.x as f64, end.y as f64, 0.0),
+            crate::geo::types::Point3D::new(c0x as f64, c0y as f64, 0.0),
+            crate::geo::types::Point3D::new(c1x as f64, c1y as f64, 0.0),
+            crate::geo::types::Point3D::new(end.x as f64, end.y as f64, 0.0),
         );
         self
     }

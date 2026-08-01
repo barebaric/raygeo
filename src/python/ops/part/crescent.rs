@@ -1,9 +1,9 @@
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
+use crate::geo::types::Point;
 use crate::ops::part::crescent::cut_area;
 use crate::python::geo::flex_point::polygons_from_tuples;
-use crate::types::Point;
 
 /// Area of ``disk(c2) − disk(c1) − fragments``, intersected with
 /// *valid_area*.

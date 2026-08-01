@@ -1,8 +1,8 @@
 use std::collections::BTreeMap;
 
+use crate::geo::types::{Point3D, Polygon};
 use crate::ops::assembly::trace_utils as tu;
 use crate::trace_types::{Meta, MetaValue, ToolSnapshot};
-use crate::types::{Point3D, Polygon};
 
 pub(super) fn tool_snapshot(
     pos: Point3D,

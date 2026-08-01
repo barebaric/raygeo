@@ -7,7 +7,10 @@
 //! # Example
 //!
 //! ```rust
-//! use raygeo::types::{Point3D, project_points_to_xy, lift_points_to_xy_plane};
+//! use raygeo::geo::algo::project::{
+//!     project_points_to_xy, lift_points_to_xy_plane,
+//! };
+//! use raygeo::geo::types::Point3D;
 //!
 //! let pts_3d = vec![Point3D::new(1.0, 2.0, 5.0), Point3D::new(3.0, 4.0, 5.0)];
 //! let pts_2d = project_points_to_xy(&pts_3d);
@@ -15,14 +18,30 @@
 //! let result_3d = lift_points_to_xy_plane(&pts_2d, 5.0);
 //! ```
 
-/// Re-exported from [`crate::types::project_point_to_xy`].
-pub use crate::types::project_point_to_xy;
+use crate::geo::types::{Point, Point3D};
 
-/// Re-exported from [`crate::types::project_points_to_xy`].
-pub use crate::types::project_points_to_xy;
+/// Project a 3D point to the XY plane, dropping Z.
+pub fn project_point_to_xy(p: Point3D) -> Point {
+    Point::new(p.x, p.y)
+}
 
-/// Re-exported from [`crate::types::lift_points_to_xy_plane`].
-pub use crate::types::lift_points_to_xy_plane;
+/// Project a slice of 3D points to the XY plane, dropping Z.
+pub fn project_points_to_xy(points: &[Point3D]) -> Vec<Point> {
+    points.iter().map(|p| Point::new(p.x, p.y)).collect()
+}
 
-/// Re-exported from [`crate::types::is_planar_in_z`].
-pub use crate::types::is_planar_in_z;
+/// Lift 2D points to the XY plane at a given Z height.
+pub fn lift_points_to_xy_plane(points: &[Point], z: f64) -> Vec<Point3D> {
+    points.iter().map(|p| Point3D::new(p.x, p.y, z)).collect()
+}
+
+/// Check whether all points share the same Z (within tolerance).
+/// Returns `Some(z)` if planar in Z, `None` otherwise.
+pub fn is_planar_in_z(points: &[Point3D], tol: f64) -> Option<f64> {
+    let z0 = points.first()?.z;
+    if points.iter().all(|p| (p.z - z0).abs() <= tol) {
+        Some(z0)
+    } else {
+        None
+    }
+}

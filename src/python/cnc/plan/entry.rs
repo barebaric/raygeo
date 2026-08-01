@@ -11,8 +11,8 @@ use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
 use crate::cnc::plan::entry::{self, EntryWorkplanOptions};
+use crate::geo::types::{Point, Polygon};
 use crate::ops::feature::region::Region;
-use crate::types::{Point, Polygon};
 
 pub(crate) fn register(plan_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = plan_mod.py();

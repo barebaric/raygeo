@@ -18,13 +18,13 @@ use crate::error::RaygeoResult;
 use crate::geo::algo::helix::HelixDirection;
 use crate::geo::shape::line::longest_line_through_point;
 use crate::geo::shape::polygon::get_polygon_bounds;
+use crate::geo::types::{Point3D, Polygon};
 use crate::ops::assembly::helix::HelixSpec;
 use crate::ops::assembly::ramp::RampSpec;
 use crate::ops::assembly::spiral::SpiralSpec;
 use crate::ops::assembly::toroid::ToroidalClearSpec;
 use crate::ops::feature::ramp::find_ramp_carrier;
 use crate::ops::feature::region::Region;
-use crate::types::{Point3D, Polygon};
 
 pub struct EntryWorkplanOptions {
     pub islands: Vec<Polygon>,
@@ -145,10 +145,10 @@ pub fn plan_entry(
 /// region). Picks the longest inside sub-segment. Falls back to the
 /// AABB-spanning line if erosion yields nothing.
 fn ramp_segment_in_region(
-    entry_pt: crate::types::Point,
+    entry_pt: crate::geo::types::Point,
     region: &Polygon,
     tool_radius: f64,
-) -> (crate::types::Point, crate::types::Point) {
+) -> (crate::geo::types::Point, crate::geo::types::Point) {
     use crate::geo::shape::polygon::{offset_polygon, JoinStyle};
 
     let eroded = offset_polygon(region, -tool_radius, JoinStyle::Miter);
@@ -162,16 +162,17 @@ fn ramp_segment_in_region(
 
     let candidates = [
         (
-            crate::types::Point::new(bbox.min.x, entry_pt.y),
-            crate::types::Point::new(bbox.max.x, entry_pt.y),
+            crate::geo::types::Point::new(bbox.min.x, entry_pt.y),
+            crate::geo::types::Point::new(bbox.max.x, entry_pt.y),
         ),
         (
-            crate::types::Point::new(entry_pt.x, bbox.min.y),
-            crate::types::Point::new(entry_pt.x, bbox.max.y),
+            crate::geo::types::Point::new(entry_pt.x, bbox.min.y),
+            crate::geo::types::Point::new(entry_pt.x, bbox.max.y),
         ),
     ];
 
-    let mut best: Option<(crate::types::Point, crate::types::Point)> = None;
+    let mut best: Option<(crate::geo::types::Point, crate::geo::types::Point)> =
+        None;
     let mut best_len = 0.0_f64;
 
     for (p1, p2) in &candidates {

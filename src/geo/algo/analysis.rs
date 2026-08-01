@@ -12,7 +12,7 @@ use crate::geo::algo::topology::{
 };
 use crate::geo::geometry::Geometry;
 use crate::geo::shape::polygon::is_point_inside_polygon;
-use crate::types::{Command, Point, Point3D, Polygon, WindingOrder};
+use crate::geo::types::{Command, Point, Point3D, Polygon, WindingOrder};
 
 /// Checks if a path forms a closed loop within the given tolerance.
 /// A closed path starts and ends at the same point.

@@ -2,7 +2,7 @@ use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
 use crate::geo::algo::narrow;
-use crate::types::Point;
+use crate::geo::types::Point;
 
 #[gen_stub_pyfunction(
     python = r#"

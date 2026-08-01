@@ -23,7 +23,7 @@ use crate::geo::algo::clipping::{
     subtract_polygons_from_line_segment,
     subtract_polygons_from_line_segment_2d,
 };
-use crate::types::{Point, Rect};
+use crate::geo::types::{Point, Rect};
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 

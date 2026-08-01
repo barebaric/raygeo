@@ -8,12 +8,12 @@ use crate::geo::shape::polygon::{
     get_circle_polygon, get_polygon_area, get_polygon_centroid,
     get_polygon_signed_area, get_polygons_closest_point, resample_polygon,
 };
+use crate::geo::types::{Point, Point3D, Polygon};
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::{AssembleCtx, Assembler, Tracelet};
 use crate::ops::part::FaceState;
 use crate::ops::state::State;
 use crate::ops::types::ToolPose;
-use crate::types::{Point, Point3D, Polygon};
 
 const MAX_WAVEFRONT_ITERATIONS: usize = 1000;
 

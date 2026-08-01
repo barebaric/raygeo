@@ -3,12 +3,12 @@ use pyo3_stub_gen::derive::{
     gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pymethods,
 };
 
+use crate::geo::types::Point3D;
 use crate::ops::assembly::profile::{self, ProfileKind, ProfileSpec};
 use crate::ops::assembly::Tracelet;
 use crate::ops::state::State;
 use crate::ops::types::CutDirection;
 use crate::python::ops::assembly::result::PyAssemblyResult;
-use crate::types::Point3D;
 
 fn check_cancel() -> bool {
     let rc = unsafe { pyo3::ffi::PyErr_CheckSignals() };

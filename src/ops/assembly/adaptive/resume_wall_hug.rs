@@ -1,6 +1,7 @@
 use prof_macros::prof;
 
 use crate::geo::shape::polygon::get_polygons_closest_point;
+use crate::geo::types::{Point, Point3D};
 use crate::ops::assembly::adaptive::resume::{
     probe, require_fragments, ResumeCtx, ResumeStrategy,
     DETAIL_NO_WALL_HUG_POINT,
@@ -8,7 +9,6 @@ use crate::ops::assembly::adaptive::resume::{
 use crate::ops::assembly::adaptive::tool::Tool;
 use crate::ops::cut::interp::point_in_valid_area;
 use crate::ops::types::ToolPose;
-use crate::types::{Point, Point3D};
 
 /// Resume from wall-hug points recorded during the current and
 /// previous cut segments.

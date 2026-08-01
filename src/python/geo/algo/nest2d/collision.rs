@@ -6,10 +6,10 @@ use crate::geo::algo::nest2d::collision;
 use crate::geo::shape::polygon::{
     do_polygons_intersect, get_polygon_group_bounds,
 };
+use crate::geo::types::Point;
+use crate::geo::types::{Polygon, Rect};
 use crate::python::geo::algo::spatial_grid2d::SpatialGrid as PySpatialGrid;
 use crate::python::geo::flex_point::{poly_to_points, PyPoint2D};
-use crate::types::Point;
-use crate::types::{Polygon, Rect};
 
 pyo3_stub_gen::module_doc!(
     "raygeo.geo.algo.nest2d.collision",

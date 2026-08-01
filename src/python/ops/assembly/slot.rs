@@ -1,9 +1,9 @@
+use crate::geo::types::Point;
 use crate::ops::assembly::slot::{self, SlotSpec};
 use crate::ops::assembly::Tracelet;
 use crate::ops::state::State;
 use crate::python::ops::assembly::result::PyAssemblyResult;
 use crate::python::ops::state::PyState;
-use crate::types::Point;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{
     gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pymethods,

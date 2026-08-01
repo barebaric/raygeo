@@ -1,9 +1,9 @@
 //! Mesh refinement.
 
 use crate::geo::shape::polygon::is_point_in_polygon;
+use crate::geo::types::Point;
 use crate::mesh::build::build_adjacency;
 use crate::mesh::types::{BoundaryTag, TriangleMesh};
-use crate::types::Point;
 use spade::handles::FixedVertexHandle;
 use spade::{ConstrainedDelaunayTriangulation, Point2, Triangulation as _};
 use std::collections::HashMap;

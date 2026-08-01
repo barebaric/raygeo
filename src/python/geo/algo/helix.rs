@@ -8,7 +8,7 @@ with configurable direction (CW/CCW), pitch, and expansion/reduction.
 ";
 
 use crate::geo::algo::helix::{self, HelixDirection as RustHelixDirection};
-use crate::types::Point;
+use crate::geo::types::Point;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass_enum, gen_stub_pyfunction};
 

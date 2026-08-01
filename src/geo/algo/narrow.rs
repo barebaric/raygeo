@@ -17,7 +17,7 @@ use crate::geo::shape::polygon::{
     get_polygons_group_intersection, get_polygons_union,
     is_point_inside_polygon, resample_polygon,
 };
-use crate::types::{Point, Polygon};
+use crate::geo::types::{Point, Polygon};
 
 /// An edge in the pocket boundary, tagged for the R-tree.
 #[derive(Clone, Debug)]

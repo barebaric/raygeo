@@ -7,7 +7,7 @@
 
 use crate::constants::EPSILON_INTERSECT;
 use crate::geo::shape::line::get_line_segment_intersection;
-use crate::types::{Command, Point, Point3D};
+use crate::geo::types::{Command, Point, Point3D};
 use glam::DVec2;
 use rstar::{PointDistance, RTree, RTreeObject, AABB};
 

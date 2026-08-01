@@ -3,9 +3,9 @@
 //! Joins ordered machining passes into a single Ops sequence with travel
 //! moves between them, and provides helpers for finding pass boundaries.
 
+use crate::geo::types::Point3D;
 use crate::ops::container::Ops;
 use crate::ops::enums::CommandCategory;
-use crate::types::Point3D;
 
 /// Strategy for linking consecutive machining passes.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

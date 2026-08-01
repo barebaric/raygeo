@@ -9,8 +9,8 @@ use prof_macros::prof;
 
 use crate::geo::shape::polygon::get_polygon_signed_area;
 use crate::geo::shape::polygon::is_point_in_polygon;
+use crate::geo::types::{Point, Polygon};
 use crate::ops::cut::stepper::STEP_ANGLE_BOUND;
-use crate::types::{Point, Polygon};
 
 /// Check whether `pt` lies in a valid tool area defined by polygon
 /// shells and holes.  CCW-wound polygons are outer shells; CW-wound

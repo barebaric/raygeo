@@ -1,6 +1,6 @@
+use crate::geo::types::Point3D;
 use crate::ops::container::Ops;
 use crate::ops::types::{MarkerCmd, MoveCmd, OpCategory};
-use crate::types::Point3D;
 
 impl Ops {
     #[allow(clippy::type_complexity)]

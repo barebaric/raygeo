@@ -1,7 +1,7 @@
 use crate::geo::shape::polygon::{
     get_polygon_bounds, get_polygon_group_bounds, translate_polygon,
 };
-use crate::types::{Polygon, Rect};
+use crate::geo::types::{Polygon, Rect};
 
 use super::collision::{does_any_overlap, is_contained};
 

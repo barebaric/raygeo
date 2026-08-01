@@ -1,5 +1,6 @@
 use prof_macros::prof;
 
+use crate::geo::types::{Point, Point3D};
 use crate::ops::assembly::adaptive::resume::{
     probe, require_fragments, ResumeCtx, ResumeStrategy, DETAIL_NO_ENGAGEMENT,
     DETAIL_NO_GROWTH, DETAIL_OUTSIDE_VALID,
@@ -7,7 +8,6 @@ use crate::ops::assembly::adaptive::resume::{
 use crate::ops::assembly::adaptive::tool::Tool;
 use crate::ops::cut::interp::point_in_valid_area;
 use crate::ops::types::ToolPose;
-use crate::types::{Point, Point3D};
 
 pub struct ResumeSegment;
 
@@ -31,7 +31,7 @@ impl ResumeStrategy for ResumeSegment {
             return None;
         }
 
-        let pos_2d = crate::types::Point::new(
+        let pos_2d = crate::geo::types::Point::new(
             ctx.segment_start.pos.x,
             ctx.segment_start.pos.y,
         );
@@ -74,7 +74,7 @@ fn nudge_to_frontier(ctx: &ResumeCtx, detail: &mut u8) -> Option<ToolPose> {
         ctx.segment_start.heading.cos(),
         ctx.segment_start.heading.sin(),
     );
-    let start_2d = crate::types::Point::new(
+    let start_2d = crate::geo::types::Point::new(
         ctx.segment_start.pos.x,
         ctx.segment_start.pos.y,
     );

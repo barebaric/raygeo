@@ -13,7 +13,7 @@ use crate::geo::algo::analysis::{
 };
 use crate::geo::shape::arc::get_arc_bounds;
 use crate::geo::shape::bezier::compute_cubic_bezier_bounds_1d;
-use crate::types::{Command, Point, Point3D, Rect};
+use crate::geo::types::{Command, Point, Point3D, Rect};
 
 /// Compute the axis-aligned bounding rectangle for a geometry command slice.
 ///

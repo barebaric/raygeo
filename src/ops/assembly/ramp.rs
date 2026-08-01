@@ -7,6 +7,7 @@ use crate::geo::algo::ramp::{
     generate_ramp_3d, RampOptions as GeoRampOptions, RampStyle,
 };
 use crate::geo::shape::polygon::get_segment_swept_polygon;
+use crate::geo::types::{Point, Point3D};
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::trace_utils as tu;
 use crate::ops::assembly::tracelet::write_polyline;
@@ -14,7 +15,6 @@ use crate::ops::assembly::{AssembleCtx, Assembler, Tracelet};
 use crate::ops::part::FaceState;
 use crate::ops::state::State;
 use crate::ops::types::ToolPose;
-use crate::types::{Point, Point3D};
 
 /// Spec for the ramp assembler.
 #[derive(Clone, Debug)]

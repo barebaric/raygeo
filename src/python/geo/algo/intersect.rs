@@ -46,13 +46,13 @@ fn ray_polygon_intersection_py(
     direction: (f64, f64),
     polygon: Vec<(f64, f64)>,
 ) -> Option<(f64, f64)> {
-    let pts: Vec<crate::types::Point> = polygon
+    let pts: Vec<crate::geo::types::Point> = polygon
         .into_iter()
-        .map(|(x, y)| crate::types::Point::new(x, y))
+        .map(|(x, y)| crate::geo::types::Point::new(x, y))
         .collect();
     intersect::get_ray_polygon_intersection(
-        crate::types::Point::new(origin.0, origin.1),
-        crate::types::Point::new(direction.0, direction.1),
+        crate::geo::types::Point::new(origin.0, origin.1),
+        crate::geo::types::Point::new(direction.0, direction.1),
         &pts,
     )
     .map(|p| (p.x, p.y))
@@ -91,10 +91,10 @@ fn ray_line_intersection_py(
     b: (f64, f64),
 ) -> Option<(f64, f64)> {
     intersect::get_ray_line_intersection(
-        crate::types::Point::new(origin.0, origin.1),
-        crate::types::Point::new(direction.0, direction.1),
-        crate::types::Point::new(a.0, a.1),
-        crate::types::Point::new(b.0, b.1),
+        crate::geo::types::Point::new(origin.0, origin.1),
+        crate::geo::types::Point::new(direction.0, direction.1),
+        crate::geo::types::Point::new(a.0, a.1),
+        crate::geo::types::Point::new(b.0, b.1),
     )
     .map(|p| (p.x, p.y))
 }

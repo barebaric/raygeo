@@ -5,7 +5,7 @@
 //! triangles.
 
 use crate::constants::EPSILON_COLLINEAR;
-use crate::types::{Point, Point3D};
+use crate::geo::types::{Point, Point3D};
 
 pub struct SegmentDelta {
     pub dx: f64,

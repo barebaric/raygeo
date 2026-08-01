@@ -1,5 +1,5 @@
 use crate::geo::algo::helix::HelixDirection;
-use crate::types::{Point, Point3D};
+use crate::geo::types::{Point, Point3D};
 
 /// Options controlling flat (constant-Z) spiral generation.
 #[derive(Clone, Debug)]

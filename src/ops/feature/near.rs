@@ -3,7 +3,7 @@ use crate::geo::shape::polygon::{
     get_polygons_group_intersection, get_signed_boundary_distance,
     offset_polygon, JoinStyle,
 };
-use crate::types::{Point, Polygon};
+use crate::geo::types::{Point, Polygon};
 
 /// Find a plunge point near the given position within the cleared area.
 ///

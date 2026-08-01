@@ -17,7 +17,7 @@ use crate::geo::algo::topology::{
 };
 use crate::geo::query::get_positions_at_distances_from_array;
 use crate::geo::shape::polygon::get_polygon_from_points;
-use crate::types::{Command, Point, Point3D, Polygon, Rect};
+use crate::geo::types::{Command, Point, Point3D, Polygon, Rect};
 
 /// A geometric path consisting of move, line, arc, and bezier commands.
 ///

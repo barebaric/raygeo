@@ -4,8 +4,8 @@ use std::collections::HashMap;
 use crate::geo::shape::polygon::{
     get_polygon_area, get_polygon_centroid, is_point_inside_polygon,
 };
+use crate::geo::types::{Point, Polygon};
 use crate::geo::Geometry;
-use crate::types::{Point, Polygon};
 
 use super::cleared_area::ClearedArea;
 use super::image_source::ImageSource;

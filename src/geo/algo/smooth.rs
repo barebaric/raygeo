@@ -9,7 +9,7 @@ use crate::geo::shape::line::get_angle_at_vertex;
 use crate::geo::shape::polygon::does_path_sweep_intersect_polygon;
 use crate::geo::shape::polygon3d::resample_polyline_3d;
 use crate::geo::shape::polyline::resample_polyline as resample_polyline_2d;
-use crate::types::{Point, Point3D, Polygon, Rect};
+use crate::geo::types::{Point, Point3D, Polygon, Rect};
 
 /// Compute a normalized Gaussian kernel based on smoothing amount.
 ///

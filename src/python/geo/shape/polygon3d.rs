@@ -16,7 +16,7 @@ use crate::geo::shape::polygon3d::{
     rotate_polygons_3d, scale_polygon_3d, translate_polygon_3d,
     translate_polygons_3d, walk_along_polygon_3d, walk_along_polyline_3d,
 };
-use crate::types::Point3D;
+use crate::geo::types::Point3D;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 

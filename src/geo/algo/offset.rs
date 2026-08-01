@@ -28,7 +28,7 @@ use crate::geo::shape::polygon::{
     get_polygons_group_difference, is_point_in_polygon, offset_polygon,
     JoinStyle,
 };
-use crate::types::{Point, Point3D, Polygon};
+use crate::geo::types::{Point, Point3D, Polygon};
 
 #[derive(Clone, Debug)]
 struct ContourItem {

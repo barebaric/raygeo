@@ -6,6 +6,7 @@ use glam::{DMat4, DVec4};
 use crate::cnc::execution::specs::{
     AggregateOutput, MachineTransformSpec, RotaryMappingSpec,
 };
+use crate::geo::types::Point3D;
 use crate::ops::assembly::AssemblyOutput;
 use crate::ops::axis::Axis;
 use crate::ops::container::Ops;
@@ -13,7 +14,6 @@ use crate::ops::types::{MarkerCmd, MoveCmd, OpCategory};
 use crate::pipeline::cache::CacheKey;
 use crate::pipeline::completed::PipelineError;
 use crate::pipeline::compute::{Compute, ComputeCtx};
-use crate::types::Point3D;
 
 pub struct MachineTransformCompute {
     pub spec: MachineTransformSpec,

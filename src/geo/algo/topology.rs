@@ -11,7 +11,7 @@ use rstar::{RTree, RTreeObject, AABB};
 use crate::geo::algo::analysis::{get_subpath_area_from_array, is_closed};
 use crate::geo::geometry::Geometry;
 use crate::geo::shape::polygon::is_point_inside_polygon;
-use crate::types::{Command, Point, Point3D, Rect};
+use crate::geo::types::{Command, Point, Point3D, Rect};
 
 /// Preprocessed contour data for hierarchy analysis.
 #[derive(Clone, Debug)]

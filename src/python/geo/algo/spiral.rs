@@ -9,7 +9,7 @@ widening after a helical entry (EntryStrategy.Helix expand_to_diameter).
 ";
 
 use crate::geo::algo::spiral;
-use crate::types::Point;
+use crate::geo::types::Point;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 

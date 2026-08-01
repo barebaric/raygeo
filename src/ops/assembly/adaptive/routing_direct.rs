@@ -1,9 +1,9 @@
 use prof_macros::prof;
 
+use crate::geo::types::Point3D;
 use crate::ops::assembly::adaptive::routing::{
     sweep_clear, RouteCtx, RoutingStrategy, ROUTE_DIRECT_SWEEP_COLLIDE,
 };
-use crate::types::Point3D;
 
 /// Direct-line routing: accept the straight segment from `from` to `to`
 /// only when the tool-disc sweep along it does not intersect any

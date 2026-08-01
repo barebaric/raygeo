@@ -8,8 +8,8 @@
 //! explicitly project data to XY before calling planar routines and lift
 //! results back afterward.
 //!
-//! [`Point`]: crate::types::Point
-//! [`Polygon`]: crate::types::Polygon
+//! [`Point`]: crate::geo::types::Point
+//! [`Polygon`]: crate::geo::types::Polygon
 
 // ── Boolean operations (Clipper2) ─────────────────────────────────────
 

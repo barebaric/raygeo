@@ -35,11 +35,11 @@ use crate::geo::algo::topology::{
 use crate::geo::geometry::Geometry as CoreGeometry;
 use crate::geo::math::map_geometry_to_frame;
 use crate::geo::query::find_closest_point_on_path_from_array;
+use crate::geo::types::PolygonPair;
+use crate::geo::types::{Command as CoreCommand, Point, Point3D};
 use crate::python::geo::flex_point::{
     point3d_to_tuple, points_to_tuples, polygons_to_tuples,
 };
-use crate::types::GeometryPair;
-use crate::types::{Command as CoreCommand, Point, Point3D};
 
 /// A rapid-move command with an endpoint but no cutting.
 #[gen_stub_pyclass]
@@ -1590,7 +1590,7 @@ impl Geometry {
     /// :returns: ``(outers, islands)`` — two lists of polygons, each a
     ///     list of ``(x, y)`` vertices.
     /// :complexity: O(n) time, O(n) space
-    fn split_inner_and_outer_polygons(&self) -> GeometryPair<Vec<(f64, f64)>> {
+    fn split_inner_and_outer_polygons(&self) -> PolygonPair<Vec<(f64, f64)>> {
         let (outers, islands) = self.inner.split_inner_and_outer_polygons();
         (polygons_to_tuples(outers), polygons_to_tuples(islands))
     }

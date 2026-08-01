@@ -3,7 +3,7 @@ use clipper2::FillRule;
 use crate::geo::shape::polygon::{
     get_polygon_bounds, get_polygon_convex_hull, polygons_to_paths,
 };
-use crate::types::{Point, Polygon};
+use crate::geo::types::{Point, Polygon};
 
 /// Compute the Inner-Fit Polygon (IFP) for placing a part inside a bin.
 ///

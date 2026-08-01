@@ -73,7 +73,7 @@
 //!
 //! ```rust
 //! use raygeo::geo::Geometry;
-//! use raygeo::types::Point;
+//! use raygeo::geo::types::Point;
 //!
 //! let mut geo = Geometry::new();
 //! geo.move_to(0.0, 0.0, 0.0);
@@ -100,7 +100,6 @@ pub mod svg;
 pub(crate) mod trace_types;
 
 pub(crate) mod trace;
-pub mod types;
 pub mod utils;
 
 pub use constants::{
@@ -108,12 +107,6 @@ pub use constants::{
     EPSILON_INTERSECT, EPSILON_MEDIUM, EPSILON_MERGE, EPSILON_NEST,
 };
 pub use error::{AxisRepr, RaygeoError, RaygeoResult};
-
-pub use types::{
-    BezierControls, BezierSplit, Command, ContourData, CubicBezier, Edge,
-    GeometryPair, Point, Point3D, Polygon, Polygon3D, Rect, Rect3D, Segment3D,
-    WindingOrder,
-};
 
 // ── Python bindings (behind "python" feature) ─────────────────────
 

@@ -1,4 +1,4 @@
-use crate::types::{Point, Point3D};
+use crate::geo::types::{Point, Point3D};
 
 /// Direction of revolution of a generated helix.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

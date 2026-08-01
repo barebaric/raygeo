@@ -1,7 +1,7 @@
 use prof_macros::prof;
 
+use crate::geo::types::Point3D;
 use crate::ops::assembly::adaptive::routing::{RouteCtx, RoutingStrategy};
-use crate::types::Point3D;
 
 /// Z-hop routing: always succeeds by retracting to safe Z, traveling
 /// directly at safe Z, then plunging to the target.  No obstacle check

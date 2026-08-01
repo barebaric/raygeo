@@ -5,7 +5,7 @@
 
 use prof_macros::prof;
 
-use crate::types::Point;
+use crate::geo::types::Point;
 
 /// Order paths by greedy nearest-neighbor starting from the longest path.
 ///

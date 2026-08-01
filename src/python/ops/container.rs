@@ -8,6 +8,7 @@ use pyo3_stub_gen::derive::{
 };
 use pyo3_stub_gen::inventory::submit;
 
+use crate::geo::types::{Point, Point3D, Rect};
 use crate::ops::{
     Axis, CommandType, MarkerCmd, MoveCmd, OpCategory, OpsSection,
     OpsSectionRange, StateCmd,
@@ -16,7 +17,6 @@ use crate::python::geo::flex_point::{
     point3d_to_tuple, polygons_from_tuples, tuple_to_point3d,
 };
 use crate::python::ops::transform as py_transform;
-use crate::types::{Point, Point3D, Rect};
 use py_transform::{extract_transformer, PyCallableCallbacks};
 
 use super::axis::PyAxis;

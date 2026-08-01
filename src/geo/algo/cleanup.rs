@@ -5,7 +5,7 @@
 
 use glam::{DVec3, DVec4};
 
-use crate::types::{Command, Point3D};
+use crate::geo::types::{Command, Point3D};
 
 /// Extract a hashable key for a segment. Returns None for MOVE commands.
 pub fn get_segment_key(cmd: &Command) -> Option<(u32, DVec3, DVec4)> {

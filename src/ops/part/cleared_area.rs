@@ -17,7 +17,7 @@ use crate::geo::shape::polygon::{
     get_polyline_swept_polygon, get_segment_swept_polygon, offset_polygon,
     JoinStyle,
 };
-use crate::types::{Point, Polygon, Rect};
+use crate::geo::types::{Point, Polygon, Rect};
 
 /// Small LRU cache for [`ClearedArea::cut_area_split`].
 ///

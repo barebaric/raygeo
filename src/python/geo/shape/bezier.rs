@@ -23,7 +23,7 @@ use crate::geo::shape::bezier::{
     linearize_bezier, linearize_bezier_adaptive, linearize_bezier_segment,
     nearest_tangent_circle_on_bezier, split_bezier,
 };
-use crate::types::{CubicBezier, Point, Point3D, Rect};
+use crate::geo::types::{CubicBezier, Point, Point3D, Rect};
 use pyo3::prelude::*;
 use pyo3::types::PyList;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;

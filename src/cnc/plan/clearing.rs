@@ -28,6 +28,7 @@ use crate::cnc::plan::plan::{Plan, PlanStep};
 use crate::error::RaygeoResult;
 use crate::geo::algo::helix::HelixDirection;
 use crate::geo::shape::polygon::{get_polygon_bounds, get_polygon_centroid};
+use crate::geo::types::{Point, Point3D, Polygon};
 use crate::ops::assembly::adaptive::AdaptiveClearingSpec;
 use crate::ops::assembly::profile::{ProfileKind, ProfileSpec};
 use crate::ops::assembly::slot::SlotSpec;
@@ -39,7 +40,6 @@ use crate::ops::feature::slot_path::{
     find_slot_path, measure_passage_min_width,
 };
 use crate::ops::part::Part;
-use crate::types::{Point, Point3D, Polygon};
 
 /// Options for [`plan_clearing`].
 ///

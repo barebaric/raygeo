@@ -8,7 +8,7 @@ use crate::geo::shape::polygon::{
     get_circle_polygon, get_polygon_area, get_polygons_group_intersection,
     get_signed_boundary_distance,
 };
-use crate::types::{Point, Polygon};
+use crate::geo::types::{Point, Polygon};
 use prof_macros::prof;
 
 /// All-in-one engagement result from a closest‑distance query.

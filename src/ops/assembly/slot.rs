@@ -15,6 +15,7 @@
 use prof_macros::prof;
 
 use crate::error::RaygeoResult;
+use crate::geo::types::{Point, Point3D, Polygon};
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::trace_utils as tu;
 use crate::ops::assembly::tracelet::write_polyline;
@@ -22,7 +23,6 @@ use crate::ops::assembly::{AssembleCtx, Assembler, Tracelet};
 use crate::ops::part::FaceState;
 use crate::ops::state::State;
 use crate::ops::types::ToolPose;
-use crate::types::{Point, Point3D, Polygon};
 
 /// Spec for the slot assembler.
 #[derive(Clone, Debug)]

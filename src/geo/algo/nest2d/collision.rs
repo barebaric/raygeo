@@ -2,7 +2,7 @@ use crate::geo::shape::polygon::{
     do_polygons_intersect, get_polygon_bounds, get_polygon_group_bounds,
     get_polygons_difference,
 };
-use crate::types::{Polygon, Rect};
+use crate::geo::types::{Polygon, Rect};
 
 use crate::geo::algo::spatial_grid2d::SpatialGrid;
 

@@ -3,6 +3,7 @@ use prof_macros::prof;
 use crate::geo::shape::polygon::{
     get_polygon_signed_area, get_polygons_group_intersection,
 };
+use crate::geo::types::Polygon;
 use crate::ops::assembly::adaptive::resume::{
     offset_and_probe, walk_and_probe, ResumeCtx, ResumeStrategy,
     WalkProbeOptions, DETAIL_NO_ENVELOPE, DETAIL_NO_FRONTIER,
@@ -10,7 +11,6 @@ use crate::ops::assembly::adaptive::resume::{
 };
 use crate::ops::assembly::adaptive::tool::Tool;
 use crate::ops::types::ToolPose;
-use crate::types::Polygon;
 
 pub struct ResumeFrontier;
 

@@ -37,12 +37,12 @@ pub use tracelet::{ProgressEvent, Tracelet};
 
 use std::any::Any;
 
+use crate::geo::types::Polygon;
 use crate::ops::callbacks::Callbacks;
 use crate::ops::container::Ops;
 use crate::ops::part::FaceState;
 use crate::ops::part::ImageSource;
 use crate::ops::state::State;
-use crate::types::Polygon;
 
 /// Context passed to [`Assembler::assemble`].
 ///

@@ -233,10 +233,10 @@ fn barycentric_interpolate_py(
     uc: f64,
 ) -> f64 {
     barycentric_interpolate(
-        crate::types::Point::new(p.0, p.1),
-        crate::types::Point::new(va.0, va.1),
-        crate::types::Point::new(vb.0, vb.1),
-        crate::types::Point::new(vc.0, vc.1),
+        crate::geo::types::Point::new(p.0, p.1),
+        crate::geo::types::Point::new(va.0, va.1),
+        crate::geo::types::Point::new(vb.0, vb.1),
+        crate::geo::types::Point::new(vc.0, vc.1),
         ua,
         ub,
         uc,
@@ -276,9 +276,9 @@ fn barycentric_weights_py(
     vc: (f64, f64),
 ) -> (f64, f64, f64) {
     get_barycentric_weights(
-        crate::types::Point::new(p.0, p.1),
-        crate::types::Point::new(va.0, va.1),
-        crate::types::Point::new(vb.0, vb.1),
-        crate::types::Point::new(vc.0, vc.1),
+        crate::geo::types::Point::new(p.0, p.1),
+        crate::geo::types::Point::new(va.0, va.1),
+        crate::geo::types::Point::new(vb.0, vb.1),
+        crate::geo::types::Point::new(vc.0, vc.1),
     )
 }

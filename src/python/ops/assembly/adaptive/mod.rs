@@ -10,6 +10,7 @@ pub(crate) mod resume;
 pub(crate) mod routing;
 pub(crate) mod tool;
 
+use crate::geo::types::Point3D;
 use crate::ops::assembly::adaptive;
 use crate::ops::state::State;
 use crate::ops::types::CutDirection;
@@ -17,7 +18,6 @@ use crate::prof::prof_report;
 use crate::python::errors::{ResumePointNotFoundError, RoutingError};
 use crate::python::ops::assembly::progress_event_to_py;
 use crate::python::ops::assembly::result::PyAssemblyResult;
-use crate::types::Point3D;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{
     gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pymethods,

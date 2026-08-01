@@ -1,7 +1,7 @@
 //! Shared meta and snapshot helpers for assembly trace modules.
 
+use crate::geo::types::{Point3D, Polygon};
 use crate::trace_types::{Meta, MetaValue, ToolSnapshot};
-use crate::types::{Point3D, Polygon};
 
 pub(crate) fn polygon_to_meta(poly: &Polygon) -> MetaValue {
     MetaValue::List(

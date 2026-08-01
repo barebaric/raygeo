@@ -13,12 +13,12 @@
 use crate::error::RaygeoResult;
 use crate::geo::algo::offset::grow_geometry;
 use crate::geo::geometry::Geometry;
+use crate::geo::types::Point3D;
 use crate::ops::assembly::contour::compute_total_offset;
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::{AssembleCtx, Assembler};
 use crate::ops::container::Ops;
 use crate::ops::types::ToolPose;
-use crate::types::Point3D;
 
 /// Spec for the frame assembler.
 ///

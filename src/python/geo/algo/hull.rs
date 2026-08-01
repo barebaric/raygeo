@@ -29,7 +29,7 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 }
 
 fn points_to_geometry(
-    pts: &[crate::types::Point],
+    pts: &[crate::geo::types::Point],
 ) -> Option<crate::geo::geometry::Geometry> {
     if pts.len() < 2 {
         return None;

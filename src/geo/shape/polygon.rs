@@ -26,7 +26,7 @@ use crate::geo::shape::arc::normalize_angle_signed;
 use crate::geo::shape::line::get_interior_angle;
 use crate::geo::shape::line::get_line_segment_closest_point;
 use crate::geo::shape::line::get_segment_segment_distance;
-use crate::types::{Edge, Point, Polygon, Rect};
+use crate::geo::types::{Edge, Point, Polygon, Rect};
 use prof_macros::prof;
 
 /// Join style for offset operations, matching clipper2 semantics.

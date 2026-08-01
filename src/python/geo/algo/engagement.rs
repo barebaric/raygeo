@@ -8,8 +8,8 @@ use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
 use crate::geo::algo::engagement;
+use crate::geo::types::Point;
 use crate::python::geo::flex_point::polygons_from_tuples;
-use crate::types::Point;
 
 pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = algo_mod.py();

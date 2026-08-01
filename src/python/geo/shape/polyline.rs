@@ -8,7 +8,7 @@ use crate::geo::shape::polyline::{
     split_polyline_at_v_junctions, trim_polyline_angular_ends,
     trim_polyline_at,
 };
-use crate::types::Point;
+use crate::geo::types::Point;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 

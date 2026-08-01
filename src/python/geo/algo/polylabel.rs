@@ -51,16 +51,16 @@ fn polylabel_py(
     holes: Option<Vec<Vec<(f64, f64)>>>,
     precision: f64,
 ) -> Option<(f64, f64)> {
-    let shell_pts: Vec<crate::types::Point> = shell
+    let shell_pts: Vec<crate::geo::types::Point> = shell
         .into_iter()
-        .map(|(x, y)| crate::types::Point::new(x, y))
+        .map(|(x, y)| crate::geo::types::Point::new(x, y))
         .collect();
-    let holes_pts: Vec<Vec<crate::types::Point>> = holes
+    let holes_pts: Vec<Vec<crate::geo::types::Point>> = holes
         .unwrap_or_default()
         .into_iter()
         .map(|h| {
             h.into_iter()
-                .map(|(x, y)| crate::types::Point::new(x, y))
+                .map(|(x, y)| crate::geo::types::Point::new(x, y))
                 .collect()
         })
         .collect();
@@ -94,16 +94,16 @@ fn find_largest_circle_py(
     holes: Option<Vec<Vec<(f64, f64)>>>,
     precision: f64,
 ) -> Option<((f64, f64), f64)> {
-    let shell_pts: Vec<crate::types::Point> = shell
+    let shell_pts: Vec<crate::geo::types::Point> = shell
         .into_iter()
-        .map(|(x, y)| crate::types::Point::new(x, y))
+        .map(|(x, y)| crate::geo::types::Point::new(x, y))
         .collect();
-    let holes_pts: Vec<Vec<crate::types::Point>> = holes
+    let holes_pts: Vec<Vec<crate::geo::types::Point>> = holes
         .unwrap_or_default()
         .into_iter()
         .map(|h| {
             h.into_iter()
-                .map(|(x, y)| crate::types::Point::new(x, y))
+                .map(|(x, y)| crate::geo::types::Point::new(x, y))
                 .collect()
         })
         .collect();

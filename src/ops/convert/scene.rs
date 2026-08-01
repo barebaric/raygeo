@@ -15,6 +15,7 @@ use std::f64::consts::PI;
 use crate::geo::algo::cylindrical::transform_to_cylinder;
 use crate::geo::shape::arc::linearize_arc;
 use crate::geo::shape::bezier::linearize_bezier_segment;
+use crate::geo::types::Point3D;
 use crate::image::scan::{
     extract_overlay_segments, extract_zero_power_segments,
 };
@@ -23,7 +24,6 @@ use crate::ops::container::Ops;
 use crate::ops::convert::{EncodeCtx, EncodeOutput, Encoder};
 use crate::ops::enums::CommandType;
 use crate::ops::types::{MarkerCmd, MoveCmd, OpCategory, OpNode, StateCmd};
-use crate::types::Point3D;
 
 const Z_OFFSET_NON_POWERED: f32 = 0.01;
 const ARC_RESOLUTION: f64 = 0.1;

@@ -10,10 +10,10 @@ use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::Tracelet;
 
 use super::trace_helpers as th;
+use crate::geo::types::{Point3D, Polygon};
 use crate::ops::part::FaceState;
 use crate::ops::state::State;
 use crate::ops::types::ToolPose;
-use crate::types::{Point3D, Polygon};
 use glam::Vec3Swizzles;
 
 /// Profile the inner boundary of a pocket, extracting geometry from

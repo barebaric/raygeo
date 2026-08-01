@@ -12,12 +12,12 @@
 use std::collections::HashMap;
 
 use super::link::find_pass_exit;
+use crate::geo::types::Point3D;
 use crate::ops::container::Ops;
 use crate::ops::enums::{CommandCategory, CommandType, SectionType};
 use crate::ops::transform::clip::clip_subpath_linear;
 use crate::ops::transform::{Phase, TransformCtx, Transformer};
 use crate::ops::types::{MoveCmd, OpCategory};
-use crate::types::Point3D;
 
 /// A clip point: the center and width of a tab on the toolpath.
 #[derive(Clone, Debug, PartialEq)]

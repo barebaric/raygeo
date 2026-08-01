@@ -2,7 +2,7 @@ use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::geo::algo::spatial_grid2d;
-use crate::types::Rect;
+use crate::geo::types::Rect;
 
 pyo3_stub_gen::module_doc!("raygeo.geo.algo.spatial_grid2d", "{}", MODULE_DOC);
 

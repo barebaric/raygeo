@@ -1,6 +1,6 @@
 use crate::geo::algo::interp::barycentric_interpolate;
 use crate::geo::algo::intersect::get_ray_line_intersection;
-use crate::types::{Point, Point3D};
+use crate::geo::types::{Point, Point3D};
 
 use super::gradient::compute_gradient_field;
 use super::types::{BoundaryTag, TriangleMesh};

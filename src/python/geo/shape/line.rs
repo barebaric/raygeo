@@ -22,7 +22,7 @@ use crate::geo::shape::line::{
     get_point_line_distance, get_segment_segment_distance,
     interpolated_segment_3d, is_point_on_segment, longest_line_through_point,
 };
-use crate::types::{Point, Rect};
+use crate::geo::types::{Point, Rect};
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 

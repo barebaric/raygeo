@@ -16,7 +16,7 @@ use crate::geo::shape::circle::{
     is_circle_inside_rect, line_segment_intersects_circle,
     nearest_tangent_circle_on_polyline, project_point_onto_circle,
 };
-use crate::types::{Point, Polygon, Rect};
+use crate::geo::types::{Point, Polygon, Rect};
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 

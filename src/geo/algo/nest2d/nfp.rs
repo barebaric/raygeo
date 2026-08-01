@@ -4,7 +4,7 @@ use crate::geo::algo::minkowski2d::{
 use crate::geo::shape::polygon::{
     get_polygon_signed_area, get_polygons_union, is_polygon_convex,
 };
-use crate::types::{Point, Polygon};
+use crate::geo::types::{Point, Polygon};
 
 /// Scale factor for converting polygon coordinates to integer hash keys.
 const POLYGON_KEY_SCALE: f64 = 10000.0;

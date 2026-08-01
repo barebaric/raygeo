@@ -36,9 +36,9 @@ fn remesh_py(
     outer: Vec<(f64, f64)>,
     max_edge_len: f64,
 ) -> PyResult<crate::python::mesh::types::TriangleMesh> {
-    let boundary: Vec<crate::types::Point> = outer
+    let boundary: Vec<crate::geo::types::Point> = outer
         .into_iter()
-        .map(|(x, y)| crate::types::Point::new(x, y))
+        .map(|(x, y)| crate::geo::types::Point::new(x, y))
         .collect();
 
     let result = remesh(&mesh.inner, &boundary, max_edge_len)

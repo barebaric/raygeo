@@ -30,7 +30,7 @@ use crate::geo::shape::polygon::{
     get_polygon_group_bounds, get_polygons_group_difference, offset_polygon,
     JoinStyle,
 };
-use crate::types::{Point, Polygon, Rect};
+use crate::geo::types::{Point, Polygon, Rect};
 
 /// Minimum horizontal ramp length for a single-pass descent.
 fn min_ramp_length(tool_radius: f64, max_ramp_angle_deg: f64) -> f64 {

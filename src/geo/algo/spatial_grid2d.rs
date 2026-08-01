@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::types::Rect;
+use crate::geo::types::Rect;
 
 /// A grid-based spatial index for fast overlap queries.
 ///

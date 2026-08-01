@@ -55,22 +55,22 @@ fn find_path_py(
     obstacle_margin: f64,
     cell_size: f64,
 ) -> Option<AStarPath> {
-    let from_pt = crate::types::Point::new(from_.0, from_.1);
-    let to_pt = crate::types::Point::new(to.0, to.1);
-    let free_pts: Vec<crate::types::Polygon> = free_space
+    let from_pt = crate::geo::types::Point::new(from_.0, from_.1);
+    let to_pt = crate::geo::types::Point::new(to.0, to.1);
+    let free_pts: Vec<crate::geo::types::Polygon> = free_space
         .into_iter()
         .map(|poly| {
             poly.into_iter()
-                .map(|(x, y)| crate::types::Point::new(x, y))
+                .map(|(x, y)| crate::geo::types::Point::new(x, y))
                 .collect()
         })
         .collect();
-    let obs_pts: Vec<crate::types::Polygon> = obstacles
+    let obs_pts: Vec<crate::geo::types::Polygon> = obstacles
         .unwrap_or_default()
         .into_iter()
         .map(|poly| {
             poly.into_iter()
-                .map(|(x, y)| crate::types::Point::new(x, y))
+                .map(|(x, y)| crate::geo::types::Point::new(x, y))
                 .collect()
         })
         .collect();

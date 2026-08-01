@@ -21,9 +21,9 @@ use rayon::prelude::*;
 
 use super::vertex_arrays::VertexArrays;
 use super::{EncodeCtx, EncodeOutput, Encoder};
+use crate::geo::types::Point3D;
 use crate::image::wu_line::draw_line_aa;
 use crate::ops::container::Ops;
-use crate::types::Point3D;
 
 /// All colour fields are in **pre-multiplied ARGB32** (byte order
 /// ``[B, G, R, A]`` on little-endian, matching Cairo's

@@ -20,7 +20,7 @@ use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::geo::algo::medial_axis as ma;
-use crate::types::Point;
+use crate::geo::types::Point;
 
 /// Medial Axis Transform of a planar domain.
 ///

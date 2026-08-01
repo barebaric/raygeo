@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use crate::geo::algo::narrow::find_narrow_passages;
 use crate::geo::shape::line::get_segment_segment_distance;
 use crate::geo::shape::polygon::{find_entry_edges, offset_polygon, JoinStyle};
-use crate::types::Polygon;
+use crate::geo::types::Polygon;
 
 /// Classification of a narrow passage for machining strategy selection.
 ///

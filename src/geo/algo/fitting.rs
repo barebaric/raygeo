@@ -4,7 +4,7 @@ use crate::geo::algo::simplify::simplify_polyline_3d;
 use crate::geo::shape::arc::is_arc_clockwise;
 use crate::geo::shape::arc::{get_arc_angles, linearize_arc};
 use crate::geo::shape::bezier::linearize_bezier_from_params;
-use crate::types::{Command, Point, Point3D};
+use crate::geo::types::{Command, Point, Point3D};
 
 /// Converts all arc commands in a geometry data array into cubic bezier approximations.
 pub fn convert_arcs_to_beziers(data: &[Command]) -> Vec<Command> {

@@ -9,8 +9,8 @@
 use prof_macros::prof;
 
 use crate::geo::shape::polygon::get_polygons_closest_point;
+use crate::geo::types::{Point, Point3D, Polygon};
 use crate::ops::types::ToolPose;
-use crate::types::{Point, Point3D, Polygon};
 
 // ── envelope_distance ────────────────────────────────────────────────
 
@@ -136,7 +136,7 @@ impl WallHugTracker {
         valid_tool_area: &[Polygon],
     ) {
         let dist = envelope_distance(
-            crate::types::Point::new(pos.x, pos.y),
+            crate::geo::types::Point::new(pos.x, pos.y),
             valid_tool_area,
         );
         let inside = dist < radius + 1e-9;

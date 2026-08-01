@@ -1,8 +1,8 @@
 use crate::geo::shape::arc::linearize_arc;
+use crate::geo::types::Point3D;
 use crate::ops::axis::Axis;
 use crate::ops::container::Ops;
 use crate::ops::types::{MoveCmd, OpCategory, OpNode};
-use crate::types::Point3D;
 
 fn linearize_scanline(
     end: Point3D,

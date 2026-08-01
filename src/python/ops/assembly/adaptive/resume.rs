@@ -4,6 +4,7 @@
 //! two resume drivers ([`emit_resume_travel`], [`try_resume`])
 //! so they can be exercised directly from Python tests.
 
+use crate::geo::types::{Point, Point3D, Polygon};
 use crate::ops::assembly::adaptive::resume::{self, ResumeCtx};
 use crate::ops::assembly::adaptive::AdaptiveClearingSpec;
 use crate::ops::assembly::Tracelet;
@@ -15,7 +16,6 @@ use crate::python::geo::algo::medial_axis::PyMedialAxis;
 use crate::python::ops::part::cleared_area::PyClearedArea;
 use crate::python::ops::part::part::PyPart;
 use crate::python::ops::PyOps;
-use crate::types::{Point, Point3D, Polygon};
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 

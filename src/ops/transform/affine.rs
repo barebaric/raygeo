@@ -3,9 +3,9 @@ use glam::{DMat4, DVec2, DVec3, DVec4};
 use crate::constants::EPSILON_COLLINEAR;
 use crate::geo::shape::point::transform_point_3d;
 
+use crate::geo::types::{Point, Point3D};
 use crate::ops::container::Ops;
 use crate::ops::types::{MoveCmd, OpCategory, OpNode};
-use crate::types::{Point, Point3D};
 
 impl Ops {
     pub fn transform(&mut self, matrix: DMat4) -> &mut Self {

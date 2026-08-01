@@ -6,10 +6,10 @@
 //! non-line segments unchanged.
 
 use crate::geo::algo::smooth::smooth_polyline_3d;
+use crate::geo::types::Point3D;
 use crate::ops::container::Ops;
 use crate::ops::enums::CommandType;
 use crate::ops::transform::{Phase, TransformCtx, Transformer};
-use crate::types::Point3D;
 
 /// Parameters for the [`smooth`] transformer.
 #[derive(Clone, Debug, PartialEq)]

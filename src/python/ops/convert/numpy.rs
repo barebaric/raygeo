@@ -1,8 +1,8 @@
 use pyo3::prelude::*;
 use pyo3::types::{PyByteArray, PyBytes, PyDict, PySlice, PyString};
 
+use crate::geo::types::Point3D;
 use crate::ops::{CommandCategory, CommandType, MoveCmd, OpCategory};
-use crate::types::Point3D;
 
 use super::dict::{create_and_append_command, py_to_axis_map_helper};
 use crate::python::ops::axis::PyAxis;

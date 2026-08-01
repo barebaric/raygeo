@@ -1,8 +1,8 @@
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
+use crate::geo::types::Point;
 use crate::ops::part::StockRegion;
-use crate::types::Point;
 
 /// Boundary and islands of a workpiece — the geometric input to
 /// clearing operations.
@@ -27,11 +27,11 @@ impl PyStockRegion {
         boundary: Vec<(f64, f64)>,
         islands: Option<Vec<Vec<(f64, f64)>>>,
     ) -> Self {
-        let b: crate::types::Polygon = boundary
+        let b: crate::geo::types::Polygon = boundary
             .into_iter()
             .map(|(x, y)| Point::new(x, y))
             .collect();
-        let i: Vec<crate::types::Polygon> = islands
+        let i: Vec<crate::geo::types::Polygon> = islands
             .unwrap_or_default()
             .into_iter()
             .map(|v| v.into_iter().map(|(x, y)| Point::new(x, y)).collect())
@@ -71,11 +71,11 @@ impl PyStockRegion {
         boundary: Vec<(f64, f64)>,
         islands: Vec<Vec<(f64, f64)>>,
     ) -> Self {
-        let b: crate::types::Polygon = boundary
+        let b: crate::geo::types::Polygon = boundary
             .into_iter()
             .map(|(x, y)| Point::new(x, y))
             .collect();
-        let i: Vec<crate::types::Polygon> = islands
+        let i: Vec<crate::geo::types::Polygon> = islands
             .into_iter()
             .map(|v| v.into_iter().map(|(x, y)| Point::new(x, y)).collect())
             .collect();

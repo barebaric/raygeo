@@ -265,8 +265,8 @@ impl PyAssemblyOutput {
         source_dimensions: Option<(f64, f64)>,
         cleared_fragments: Option<Vec<Vec<(f64, f64)>>>,
     ) -> Self {
+        use crate::geo::types::Point3D;
         use crate::ops::types::ToolPose;
-        use crate::types::Point3D;
         let frags = cleared_fragments.map(polygons_from_tuples);
         PyAssemblyOutput {
             inner: AssemblyOutput {

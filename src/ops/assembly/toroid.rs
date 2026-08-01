@@ -8,6 +8,7 @@ use crate::geo::algo::trochoid::{
     get_trochoid_along_3d, get_trochoid_along_3d_ramped, TrochoidOptions,
     TrochoidOptionsRamped,
 };
+use crate::geo::types::{Point, Point3D, Polygon};
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::trace_utils as tu;
 use crate::ops::assembly::tracelet::write_polyline;
@@ -15,7 +16,6 @@ use crate::ops::assembly::{AssembleCtx, Assembler, Tracelet};
 use crate::ops::part::FaceState;
 use crate::ops::state::State;
 use crate::ops::types::ToolPose;
-use crate::types::{Point, Point3D, Polygon};
 
 /// Spec for the toroid (constant-Z trochoid along a carrier) assembler.
 #[derive(Clone, Debug)]

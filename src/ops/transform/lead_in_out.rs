@@ -1,9 +1,9 @@
 use crate::geo::algo::analysis::get_tangent_at_from_array;
+use crate::geo::types::Point3D;
 use crate::ops::container::Ops;
 use crate::ops::enums::{CommandCategory, CommandType, SectionType};
 use crate::ops::transform::{Phase, TransformCtx, Transformer};
 use crate::ops::types::{MarkerCmd, OpCategory};
-use crate::types::Point3D;
 
 /// Parameters for the [`apply_lead_in_out`] transformer.
 #[derive(Clone, Debug, PartialEq)]

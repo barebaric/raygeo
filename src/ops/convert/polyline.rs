@@ -1,8 +1,8 @@
 //! Convert polylines to Ops.
 
+use crate::geo::types::Point3D;
 use crate::ops::container::Ops;
 use crate::ops::state::State;
-use crate::types::Point3D;
 
 impl Ops {
     /// Build Ops from a 3-D polyline.

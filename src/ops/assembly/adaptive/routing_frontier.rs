@@ -4,13 +4,13 @@ use crate::geo::shape::polygon::get_polygons_closest_point;
 use crate::geo::shape::polygon::offset_polygon;
 use crate::geo::shape::polygon::resample_polygon;
 use crate::geo::shape::polygon::JoinStyle;
+use crate::geo::types::{Point, Point3D};
 use crate::ops::assembly::adaptive::routing::{
     sweep_clear, RouteCtx, RoutingStrategy, ROUTE_FRONTIER_DIFFERENT_POLYGONS,
     ROUTE_FRONTIER_NO_FRONTIER, ROUTE_FRONTIER_NO_OBSTACLES,
     ROUTE_FRONTIER_OFFSET_EMPTY, ROUTE_FRONTIER_SAME_VERTEX,
     ROUTE_FRONTIER_SWEEP_COLLIDE, ROUTE_FRONTIER_TOO_FEW_VERTS,
 };
-use crate::types::{Point, Point3D};
 
 /// Frontier-walking routing: find the shortest path along the cleared-area
 /// frontier between `from` and `to`, then offset the segment inward by

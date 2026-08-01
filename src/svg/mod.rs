@@ -8,7 +8,7 @@ use crate::geo::shape::arc::get_arc_sweep;
 use glam::{DMat3, DVec3};
 
 use crate::geo::math::{mat3_det2x2, mat3_transform};
-use crate::types::Command;
+use crate::geo::types::Command;
 
 type BezierSeg = ((f64, f64), (f64, f64), (f64, f64), (f64, f64));
 
@@ -555,9 +555,9 @@ impl PathBuildContext {
                         self.scale_y,
                     );
                     g.bezier_to(
-                        crate::types::Point3D::new(tc1x, tc1y, 0.0),
-                        crate::types::Point3D::new(tc2x, tc2y, 0.0),
-                        crate::types::Point3D::new(tex, tey, 0.0),
+                        crate::geo::types::Point3D::new(tc1x, tc1y, 0.0),
+                        crate::geo::types::Point3D::new(tc2x, tc2y, 0.0),
+                        crate::geo::types::Point3D::new(tex, tey, 0.0),
                     );
                 }
             }

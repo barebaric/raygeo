@@ -6,7 +6,7 @@
 
 use prof_macros::prof;
 
-use crate::types::{Point, Point3D};
+use crate::geo::types::{Point, Point3D};
 
 // ── Tool constants ───────────────────────────────────────────────────
 

@@ -12,7 +12,7 @@ use crate::geo::shape::polygon::{
     get_polygon_group_bounds, is_point_inside_polygon, offset_polygon,
     JoinStyle,
 };
-use crate::types::{Point, Polygon};
+use crate::geo::types::{Point, Polygon};
 
 /// Wrapper for `f64` that implements `Ord` via `total_cmp` (never NaN).
 #[derive(Debug, Clone, Copy, PartialEq)]

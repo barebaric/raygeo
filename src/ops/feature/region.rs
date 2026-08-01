@@ -4,10 +4,10 @@ use crate::geo::shape::polygon::{
     get_polygons_group_difference, is_point_in_polygon, offset_polygon,
     JoinStyle,
 };
+use crate::geo::types::{Point, Polygon};
 use crate::ops::feature::narrow::{
     analyze_pocket, NarrowAnalysisOptions, NarrowRegion,
 };
-use crate::types::{Point, Polygon};
 use prof_macros::prof;
 
 /// A disconnected wide sub-region of a pocket.

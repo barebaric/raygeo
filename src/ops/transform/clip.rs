@@ -9,12 +9,12 @@ use crate::geo::algo::interp::{
 };
 use crate::geo::shape::arc::is_arc_inside_polygons;
 use crate::geo::shape::bezier::is_bezier_inside_polygons;
+use crate::geo::types::Command;
+use crate::geo::types::{Point, Point3D, Polygon, Rect};
 use crate::ops::container::Ops;
 use crate::ops::enums::CommandType;
 use crate::ops::transform::{Phase, TransformCtx, Transformer};
 use crate::ops::types::{MoveCmd, OpCategory, OpNode};
-use crate::types::Command;
-use crate::types::{Point, Point3D, Polygon, Rect};
 
 /// Parameters for the [`Ops::clip_ops_to_regions`] transformer.
 ///

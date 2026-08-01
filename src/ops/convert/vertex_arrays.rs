@@ -6,12 +6,12 @@
 
 use crate::geo::shape::arc::linearize_arc;
 use crate::geo::shape::bezier::linearize_bezier_segment;
+use crate::geo::types::Point3D;
 use crate::image::scan::extract_zero_power_segments;
 use crate::ops::container::Ops;
 use crate::ops::convert::{EncodeCtx, EncodeOutput, Encoder};
 use crate::ops::enums::CommandType;
 use crate::ops::types::{MoveCmd, OpCategory, OpNode, StateCmd};
-use crate::types::Point3D;
 
 /// Output buffers for vertex encoding.
 #[derive(Debug, Clone)]

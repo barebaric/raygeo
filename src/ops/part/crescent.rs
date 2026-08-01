@@ -13,7 +13,7 @@ use crate::geo::shape::polygon::{
     get_polygon_signed_area, rotate_polygon,
 };
 use crate::geo::shape::rect::do_rects_intersect;
-use crate::types::{Point, Polygon, Rect};
+use crate::geo::types::{Point, Polygon, Rect};
 use prof_macros::prof;
 
 /// Rotate a point by the pre-computed (cos, sin) of an angle.

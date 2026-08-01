@@ -18,12 +18,12 @@ use crate::geo::algo::topology::{
     split_inner_and_outer_contours, split_into_contours,
 };
 use crate::geo::geometry::Geometry;
+use crate::geo::types::Point3D;
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::{AssembleCtx, Assembler};
 use crate::ops::container::Ops;
 use crate::ops::part::FaceState;
 use crate::ops::types::ToolPose;
-use crate::types::Point3D;
 
 /// Spec for the contour assembler.
 ///

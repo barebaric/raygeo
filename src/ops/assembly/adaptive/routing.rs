@@ -11,9 +11,9 @@ use crate::geo::algo::smooth::build_smoothed_path;
 use crate::geo::shape::polygon::compute_polygon_bounds;
 use crate::geo::shape::polygon::does_path_sweep_intersect_polygon;
 use crate::geo::shape::polygon::is_path_confined_to_boundary;
+use crate::geo::types::{Point, Point3D, Polygon, Rect};
 use crate::ops::assembly::adaptive::AdaptiveClearingSpec;
 use crate::ops::part::FaceState;
-use crate::types::{Point, Point3D, Polygon, Rect};
 
 use super::chain::StrategyChain;
 

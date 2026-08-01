@@ -4,7 +4,7 @@
 //! the pure-geometry path shortener ([`smooth_route`]) so it can be
 //! exercised directly from Python tests.
 
-use crate::types::{Point, Point3D, Polygon};
+use crate::geo::types::{Point, Point3D, Polygon};
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 

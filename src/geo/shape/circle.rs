@@ -8,7 +8,7 @@
 
 use crate::geo::shape::line::get_line_segment_closest_point;
 use crate::geo::shape::polygon::is_point_inside_polygon;
-use crate::types::{Point, Polygon, Rect};
+use crate::geo::types::{Point, Polygon, Rect};
 
 /// Computes the intersection points between two circles.
 /// Uses the geometry of intersecting circles to find 0, 1, or 2 points.

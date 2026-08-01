@@ -14,7 +14,7 @@ determining path winding order.
 
 use super::super::flex_point::points_to_tuples;
 use super::super::Geometry;
-use crate::types::WindingOrder;
+use crate::geo::types::WindingOrder;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 

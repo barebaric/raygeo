@@ -5,6 +5,7 @@ use crate::geo::algo::medial_axis::MedialAxis;
 use crate::geo::shape::polygon::{
     get_polygon_signed_area, get_polygons_closest_point,
 };
+use crate::geo::types::{Point, Point3D, Polygon};
 use crate::ops::assembly::adaptive::resume::{
     offset_and_probe, require_fragments, ResumeCtx, ResumeStrategy,
     DETAIL_NODE_NOT_CLEARED, DETAIL_NO_CROSSING, DETAIL_NO_FRONTIER,
@@ -14,7 +15,6 @@ use crate::ops::assembly::adaptive::tool::Tool;
 use crate::ops::part::{ClearedArea, StockRegion};
 use crate::ops::types::CutDirection;
 use crate::ops::types::ToolPose;
-use crate::types::{Point, Point3D, Polygon};
 
 pub struct ResumeMat;
 
@@ -39,7 +39,7 @@ impl ResumeStrategy for ResumeMat {
         let fragments = require_fragments(ctx, detail)?;
         let is_cleared = axis.build_cleared_mask(fragments);
         let from_idx = match axis
-            .nearest_node(crate::types::Point::new(tool.pos.x, tool.pos.y))
+            .nearest_node(crate::geo::types::Point::new(tool.pos.x, tool.pos.y))
         {
             Some(i) => i,
             None => {

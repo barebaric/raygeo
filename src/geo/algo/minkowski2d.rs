@@ -7,7 +7,7 @@
 //! No-Fit Polygons (NFP) and Inner-Fit Polygons (IFP).
 
 use crate::geo::shape::polygon::{get_polygon_bounds, get_polygon_convex_hull};
-use crate::types::{Point, Polygon};
+use crate::geo::types::{Point, Polygon};
 
 pub fn convolve_two_segments(
     a1: Point,

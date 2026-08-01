@@ -2,10 +2,10 @@ use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
 use crate::geo::algo::nest2d::ifp;
+use crate::geo::types::Point;
 use crate::python::geo::flex_point::{
     points_to_tuples, poly_to_points, polygons_to_tuples, PyPoint2D,
 };
-use crate::types::Point;
 
 pyo3_stub_gen::module_doc!("raygeo.geo.algo.nest2d.ifp", "{}", MODULE_DOC);
 

@@ -4,7 +4,7 @@ use super::axis::Axis;
 use super::enums::{CommandType, RasterMode, SectionType};
 use super::state::{AirAssistMode, CoolantMode, HeadCoolantMode, State};
 use crate::error::RaygeoError;
-use crate::types::{Point, Point3D};
+use crate::geo::types::{Point, Point3D};
 
 /// Position and heading of the cutting tool.
 #[derive(Debug, Clone, Copy, PartialEq)]

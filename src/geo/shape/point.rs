@@ -4,7 +4,7 @@
 
 use glam::DMat4;
 
-use crate::types::{Point, Point3D};
+use crate::geo::types::{Point, Point3D};
 
 /// Computes the midpoint between two 3D points.
 pub fn get_midpoint_3d(a: Point3D, b: Point3D) -> Point3D {

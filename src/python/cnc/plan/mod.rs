@@ -15,7 +15,7 @@ use pyo3::types::PyDict;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::cnc::plan::plan::{self, PlanStep};
-use crate::types::{Point, Polygon};
+use crate::geo::types::{Point, Polygon};
 
 /// One step in a Plan: a face_id and an assembler spec.
 #[gen_stub_pyclass(module = "raygeo.cnc.plan")]

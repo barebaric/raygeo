@@ -16,13 +16,13 @@ impl Ops {
 
         for cmd in &geometry.data {
             match cmd {
-                crate::Command::Move { end } => {
+                crate::geo::types::Command::Move { end } => {
                     ops.move_to(end.x, end.y, end.z, None);
                 }
-                crate::Command::Line { end } => {
+                crate::geo::types::Command::Line { end } => {
                     ops.line_to(end.x, end.y, end.z, None);
                 }
-                crate::Command::Arc {
+                crate::geo::types::Command::Arc {
                     end,
                     center_offset,
                     normal,
@@ -38,7 +38,7 @@ impl Ops {
                         None,
                     );
                 }
-                crate::Command::Bezier {
+                crate::geo::types::Command::Bezier {
                     end,
                     control1,
                     control2,

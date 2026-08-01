@@ -4,6 +4,7 @@ use crate::geo::shape::polygon::{
     get_polygon_heading_at, get_polygons_closest_point,
 };
 use crate::geo::shape::polygon3d::walk_along_polygon_3d;
+use crate::geo::types::{Point, Point3D, Polygon};
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::Tracelet;
 use crate::ops::part::FaceState;
@@ -11,7 +12,6 @@ use crate::ops::state::State;
 use crate::ops::types::CutDirection;
 use crate::ops::types::ToolPose;
 use crate::trace_types::MoveKind;
-use crate::types::{Point, Point3D, Polygon};
 
 use super::trace_helpers as th;
 
@@ -327,8 +327,8 @@ pub(crate) fn run_profile(
         // check so the swept path is reflected in the face.cleared fragments.
         face.cleared.begin_batch();
         face.cleared.expand_batched(
-            crate::types::Point::new(current_3d.x, current_3d.y),
-            crate::types::Point::new(next.x, next.y),
+            crate::geo::types::Point::new(current_3d.x, current_3d.y),
+            crate::geo::types::Point::new(next.x, next.y),
             common.tool_radius,
         );
         face.cleared.commit_batch_local();

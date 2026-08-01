@@ -8,7 +8,7 @@ with automatic extension when the ramp angle exceeds the maximum.
 ";
 
 use crate::geo::algo::ramp::{self, RampStyle as RustRampStyle};
-use crate::types::Point;
+use crate::geo::types::Point;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass_enum, gen_stub_pyfunction};
 

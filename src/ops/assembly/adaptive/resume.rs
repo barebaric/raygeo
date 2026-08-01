@@ -15,6 +15,7 @@ use crate::geo::shape::polygon::{
     get_polygons_closest_point, get_polygons_group_intersection,
     walk_polygon_vertices,
 };
+use crate::geo::types::{Point, Point3D, Polygon};
 use crate::ops::assembly::Tracelet;
 use crate::ops::cut::interp::point_in_valid_area;
 use crate::ops::cut::search::walk_polygon_samples;
@@ -26,7 +27,6 @@ use crate::ops::part::FaceState;
 use crate::ops::types::CutDirection;
 use crate::ops::types::ToolPose;
 use crate::trace_types::{MoveKind, ToolSnapshot};
-use crate::types::{Point, Point3D, Polygon};
 
 use super::routing;
 use super::tool::Tool;

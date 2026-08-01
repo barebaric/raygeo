@@ -2,7 +2,7 @@ use numpy::{PyArray2, PyArrayMethods};
 use pyo3::prelude::*;
 use pyo3_stub_gen::{PyStubType, TypeInfo};
 
-use crate::{Point, Point3D};
+use crate::geo::types::{Point, Point3D};
 
 use super::types::{Edge2D, Edge3D};
 

@@ -15,7 +15,7 @@
 //! # Usage
 //!
 //! ```rust
-//! use raygeo::types::{Point3D, Polygon3D};
+//! use raygeo::geo::types::{Point3D, Polygon3D};
 //! use raygeo::geo::shape::polygon3d::{get_polygons_union_3d, offset_polygon_3d};
 //!
 //! let poly: Polygon3D = vec![
@@ -28,9 +28,11 @@
 //! assert!(inflated[0][0].z == 5.0);
 //! ```
 //!
-//! [`Polygon3D`]: crate::types::Polygon3D
+//! [`Polygon3D`]: crate::geo::types::Polygon3D
 
-use crate::types::{Point, Point3D, Polygon, Polygon3D, Rect3D, Segment3D};
+use crate::geo::types::{
+    Point, Point3D, Polygon, Polygon3D, Rect3D, Segment3D,
+};
 
 use super::polygon::{
     get_polygon_convex_hull as get_polygon_convex_hull_2d,

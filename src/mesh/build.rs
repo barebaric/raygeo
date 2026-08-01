@@ -6,7 +6,7 @@ use spade::{ConstrainedDelaunayTriangulation, Point2, Triangulation};
 use crate::geo::shape::polygon::{
     is_point_in_polygon, offset_polygon as offset_poly, JoinStyle,
 };
-use crate::types::Point;
+use crate::geo::types::Point;
 
 use super::types::{BoundaryTag, Triangle, TriangleMesh};
 

@@ -3,7 +3,7 @@ use crate::geo::shape::polygon::{
     get_polygons_group_intersection, is_point_in_polygon, offset_polygon,
     rotate_polygon, translate_polygon, JoinStyle,
 };
-use crate::types::{Point, Polygon, Rect};
+use crate::geo::types::{Point, Polygon, Rect};
 
 use super::collision::does_any_overlap_hierarchical_grid;
 use super::gravity::apply_gravity;

@@ -3,8 +3,8 @@ use crate::constants::EPSILON_COLLINEAR;
 use crate::geo::shape::arc::get_arc_length;
 use crate::geo::shape::bezier::get_bezier_length;
 use crate::geo::shape::line::get_line_segment_length;
+use crate::geo::types::{Point, Point3D};
 use crate::ops::types::{MoveCmd, OpCategory, StateCmd};
-use crate::types::{Point, Point3D};
 
 impl Ops {
     pub fn invalidate_time_cache(&mut self) {

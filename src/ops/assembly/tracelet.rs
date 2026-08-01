@@ -9,13 +9,13 @@
 //! An optional progress callback receives batches of ops in real time for
 //! streaming UI updates.
 
+use crate::geo::types::Point3D;
 use crate::ops::container::Ops;
 use crate::ops::types::{MoveCmd, OpCategory, OpNode};
 use crate::ops::{Axis, State};
 use crate::trace_types::{
     EventKind, Meta, MoveKind, ProgressSnapshot, ToolSnapshot,
 };
-use crate::types::Point3D;
 
 use super::result::TraceEventData;
 

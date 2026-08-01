@@ -7,7 +7,7 @@ use prof_macros::prof;
 
 use crate::geo::shape::line::get_interior_angle;
 use crate::geo::shape::line::get_line_segment_closest_point;
-use crate::types::{Point, Rect};
+use crate::geo::types::{Point, Rect};
 
 /// Get the bounding box of an open polyline.
 ///

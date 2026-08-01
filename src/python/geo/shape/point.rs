@@ -19,7 +19,7 @@ use crate::geo::shape::point::get_circumcenter_3d;
 use crate::geo::shape::point::get_midpoint_3d;
 use crate::geo::shape::point::rotate_point;
 use crate::geo::shape::point::transform_point_3d;
-use crate::types::{Point, Point3D};
+use crate::geo::types::{Point, Point3D};
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 

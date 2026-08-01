@@ -3,9 +3,9 @@ use pyo3_stub_gen::derive::{
     gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pymethods,
 };
 
+use crate::geo::types::Point;
 use crate::ops::cut;
 use crate::python::geo::flex_point::polygons_from_tuples;
-use crate::types::Point;
 
 /// Bracket of error values for adaptive-stepping interpolation.
 ///

@@ -2,6 +2,7 @@ use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
+use crate::geo::types::{Point, Polygon};
 use crate::image::types::PixelImage;
 use crate::ops::part::image_source::WholeImageSource;
 use crate::ops::part::Part;
@@ -12,7 +13,6 @@ use crate::python::ops::part::image_source::{
     PyVipsChunkSource, PyWholeImageSource,
 };
 use crate::python::ops::part::stock_region::PyStockRegion;
-use crate::types::{Point, Polygon};
 
 /// Extract a flat u8 buffer from a numpy array.
 fn extract_flat_u8(

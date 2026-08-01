@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use crate::cnc::execution::callbacks::OpsCallbacksAdapter;
 use crate::cnc::execution::callbacks::ScaledCallbacks;
+use crate::geo::types::{Point3D, Polygon};
 use crate::ops::assembly::{
     AssembleCtx, Assembler, AssemblyMeta, AssemblyOutput, AssemblyWarning,
     AssemblyWarningKind, Tracelet,
@@ -15,7 +16,6 @@ use crate::pipeline::cache::CacheKey;
 use crate::pipeline::completed::PipelineError;
 use crate::pipeline::compute::{Compute, ComputeCtx, DepMap};
 use crate::prof::prof_report;
-use crate::types::{Point3D, Polygon};
 
 pub struct AssemblerCompute {
     pub assembler: Arc<dyn Assembler>,

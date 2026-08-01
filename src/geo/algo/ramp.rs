@@ -1,4 +1,4 @@
-use crate::types::{Point, Point3D};
+use crate::geo::types::{Point, Point3D};
 
 /// Style of ramp entry.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

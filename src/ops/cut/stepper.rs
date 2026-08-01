@@ -2,9 +2,9 @@ use prof_macros::prof;
 
 use crate::dbg_log;
 use crate::geo::algo::engagement::Engagement;
+use crate::geo::types::{Point, Polygon};
 use crate::ops::cut::interp::{point_in_valid_area, rotate, Interpolation};
 use crate::ops::part::ClearedArea;
-use crate::types::{Point, Polygon};
 
 /// Penalty weight applied to fresh material on the wrong side of the
 /// tool (relative to `dir_sign`) when ranking candidate deflections.

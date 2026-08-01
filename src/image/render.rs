@@ -8,8 +8,8 @@
 
 use crate::geo::geometry::Geometry;
 use crate::geo::shape::bezier::get_bezier_point_at;
+use crate::geo::types::{Command, Point, Point3D};
 use crate::image::wu_line::draw_line_aa;
-use crate::types::{Command, Point, Point3D};
 
 /// Options for [`geometry_to_image`].
 pub struct RenderOptions {

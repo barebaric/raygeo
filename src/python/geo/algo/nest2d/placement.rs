@@ -4,12 +4,12 @@ use pyo3::types::PyDict;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
 use crate::geo::algo::nest2d::placement;
+use crate::geo::types::{Point, Polygon, Rect};
 use crate::python::geo::algo::spatial_grid2d::SpatialGrid as PySpatialGrid;
 use crate::python::geo::flex_point::{
     option_point_to_tuple, points_to_tuples, poly_to_points,
     polygons_to_tuples, tuples_to_points, PyPoint2D,
 };
-use crate::types::{Point, Polygon, Rect};
 
 pyo3_stub_gen::module_doc!(
     "raygeo.geo.algo.nest2d.placement",

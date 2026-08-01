@@ -18,7 +18,9 @@ use crate::geo::algo::interp::solve_quadratic;
 use crate::geo::shape::line::get_line_segment_closest_point;
 use crate::geo::shape::point::get_midpoint_3d;
 use crate::geo::shape::polygon::is_point_inside_polygon;
-use crate::types::{CubicBezier, Point, Point3D, Polygon, Polygon3D, Rect};
+use crate::geo::types::{
+    CubicBezier, Point, Point3D, Polygon, Polygon3D, Rect,
+};
 
 /// Evaluates a cubic Bezier curve at parameter t [0, 1] using the Bernstein polynomial.
 pub fn get_bezier_point_at(

@@ -20,7 +20,7 @@ use crate::geo::algo::fitting::{
     project_circle_center_to_bisector,
 };
 use crate::geo::geometry::Geometry as CoreGeometry;
-use crate::types::{Point, Point3D};
+use crate::geo::types::{Point, Point3D};
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 

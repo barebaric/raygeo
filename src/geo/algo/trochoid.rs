@@ -1,4 +1,4 @@
-use crate::types::{Point, Point3D};
+use crate::geo::types::{Point, Point3D};
 
 /// Options for trochoidal path generation along a carrier polyline.
 #[derive(Clone, Debug)]

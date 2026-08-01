@@ -10,6 +10,7 @@
 //! set.
 
 use crate::error::{RaygeoError, RaygeoResult};
+use crate::geo::types::Point3D;
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::{AssembleCtx, Assembler};
 use crate::ops::callbacks::{Callbacks, ChunkPayload};
@@ -18,7 +19,6 @@ use crate::ops::convert::image::ScanMode;
 use crate::ops::enums::{RasterMode, SectionType};
 use crate::ops::part::ImageSource;
 use crate::ops::types::ToolPose;
-use crate::types::Point3D;
 
 /// Spec for the raster assembler.
 ///

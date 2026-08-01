@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 
 use crate::geo::shape::text::{text_to_geometry, FontConfig};
+use crate::geo::types::{Point, Point3D};
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::tracelet::Tracelet;
 use crate::ops::assembly::{AssembleCtx, Assembler};
@@ -8,7 +9,6 @@ use crate::ops::container::Ops;
 use crate::ops::state::State;
 use crate::ops::types::{MoveCmd, OpCategory, ToolPose};
 use crate::trace_types::{Meta, MetaValue, MoveKind};
-use crate::types::{Point, Point3D};
 
 pub(crate) mod trace_helpers;
 

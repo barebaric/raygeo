@@ -4,7 +4,7 @@
 
 use std::f64::consts::PI;
 
-use crate::types::{Point, Point3D, Polygon, Rect};
+use crate::geo::types::{Point, Point3D, Polygon, Rect};
 
 /// Computes the Euclidean length of a line segment.
 pub fn get_line_segment_length(p1: Point, p2: Point) -> f64 {

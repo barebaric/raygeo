@@ -8,11 +8,11 @@
 //! and Z is linearly interpolated from the input points.
 //!
 //! Callers of the 2D cores must explicitly project 3D data before calling;
-//! see [`crate::types`] (or [`super::project`]) for helpers.
+//! see [`crate::geo::types`] (or [`super::project`]) for helpers.
 
 use crate::geo::shape::line::get_line_segment_polygon_intersections_into;
 use crate::geo::shape::polygon::is_point_inside_polygon;
-use crate::types::{Point, Point3D, Polygon, Rect};
+use crate::geo::types::{Point, Point3D, Polygon, Rect};
 
 // ── Cohen–Sutherland outcodes ─────────────────────────────────────────
 

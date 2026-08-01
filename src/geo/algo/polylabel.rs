@@ -10,7 +10,7 @@ use std::collections::BinaryHeap;
 use crate::geo::shape::polygon::{
     get_point_line_distance, get_polygon_closest_point, is_point_in_polygon,
 };
-use crate::types::{Point, Polygon};
+use crate::geo::types::{Point, Polygon};
 
 /// A square cell used during the priority-queue search.
 #[derive(Clone, Copy, Debug)]

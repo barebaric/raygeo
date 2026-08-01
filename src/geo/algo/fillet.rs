@@ -11,7 +11,7 @@ use crate::geo::shape::polygon::{
     compute_polygon_bounds, does_path_sweep_intersect_polygon,
 };
 use crate::geo::shape::polyline::trim_polyline_at;
-use crate::types::{Point, Polygon, Rect};
+use crate::geo::types::{Point, Polygon, Rect};
 
 /// Create a circular fillet polyline tangent to `dir` at `p`.
 ///

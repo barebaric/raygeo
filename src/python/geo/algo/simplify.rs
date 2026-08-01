@@ -16,7 +16,7 @@ use super::super::flex_point::{
 };
 use crate::geo::algo::simplify::simplify_polyline;
 use crate::geo::algo::simplify::simplify_polyline_3d;
-use crate::types::{Point, Point3D};
+use crate::geo::types::{Point, Point3D};
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 

@@ -8,13 +8,13 @@ use crate::cnc::execution::specs::{
     AggregateGroup, AggregateInput, AggregateOutput, AggregateSpec, LinkMode,
     Marker,
 };
+use crate::geo::types::Point3D;
 use crate::ops::assembly::AssemblyOutput;
 use crate::ops::container::Ops;
 use crate::ops::transform::apply_transformers;
 use crate::pipeline::aggregate::{Aggregate, AggregateCtx, DepMap};
 use crate::pipeline::cache::CacheKey;
 use crate::pipeline::completed::PipelineError;
-use crate::types::Point3D;
 
 pub struct OpsAggregate {
     pub spec: AggregateSpec,

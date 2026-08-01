@@ -1,7 +1,7 @@
 //! Python wrapper for the adaptive-clearing [`Tool`] state.
 
+use crate::geo::types::{Point, Point3D};
 use crate::ops::assembly::adaptive::tool::Tool;
-use crate::types::{Point, Point3D};
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 

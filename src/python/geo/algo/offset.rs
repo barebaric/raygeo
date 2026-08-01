@@ -13,7 +13,7 @@ use crate::geo::algo::offset::{
     compute_inset_region, concentric_offsets, find_deepest_cores,
     offset_contour_group,
 };
-use crate::types::{Point as GeoPoint, Polygon as GeoPolygon};
+use crate::geo::types::{Point as GeoPoint, Polygon as GeoPolygon};
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 

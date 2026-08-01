@@ -9,7 +9,7 @@ use glam::{DMat3, DMat4, DVec2, DVec3, DVec4};
 use crate::geo::geometry::Geometry;
 use crate::geo::shape::arc::linearize_arc;
 use crate::geo::shape::point::transform_point_3d;
-use crate::types::{Command, Point, Point3D};
+use crate::geo::types::{Command, Point, Point3D};
 
 /// Transform a 2D point by a 3x3 affine matrix (homogeneous coordinates).
 pub fn mat3_transform(m: DMat3, x: f64, y: f64) -> (f64, f64) {

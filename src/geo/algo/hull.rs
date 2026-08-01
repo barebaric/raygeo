@@ -1,5 +1,5 @@
 use crate::geo::shape::polygon::get_polygon_convex_hull;
-use crate::types::Point;
+use crate::geo::types::Point;
 
 pub fn find_external_contours(
     image: &[u8],
