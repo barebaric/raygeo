@@ -285,8 +285,7 @@ def test_shrinkwrap_fails_when_read_all_returns_none():
         shrinkwrap(
             part,
             gravity=0.0,
-            kerf_mm=0.0,
-            path_offset_mm=0.0,
+            offset_mm=0.0,
             cut_side="outer",
             arc_tolerance=0.0,
             allow_arcs=False,
@@ -299,8 +298,7 @@ def test_shrinkwrap_works_when_read_all_succeeds():
     result = shrinkwrap(
         part,
         gravity=0.0,
-        kerf_mm=0.0,
-        path_offset_mm=0.0,
+        offset_mm=0.0,
         cut_side="outer",
         arc_tolerance=0.0,
         allow_arcs=False,

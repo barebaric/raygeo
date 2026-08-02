@@ -227,8 +227,7 @@ def test_shrinkwrap_reads_through_image_source():
     result = shrinkwrap(
         part,
         gravity=0.0,
-        kerf_mm=0.0,
-        path_offset_mm=0.0,
+        offset_mm=0.0,
         cut_side="outer",
         arc_tolerance=0.0,
         allow_arcs=False,
@@ -261,8 +260,7 @@ def test_shrinkwrap_fails_when_no_image_source():
         shrinkwrap(
             part,
             gravity=0.0,
-            kerf_mm=0.0,
-            path_offset_mm=0.0,
+            offset_mm=0.0,
             cut_side="outer",
             arc_tolerance=0.0,
             allow_arcs=False,

@@ -30,8 +30,7 @@ use crate::ops::types::ToolPose;
 #[derive(Clone, Debug)]
 pub struct ShrinkwrapSpec {
     pub gravity: f64,
-    pub kerf_mm: f64,
-    pub path_offset_mm: f64,
+    pub offset_mm: f64,
     pub cut_side: String,
     pub arc_tolerance: f64,
     pub allow_arcs: bool,
@@ -52,8 +51,7 @@ impl Assembler for ShrinkwrapSpec {
             image_src,
             ctx.size_mm,
             self.gravity,
-            self.kerf_mm,
-            self.path_offset_mm,
+            self.offset_mm,
             &self.cut_side,
             self.arc_tolerance,
             self.allow_arcs,
@@ -117,16 +115,15 @@ fn hull_to_mm(
 /// Reads pixels from `image_src`, computes a concave hull using
 /// Bézier gravity attraction, transforms pixel coordinates to
 /// millimetre space via `part_size_mm` and the image dimensions,
-/// computes the total offset from kerf / path-offset / cut-side,
-/// applies it, optionally fits arcs/curves when `arc_tolerance` > 0,
-/// and returns the result as an `(Ops, AssemblyMeta)` pair.
+/// computes the total offset from offset / cut-side, applies it,
+/// optionally fits arcs/curves when `arc_tolerance` > 0, and returns
+/// the result as an `(Ops, AssemblyMeta)` pair.
 #[allow(clippy::too_many_arguments)]
 pub fn assemble_shrinkwrap(
     image_src: &dyn ImageSource,
     part_size_mm: (f64, f64),
     gravity: f64,
-    kerf_mm: f64,
-    path_offset_mm: f64,
+    offset_mm: f64,
     cut_side: &str,
     arc_tolerance: f64,
     allow_arcs: bool,
@@ -175,7 +172,7 @@ pub fn assemble_shrinkwrap(
 
     let mut geo = hull_to_mm(&hull_pts, (w_mm, h_mm), (h_px, w_px));
 
-    let total_offset = compute_total_offset(kerf_mm, path_offset_mm, cut_side);
+    let total_offset = compute_total_offset(offset_mm, cut_side);
     if total_offset.abs() > 1e-6 {
         geo = grow_geometry(&geo, total_offset);
     }

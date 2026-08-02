@@ -24,7 +24,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 
 /// Parameters for the ``contour`` assembler.
 ///
-/// Construct with ``ContourSpec(kerf_mm, path_offset_mm, cut_side,
+/// Construct with ``ContourSpec(offset_mm, cut_side,
 /// overcut, cut_order, remove_inner, arc_tolerance, allow_arcs,
 /// supports_curves)``. Wrap in an
 /// :class:`~raygeo.ops.assembly.Assembler` instance to drive the
@@ -39,12 +39,9 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 )]
 #[derive(Clone, PartialEq)]
 pub struct PyContourSpec {
-    /// Tool kerf width in mm.
+    /// Total path offset distance in mm.
     #[pyo3(get)]
-    pub kerf_mm: f64,
-    /// Additional offset distance in mm.
-    #[pyo3(get)]
-    pub path_offset_mm: f64,
+    pub offset_mm: f64,
     /// ``"centerline"``, ``"outside"``, or ``"inside"``.
     #[pyo3(get)]
     pub cut_side: String,
@@ -72,8 +69,7 @@ impl PyContourSpec {
     /// Convert into the core-layer spec.
     pub fn into_core(self) -> CoreContourSpec {
         CoreContourSpec {
-            kerf_mm: self.kerf_mm,
-            path_offset_mm: self.path_offset_mm,
+            offset_mm: self.offset_mm,
             cut_side: self.cut_side,
             overcut: self.overcut,
             cut_order: self.cut_order,
@@ -90,8 +86,7 @@ impl PyContourSpec {
 impl PyContourSpec {
     #[new]
     #[pyo3(signature = (
-        kerf_mm = 0.0,
-        path_offset_mm = 0.0,
+        offset_mm = 0.0,
         cut_side = "centerline",
         overcut = 0.0,
         cut_order = "inside_outside",
@@ -102,8 +97,7 @@ impl PyContourSpec {
     ))]
     #[allow(clippy::too_many_arguments)]
     fn new(
-        kerf_mm: f64,
-        path_offset_mm: f64,
+        offset_mm: f64,
         cut_side: &str,
         overcut: f64,
         cut_order: &str,
@@ -113,8 +107,7 @@ impl PyContourSpec {
         supports_curves: bool,
     ) -> Self {
         PyContourSpec {
-            kerf_mm,
-            path_offset_mm,
+            offset_mm,
             cut_side: cut_side.to_string(),
             overcut,
             cut_order: cut_order.to_string(),
@@ -132,8 +125,7 @@ impl PyContourSpec {
 
     def contour(
         part: raygeo.ops.part.Part,
-        kerf_mm: float = 0.0,
-        path_offset_mm: float = 0.0,
+        offset_mm: float = 0.0,
         cut_side: str = "centerline",
         overcut: float = 0.0,
         cut_order: str = "inside_outside",
@@ -145,15 +137,14 @@ impl PyContourSpec {
         """Trace contours from the part geometry.
 
         Extracts the vector geometry from *part*, computes the total
-        offset from kerf / path-offset / cut-side, applies it with
+        offset from offset / cut-side, applies it with
         winding-order normalisation and offset fallback, orders
         inner/outer contours, applies overcut, optionally fits arcs
         and curves, and returns the result as an
         :class:`AssemblyResult`.
 
         :param part: The part whose geometry defines the contours.
-        :param kerf_mm: Tool kerf width in mm (default 0.0).
-        :param path_offset_mm: Additional offset distance in mm
+        :param offset_mm: Total path offset distance in mm
             (default 0.0).
         :param cut_side: ``"centerline"``, ``"outside"``, or
             ``"inside"`` (default ``"centerline"``).
@@ -177,8 +168,7 @@ impl PyContourSpec {
 #[pyfunction(name = "contour")]
 #[pyo3(signature = (
     part,
-    kerf_mm = 0.0,
-    path_offset_mm = 0.0,
+    offset_mm = 0.0,
     cut_side = "centerline",
     overcut = 0.0,
     cut_order = "inside_outside",
@@ -189,8 +179,7 @@ impl PyContourSpec {
 ))]
 fn contour_py(
     part: &PyPart,
-    kerf_mm: f64,
-    path_offset_mm: f64,
+    offset_mm: f64,
     cut_side: &str,
     overcut: f64,
     cut_order: &str,
@@ -204,8 +193,7 @@ fn contour_py(
     })?;
     let (ops, meta) = assemble_contour(
         face,
-        kerf_mm,
-        path_offset_mm,
+        offset_mm,
         cut_side,
         overcut,
         cut_order,

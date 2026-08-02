@@ -15,16 +15,14 @@ class ShrinkwrapSpec:
     r"""
     Parameters for the ``shrinkwrap`` assembler.
     
-    Construct with ``ShrinkwrapSpec(gravity, kerf_mm, ...)``. Wrap in
+    Construct with ``ShrinkwrapSpec(gravity, offset_mm, ...)``. Wrap in
     an :class:`~raygeo.ops.assembly.Assembler` instance to drive the
     `Assembler` trait.
     """
     @property
     def gravity(self) -> builtins.float: ...
     @property
-    def kerf_mm(self) -> builtins.float: ...
-    @property
-    def path_offset_mm(self) -> builtins.float: ...
+    def offset_mm(self) -> builtins.float: ...
     @property
     def cut_side(self) -> builtins.str: ...
     @property
@@ -34,9 +32,9 @@ class ShrinkwrapSpec:
     @property
     def supports_curves(self) -> builtins.bool: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __new__(cls, gravity: builtins.float = 0.1, kerf_mm: builtins.float = 0.0, path_offset_mm: builtins.float = 0.0, cut_side: builtins.str = 'centerline', arc_tolerance: builtins.float = 0.0, allow_arcs: builtins.bool = True, supports_curves: builtins.bool = False) -> ShrinkwrapSpec: ...
+    def __new__(cls, gravity: builtins.float = 0.1, offset_mm: builtins.float = 0.0, cut_side: builtins.str = 'centerline', arc_tolerance: builtins.float = 0.0, allow_arcs: builtins.bool = True, supports_curves: builtins.bool = False) -> ShrinkwrapSpec: ...
 
-def shrinkwrap(part: raygeo.ops.part.Part, gravity: float = 0.1, kerf_mm: float = 0, path_offset_mm: float = 0, cut_side: str = 'centerline', arc_tolerance: float = 0, allow_arcs: bool = True, supports_curves: bool = False) -> raygeo.ops.assembly.AssemblyResult:
+def shrinkwrap(part: raygeo.ops.part.Part, gravity: float = 0.1, offset_mm: float = 0, cut_side: str = 'centerline', arc_tolerance: float = 0, allow_arcs: bool = True, supports_curves: bool = False) -> raygeo.ops.assembly.AssemblyResult:
     r"""
     Generate a shrink-wrapped (concave hull) contour around image content.
     
@@ -44,7 +42,7 @@ def shrinkwrap(part: raygeo.ops.part.Part, gravity: float = 0.1, kerf_mm: float 
     array), computes a concave hull using Bézier gravity attraction,
     transforms pixel coordinates to millimetre space via the part's
     *size_mm* and image dimensions, computes the total offset from
-    kerf / path-offset / cut-side, applies it, optionally fits
+    offset / cut-side, applies it, optionally fits
     arcs/curves when *arc_tolerance* > 0, and returns the result
     as an :class:`AssemblyResult`.
     
@@ -52,8 +50,7 @@ def shrinkwrap(part: raygeo.ops.part.Part, gravity: float = 0.1, kerf_mm: float 
         image buffer (``part.image``).
     :param gravity: Shrink-wrap factor 0.0–1.0 (0 = convex hull,
         default 0.1).
-    :param kerf_mm: Tool kerf width in mm (default 0.0).
-    :param path_offset_mm: Additional offset distance in mm
+    :param offset_mm: Total path offset distance in mm
         (default 0.0).
     :param cut_side: ``"centerline"``, ``"outside"``, or
         ``"inside"`` (default ``"centerline"``).

@@ -77,8 +77,7 @@ def test_shrinkwrap_compute_is_scalable_false():
 def test_shrinkwrap_pipeline_matches_direct_call():
     spec = ShrinkwrapSpec(
         gravity=0.0,
-        kerf_mm=0.0,
-        path_offset_mm=0.0,
+        offset_mm=0.0,
         cut_side="outer",
         arc_tolerance=0.0,
         allow_arcs=False,
@@ -90,8 +89,7 @@ def test_shrinkwrap_pipeline_matches_direct_call():
     direct = shrinkwrap(
         direct_part,
         gravity=0.0,
-        kerf_mm=0.0,
-        path_offset_mm=0.0,
+        offset_mm=0.0,
         cut_side="outer",
         arc_tolerance=0.0,
         allow_arcs=False,

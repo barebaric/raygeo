@@ -22,7 +22,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 
 /// Parameters for the ``frame`` assembler.
 ///
-/// Construct with ``FrameSpec(kerf_mm, path_offset_mm, cut_side)``.
+/// Construct with ``FrameSpec(offset_mm, cut_side)``.
 /// Wrap in an :class:`~raygeo.ops.assembly.Assembler` instance to
 /// drive the `Assembler` trait.
 #[gen_stub_pyclass]
@@ -35,12 +35,9 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 )]
 #[derive(Clone, PartialEq)]
 pub struct PyFrameSpec {
-    /// Tool kerf width in mm.
+    /// Total path offset distance in mm.
     #[pyo3(get)]
-    pub kerf_mm: f64,
-    /// Additional offset distance in mm.
-    #[pyo3(get)]
-    pub path_offset_mm: f64,
+    pub offset_mm: f64,
     /// ``"centerline"``, ``"outside"``, or ``"inside"``.
     #[pyo3(get)]
     pub cut_side: String,
@@ -50,8 +47,7 @@ impl PyFrameSpec {
     /// Convert into the core-layer spec.
     pub fn into_core(self) -> CoreFrameSpec {
         CoreFrameSpec {
-            kerf_mm: self.kerf_mm,
-            path_offset_mm: self.path_offset_mm,
+            offset_mm: self.offset_mm,
             cut_side: self.cut_side,
         }
     }
@@ -62,14 +58,12 @@ impl PyFrameSpec {
 impl PyFrameSpec {
     #[new]
     #[pyo3(signature = (
-        kerf_mm = 0.0,
-        path_offset_mm = 0.0,
+        offset_mm = 0.0,
         cut_side = "centerline",
     ))]
-    fn new(kerf_mm: f64, path_offset_mm: f64, cut_side: &str) -> Self {
+    fn new(offset_mm: f64, cut_side: &str) -> Self {
         PyFrameSpec {
-            kerf_mm,
-            path_offset_mm,
+            offset_mm,
             cut_side: cut_side.to_string(),
         }
     }
@@ -81,19 +75,17 @@ impl PyFrameSpec {
 
     def frame(
         part: raygeo.ops.part.Part,
-        kerf_mm: float = 0.0,
-        path_offset_mm: float = 0.0,
+        offset_mm: float = 0.0,
         cut_side: str = "centerline",
     ) -> raygeo.ops.assembly.AssemblyResult:
         """Generate a rectangular frame around the part boundary.
 
         Creates a rectangle matching ``part.size_mm``, computes the
-        total offset from kerf / path-offset / cut-side, applies it,
-        and returns the frame as an :class:`AssemblyResult`.
+        total offset from offset / cut-side, applies it, and returns
+        the frame as an :class:`AssemblyResult`.
 
         :param part: The part whose size defines the frame.
-        :param kerf_mm: Tool kerf width in mm (default 0.0).
-        :param path_offset_mm: Additional offset distance in mm
+        :param offset_mm: Total path offset distance in mm
             (default 0.0).
         :param cut_side: ``"centerline"``, ``"outside"``, or
             ``"inside"`` (default ``"centerline"``).
@@ -106,17 +98,14 @@ impl PyFrameSpec {
 #[pyfunction(name = "frame")]
 #[pyo3(signature = (
     part,
-    kerf_mm = 0.0,
-    path_offset_mm = 0.0,
+    offset_mm = 0.0,
     cut_side = "centerline",
 ))]
 fn frame_py(
     part: &PyPart,
-    kerf_mm: f64,
-    path_offset_mm: f64,
+    offset_mm: f64,
     cut_side: &str,
 ) -> PyResult<PyAssemblyResult> {
-    let (ops, meta) =
-        assemble_frame(part.inner.size_mm, kerf_mm, path_offset_mm, cut_side)?;
+    let (ops, meta) = assemble_frame(part.inner.size_mm, offset_mm, cut_side)?;
     Ok(PyAssemblyResult::from_parts(ops, meta, None, vec![]))
 }

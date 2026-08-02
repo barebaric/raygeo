@@ -24,7 +24,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 
 /// Parameters for the ``shrinkwrap`` assembler.
 ///
-/// Construct with ``ShrinkwrapSpec(gravity, kerf_mm, ...)``. Wrap in
+/// Construct with ``ShrinkwrapSpec(gravity, offset_mm, ...)``. Wrap in
 /// an :class:`~raygeo.ops.assembly.Assembler` instance to drive the
 /// `Assembler` trait.
 #[gen_stub_pyclass]
@@ -40,9 +40,7 @@ pub struct PyShrinkwrapSpec {
     #[pyo3(get)]
     pub gravity: f64,
     #[pyo3(get)]
-    pub kerf_mm: f64,
-    #[pyo3(get)]
-    pub path_offset_mm: f64,
+    pub offset_mm: f64,
     #[pyo3(get)]
     pub cut_side: String,
     #[pyo3(get)]
@@ -58,8 +56,7 @@ impl PyShrinkwrapSpec {
     pub fn into_core(self) -> CoreShrinkwrapSpec {
         CoreShrinkwrapSpec {
             gravity: self.gravity,
-            kerf_mm: self.kerf_mm,
-            path_offset_mm: self.path_offset_mm,
+            offset_mm: self.offset_mm,
             cut_side: self.cut_side,
             arc_tolerance: self.arc_tolerance,
             allow_arcs: self.allow_arcs,
@@ -74,8 +71,7 @@ impl PyShrinkwrapSpec {
     #[new]
     #[pyo3(signature = (
         gravity = 0.1,
-        kerf_mm = 0.0,
-        path_offset_mm = 0.0,
+        offset_mm = 0.0,
         cut_side = "centerline",
         arc_tolerance = 0.0,
         allow_arcs = true,
@@ -84,8 +80,7 @@ impl PyShrinkwrapSpec {
     #[allow(clippy::too_many_arguments)]
     fn new(
         gravity: f64,
-        kerf_mm: f64,
-        path_offset_mm: f64,
+        offset_mm: f64,
         cut_side: &str,
         arc_tolerance: f64,
         allow_arcs: bool,
@@ -93,8 +88,7 @@ impl PyShrinkwrapSpec {
     ) -> Self {
         PyShrinkwrapSpec {
             gravity,
-            kerf_mm,
-            path_offset_mm,
+            offset_mm,
             cut_side: cut_side.to_string(),
             arc_tolerance,
             allow_arcs,
@@ -111,8 +105,7 @@ impl PyShrinkwrapSpec {
     def shrinkwrap(
         part: raygeo.ops.part.Part,
         gravity: float = 0.1,
-        kerf_mm: float = 0.0,
-        path_offset_mm: float = 0.0,
+        offset_mm: float = 0.0,
         cut_side: str = "centerline",
         arc_tolerance: float = 0.0,
         allow_arcs: bool = True,
@@ -124,7 +117,7 @@ impl PyShrinkwrapSpec {
         array), computes a concave hull using Bézier gravity attraction,
         transforms pixel coordinates to millimetre space via the part's
         *size_mm* and image dimensions, computes the total offset from
-        kerf / path-offset / cut-side, applies it, optionally fits
+        offset / cut-side, applies it, optionally fits
         arcs/curves when *arc_tolerance* > 0, and returns the result
         as an :class:`AssemblyResult`.
 
@@ -132,8 +125,7 @@ impl PyShrinkwrapSpec {
             image buffer (``part.image``).
         :param gravity: Shrink-wrap factor 0.0–1.0 (0 = convex hull,
             default 0.1).
-        :param kerf_mm: Tool kerf width in mm (default 0.0).
-        :param path_offset_mm: Additional offset distance in mm
+        :param offset_mm: Total path offset distance in mm
             (default 0.0).
         :param cut_side: ``"centerline"``, ``"outside"``, or
             ``"inside"`` (default ``"centerline"``).
@@ -153,8 +145,7 @@ impl PyShrinkwrapSpec {
 #[pyo3(signature = (
     part,
     gravity = 0.1,
-    kerf_mm = 0.0,
-    path_offset_mm = 0.0,
+    offset_mm = 0.0,
     cut_side = "centerline",
     arc_tolerance = 0.0,
     allow_arcs = true,
@@ -163,8 +154,7 @@ impl PyShrinkwrapSpec {
 fn shrinkwrap_py(
     part: &PyPart,
     gravity: f64,
-    kerf_mm: f64,
-    path_offset_mm: f64,
+    offset_mm: f64,
     cut_side: &str,
     arc_tolerance: f64,
     allow_arcs: bool,
@@ -179,8 +169,7 @@ fn shrinkwrap_py(
         image_src.as_ref(),
         part.inner.size_mm,
         gravity,
-        kerf_mm,
-        path_offset_mm,
+        offset_mm,
         cut_side,
         arc_tolerance,
         allow_arcs,

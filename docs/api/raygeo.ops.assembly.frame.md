@@ -7,8 +7,8 @@ sidebar_label: raygeo.ops.assembly.frame
 
 Parameters for the `frame` assembler.
 
-Construct with `FrameSpec(kerf_mm, path_offset_mm, cut_side)`. Wrap in an
-**~raygeo.ops.assembly.Assembler** instance to drive the `Assembler` trait.
+Construct with `FrameSpec(offset_mm, cut_side)`. Wrap in an **~raygeo.ops.assembly.Assembler**
+instance to drive the `Assembler` trait.
 
 ### `cut_side`
 
@@ -18,21 +18,13 @@ cut_side: str
 
 `"centerline"`, `"outside"`, or `"inside"`.
 
-### `kerf_mm`
+### `offset_mm`
 
 ```python
-kerf_mm: float
+offset_mm: float
 ```
 
-Tool kerf width in mm.
-
-### `path_offset_mm`
-
-```python
-path_offset_mm: float
-```
-
-Additional offset distance in mm.
+Total path offset distance in mm.
 
 ## Functions
 
@@ -41,23 +33,21 @@ Additional offset distance in mm.
 ```python
 frame(
     part: ops.part.Part,
-    kerf_mm: float = 0,
-    path_offset_mm: float = 0,
+    offset_mm: float = 0,
     cut_side: str = 'centerline',
 ) -> ops.assembly.AssemblyResult
 ```
 
 Generate a rectangular frame around the part boundary.
 
-Creates a rectangle matching `part.size_mm`, computes the total offset from kerf / path-offset /
-cut-side, applies it, and returns the frame as an **AssemblyResult**.
+Creates a rectangle matching `part.size_mm`, computes the total offset from offset / cut-side,
+applies it, and returns the frame as an **AssemblyResult**.
 
 **Raises:** `ValueError` — If the part has no size information.
 
-| Parameter        | Type                          | Description                                                          |
-| ---------------- | ----------------------------- | -------------------------------------------------------------------- |
-| `part`           | `ops.part.Part`               | The part whose size defines the frame.                               |
-| `kerf_mm`        | `float = 0`                   | Tool kerf width in mm (default 0.0).                                 |
-| `path_offset_mm` | `float = 0`                   | Additional offset distance in mm (default 0.0).                      |
-| `cut_side`       | `str = 'centerline'`          | `"centerline"`, `"outside"`, or `"inside"` (default `"centerline"`). |
-| _Returns_        | `ops.assembly.AssemblyResult` | An **AssemblyResult** with the frame path.                           |
+| Parameter   | Type                          | Description                                                          |
+| ----------- | ----------------------------- | -------------------------------------------------------------------- |
+| `part`      | `ops.part.Part`               | The part whose size defines the frame.                               |
+| `offset_mm` | `float = 0`                   | Total path offset distance in mm (default 0.0).                      |
+| `cut_side`  | `str = 'centerline'`          | `"centerline"`, `"outside"`, or `"inside"` (default `"centerline"`). |
+| _Returns_   | `ops.assembly.AssemblyResult` | An **AssemblyResult** with the frame path.                           |

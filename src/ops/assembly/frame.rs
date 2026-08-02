@@ -26,8 +26,7 @@ use crate::ops::types::ToolPose;
 /// `Box<dyn Assembler>` by callers that drive the trait.
 #[derive(Clone, Debug)]
 pub struct FrameSpec {
-    pub kerf_mm: f64,
-    pub path_offset_mm: f64,
+    pub offset_mm: f64,
     pub cut_side: String,
 }
 
@@ -37,13 +36,9 @@ impl Assembler for FrameSpec {
         if ctx.callbacks.is_cancelled() {
             return Err("cancelled".to_string());
         }
-        let (ops, meta) = assemble_frame(
-            ctx.size_mm,
-            self.kerf_mm,
-            self.path_offset_mm,
-            &self.cut_side,
-        )
-        .map_err(|e| e.to_string())?;
+        let (ops, meta) =
+            assemble_frame(ctx.size_mm, self.offset_mm, &self.cut_side)
+                .map_err(|e| e.to_string())?;
         if ctx.callbacks.is_cancelled() {
             return Err("cancelled".to_string());
         }
@@ -70,14 +65,13 @@ impl Assembler for FrameSpec {
 }
 
 /// Generate a rectangular frame matching the part's `size_mm`,
-/// optionally offset by kerf / path-offset / cut-side.
+/// optionally offset by offset / cut-side.
 ///
 /// Returns `(Ops, AssemblyMeta)` with zero start/end tool poses (the
 /// frame is a closed rectangle with no entry/exit move).
 pub fn assemble_frame(
     size_mm: (f64, f64),
-    kerf_mm: f64,
-    path_offset_mm: f64,
+    offset_mm: f64,
     cut_side: &str,
 ) -> RaygeoResult<(Ops, AssemblyMeta)> {
     let (w, h) = size_mm;
@@ -87,7 +81,7 @@ pub fn assemble_frame(
         ));
     }
 
-    let total_offset = compute_total_offset(kerf_mm, path_offset_mm, cut_side);
+    let total_offset = compute_total_offset(offset_mm, cut_side);
 
     let mut geo = Geometry::new();
     geo.move_to(0.0, 0.0, 0.0);

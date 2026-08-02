@@ -67,12 +67,10 @@ def test_frame_pipeline_matches_direct_call():
         _frame_node(
             "match",
             part=pipe_part,
-            spec=FrameSpec(
-                kerf_mm=1.0, path_offset_mm=0.5, cut_side="outside"
-            ),
+            spec=FrameSpec(offset_mm=1.0, cut_side="outside"),
         )
     )
-    direct = frame(part, kerf_mm=1.0, path_offset_mm=0.5, cut_side="outside")
+    direct = frame(part, offset_mm=1.0, cut_side="outside")
     pipe_ops = result_ops(c).to_dict()
     direct_ops = direct.ops.to_dict()
     assert pipe_ops["commands"][0] == {"type": "SET_POWER", "power": 0.0}
@@ -85,9 +83,7 @@ def test_frame_cut_side_changes_output():
         _run_one(
             _frame_node(
                 "c",
-                spec=FrameSpec(
-                    kerf_mm=1.0, path_offset_mm=1.0, cut_side="centerline"
-                ),
+                spec=FrameSpec(offset_mm=1.5, cut_side="centerline"),
             )
         )
     ).to_dict()
@@ -95,9 +91,7 @@ def test_frame_cut_side_changes_output():
         _run_one(
             _frame_node(
                 "o",
-                spec=FrameSpec(
-                    kerf_mm=1.0, path_offset_mm=1.0, cut_side="outside"
-                ),
+                spec=FrameSpec(offset_mm=1.5, cut_side="outside"),
             )
         )
     ).to_dict()

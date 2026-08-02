@@ -69,7 +69,7 @@ def test_contour_compute_is_scalable_default_true():
 # ── Different ContourSpec parameters produce different output ─────
 
 
-def test_kerf_changes_output():
+def test_offset_changes_output():
     base = result_ops(
         _run_one(make_contour_compute("b", spec=ContourSpec()))
     ).to_dict()
@@ -78,8 +78,7 @@ def test_kerf_changes_output():
             make_contour_compute(
                 "o",
                 spec=ContourSpec(
-                    kerf_mm=5.0,
-                    path_offset_mm=5.0,
+                    offset_mm=7.5,
                     cut_side="outside",
                 ),
             )
@@ -94,8 +93,7 @@ def test_cut_side_outside_changes_output():
             make_contour_compute(
                 "c",
                 spec=ContourSpec(
-                    kerf_mm=5.0,
-                    path_offset_mm=5.0,
+                    offset_mm=7.5,
                     cut_side="centerline",
                 ),
             )
@@ -106,8 +104,7 @@ def test_cut_side_outside_changes_output():
             make_contour_compute(
                 "o",
                 spec=ContourSpec(
-                    kerf_mm=5.0,
-                    path_offset_mm=5.0,
+                    offset_mm=7.5,
                     cut_side="outside",
                 ),
             )
@@ -134,14 +131,10 @@ def test_pipeline_matches_direct_contour_call():
         make_contour_compute(
             "match",
             part=pipe_part,
-            spec=ContourSpec(
-                kerf_mm=5.0, path_offset_mm=5.0, cut_side="outside"
-            ),
+            spec=ContourSpec(offset_mm=7.5, cut_side="outside"),
         )
     )
-    direct = contour(
-        direct_part, kerf_mm=5.0, path_offset_mm=5.0, cut_side="outside"
-    )
+    direct = contour(direct_part, offset_mm=7.5, cut_side="outside")
     pipe_ops = result_ops(c).to_dict()
     direct_ops = direct.ops.to_dict()
     assert pipe_ops["commands"][0] == {"type": "SET_POWER", "power": 0.0}

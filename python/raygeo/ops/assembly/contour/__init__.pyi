@@ -14,21 +14,16 @@ class ContourSpec:
     r"""
     Parameters for the ``contour`` assembler.
     
-    Construct with ``ContourSpec(kerf_mm, path_offset_mm, cut_side,
+    Construct with ``ContourSpec(offset_mm, cut_side,
     overcut, cut_order, remove_inner, arc_tolerance, allow_arcs,
     supports_curves)``. Wrap in an
     :class:`~raygeo.ops.assembly.Assembler` instance to drive the
     `Assembler` trait.
     """
     @property
-    def kerf_mm(self) -> builtins.float:
+    def offset_mm(self) -> builtins.float:
         r"""
-        Tool kerf width in mm.
-        """
-    @property
-    def path_offset_mm(self) -> builtins.float:
-        r"""
-        Additional offset distance in mm.
+        Total path offset distance in mm.
         """
     @property
     def cut_side(self) -> builtins.str:
@@ -66,22 +61,21 @@ class ContourSpec:
         Keep Bézier curves when arc_tolerance > 0.
         """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __new__(cls, kerf_mm: builtins.float = 0.0, path_offset_mm: builtins.float = 0.0, cut_side: builtins.str = 'centerline', overcut: builtins.float = 0.0, cut_order: builtins.str = 'inside_outside', remove_inner: builtins.bool = False, arc_tolerance: builtins.float = 0.0, allow_arcs: builtins.bool = True, supports_curves: builtins.bool = False) -> ContourSpec: ...
+    def __new__(cls, offset_mm: builtins.float = 0.0, cut_side: builtins.str = 'centerline', overcut: builtins.float = 0.0, cut_order: builtins.str = 'inside_outside', remove_inner: builtins.bool = False, arc_tolerance: builtins.float = 0.0, allow_arcs: builtins.bool = True, supports_curves: builtins.bool = False) -> ContourSpec: ...
 
-def contour(part: raygeo.ops.part.Part, kerf_mm: float = 0, path_offset_mm: float = 0, cut_side: str = 'centerline', overcut: float = 0, cut_order: str = 'inside_outside', remove_inner: bool = False, arc_tolerance: float = 0, allow_arcs: bool = True, supports_curves: bool = False) -> raygeo.ops.assembly.AssemblyResult:
+def contour(part: raygeo.ops.part.Part, offset_mm: float = 0, cut_side: str = 'centerline', overcut: float = 0, cut_order: str = 'inside_outside', remove_inner: bool = False, arc_tolerance: float = 0, allow_arcs: bool = True, supports_curves: bool = False) -> raygeo.ops.assembly.AssemblyResult:
     r"""
     Trace contours from the part geometry.
     
     Extracts the vector geometry from *part*, computes the total
-    offset from kerf / path-offset / cut-side, applies it with
+    offset from offset / cut-side, applies it with
     winding-order normalisation and offset fallback, orders
     inner/outer contours, applies overcut, optionally fits arcs
     and curves, and returns the result as an
     :class:`AssemblyResult`.
     
     :param part: The part whose geometry defines the contours.
-    :param kerf_mm: Tool kerf width in mm (default 0.0).
-    :param path_offset_mm: Additional offset distance in mm
+    :param offset_mm: Total path offset distance in mm
         (default 0.0).
     :param cut_side: ``"centerline"``, ``"outside"``, or
         ``"inside"`` (default ``"centerline"``).

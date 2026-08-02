@@ -31,8 +31,7 @@ use crate::ops::types::ToolPose;
 /// `Box<dyn Assembler>` by callers that drive the trait.
 #[derive(Clone, Debug)]
 pub struct ContourSpec {
-    pub kerf_mm: f64,
-    pub path_offset_mm: f64,
+    pub offset_mm: f64,
     pub cut_side: String,
     pub overcut: f64,
     pub cut_order: String,
@@ -50,8 +49,7 @@ impl Assembler for ContourSpec {
         }
         let (ops, meta) = assemble_contour(
             ctx.face,
-            self.kerf_mm,
-            self.path_offset_mm,
+            self.offset_mm,
             &self.cut_side,
             self.overcut,
             &self.cut_order,
@@ -82,23 +80,17 @@ impl Assembler for ContourSpec {
     }
 }
 
-/// Compute the total offset from kerf, path offset, and cut side.
+/// Compute the total signed offset for the given cut side.
 ///
 /// ```text
-/// kerf_compensation = kerf_mm / 2
 /// centerline  -> 0
-/// outside     -> +path_offset_mm + kerf_compensation
-/// inside      -> -path_offset_mm - kerf_compensation
+/// outside     -> +offset_mm
+/// inside      -> -offset_mm
 /// ```
-pub fn compute_total_offset(
-    kerf_mm: f64,
-    path_offset_mm: f64,
-    cut_side: &str,
-) -> f64 {
-    let kerf_comp = kerf_mm / 2.0;
+pub fn compute_total_offset(offset_mm: f64, cut_side: &str) -> f64 {
     match cut_side.to_ascii_lowercase().as_str() {
-        "outside" => path_offset_mm + kerf_comp,
-        "inside" => -path_offset_mm - kerf_comp,
+        "outside" => offset_mm,
+        "inside" => -offset_mm,
         _ => 0.0,
     }
 }
@@ -106,7 +98,7 @@ pub fn compute_total_offset(
 /// Trace contours from `part.geometry` into an [`Ops`] sequence.
 ///
 /// Extracts the vector geometry from `part`, computes the total offset
-/// from kerf / path-offset / cut-side, applies it with winding-order
+/// from offset / cut-side, applies it with winding-order
 /// normalisation and offset fallback, orders inner/outer contours,
 /// applies overcut, optionally fits arcs and curves, and returns the
 /// result as an `(Ops, AssemblyMeta)` pair.
@@ -115,8 +107,7 @@ pub fn compute_total_offset(
 #[allow(clippy::too_many_arguments)]
 pub fn assemble_contour(
     face: &FaceState,
-    kerf_mm: f64,
-    path_offset_mm: f64,
+    offset_mm: f64,
     cut_side: &str,
     overcut: f64,
     cut_order: &str,
@@ -125,7 +116,7 @@ pub fn assemble_contour(
     allow_arcs: bool,
     supports_curves: bool,
 ) -> RaygeoResult<(Ops, AssemblyMeta)> {
-    let total_offset = compute_total_offset(kerf_mm, path_offset_mm, cut_side);
+    let total_offset = compute_total_offset(offset_mm, cut_side);
 
     let source_geo = match face.geometry.clone() {
         Some(g) => g,
