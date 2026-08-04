@@ -5,6 +5,7 @@ import argparse
 import ast
 import fnmatch
 import importlib
+import io
 import pkgutil
 import shutil
 import sys
@@ -15,7 +16,7 @@ import matplotlib.pyplot as plt
 import mdformat
 
 import tools.examples
-from tools import api_docs
+from tools import api_docs, image_compare
 
 
 def _format_md(content: str) -> str:
@@ -42,6 +43,7 @@ def _generate_images(
     images_dir: Path,
     doc_filter: str | None = None,
     func_filter: str | None = None,
+    force: bool = False,
 ) -> tuple[dict[str, list], set[Path]]:
     matplotlib.use("Agg")
     images_dir.mkdir(parents=True, exist_ok=True)
@@ -88,8 +90,19 @@ def _generate_images(
             result = func()
             if hasattr(result, "savefig"):
                 fig = result
-                fig.savefig(img_path, dpi=150)
+                buf = io.BytesIO()
+                fig.savefig(buf, dpi=150, format="png")
                 plt.close(fig)
+                new_bytes = buf.getvalue()
+
+                if (
+                    not force
+                    and img_path.exists()
+                    and image_compare.looks_identical(img_path, new_bytes)
+                ):
+                    print(f"    {img_path.name} unchanged")
+                else:
+                    img_path.write_bytes(new_bytes)
                 produced.add(img_path)
             else:
                 continue
@@ -182,7 +195,7 @@ def cmd_examples(args):
     images_dir = Path(args.output) / "api" / "images"
     images_dir.mkdir(parents=True, exist_ok=True)
     print(f"Generating visual examples -> {images_dir}")
-    inline_map, _ = _generate_images(images_dir)
+    inline_map, _ = _generate_images(images_dir, force=args.force)
 
 
 def cmd_all(args):
@@ -237,13 +250,17 @@ def cmd_all(args):
         print(f"  {mod} -> {out_path}")
 
         doc_target = f"{mod}.md"
-        inline_map, imgs = _generate_images(images_dir, doc_filter=doc_target)
+        inline_map, imgs = _generate_images(
+            images_dir, doc_filter=doc_target, force=args.force
+        )
         produced_images.update(imgs)
         _inject_images_into_api(api_dir, images_dir, inline_map)
 
     orphan_targets = all_doc_targets - {p.name for p in produced_docs}
     for target in orphan_targets:
-        inline_map, imgs = _generate_images(images_dir, doc_filter=target)
+        inline_map, imgs = _generate_images(
+            images_dir, doc_filter=target, force=args.force
+        )
         produced_images.update(imgs)
         _inject_images_into_api(api_dir, images_dir, inline_map)
 
@@ -370,6 +387,7 @@ def cmd_doc(args):
                 images_dir,
                 doc_filter=doc_targets[0],
                 func_filter=func_filter,
+                force=args.force,
             )
             _inject_images_into_api(api_dir, images_dir, inline_map)
             continue
@@ -393,6 +411,7 @@ def cmd_doc(args):
             images_dir,
             doc_filter=doc_target,
             func_filter=func_filter,
+            force=args.force,
         )
 
         print("Injecting images into API docs...")
@@ -415,6 +434,16 @@ def main():
         type=str,
         default="python/raygeo",
         help="Path to .pyi stub directory (default: python/raygeo)",
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help=(
+            "Always overwrite images, even when the new render looks "
+            "identical to the existing one. By default images are kept "
+            "when a perceptual comparison finds no visible change, "
+            "keeping git status clean across matplotlib/library upgrades."
+        ),
     )
 
     subparsers = parser.add_subparsers(dest="command")
