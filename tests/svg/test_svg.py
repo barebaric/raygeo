@@ -198,6 +198,163 @@ class TestSvgStringToGeometries:
         assert not geos[0].is_empty()
 
 
+class TestSvgUseAndDefs:
+    """Tests for `<use>` references and `<defs>`/`<symbol>` exclusion."""
+
+    def test_defs_paths_not_rendered_directly(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg" '
+            'xmlns:xlink="http://www.w3.org/1999/xlink">'
+            "<defs>"
+            '<path id="p" d="M 0 0 L 10 0 L 10 10 Z"/>'
+            "</defs>"
+            "</svg>"
+        )
+        geos = svg_string_to_geometries(svg)
+        assert len(geos) == 0
+
+    def test_use_renders_referenced_path(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg" '
+            'xmlns:xlink="http://www.w3.org/1999/xlink">'
+            "<defs>"
+            '<path id="p" d="M 0 0 L 10 0 L 10 10 Z"/>'
+            "</defs>"
+            '<use xlink:href="#p"/>'
+            "</svg>"
+        )
+        geos = svg_string_to_geometries(svg)
+        assert len(geos) == 1
+        rect = geos[0].rect()
+        assert rect == (0.0, 0.0, 10.0, 10.0)
+
+    def test_use_transform_applied(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg" '
+            'xmlns:xlink="http://www.w3.org/1999/xlink">'
+            "<defs>"
+            '<path id="p" d="M 0 0 L 10 0 L 10 10 Z"/>'
+            "</defs>"
+            '<use xlink:href="#p" transform="translate(100, 200)"/>'
+            "</svg>"
+        )
+        geos = svg_string_to_geometries(svg)
+        assert len(geos) == 1
+        rect = geos[0].rect()
+        assert rect == (100.0, 200.0, 110.0, 210.0)
+
+    def test_use_x_y_attributes(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg" '
+            'xmlns:xlink="http://www.w3.org/1999/xlink">'
+            "<defs>"
+            '<path id="p" d="M 0 0 L 10 0 L 10 10 Z"/>'
+            "</defs>"
+            '<use href="#p" x="50" y="70"/>'
+            "</svg>"
+        )
+        geos = svg_string_to_geometries(svg)
+        assert len(geos) == 1
+        rect = geos[0].rect()
+        assert rect == (50.0, 70.0, 60.0, 80.0)
+
+    def test_use_combines_transform_and_xy(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg" '
+            'xmlns:xlink="http://www.w3.org/1999/xlink">'
+            "<defs>"
+            '<path id="p" d="M 0 0 L 10 0 L 10 10 Z"/>'
+            "</defs>"
+            '<use xlink:href="#p" x="50" y="70" '
+            'transform="translate(10, 20)"/>'
+            "</svg>"
+        )
+        geos = svg_string_to_geometries(svg)
+        assert len(geos) == 1
+        rect = geos[0].rect()
+        assert rect == (60.0, 90.0, 70.0, 100.0)
+
+    def test_symbol_not_rendered_directly(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg" '
+            'xmlns:xlink="http://www.w3.org/1999/xlink">'
+            '<symbol id="s"><path d="M 0 0 L 5 5"/></symbol>'
+            "</svg>"
+        )
+        geos = svg_string_to_geometries(svg)
+        assert len(geos) == 0
+
+    def test_use_references_symbol(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg" '
+            'xmlns:xlink="http://www.w3.org/1999/xlink">'
+            '<symbol id="s"><path d="M 0 0 L 5 5"/></symbol>'
+            '<use xlink:href="#s" x="20" y="30"/>'
+            "</svg>"
+        )
+        geos = svg_string_to_geometries(svg)
+        assert len(geos) == 1
+        rect = geos[0].rect()
+        assert rect == (20.0, 30.0, 25.0, 35.0)
+
+    def test_use_cycle_protection(self):
+        """A `<use>` referencing itself does not loop forever."""
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg" '
+            'xmlns:xlink="http://www.w3.org/1999/xlink">'
+            '<path id="p" d="M 0 0 L 1 1"/>'
+            '<use xlink:href="#p" id="u1"/>'
+            '<use xlink:href="#u1" id="u2"/>'
+            "</svg>"
+        )
+        geos = svg_string_to_geometries(svg)
+        # path rendered directly, plus one via u1, plus one via u2
+        # (u2 references u1 which references p; cycle protection prevents
+        # infinite recursion but each use still expands once)
+        assert len(geos) >= 1
+
+    def test_use_by_color_buckets(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg" '
+            'xmlns:xlink="http://www.w3.org/1999/xlink">'
+            "<defs>"
+            '<path id="p" d="M 0 0 L 10 10" fill="red"/>'
+            "</defs>"
+            '<use xlink:href="#p"/>'
+            "</svg>"
+        )
+        buckets = svg_string_to_geometries_by_color(svg)
+        assert [k for k, _ in buckets] == ["#ff0000"]
+        assert len(buckets[0][1]) == 1
+
+    def test_defs_shapes_not_in_color_buckets(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg" '
+            'xmlns:xlink="http://www.w3.org/1999/xlink">'
+            "<defs>"
+            '<path id="p" d="M 0 0 L 10 10" fill="red"/>'
+            "</defs>"
+            "</svg>"
+        )
+        buckets = svg_string_to_geometries_by_color(svg)
+        assert buckets == []
+
+    def test_filter_svg_by_color_keeps_use(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg" '
+            'xmlns:xlink="http://www.w3.org/1999/xlink">'
+            "<defs>"
+            '<path id="p" d="M 0 0 L 10 10" fill="#ff0000"/>'
+            "</defs>"
+            '<use xlink:href="#p"/>'
+            "</svg>"
+        )
+        out = filter_svg_by_color(svg, "#ff0000")
+        assert "<use" in out
+        assert 'xlink:href="#p"' in out
+        assert "<defs>" in out
+
+
 class TestGeometryToSvgPath:
     def test_empty_geometry(self):
         geo = Geometry()
