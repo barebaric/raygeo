@@ -188,87 +188,152 @@ pub fn assemble_raster(
 
     let mut combined = Ops::new();
 
-    for &a in &angles {
-        let pass = match mode {
-            "power_modulated" => {
-                let (alp, ah, aw) = match alpha {
-                    Some(arr) => (arr.to_vec(), h, w),
-                    None => (gray.clone(), h, w),
-                };
-                if ah != h || aw != w {
-                    return Err(RaygeoError::ContourError(
-                        "Alpha array dimensions must match image \
-                         dimensions"
-                            .to_string(),
-                    ));
+    if mode == "multi_pass" && cross_hatch {
+        let passes_angle0 = Ops::multi_pass_ops(
+            &gray,
+            h,
+            w,
+            pixels_per_mm,
+            offset_x_mm,
+            offset_y_mm,
+            line_interval_mm,
+            num_depth_levels,
+            z_step_down,
+            angles[0],
+            angle_increment,
+            scan_mode_val,
+        );
+        let passes_angle1 = Ops::multi_pass_ops(
+            &gray,
+            h,
+            w,
+            pixels_per_mm,
+            offset_x_mm,
+            offset_y_mm,
+            line_interval_mm,
+            num_depth_levels,
+            z_step_down,
+            angles[1],
+            angle_increment,
+            scan_mode_val,
+        );
+        let rm = raster_mode.unwrap();
+        for i in 0..passes_angle0.len().max(passes_angle1.len()) {
+            for passes in [&passes_angle0, &passes_angle1] {
+                if i < passes.len() {
+                    let mut wrapped = Ops::new();
+                    wrapped
+                        .ops_section_start(
+                            SectionType::RasterFill,
+                            "raster",
+                            Some(rm),
+                        )
+                        .map_err(|e| {
+                            RaygeoError::ContourError(e.to_string())
+                        })?;
+                    wrapped.extend(&passes[i]);
+                    wrapped
+                        .ops_section_end(SectionType::RasterFill, Some(rm))
+                        .map_err(|e| {
+                            RaygeoError::ContourError(e.to_string())
+                        })?;
+                    combined.extend(&wrapped);
                 }
-                Ops::from_power_modulated_image(
+            }
+        }
+    } else {
+        for &a in &angles {
+            let pass = match mode {
+                "power_modulated" => {
+                    let (alp, ah, aw) = match alpha {
+                        Some(arr) => (arr.to_vec(), h, w),
+                        None => (gray.clone(), h, w),
+                    };
+                    if ah != h || aw != w {
+                        return Err(RaygeoError::ContourError(
+                            "Alpha array dimensions must match image \
+                             dimensions"
+                                .to_string(),
+                        ));
+                    }
+                    Ops::from_power_modulated_image(
+                        &gray,
+                        &alp,
+                        h,
+                        w,
+                        pixels_per_mm,
+                        offset_x_mm,
+                        offset_y_mm,
+                        line_interval_mm,
+                        sample_interval_mm,
+                        min_power,
+                        max_power,
+                        step_power,
+                        num_power_levels,
+                        a,
+                        scan_mode_val,
+                        dot_width_correction_mm,
+                    )
+                }
+                "mask_scan" | "dither" => Ops::from_mask_scan(
                     &gray,
-                    &alp,
                     h,
                     w,
                     pixels_per_mm,
                     offset_x_mm,
                     offset_y_mm,
                     line_interval_mm,
-                    sample_interval_mm,
-                    min_power,
-                    max_power,
                     step_power,
-                    num_power_levels,
                     a,
                     scan_mode_val,
                     dot_width_correction_mm,
-                )
-            }
-            "mask_scan" | "dither" => Ops::from_mask_scan(
-                &gray,
-                h,
-                w,
-                pixels_per_mm,
-                offset_x_mm,
-                offset_y_mm,
-                line_interval_mm,
-                step_power,
-                a,
-                scan_mode_val,
-                dot_width_correction_mm,
-            ),
-            "multi_pass" => Ops::from_multi_pass_image(
-                &gray,
-                h,
-                w,
-                pixels_per_mm,
-                offset_x_mm,
-                offset_y_mm,
-                line_interval_mm,
-                num_depth_levels,
-                z_step_down,
-                a,
-                angle_increment,
-                scan_mode_val,
-            ),
-            other => {
-                return Err(RaygeoError::ContourError(format!(
-                    "Unknown mode '{}' — expected 'power_modulated', \
-                     'mask_scan', or 'multi_pass'",
-                    other
-                )));
-            }
-        };
+                ),
+                "multi_pass" => Ops::from_multi_pass_image(
+                    &gray,
+                    h,
+                    w,
+                    pixels_per_mm,
+                    offset_x_mm,
+                    offset_y_mm,
+                    line_interval_mm,
+                    num_depth_levels,
+                    z_step_down,
+                    a,
+                    angle_increment,
+                    scan_mode_val,
+                ),
+                other => {
+                    return Err(RaygeoError::ContourError(format!(
+                        "Unknown mode '{}' — expected 'power_modulated', \
+                         'mask_scan', or 'multi_pass'",
+                        other
+                    )));
+                }
+            };
 
-        if let Some(rm) = raster_mode {
-            let mut wrapped = Ops::new();
-            wrapped
-                .ops_section_start(SectionType::RasterFill, "raster", Some(rm))
-                .map_err(|e| RaygeoError::ContourError(e.to_string()))?;
-            wrapped.extend(&pass);
-            wrapped
-                .ops_section_end(SectionType::RasterFill, Some(rm))
-                .map_err(|e| RaygeoError::ContourError(e.to_string()))?;
-            combined.extend(&wrapped);
-        } else {
-            combined.extend(&pass);
+            if let Some(rm) = raster_mode {
+                let pass_sections = match mode {
+                    "multi_pass" => split_multi_pass_sections(&pass),
+                    _ => vec![pass],
+                };
+                for pass_section in pass_sections {
+                    let mut wrapped = Ops::new();
+                    wrapped
+                        .ops_section_start(
+                            SectionType::RasterFill,
+                            "raster",
+                            Some(rm),
+                        )
+                        .map_err(|e| RaygeoError::ContourError(e.to_string()))?;
+                    wrapped.extend(&pass_section);
+                    wrapped
+                        .ops_section_end(SectionType::RasterFill, Some(rm))
+                        .map_err(|e| RaygeoError::ContourError(e.to_string()))?;
+                    combined.extend(&wrapped);
+                }
+            } else {
+                combined.extend(&pass);
+            }
         }
     }
 
@@ -283,6 +348,35 @@ pub fn assemble_raster(
         },
     };
     Ok((combined, meta))
+}
+
+/// Split a multi_pass Ops block into per-pass sub-Ops, one per Z level.
+///
+/// Each pass in a multi_pass raster is emitted at a distinct Z offset.
+/// The optimizer must treat each pass as an independent group so that
+/// segments are only reordered within a pass, never across passes.
+fn split_multi_pass_sections(ops: &Ops) -> Vec<Ops> {
+    let mut sections: Vec<Ops> = Vec::new();
+    let mut current_z: Option<f64> = None;
+    let mut current = Ops::new();
+
+    for i in 0..ops.len() {
+        let z = ops.endpoint(i).z;
+        if current.is_empty() {
+            current_z = Some(z);
+            current.transfer_command_from(ops, i);
+            continue;
+        }
+        if (z - current_z.unwrap_or(z)).abs() > 1e-9 {
+            sections.push(std::mem::take(&mut current));
+            current_z = Some(z);
+        }
+        current.transfer_command_from(ops, i);
+    }
+    if !current.is_empty() {
+        sections.push(current);
+    }
+    sections
 }
 
 /// Target slab size for lazy image loading (≈ 8 MB per slab).

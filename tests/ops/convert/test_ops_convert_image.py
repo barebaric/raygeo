@@ -223,21 +223,23 @@ class TestFullSweepMaskScan:
 
 
 class TestFullSweepMaskLines:
-    def test_fewer_lines_than_segmented(self):
-        mask = np.ones((30, 30), dtype=np.uint8)
+    def test_fewer_commands_than_segmented(self):
+        mask = np.zeros((30, 30), dtype=np.uint8)
+        mask[5:25, 5:15] = 1
+        mask[5:25, 18:25] = 1
         seg = Ops.from_mask_lines(mask, (10.0, 10.0), 0, 0, 0.1)
         fs = Ops.from_mask_lines(
             mask, (10.0, 10.0), 0, 0, 0.1, scan_mode=ScanMode.FULL_SWEEP
         )
-        assert fs.len() <= seg.len()
+        assert fs.len() < seg.len()
 
-    def test_produces_lines(self):
+    def test_produces_scanlines(self):
         mask = np.ones((20, 20), dtype=np.uint8)
         ops = Ops.from_mask_lines(
             mask, (10.0, 10.0), 0, 0, 0.1, scan_mode=ScanMode.FULL_SWEEP
         )
         types = [ops.command_type(i) for i in range(ops.len())]
-        assert CommandType.LINE_TO in types
+        assert CommandType.SCAN_LINE in types
 
     def test_empty_mask(self):
         mask = np.zeros((10, 10), dtype=np.uint8)
@@ -246,10 +248,49 @@ class TestFullSweepMaskLines:
         )
         assert ops.is_empty()
 
+    def test_power_zero_in_gaps(self):
+        mask = np.zeros((30, 30), dtype=np.uint8)
+        mask[5:25, 5:25] = 1
+        ops = Ops.from_mask_lines(
+            mask, (10.0, 10.0), 0, 0, 0.1, scan_mode=ScanMode.FULL_SWEEP
+        )
+        scan_indices = [
+            i
+            for i in range(ops.len())
+            if ops.command_type(i) == CommandType.SCAN_LINE
+        ]
+        assert len(scan_indices) > 0
+        for i in scan_indices:
+            pv = ops.scanline_data(i)
+            assert min(pv) == 0
+            assert max(pv) > 0
+
+    def test_one_scanline_per_scan_row(self):
+        mask = np.zeros((30, 30), dtype=np.uint8)
+        mask[5:25, 5:15] = 1
+        mask[5:25, 18:25] = 1
+        ops = Ops.from_mask_lines(
+            mask, (10.0, 10.0), 0, 0, 0.1, scan_mode=ScanMode.FULL_SWEEP
+        )
+        scan_count = sum(
+            1
+            for i in range(ops.len())
+            if ops.command_type(i) == CommandType.SCAN_LINE
+        )
+        seg = Ops.from_mask_lines(mask, (10.0, 10.0), 0, 0, 0.1)
+        line_count = sum(
+            1
+            for i in range(seg.len())
+            if seg.command_type(i) == CommandType.LINE_TO
+        )
+        assert scan_count < line_count
+
 
 class TestFullSweepMultiPass:
-    def test_fewer_lines_than_segmented(self):
-        gray = np.full((20, 20), 64, dtype=np.uint8)
+    def test_fewer_commands_than_segmented(self):
+        gray = np.full((20, 20), 255, dtype=np.uint8)
+        gray[5:15, 5:10] = 64
+        gray[5:15, 12:15] = 64
         seg = Ops.from_multi_pass_image(gray, (10.0, 10.0), 0, 0, 0.1, 3, 0.5)
         fs = Ops.from_multi_pass_image(
             gray,
@@ -261,9 +302,9 @@ class TestFullSweepMultiPass:
             0.5,
             scan_mode=ScanMode.FULL_SWEEP,
         )
-        assert fs.len() <= seg.len()
+        assert fs.len() < seg.len()
 
-    def test_produces_lines(self):
+    def test_produces_scanlines(self):
         gray = np.full((20, 20), 64, dtype=np.uint8)
         ops = Ops.from_multi_pass_image(
             gray,
@@ -275,7 +316,8 @@ class TestFullSweepMultiPass:
             0.5,
             scan_mode=ScanMode.FULL_SWEEP,
         )
-        assert not ops.is_empty()
+        types = [ops.command_type(i) for i in range(ops.len())]
+        assert CommandType.SCAN_LINE in types
 
     def test_white_image_empty(self):
         gray = np.full((10, 10), 255, dtype=np.uint8)

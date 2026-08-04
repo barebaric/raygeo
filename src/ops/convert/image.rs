@@ -139,18 +139,19 @@ fn emit_scan(
     start_mm: (f64, f64),
     end_mm: (f64, f64),
     ymax_mm: f64,
+    z: f64,
     power_values: Vec<u8>,
 ) {
     ops.move_to(
         start_mm.0,
         convert_y_to_output(start_mm.1, ymax_mm),
-        0.0,
+        z,
         None,
     );
     ops.scan_to(
         end_mm.0,
         convert_y_to_output(end_mm.1, ymax_mm),
-        0.0,
+        z,
         power_values,
         None,
     );
@@ -264,7 +265,7 @@ fn process_scan_full_sweep(
     } else {
         power_values
     };
-    emit_scan(ops, start_mm, end_mm, ymax_mm, pw);
+    emit_scan(ops, start_mm, end_mm, ymax_mm, 0.0, pw);
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -299,20 +300,34 @@ fn process_scan_segmented(
             segment_endpoints_mm(scan_line, si, ei, rev, pixels_per_mm);
         let mut pw = vec![power_byte; ei - si];
         apply_dot_width_trim(&mut pw, trim_px);
-        emit_scan(ops, start_mm, end_mm, ymax_mm, pw);
+        emit_scan(ops, start_mm, end_mm, ymax_mm, 0.0, pw);
     }
 }
 
 fn process_line_full_sweep(
     ops: &mut Ops,
     scan_line: &ScanLine,
+    values: &[u8],
     pixels_per_mm: (f64, f64),
     ymax_mm: f64,
     z: f64,
     rev: bool,
 ) {
+    if !values.iter().any(|&v| v > 0) {
+        return;
+    }
+
+    let power_values: Vec<u8> = values
+        .iter()
+        .map(|&v| if v > 0 { 255 } else { 0 })
+        .collect();
+    let pw = if rev {
+        power_values.into_iter().rev().collect()
+    } else {
+        power_values
+    };
     let (start_mm, end_mm) = endpoints_for_scan(scan_line, rev, pixels_per_mm);
-    emit_line(ops, start_mm, end_mm, ymax_mm, z);
+    emit_scan(ops, start_mm, end_mm, ymax_mm, z, pw);
 }
 
 fn process_line_segmented(
@@ -567,6 +582,7 @@ impl Ops {
                 ScanMode::FullSweep => process_line_full_sweep(
                     &mut ops,
                     scan_line,
+                    &values,
                     pixels_per_mm,
                     ymax_mm,
                     z,
@@ -602,7 +618,43 @@ impl Ops {
         angle_increment: f64,
         scan_mode: ScanMode,
     ) -> Ops {
+        let passes = Self::multi_pass_ops(
+            gray_image,
+            height,
+            width,
+            pixels_per_mm,
+            offset_x_mm,
+            offset_y_mm,
+            line_interval_mm,
+            num_depth_levels,
+            z_step_down,
+            angle,
+            angle_increment,
+            scan_mode,
+        );
         let mut ops = Ops::new();
+        for p in passes {
+            ops.extend(&p);
+        }
+        ops
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn multi_pass_ops(
+        gray_image: &[u8],
+        height: usize,
+        width: usize,
+        pixels_per_mm: (f64, f64),
+        offset_x_mm: f64,
+        offset_y_mm: f64,
+        line_interval_mm: f64,
+        num_depth_levels: usize,
+        z_step_down: f64,
+        angle: f64,
+        angle_increment: f64,
+        scan_mode: ScanMode,
+    ) -> Vec<Ops> {
+        let mut passes: Vec<Ops> = Vec::new();
 
         let mut pass_map: Vec<i32> = Vec::with_capacity(height * width);
         for &val in gray_image {
@@ -639,9 +691,9 @@ impl Ops {
                 pass_angle,
                 scan_mode,
             );
-            ops.extend(&pass_ops);
+            passes.push(pass_ops);
         }
 
-        ops
+        passes
     }
 }
