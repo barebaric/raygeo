@@ -3,16 +3,19 @@ import pytest
 
 from raygeo.geo import Geometry
 from raygeo.svg import (
-    extract_svg_metadata,
+    filter_svg_by_color,
     geometry_to_svg_path,
-    parse_svg_length,
     parse_svg_path_data,
-    parse_svg_transform,
-    svg_length_to_mm,
     svg_string_to_geometries,
+    svg_string_to_geometries_by_color,
     svg_string_to_geometries_by_layer,
     svg_string_to_geometry,
+    svg_string_to_geometry_by_color,
 )
+from raygeo.svg.color import ColorAttr
+from raygeo.svg.length import parse_svg_length, svg_length_to_mm
+from raygeo.svg.metadata import extract_svg_metadata
+from raygeo.svg.transform import parse_svg_transform
 
 # ---------------------------------------------------------------------------
 # parse_svg_transform
@@ -989,3 +992,301 @@ class TestSvgStringToGeometriesByLayer:
         layers = svg_string_to_geometries_by_layer(svg)
         assert len(layers) == 1
         assert len(layers[0][1]) >= 3
+
+
+# ---------------------------------------------------------------------------
+# svg_string_to_geometries_by_color
+# ---------------------------------------------------------------------------
+
+
+class TestSvgStringToGeometriesByColor:
+    def test_buckets_by_fill(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg">'
+            '<path d="M 0 0 L 5 5" fill="red"/>'
+            '<path d="M 10 10 L 15 15" fill="#00ff00"/>'
+            "</svg>"
+        )
+        buckets = svg_string_to_geometries_by_color(svg)
+        assert [k for k, _ in buckets] == ["#00ff00", "#ff0000"]
+
+    def test_unset_fill_goes_to_no_color(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg">'
+            '<path d="M 0 0 L 5 5"/>'
+            "</svg>"
+        )
+        buckets = svg_string_to_geometries_by_color(svg)
+        assert [k for k, _ in buckets] == ["_no_color"]
+        assert len(buckets[0][1]) == 1
+
+    def test_fill_none_goes_to_no_color(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg">'
+            '<path d="M 0 0 L 5 5" fill="none"/>'
+            "</svg>"
+        )
+        buckets = svg_string_to_geometries_by_color(svg)
+        assert [k for k, _ in buckets] == ["_no_color"]
+
+    def test_color_key_normalized_lowercase(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg">'
+            '<path d="M 0 0 L 5 5" fill="RED"/>'
+            '<path d="M 10 10 L 15 15" fill="#F00"/>'
+            '<path d="M 20 20 L 25 25" fill="#ff0000"/>'
+            "</svg>"
+        )
+        buckets = svg_string_to_geometries_by_color(svg)
+        assert [k for k, _ in buckets] == ["#ff0000"]
+        assert len(buckets[0][1]) == 3
+
+    def test_stroke_attr(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg">'
+            '<path d="M 0 0 L 5 5" stroke="red"/>'
+            "</svg>"
+        )
+        buckets = svg_string_to_geometries_by_color(
+            svg, color_attr=ColorAttr.STROKE
+        )
+        assert [k for k, _ in buckets] == ["#ff0000"]
+
+    def test_fill_else_stroke_prefers_fill(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg">'
+            '<path d="M 0 0 L 5 5" fill="red" stroke="blue"/>'
+            "</svg>"
+        )
+        buckets = svg_string_to_geometries_by_color(
+            svg, color_attr=ColorAttr.FILL_ELSE_STROKE
+        )
+        assert [k for k, _ in buckets] == ["#ff0000"]
+
+    def test_fill_else_stroke_falls_back_to_stroke(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg">'
+            '<path d="M 0 0 L 5 5" fill="none" stroke="blue"/>'
+            "</svg>"
+        )
+        buckets = svg_string_to_geometries_by_color(
+            svg, color_attr=ColorAttr.FILL_ELSE_STROKE
+        )
+        assert [k for k, _ in buckets] == ["#0000ff"]
+
+    def test_color_inherited_from_group(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg">'
+            '<g fill="#112233">'
+            '<path d="M 0 0 L 5 5"/>'
+            "</g>"
+            "</svg>"
+        )
+        buckets = svg_string_to_geometries_by_color(svg)
+        assert [k for k, _ in buckets] == ["#112233"]
+        assert len(buckets[0][1]) == 1
+
+    def test_current_color_resolves_to_nearest_color(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg" color="blue">'
+            '<path d="M 0 0 L 5 5" fill="currentColor"/>'
+            "</svg>"
+        )
+        buckets = svg_string_to_geometries_by_color(svg)
+        assert [k for k, _ in buckets] == ["#0000ff"]
+
+    def test_current_color_defaults_to_black(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg">'
+            '<path d="M 0 0 L 5 5" fill="currentColor"/>'
+            "</svg>"
+        )
+        buckets = svg_string_to_geometries_by_color(svg)
+        assert [k for k, _ in buckets] == ["#000000"]
+
+    def test_multiple_shapes_per_color(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg">'
+            '<path d="M 0 0 L 5 5" fill="red"/>'
+            '<path d="M 10 10 L 15 15" fill="red"/>'
+            '<rect x="20" y="20" width="10" height="10" fill="red"/>'
+            "</svg>"
+        )
+        buckets = svg_string_to_geometries_by_color(svg)
+        assert [k for k, _ in buckets] == ["#ff0000"]
+        assert len(buckets[0][1]) == 3
+
+    def test_with_scale(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg">'
+            '<path d="M 0 0 L 5 5" fill="red"/>'
+            "</svg>"
+        )
+        buckets = svg_string_to_geometries_by_color(
+            svg, scale_x=2.0, scale_y=3.0
+        )
+        assert [k for k, _ in buckets] == ["#ff0000"]
+        assert len(buckets[0][1]) == 1
+
+    def test_any_split_fill_and_stroke(self):
+        """In any mode, differing fill and stroke yield two buckets."""
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg">'
+            '<path d="M 0 0 L 5 5" fill="red" stroke="blue"/>'
+            '<path d="M 10 10 L 15 15" fill="red"/>'
+            '<path d="M 20 20 L 25 25" stroke="#00ff00"/>'
+            "</svg>"
+        )
+        buckets = svg_string_to_geometries_by_color(
+            svg, color_attr=ColorAttr.ANY
+        )
+        by_key = {k: v for k, v in buckets}
+        assert set(by_key) == {"#0000ff", "#00ff00", "#ff0000"}
+        # The fill+stroke shape lands in both buckets.
+        assert len(by_key["#ff0000"]) == 2
+        assert len(by_key["#0000ff"]) == 1
+        assert len(by_key["#00ff00"]) == 1
+
+    def test_any_matching_fill_and_stroke_bucket_once(self):
+        """Equal fill and stroke colors produce a single bucket."""
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg">'
+            '<path d="M 0 0 L 5 5" fill="red" stroke="red"/>'
+            "</svg>"
+        )
+        buckets = svg_string_to_geometries_by_color(
+            svg, color_attr=ColorAttr.ANY
+        )
+        assert [k for k, _ in buckets] == ["#ff0000"]
+        assert len(buckets[0][1]) == 1
+
+    def test_any_no_color_bucket(self):
+        """Shapes with neither fill nor stroke color go to _no_color."""
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg">'
+            '<path d="M 0 0 L 5 5"/>'
+            "</svg>"
+        )
+        buckets = svg_string_to_geometries_by_color(
+            svg, color_attr=ColorAttr.ANY
+        )
+        assert [k for k, _ in buckets] == ["_no_color"]
+
+    def test_no_paths(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg"><rect x="0" y="0"/></svg>'
+        )
+        assert svg_string_to_geometries_by_color(svg) == []
+
+    def test_invalid_xml_raises(self):
+        with pytest.raises(ValueError, match="failed to parse SVG"):
+            svg_string_to_geometries_by_color("not xml")
+
+
+# ---------------------------------------------------------------------------
+# svg_string_to_geometry_by_color
+# ---------------------------------------------------------------------------
+
+
+class TestSvgStringToGeometryByColor:
+    def test_merges_subpaths_per_color(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg">'
+            '<path d="M 0 0 L 5 5" fill="red"/>'
+            '<path d="M 10 10 L 15 15" fill="red"/>'
+            "</svg>"
+        )
+        buckets = svg_string_to_geometry_by_color(svg)
+        assert [k for k, _ in buckets] == ["#ff0000"]
+        key, geo = buckets[0]
+        assert not geo.is_empty()
+        assert len(geo.data) >= 2
+
+    def test_color_attr_passed_through(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg">'
+            '<path d="M 0 0 L 5 5" stroke="red"/>'
+            "</svg>"
+        )
+        buckets = svg_string_to_geometry_by_color(
+            svg, color_attr=ColorAttr.STROKE
+        )
+        assert [k for k, _ in buckets] == ["#ff0000"]
+
+
+class TestFilterSvgByColor:
+    def test_keeps_only_matching_color(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg">'
+            '<rect x="0" y="0" width="10" height="10" fill="#ff0000"/>'
+            '<rect x="20" y="20" width="10" height="10" fill="#00ff00"/>'
+            "</svg>"
+        )
+        out = filter_svg_by_color(svg, "#ff0000")
+        assert '<rect x="0"' in out
+        assert '<rect x="20"' not in out
+
+    def test_keeps_structure_intact(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10">'
+            '<defs><linearGradient id="g"/></defs>'
+            '<rect x="0" y="0" width="5" height="5" fill="#ff0000"/>'
+            '<rect x="1" y="1" width="5" height="5" fill="#00ff00"/>'
+            "</svg>"
+        )
+        out = filter_svg_by_color(svg, "#ff0000")
+        assert "<defs>" in out
+        assert "linearGradient" in out
+        assert 'width="10"' in out
+        assert 'fill="#00ff00"' not in out
+
+    def test_any_keeps_fill_or_stroke(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg">'
+            '<rect x="0" y="0" width="5" height="5" fill="#ff0000" '
+            'stroke="#0000ff"/>'
+            "</svg>"
+        )
+        by_fill = filter_svg_by_color(svg, "#ff0000")
+        assert 'fill="#ff0000"' in by_fill
+        by_stroke = filter_svg_by_color(svg, "#0000ff")
+        assert 'fill="#ff0000"' in by_stroke
+
+    def test_fill_mode_ignores_stroke(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg">'
+            '<rect x="0" y="0" width="5" height="5" stroke="#ff0000"/>'
+            '<rect x="10" y="10" width="5" height="5" fill="#ff0000"/>'
+            "</svg>"
+        )
+        out = filter_svg_by_color(svg, "#ff0000", color_attr=ColorAttr.FILL)
+        # Only the filled shape survives in fill mode.
+        assert out.count("rect") == 1
+
+    def test_no_color_bucket(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg">'
+            '<rect x="0" y="0" width="5" height="5" fill="#ff0000"/>'
+            '<rect x="10" y="10" width="5" height="5"/>'
+            "</svg>"
+        )
+        out = filter_svg_by_color(svg, "_no_color")
+        assert out.count("rect") == 1
+        assert 'fill="#ff0000"' not in out
+
+    def test_missing_color_removes_all_shapes(self):
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg">'
+            '<rect x="0" y="0" width="5" height="5" fill="#ff0000"/>'
+            "</svg>"
+        )
+        out = filter_svg_by_color(svg, "#00ff00")
+        assert "rect" not in out
+
+    def test_invalid_xml_raises(self):
+        with pytest.raises(ValueError, match="failed to parse SVG"):
+            filter_svg_by_color("not xml", "#ff0000")
+
+    def test_no_paths(self):
+        svg = '<svg xmlns="http://www.w3.org/2000/svg"></svg>'
+        assert svg_string_to_geometry_by_color(svg) == []

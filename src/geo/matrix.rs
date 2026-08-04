@@ -1,6 +1,6 @@
 use glam::{DMat3, DMat4, DVec2, DVec3, DVec4};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct Matrix {
     pub m: DMat3,
 }
@@ -96,7 +96,7 @@ impl Matrix {
     }
 
     pub fn copy(&self) -> Self {
-        self.clone()
+        *self
     }
 
     /// Index into row-major layout: m[row][col]
@@ -146,7 +146,7 @@ impl Matrix {
     }
 
     pub fn set_translation(&self, tx: f64, ty: f64) -> Self {
-        let mut m = self.clone();
+        let mut m = *self;
         m.set_translation_in_place(tx, ty);
         m
     }
@@ -157,7 +157,7 @@ impl Matrix {
     }
 
     pub fn without_translation(&self) -> Self {
-        let mut m = self.clone();
+        let mut m = *self;
         m.m.z_axis.x = 0.0;
         m.m.z_axis.y = 0.0;
         m
@@ -191,11 +191,11 @@ impl Matrix {
     }
 
     pub fn translate_pre(&self, tx: f64, ty: f64) -> Self {
-        Self::from_translation(tx, ty) * self.clone()
+        Self::from_translation(tx, ty) * *self
     }
 
     pub fn translate_post(&self, tx: f64, ty: f64) -> Self {
-        self.clone() * Self::from_translation(tx, ty)
+        *self * Self::from_translation(tx, ty)
     }
 
     pub fn scale_pre(
@@ -205,7 +205,7 @@ impl Matrix {
         center: Option<(f64, f64)>,
     ) -> Self {
         let s = wrap_center(Self::from_scale(sx, sy), center);
-        s * self.clone()
+        s * *self
     }
 
     pub fn scale_post(
@@ -215,7 +215,7 @@ impl Matrix {
         center: Option<(f64, f64)>,
     ) -> Self {
         let s = wrap_center(Self::from_scale(sx, sy), center);
-        self.clone() * s
+        *self * s
     }
 
     pub fn rotate_pre(
@@ -224,7 +224,7 @@ impl Matrix {
         center: Option<(f64, f64)>,
     ) -> Self {
         let r = wrap_center(Self::from_rotation(angle_deg), center);
-        r * self.clone()
+        r * *self
     }
 
     pub fn rotate_post(
@@ -233,7 +233,7 @@ impl Matrix {
         center: Option<(f64, f64)>,
     ) -> Self {
         let r = wrap_center(Self::from_rotation(angle_deg), center);
-        self.clone() * r
+        *self * r
     }
 
     pub fn shear_pre(
@@ -243,7 +243,7 @@ impl Matrix {
         center: Option<(f64, f64)>,
     ) -> Self {
         let k = wrap_center(Self::from_shear(shx, shy), center);
-        k * self.clone()
+        k * *self
     }
 
     pub fn shear_post(
@@ -253,7 +253,7 @@ impl Matrix {
         center: Option<(f64, f64)>,
     ) -> Self {
         let k = wrap_center(Self::from_shear(shx, shy), center);
-        self.clone() * k
+        *self * k
     }
 
     pub fn flip_horizontal(center: Option<(f64, f64)>) -> Self {

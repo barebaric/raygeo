@@ -1,18 +1,35 @@
+//! SVG parsing and geometry extraction.
+//!
+//! Provides parsers for path data and transforms, shape conversion,
+//! color resolution, and layer/color-aware geometry extraction.
+
+pub mod arc;
+pub mod color;
+pub mod length;
+pub mod metadata;
+pub mod path;
+pub mod shape;
+pub mod transform;
+pub(crate) mod traverse;
+
 use std::f64::consts::PI;
 
 use svgtypes::PathSegment;
 
 use crate::error::{RaygeoError, RaygeoResult};
 use crate::geo::geometry::Geometry;
+use crate::geo::matrix::Matrix;
 use crate::geo::shape::arc::get_arc_sweep;
-use glam::{DMat3, DVec3};
-
-use crate::geo::math::{mat3_det2x2, mat3_transform};
 use crate::geo::types::Command;
+use crate::svg::color::ColorAttr;
+use crate::svg::path::PathBuildContext;
+use crate::svg::traverse::{
+    collect_color_remove_ranges, traverse, traverse_by_color,
+};
 
-type BezierSeg = ((f64, f64), (f64, f64), (f64, f64), (f64, f64));
+use std::ops::Range;
 
-fn parse_coords(s: &str) -> Vec<f64> {
+pub(crate) fn parse_coords(s: &str) -> Vec<f64> {
     let mut coords = Vec::new();
     let mut chars = s.chars().peekable();
     let mut buf = String::new();
@@ -67,524 +84,6 @@ fn parse_coords(s: &str) -> Vec<f64> {
     coords
 }
 
-/// Apply the affine transform + scale to a single SVG coordinate.
-fn txfm_pt(px: f64, py: f64, m: DMat3, sx: f64, sy: f64) -> (f64, f64) {
-    let (tx, ty) = mat3_transform(m, px, py);
-    (tx / sx, ty / sy)
-}
-
-/// Transform an arc's center offset and determine if direction flips.
-fn txfm_arc(
-    start: (f64, f64),
-    center: (f64, f64),
-    clockwise: bool,
-    m: DMat3,
-    sx: f64,
-    sy: f64,
-) -> (f64, f64, f64, f64, bool) {
-    let (tsx, tsy) = txfm_pt(start.0, start.1, m, sx, sy);
-    let (tex, tey) = txfm_pt(center.0, center.1, m, sx, sy);
-    let ti = tex - tsx;
-    let tj = tey - tsy;
-    let det = mat3_det2x2(m);
-    let cw = if (det < 0.0) != (sx * sy < 0.0) {
-        !clockwise
-    } else {
-        clockwise
-    };
-    (tex, tey, ti, tj, cw)
-}
-
-/// Sample N evenly-spaced points on a cubic bezier (used by C, S, Q, T).
-fn flatten_cubic(
-    p0: (f64, f64),
-    p1: (f64, f64),
-    p2: (f64, f64),
-    p3: (f64, f64),
-    n: usize,
-) -> Vec<(f64, f64)> {
-    let mut pts = Vec::with_capacity(n);
-    for i in 1..=n {
-        let t = i as f64 / n as f64;
-        let u = 1.0 - t;
-        let x = u * u * u * p0.0
-            + 3.0 * u * u * t * p1.0
-            + 3.0 * u * t * t * p2.0
-            + t * t * t * p3.0;
-        let y = u * u * u * p0.1
-            + 3.0 * u * u * t * p1.1
-            + 3.0 * u * t * t * p2.1
-            + t * t * t * p3.1;
-        pts.push((x, y));
-    }
-    pts
-}
-
-/// Result of converting an SVG endpoint-parameterised arc to center form.
-struct ArcCenter {
-    cx: f64,
-    cy: f64,
-    start_angle: f64,
-    sweep: f64,
-    rx: f64,
-    ry: f64,
-    phi: f64,
-}
-
-#[allow(clippy::too_many_arguments)]
-fn svg_arc_center(
-    x1: f64,
-    y1: f64,
-    rx: f64,
-    ry: f64,
-    phi_deg: f64,
-    large: bool,
-    sweep: bool,
-    x2: f64,
-    y2: f64,
-) -> Option<ArcCenter> {
-    if rx.abs() < 1e-9
-        || ry.abs() < 1e-9
-        || (x1 - x2).abs() < 1e-9 && (y1 - y2).abs() < 1e-9
-    {
-        return None;
-    }
-    let mut rx = rx.abs();
-    let mut ry = ry.abs();
-    let phi = phi_deg.to_radians();
-    let cp = phi.cos();
-    let sp = phi.sin();
-    let dx = (x1 - x2) / 2.0;
-    let dy = (y1 - y2) / 2.0;
-    let x1p = cp * dx + sp * dy;
-    let y1p = -sp * dx + cp * dy;
-    let lambda = x1p * x1p / (rx * rx) + y1p * y1p / (ry * ry);
-    if lambda > 1.0 {
-        let s = lambda.sqrt();
-        rx *= s;
-        ry *= s;
-    }
-    let rx2 = rx * rx;
-    let ry2 = ry * ry;
-    let x1p2 = x1p * x1p;
-    let y1p2 = y1p * y1p;
-    let num = rx2 * ry2 - rx2 * y1p2 - ry2 * x1p2;
-    let den = rx2 * y1p2 + ry2 * x1p2;
-    let f = if den > 0.0 {
-        (num.max(0.0) / den).sqrt()
-    } else {
-        0.0
-    };
-    let f = if large == sweep { -f } else { f };
-    let cxp = f * rx * y1p / ry;
-    let cyp = -f * ry * x1p / rx;
-    let cx = cp * cxp - sp * cyp + (x1 + x2) / 2.0;
-    let cy = sp * cxp + cp * cyp + (y1 + y2) / 2.0;
-    let sa = ((y1p - cyp) / ry).atan2((x1p - cxp) / rx);
-    let ea = ((-y1p - cyp) / ry).atan2((-x1p - cxp) / rx);
-    let mut sw = ea - sa;
-    if sweep {
-        if sw < 0.0 {
-            sw += 2.0 * PI;
-        }
-    } else if sw > 0.0 {
-        sw -= 2.0 * PI;
-    }
-    Some(ArcCenter {
-        cx,
-        cy,
-        start_angle: sa,
-        sweep: sw,
-        rx,
-        ry,
-        phi,
-    })
-}
-
-/// Convert an elliptical arc segment (≤ 90°) to a cubic bezier.
-fn arc_seg_to_bezier(
-    cx: f64,
-    cy: f64,
-    rx: f64,
-    ry: f64,
-    phi: f64,
-    t1: f64,
-    t2: f64,
-) -> BezierSeg {
-    let k = 4.0 / 3.0 * ((t2 - t1) / 4.0).tan();
-    let cp = phi.cos();
-    let sp = phi.sin();
-    let c1 = t1.cos();
-    let s1 = t1.sin();
-    let c2 = t2.cos();
-    let s2 = t2.sin();
-    let sx = cx + rx * c1 * cp - ry * s1 * sp;
-    let sy = cy + rx * c1 * sp + ry * s1 * cp;
-    let ex = cx + rx * c2 * cp - ry * s2 * sp;
-    let ey = cy + rx * c2 * sp + ry * s2 * cp;
-    let c1x = sx - k * (rx * s1 * cp + ry * c1 * sp);
-    let c1y = sy - k * (rx * s1 * sp - ry * c1 * cp);
-    let c2x = ex + k * (rx * s2 * cp + ry * c2 * sp);
-    let c2y = ey + k * (rx * s2 * sp - ry * c2 * cp);
-    ((sx, sy), (c1x, c1y), (c2x, c2y), (ex, ey))
-}
-
-/// Split an elliptical arc into ≤90° bezier segments.
-fn elliptical_arc_to_beziers(ac: &ArcCenter) -> Vec<BezierSeg> {
-    if !ac.sweep.is_finite() || !ac.start_angle.is_finite() {
-        return vec![];
-    }
-    let mut segs = Vec::new();
-    let step = if ac.sweep > 0.0 { PI / 2.0 } else { -PI / 2.0 };
-    let end = ac.start_angle + ac.sweep;
-    let mut t = ac.start_angle;
-    loop {
-        let next = if (ac.sweep > 0.0 && t + step >= end)
-            || (ac.sweep < 0.0 && t + step <= end)
-        {
-            end
-        } else {
-            t + step
-        };
-        segs.push(arc_seg_to_bezier(
-            ac.cx, ac.cy, ac.rx, ac.ry, ac.phi, t, next,
-        ));
-        if next == end {
-            break;
-        }
-        t = next;
-    }
-    segs
-}
-
-fn push_line(geo: &mut Geometry, x: f64, y: f64, m: DMat3, sx: f64, sy: f64) {
-    let (tx, ty) = txfm_pt(x, y, m, sx, sy);
-    geo.line_to(tx, ty, 0.0);
-}
-
-/// Mutable state accumulated while parsing an SVG path `d` string.
-struct PathBuildContext {
-    pos: (f64, f64),
-    subpath_start: (f64, f64),
-    prev_c2: Option<(f64, f64)>,
-    prev_q: Option<(f64, f64)>,
-    current_geo: Option<Geometry>,
-    geometries: Vec<Geometry>,
-    transform: DMat3,
-    scale_x: f64,
-    scale_y: f64,
-}
-
-impl PathBuildContext {
-    fn new(transform: DMat3, scale_x: f64, scale_y: f64) -> Self {
-        Self {
-            pos: (0.0, 0.0),
-            subpath_start: (0.0, 0.0),
-            prev_c2: None,
-            prev_q: None,
-            current_geo: None,
-            geometries: Vec::new(),
-            transform,
-            scale_x,
-            scale_y,
-        }
-    }
-
-    fn flush_current(&mut self) {
-        self.prev_c2 = None;
-        self.prev_q = None;
-        if let Some(g) = self.current_geo.take() {
-            if !g.is_empty() {
-                self.geometries.push(g);
-            }
-        }
-    }
-
-    fn resolve_pos(&self, abs: bool, x: f64, y: f64) -> (f64, f64) {
-        if abs {
-            (x, y)
-        } else {
-            (self.pos.0 + x, self.pos.1 + y)
-        }
-    }
-
-    fn push_flattened(&mut self, points: &[(f64, f64)], end: (f64, f64)) {
-        self.pos = end;
-        if let Some(ref mut g) = self.current_geo {
-            for &(px, py) in points {
-                push_line(
-                    g,
-                    px,
-                    py,
-                    self.transform,
-                    self.scale_x,
-                    self.scale_y,
-                );
-            }
-        }
-    }
-
-    fn handle_moveto(&mut self, abs: bool, x: f64, y: f64) {
-        self.flush_current();
-        let pos = self.resolve_pos(abs, x, y);
-        self.pos = pos;
-        self.subpath_start = pos;
-        let mut g = Geometry::new();
-        let (tx, ty) =
-            txfm_pt(pos.0, pos.1, self.transform, self.scale_x, self.scale_y);
-        g.move_to(tx, ty, 0.0);
-        self.current_geo = Some(g);
-    }
-
-    fn handle_lineto(&mut self, abs: bool, x: f64, y: f64) {
-        let pos = self.resolve_pos(abs, x, y);
-        self.prev_c2 = None;
-        self.prev_q = None;
-        self.pos = pos;
-        if let Some(ref mut g) = self.current_geo {
-            push_line(
-                g,
-                pos.0,
-                pos.1,
-                self.transform,
-                self.scale_x,
-                self.scale_y,
-            );
-        }
-    }
-
-    fn handle_hline_to(&mut self, abs: bool, x: f64) {
-        self.prev_c2 = None;
-        self.prev_q = None;
-        if abs {
-            self.pos.0 = x;
-        } else {
-            self.pos.0 += x;
-        }
-        if let Some(ref mut g) = self.current_geo {
-            push_line(
-                g,
-                self.pos.0,
-                self.pos.1,
-                self.transform,
-                self.scale_x,
-                self.scale_y,
-            );
-        }
-    }
-
-    fn handle_vline_to(&mut self, abs: bool, y: f64) {
-        self.prev_c2 = None;
-        self.prev_q = None;
-        if abs {
-            self.pos.1 = y;
-        } else {
-            self.pos.1 += y;
-        }
-        if let Some(ref mut g) = self.current_geo {
-            push_line(
-                g,
-                self.pos.0,
-                self.pos.1,
-                self.transform,
-                self.scale_x,
-                self.scale_y,
-            );
-        }
-    }
-
-    #[allow(clippy::too_many_arguments)]
-    fn handle_cubic_to(
-        &mut self,
-        abs: bool,
-        x1: f64,
-        y1: f64,
-        x2: f64,
-        y2: f64,
-        x: f64,
-        y: f64,
-    ) {
-        self.prev_q = None;
-        let c1 = self.resolve_pos(abs, x1, y1);
-        let c2 = self.resolve_pos(abs, x2, y2);
-        let end = self.resolve_pos(abs, x, y);
-        self.prev_c2 = Some(c2);
-        let pts = flatten_cubic(self.pos, c1, c2, end, 20);
-        self.push_flattened(&pts, end);
-    }
-
-    fn handle_smooth_cubic_to(
-        &mut self,
-        abs: bool,
-        x2: f64,
-        y2: f64,
-        x: f64,
-        y: f64,
-    ) {
-        self.prev_q = None;
-        let c2 = self.resolve_pos(abs, x2, y2);
-        let end = self.resolve_pos(abs, x, y);
-        let c1 = match self.prev_c2 {
-            Some((px, py)) => (2.0 * self.pos.0 - px, 2.0 * self.pos.1 - py),
-            None => self.pos,
-        };
-        self.prev_c2 = Some(c2);
-        let pts = flatten_cubic(self.pos, c1, c2, end, 20);
-        self.push_flattened(&pts, end);
-    }
-
-    fn handle_quadratic(
-        &mut self,
-        abs: bool,
-        x1: f64,
-        y1: f64,
-        x: f64,
-        y: f64,
-    ) {
-        self.prev_c2 = None;
-        let q = self.resolve_pos(abs, x1, y1);
-        let end = self.resolve_pos(abs, x, y);
-        self.prev_q = Some(q);
-        let c1 = (
-            self.pos.0 + 2.0 / 3.0 * (q.0 - self.pos.0),
-            self.pos.1 + 2.0 / 3.0 * (q.1 - self.pos.1),
-        );
-        let c2 = (
-            q.0 + 1.0 / 3.0 * (end.0 - q.0),
-            q.1 + 1.0 / 3.0 * (end.1 - q.1),
-        );
-        let pts = flatten_cubic(self.pos, c1, c2, end, 20);
-        self.push_flattened(&pts, end);
-    }
-
-    fn handle_smooth_quadratic(&mut self, abs: bool, x: f64, y: f64) {
-        self.prev_c2 = None;
-        let end = self.resolve_pos(abs, x, y);
-        let q = match self.prev_q {
-            Some((px, py)) => (2.0 * self.pos.0 - px, 2.0 * self.pos.1 - py),
-            None => self.pos,
-        };
-        self.prev_q = Some(q);
-        let c1 = (
-            self.pos.0 + 2.0 / 3.0 * (q.0 - self.pos.0),
-            self.pos.1 + 2.0 / 3.0 * (q.1 - self.pos.1),
-        );
-        let c2 = (
-            q.0 + 1.0 / 3.0 * (end.0 - q.0),
-            q.1 + 1.0 / 3.0 * (end.1 - q.1),
-        );
-        let pts = flatten_cubic(self.pos, c1, c2, end, 20);
-        self.push_flattened(&pts, end);
-    }
-
-    #[allow(clippy::too_many_arguments)]
-    fn handle_elliptical_arc(
-        &mut self,
-        abs: bool,
-        rx: f64,
-        ry: f64,
-        x_axis_rotation: f64,
-        large_arc: bool,
-        sweep: bool,
-        x: f64,
-        y: f64,
-    ) {
-        self.prev_c2 = None;
-        self.prev_q = None;
-        let end = self.resolve_pos(abs, x, y);
-        let ac = match svg_arc_center(
-            self.pos.0,
-            self.pos.1,
-            rx,
-            ry,
-            x_axis_rotation,
-            large_arc,
-            sweep,
-            end.0,
-            end.1,
-        ) {
-            Some(ac) => ac,
-            None => {
-                self.pos = end;
-                return;
-            }
-        };
-        let is_circular = (ac.rx - ac.ry).abs() / ac.rx.max(ac.ry) < 1e-3;
-        let is_short_arc = ac.sweep.abs() <= PI + 1e-9;
-        if let Some(ref mut g) = self.current_geo {
-            if is_circular && is_short_arc {
-                let (_cx, _cy, ti, tj, cw) = txfm_arc(
-                    self.pos,
-                    (ac.cx, ac.cy),
-                    !sweep,
-                    self.transform,
-                    self.scale_x,
-                    self.scale_y,
-                );
-                let (end_x, end_y) = txfm_pt(
-                    end.0,
-                    end.1,
-                    self.transform,
-                    self.scale_x,
-                    self.scale_y,
-                );
-                g.arc_to(end_x, end_y, ti, tj, cw, 0.0);
-            } else {
-                for (_, (c1x, c1y), (c2x, c2y), (ex, ey)) in
-                    elliptical_arc_to_beziers(&ac)
-                {
-                    let (tc1x, tc1y) = txfm_pt(
-                        c1x,
-                        c1y,
-                        self.transform,
-                        self.scale_x,
-                        self.scale_y,
-                    );
-                    let (tc2x, tc2y) = txfm_pt(
-                        c2x,
-                        c2y,
-                        self.transform,
-                        self.scale_x,
-                        self.scale_y,
-                    );
-                    let (tex, tey) = txfm_pt(
-                        ex,
-                        ey,
-                        self.transform,
-                        self.scale_x,
-                        self.scale_y,
-                    );
-                    g.bezier_to(
-                        crate::geo::types::Point3D::new(tc1x, tc1y, 0.0),
-                        crate::geo::types::Point3D::new(tc2x, tc2y, 0.0),
-                        crate::geo::types::Point3D::new(tex, tey, 0.0),
-                    );
-                }
-            }
-        }
-        self.pos = end;
-    }
-
-    fn handle_close_path(&mut self) {
-        self.prev_c2 = None;
-        self.prev_q = None;
-        if let Some(ref mut g) = self.current_geo {
-            g.close_path();
-        }
-        self.pos = self.subpath_start;
-    }
-
-    fn finish(self) -> Vec<Geometry> {
-        let mut geometries = self.geometries;
-        if let Some(geo) = self.current_geo {
-            if !geo.is_empty() {
-                geometries.push(geo);
-            }
-        }
-        geometries
-    }
-}
-
 /// Parse an SVG path `d` attribute into a list of geometries.
 ///
 /// Supports M/m, L/l, H/h, V/v, C/c, S/s, Q/q, T/t, A/a, Z/z.
@@ -593,7 +92,7 @@ impl PathBuildContext {
 /// elliptical arcs are approximated with cubic beziers.
 pub fn parse_svg_path_data(
     path_data: &str,
-    transform: DMat3,
+    transform: &Matrix,
     scale_x: f64,
     scale_y: f64,
 ) -> RaygeoResult<Vec<Geometry>> {
@@ -672,272 +171,6 @@ pub fn parse_svg_path_data(
     Ok(ctx.finish())
 }
 
-fn translate_m(coords: &[f64]) -> DMat3 {
-    let mut m = DMat3::IDENTITY;
-    if !coords.is_empty() {
-        let tx = coords[0];
-        let ty = if coords.len() > 1 { coords[1] } else { 0.0 };
-        m = DMat3::from_cols(
-            DVec3::new(1.0, 0.0, 0.0),
-            DVec3::new(0.0, 1.0, 0.0),
-            DVec3::new(tx, ty, 1.0),
-        );
-    }
-    m
-}
-
-fn scale_m(coords: &[f64]) -> DMat3 {
-    if coords.is_empty() {
-        return DMat3::IDENTITY;
-    }
-    let sx = coords[0];
-    let sy = if coords.len() > 1 { coords[1] } else { sx };
-    DMat3::from_cols(
-        DVec3::new(sx, 0.0, 0.0),
-        DVec3::new(0.0, sy, 0.0),
-        DVec3::new(0.0, 0.0, 1.0),
-    )
-}
-
-fn rotate_m(coords: &[f64]) -> DMat3 {
-    if coords.is_empty() {
-        return DMat3::IDENTITY;
-    }
-    let a = coords[0].to_radians();
-    let c = a.cos();
-    let s = a.sin();
-    if coords.len() >= 3 {
-        let (cx, cy) = (coords[1], coords[2]);
-        DMat3::from_cols(
-            DVec3::new(c, s, 0.0),
-            DVec3::new(-s, c, 0.0),
-            DVec3::new(cx - cx * c + cy * s, cy - cx * s - cy * c, 1.0),
-        )
-    } else {
-        DMat3::from_cols(
-            DVec3::new(c, s, 0.0),
-            DVec3::new(-s, c, 0.0),
-            DVec3::new(0.0, 0.0, 1.0),
-        )
-    }
-}
-
-fn skew_x_m(coords: &[f64]) -> DMat3 {
-    if let Some(&a) = coords.first() {
-        let t = a.to_radians().tan();
-        DMat3::from_cols(
-            DVec3::new(1.0, 0.0, 0.0),
-            DVec3::new(t, 1.0, 0.0),
-            DVec3::new(0.0, 0.0, 1.0),
-        )
-    } else {
-        DMat3::IDENTITY
-    }
-}
-
-fn skew_y_m(coords: &[f64]) -> DMat3 {
-    if let Some(&a) = coords.first() {
-        let t = a.to_radians().tan();
-        DMat3::from_cols(
-            DVec3::new(1.0, t, 0.0),
-            DVec3::new(0.0, 1.0, 0.0),
-            DVec3::new(0.0, 0.0, 1.0),
-        )
-    } else {
-        DMat3::IDENTITY
-    }
-}
-
-fn affine_m(coords: &[f64]) -> DMat3 {
-    if coords.len() < 6 {
-        return DMat3::IDENTITY;
-    }
-    DMat3::from_cols(
-        DVec3::new(coords[0], coords[1], 0.0),
-        DVec3::new(coords[2], coords[3], 0.0),
-        DVec3::new(coords[4], coords[5], 1.0),
-    )
-}
-
-/// Parse an SVG `transform` attribute into a 3×3 affine matrix.
-///
-/// Supports: `translate`, `scale`, `rotate`, `skewX`, `skewY`, `matrix`.
-/// Multiple functions can be chained (e.g. `translate(10,20) scale(2)`).
-pub fn parse_svg_transform(transform_str: &str) -> DMat3 {
-    let mut matrix = DMat3::IDENTITY;
-    if transform_str.is_empty() {
-        return matrix;
-    }
-    let mut remaining = transform_str.trim();
-    while !remaining.is_empty() {
-        let name_start = match remaining.find(|c: char| c.is_ascii_alphabetic())
-        {
-            Some(i) => i,
-            None => break,
-        };
-        remaining = &remaining[name_start..];
-        let name_end = remaining
-            .find(|c: char| !c.is_ascii_alphabetic())
-            .unwrap_or(remaining.len());
-        let name = &remaining[..name_end];
-        remaining = remaining[name_end..].trim_start();
-        if remaining.starts_with('(') {
-            if let Some(close) = remaining.find(')') {
-                let coords = parse_coords(&remaining[1..close]);
-                let fm = match name {
-                    "translate" => translate_m(&coords),
-                    "scale" => scale_m(&coords),
-                    "rotate" => rotate_m(&coords),
-                    "skewX" => skew_x_m(&coords),
-                    "skewY" => skew_y_m(&coords),
-                    "matrix" => affine_m(&coords),
-                    _ => DMat3::IDENTITY,
-                };
-                matrix *= fm;
-                remaining = remaining[close + 1..].trim_start();
-            } else {
-                break;
-            }
-        } else {
-            break;
-        }
-    }
-    matrix
-}
-
-fn attr_f64(node: &roxmltree::Node, name: &str) -> Option<f64> {
-    node.attribute(name).and_then(|v| v.parse::<f64>().ok())
-}
-
-fn is_hidden(node: &roxmltree::Node) -> bool {
-    if let Some(d) = node.attribute("display") {
-        if d == "none" {
-            return true;
-        }
-    }
-    if let Some(v) = node.attribute("visibility") {
-        if v == "hidden" || v == "collapse" {
-            return true;
-        }
-    }
-    false
-}
-
-fn rect_to_d(node: &roxmltree::Node) -> Option<String> {
-    let x = attr_f64(node, "x").unwrap_or(0.0);
-    let y = attr_f64(node, "y").unwrap_or(0.0);
-    let w = attr_f64(node, "width")?;
-    let h = attr_f64(node, "height")?;
-    if w <= 0.0 || h <= 0.0 {
-        return None;
-    }
-    let rx = attr_f64(node, "rx").unwrap_or(0.0).min(w / 2.0);
-    let ry = attr_f64(node, "ry").unwrap_or(0.0).min(h / 2.0);
-    let rx = if rx > 0.0 || ry > 0.0 {
-        if rx > 0.0 {
-            rx
-        } else {
-            ry
-        }
-    } else {
-        0.0
-    };
-    let ry = if ry > 0.0 { ry } else { rx };
-    if rx > 0.0 && ry > 0.0 {
-        Some(format!(
-            "M {} {} A {} {} 0 0 1 {} {} L {} {} A {} {} 0 0 1 {} {} L {} {} A {} {} 0 0 1 {} {} L {} {} A {} {} 0 0 1 {} {} Z",
-            x, y + ry, rx, ry, x + rx, y,
-            x + w - rx, y, rx, ry, x + w, y + ry,
-            x + w, y + h - ry, rx, ry, x + w - rx, y + h,
-            x + rx, y + h, rx, ry, x, y + h - ry,
-        ))
-    } else {
-        Some(format!(
-            "M {} {} L {} {} L {} {} L {} {} Z",
-            x,
-            y,
-            x + w,
-            y,
-            x + w,
-            y + h,
-            x,
-            y + h
-        ))
-    }
-}
-
-fn circle_to_d(node: &roxmltree::Node) -> Option<String> {
-    let cx = attr_f64(node, "cx").unwrap_or(0.0);
-    let cy = attr_f64(node, "cy").unwrap_or(0.0);
-    let r = attr_f64(node, "r")?;
-    if r <= 0.0 {
-        return None;
-    }
-    Some(format!(
-        "M {} {} A {} {} 0 1 1 {} {} A {} {} 0 1 1 {} {} Z",
-        cx,
-        cy - r,
-        r,
-        r,
-        cx,
-        cy + r,
-        r,
-        r,
-        cx,
-        cy - r
-    ))
-}
-
-fn ellipse_to_d(node: &roxmltree::Node) -> Option<String> {
-    let cx = attr_f64(node, "cx").unwrap_or(0.0);
-    let cy = attr_f64(node, "cy").unwrap_or(0.0);
-    let rx = attr_f64(node, "rx")?;
-    let ry = attr_f64(node, "ry")?;
-    if rx <= 0.0 || ry <= 0.0 {
-        return None;
-    }
-    Some(format!(
-        "M {} {} A {} {} 0 1 1 {} {} A {} {} 0 1 1 {} {} Z",
-        cx,
-        cy - ry,
-        rx,
-        ry,
-        cx,
-        cy + ry,
-        rx,
-        ry,
-        cx,
-        cy - ry
-    ))
-}
-
-fn line_to_d(node: &roxmltree::Node) -> Option<String> {
-    let x1 = attr_f64(node, "x1").unwrap_or(0.0);
-    let y1 = attr_f64(node, "y1").unwrap_or(0.0);
-    let x2 = attr_f64(node, "x2").unwrap_or(0.0);
-    let y2 = attr_f64(node, "y2").unwrap_or(0.0);
-    Some(format!("M {} {} L {} {}", x1, y1, x2, y2))
-}
-
-fn poly_to_d(node: &roxmltree::Node) -> Option<String> {
-    let tag = node.tag_name().name();
-    let pts = node.attribute("points")?;
-    let coords = parse_coords(pts);
-    if coords.len() < 2 {
-        return None;
-    }
-    let mut d = format!("M {} {}", coords[0], coords[1]);
-    for i in (2..coords.len()).step_by(2) {
-        if i + 1 < coords.len() {
-            d.push_str(&format!(" L {} {}", coords[i], coords[i + 1]));
-        }
-    }
-    if tag == "polygon" {
-        d.push_str(" Z");
-    }
-    Some(d)
-}
-
 /// Parse a complete SVG XML string and extract all geometries from `path`,
 /// `rect`, `circle`, `ellipse`, `line`, `polyline` and `polygon` elements.
 /// Hidden elements (`display="none"`, `visibility="hidden"`) are skipped.
@@ -949,7 +182,7 @@ pub fn svg_string_to_geometries(
     let all_geometries = match roxmltree::Document::parse(svg_str) {
         Ok(doc) => {
             let mut geos = Vec::new();
-            let identity = DMat3::IDENTITY;
+            let identity = Matrix::identity();
             traverse(doc.root_element(), identity, &mut geos, scale_x, scale_y);
             geos
         }
@@ -972,214 +205,6 @@ pub fn svg_string_to_geometry(
         combined.extend(&g);
     }
     Ok(combined)
-}
-
-fn traverse(
-    node: roxmltree::Node,
-    parent_tfm: DMat3,
-    geos: &mut Vec<Geometry>,
-    scale_x: f64,
-    scale_y: f64,
-) {
-    if is_hidden(&node) {
-        return;
-    }
-
-    let local = parse_svg_transform(node.attribute("transform").unwrap_or(""));
-    let combined = parent_tfm * local;
-
-    match node.tag_name().name() {
-        "path" => {
-            if let Some(d) = node.attribute("d") {
-                if let Ok(g) =
-                    parse_svg_path_data(d, combined, scale_x, scale_y)
-                {
-                    geos.extend(g);
-                }
-            }
-        }
-        "rect" => {
-            if let Some(d) = rect_to_d(&node) {
-                if let Ok(g) =
-                    parse_svg_path_data(&d, combined, scale_x, scale_y)
-                {
-                    geos.extend(g);
-                }
-            }
-        }
-        "circle" => {
-            if let Some(d) = circle_to_d(&node) {
-                if let Ok(g) =
-                    parse_svg_path_data(&d, combined, scale_x, scale_y)
-                {
-                    geos.extend(g);
-                }
-            }
-        }
-        "ellipse" => {
-            if let Some(d) = ellipse_to_d(&node) {
-                if let Ok(g) =
-                    parse_svg_path_data(&d, combined, scale_x, scale_y)
-                {
-                    geos.extend(g);
-                }
-            }
-        }
-        "line" => {
-            if let Some(d) = line_to_d(&node) {
-                if let Ok(g) =
-                    parse_svg_path_data(&d, combined, scale_x, scale_y)
-                {
-                    geos.extend(g);
-                }
-            }
-        }
-        "polyline" | "polygon" => {
-            if let Some(d) = poly_to_d(&node) {
-                if let Ok(g) =
-                    parse_svg_path_data(&d, combined, scale_x, scale_y)
-                {
-                    geos.extend(g);
-                }
-            }
-        }
-        _ => {}
-    }
-
-    for child in node.children() {
-        if child.is_element() {
-            traverse(child, combined, geos, scale_x, scale_y);
-        }
-    }
-}
-
-// ── SVG Length parsing ────────────────────────────────────────────
-
-/// A parsed SVG length value with its unit suffix.
-///
-/// Supports: `mm`, `cm`, `in`, `pt`, `pc`, `px` and unitless (treated as `px`).
-#[derive(Debug, Clone, PartialEq)]
-pub struct SvgLength {
-    pub value: f64,
-    pub unit: String,
-}
-
-impl SvgLength {
-    /// Convert this length to millimetres using the given DPI for `px` / unitless values.
-    pub fn to_mm(&self, dpi: f64) -> f64 {
-        match self.unit.as_str() {
-            "mm" => self.value,
-            "cm" => self.value * 10.0,
-            "dm" => self.value * 100.0,
-            "m" => self.value * 1000.0,
-            "in" | "inch" => self.value * 25.4,
-            "pt" => self.value * 25.4 / 72.0,
-            "pc" => self.value * 25.4 / 6.0,
-            _ => self.value * 25.4 / dpi, // px, unitless, em, ex, %
-        }
-    }
-
-    /// Convert this length to pixels using the given DPI.
-    pub fn to_px(&self, dpi: f64) -> f64 {
-        match self.unit.as_str() {
-            "mm" => self.value * dpi / 25.4,
-            "cm" => self.value * dpi / 2.54,
-            "dm" => self.value * dpi / 0.254,
-            "m" => self.value * dpi / 0.0254,
-            "in" | "inch" => self.value * dpi,
-            "pt" => self.value * dpi / 72.0,
-            "pc" => self.value * dpi / 6.0,
-            _ => self.value, // px, unitless
-        }
-    }
-}
-
-/// Parse an SVG length string (e.g. `"10mm"`, `"2.5in"`, `"100"`, `"3cm"`, `"12pt"`).
-///
-/// Returns the numeric value and unit string. Unitless or `px` lengths are
-/// returned with `unit = "px"`.
-pub fn parse_svg_length(length_str: &str) -> RaygeoResult<SvgLength> {
-    let s = length_str.trim();
-    if s.is_empty() {
-        return Ok(SvgLength {
-            value: 0.0,
-            unit: "px".into(),
-        });
-    }
-    let num_end = s
-        .find(|c: char| !c.is_ascii_digit() && c != '.' && c != '-' && c != '+')
-        .unwrap_or(s.len());
-    if num_end == 0 {
-        return Err(RaygeoError::SvgParseError(format!(
-            "invalid SVG length: {length_str}"
-        )));
-    }
-    let value: f64 = s[..num_end].parse().map_err(|_| {
-        RaygeoError::SvgParseError(format!(
-            "invalid SVG length value: {length_str}"
-        ))
-    })?;
-    let unit = s[num_end..].trim().to_string();
-    let unit = if unit.is_empty() { "px".into() } else { unit };
-    Ok(SvgLength { value, unit })
-}
-
-// ── SVG Metadata extraction ───────────────────────────────────────
-
-/// Metadata extracted from the root `<svg>` element.
-#[derive(Debug, Clone)]
-pub struct SvgMetadata {
-    pub width: Option<f64>,
-    pub height: Option<f64>,
-    pub width_unit: String,
-    pub height_unit: String,
-    pub viewbox: Option<(f64, f64, f64, f64)>,
-}
-
-/// Extract metadata (width, height, units, viewBox) from an SVG string.
-pub fn extract_svg_metadata(svg_str: &str) -> RaygeoResult<SvgMetadata> {
-    let doc = roxmltree::Document::parse(svg_str)
-        .map_err(|e| RaygeoError::SvgParseError(format!("{e}")))?;
-    let root = doc.root_element();
-    if root.tag_name().name() != "svg" {
-        return Err(RaygeoError::SvgParseError(
-            "root element is not <svg>".into(),
-        ));
-    }
-
-    let (width, width_unit) = if let Some(w) = root.attribute("width") {
-        let pl = parse_svg_length(w)?;
-        (Some(pl.value), pl.unit)
-    } else {
-        (None, "px".into())
-    };
-
-    let (height, height_unit) = if let Some(h) = root.attribute("height") {
-        let pl = parse_svg_length(h)?;
-        (Some(pl.value), pl.unit)
-    } else {
-        (None, "px".into())
-    };
-
-    let viewbox = root.attribute("viewBox").and_then(|vb| {
-        let parts: Vec<f64> = vb
-            .split_whitespace()
-            .filter_map(|s| s.parse().ok())
-            .collect();
-        if parts.len() == 4 {
-            Some((parts[0], parts[1], parts[2], parts[3]))
-        } else {
-            None
-        }
-    });
-
-    Ok(SvgMetadata {
-        width,
-        height,
-        width_unit,
-        height_unit,
-        viewbox,
-    })
 }
 
 // ── Layer-aware geometry extraction ──────────────────────────────
@@ -1213,7 +238,7 @@ pub fn svg_string_to_geometries_by_layer(
                     let mut geos = Vec::new();
                     traverse(
                         child,
-                        DMat3::IDENTITY,
+                        Matrix::identity(),
                         &mut geos,
                         scale_x,
                         scale_y,
@@ -1247,6 +272,104 @@ pub fn svg_string_to_geometry_by_layer(
             (id, combined)
         })
         .collect())
+}
+
+// ── Color-aware geometry extraction ───────────────────────────────
+
+/// Extract geometries grouped by color.
+///
+/// Walks the entire SVG tree (not just top-level `<g>` elements) and
+/// buckets shapes by their resolved color attribute, selected with
+/// [`ColorAttr`]. Colors are resolved with SVG inheritance: an element's
+/// own presentation attribute (or `style` declaration) wins, otherwise
+/// the nearest ancestor's value is used. `currentColor` resolves against
+/// the nearest `color` attribute (defaulting to black). Shapes whose
+/// chosen color attribute is `none` or unset go into a `_no_color`
+/// bucket.
+///
+/// Bucket keys are lowercase `#rrggbb` hex strings (alpha discarded).
+/// In [`ColorAttr::Any`] mode a shape whose fill differs from its stroke
+/// lands in two buckets, one per color.
+pub fn svg_string_to_geometries_by_color(
+    svg_str: &str,
+    scale_x: f64,
+    scale_y: f64,
+    mode: ColorAttr,
+) -> RaygeoResult<Vec<(String, Vec<Geometry>)>> {
+    let doc = roxmltree::Document::parse(svg_str)
+        .map_err(|e| RaygeoError::SvgParseError(format!("{e}")))?;
+    let root = doc.root_element();
+
+    let mut buckets: std::collections::BTreeMap<String, Vec<Geometry>> =
+        std::collections::BTreeMap::new();
+    traverse_by_color(
+        root,
+        Matrix::identity(),
+        mode,
+        &mut buckets,
+        scale_x,
+        scale_y,
+    );
+
+    Ok(buckets
+        .into_iter()
+        .filter(|(_, geos)| !geos.is_empty())
+        .collect())
+}
+
+/// Like [`svg_string_to_geometries_by_color`] but merges each color
+/// bucket's subpaths into a single [`Geometry`].
+pub fn svg_string_to_geometry_by_color(
+    svg_str: &str,
+    scale_x: f64,
+    scale_y: f64,
+    mode: ColorAttr,
+) -> RaygeoResult<Vec<(String, Geometry)>> {
+    let buckets =
+        svg_string_to_geometries_by_color(svg_str, scale_x, scale_y, mode)?;
+    Ok(buckets
+        .into_iter()
+        .map(|(key, geos)| {
+            let mut combined = Geometry::new();
+            for g in geos {
+                combined.extend(&g);
+            }
+            (key, combined)
+        })
+        .collect())
+}
+
+/// Return a copy of `svg_str` containing only the shapes whose resolved
+/// color includes `color_key`.
+///
+/// Non-matching shape elements are removed by byte range, so the rest of
+/// the document (groups, defs, namespaces) is preserved verbatim. Shapes
+/// in `_no_color` are kept when `color_key` is `_no_color`.
+///
+/// Returns `Err` when the SVG cannot be parsed.
+pub fn filter_svg_by_color(
+    svg_str: &str,
+    mode: ColorAttr,
+    color_key: &str,
+) -> RaygeoResult<String> {
+    let doc = roxmltree::Document::parse(svg_str)
+        .map_err(|e| RaygeoError::SvgParseError(format!("{e}")))?;
+    let root = doc.root_element();
+
+    let mut remove: Vec<Range<usize>> = Vec::new();
+    collect_color_remove_ranges(root, mode, color_key, &mut remove);
+    remove.sort_by_key(|r| r.start);
+
+    let mut out = String::with_capacity(svg_str.len());
+    let mut pos = 0usize;
+    for range in remove {
+        if range.start >= pos {
+            out.push_str(&svg_str[pos..range.start]);
+            pos = range.end;
+        }
+    }
+    out.push_str(&svg_str[pos..]);
+    Ok(out)
 }
 
 /// Convert a normalised Geometry into an SVG path `d` string.

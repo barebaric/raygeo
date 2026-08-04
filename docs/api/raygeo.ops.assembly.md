@@ -197,3 +197,8 @@ Machine-readable category for a non-fatal **AssemblyWarning**.
 
 Mirrors the Rust **~raygeo.ops.assembly.AssemblyWarningKind**; the consumer maps each variant to a
 translatable message template.
+
+**Values:**
+
+- `FACE_FAILED` — A whole face's assembly failed; processing continued.
+- `REGION_FAILED` — A single region within a face failed; other regions cleared.

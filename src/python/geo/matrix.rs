@@ -281,7 +281,7 @@ impl Matrix {
     #[gen_stub(skip)]
     fn __matmul__(&self, other: &Self) -> Self {
         Matrix {
-            inner: self.inner.clone() * other.inner.clone(),
+            inner: self.inner * other.inner,
         }
     }
 

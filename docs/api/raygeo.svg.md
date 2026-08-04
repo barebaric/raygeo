@@ -5,125 +5,36 @@ sidebar_label: raygeo.svg
 
 ![SVG path data parsed into geometries](images/svg-parsing.png)
 
-*SVG path data parsed into geometries*
+*SVG path data parsed into geometries* SVG parsing and geometry extraction.
 
-## SvgMetadata
-
-SVG document metadata extracted from an SVG string.
-
-Provides width, height, units and viewBox values parsed from the root `<svg>` element.
-
-### `height`
-
-```python
-height: Optional[float]
-```
-
-Document height as a numeric value (may be `None` if not set).
-
-### `height_unit`
-
-```python
-height_unit: str
-```
-
-Unit string for the height attribute.
-
-### `viewbox`
-
-```python
-viewbox: Optional[tuple[float, float, float, float]]
-```
-
-ViewBox as `(min_x, min_y, width, height)`, or `None`.
-
-### `width`
-
-```python
-width: Optional[float]
-```
-
-Document width as a numeric value (may be `None` if not set).
-
-### `width_unit`
-
-```python
-width_unit: str
-```
-
-Unit string for the width attribute (e.g. `"mm"`, `"in"`, `"px"`).
-
-### `height_mm()`
-
-```python
-height_mm(dpi: float = 96.0) -> Optional[float]
-```
-
-Convert the document height to millimetres.
-
-| Parameter    | Type              | Description                                              |
-| ------------ | ----------------- | -------------------------------------------------------- |
-| `dpi`        | `float = 96.0`    | Pixels-per-inch for px/unitless conversion (default 96). |
-| _Returns_    | `Optional[float]` | Height in millimetres, or `None` if not set.             |
-| _Complexity_ |                   | O(1)                                                     |
-
-### `height_px()`
-
-```python
-height_px(dpi: float = 96.0) -> Optional[float]
-```
-
-Convert the document height to pixels.
-
-| Parameter    | Type              | Description                                  |
-| ------------ | ----------------- | -------------------------------------------- |
-| `dpi`        | `float = 96.0`    | Pixels-per-inch for conversion (default 96). |
-| _Returns_    | `Optional[float]` | Height in pixels, or `None` if not set.      |
-| _Complexity_ |                   | O(1)                                         |
-
-### `width_mm()`
-
-```python
-width_mm(dpi: float = 96.0) -> Optional[float]
-```
-
-Convert the document width to millimetres.
-
-| Parameter    | Type              | Description                                              |
-| ------------ | ----------------- | -------------------------------------------------------- |
-| `dpi`        | `float = 96.0`    | Pixels-per-inch for px/unitless conversion (default 96). |
-| _Returns_    | `Optional[float]` | Width in millimetres, or `None` if not set.              |
-| _Complexity_ |                   | O(1)                                                     |
-
-### `width_px()`
-
-```python
-width_px(dpi: float = 96.0) -> Optional[float]
-```
-
-Convert the document width to pixels.
-
-| Parameter    | Type              | Description                                  |
-| ------------ | ----------------- | -------------------------------------------- |
-| `dpi`        | `float = 96.0`    | Pixels-per-inch for conversion (default 96). |
-| _Returns_    | `Optional[float]` | Width in pixels, or `None` if not set.       |
-| _Complexity_ |                   | O(1)                                         |
+Extracts Geometry objects from SVG documents — either as a flat list or grouped by layer or by color
+— and provides parsers for path data and transforms, length handling, metadata extraction and path
+export.
 
 ## Functions
 
-### `extract_svg_metadata()`
+### `filter_svg_by_color()`
 
 ```python
-extract_svg_metadata(svg_str: str) -> SvgMetadata
+filter_svg_by_color(
+    svg_str: str,
+    color_key: str,
+    color_attr: svg.color.ColorAttr = raygeo.svg.color.ColorAttr.ANY,
+) -> str
 ```
 
-Extract width, height, units and viewBox from an SVG string.
+Return a copy of the SVG containing only shapes of one color.
 
-| Parameter    | Type          | Description                                                                               |
-| ------------ | ------------- | ----------------------------------------------------------------------------------------- |
-| `svg_str`    | `str`         | SVG document as a string.                                                                 |
-| _Returns_    | `SvgMetadata` | SvgMetadata instance with width, height, width_unit, height_unit, and viewbox attributes. |
-| _Complexity_ |               | O(n) where n = size of SVG document                                                       |
+Non-matching shapes are removed, preserving the rest of the document (groups, defs, namespaces)
+verbatim. Useful for rendering a color layer's base image.
+
+| Parameter    | Type                                                   | Description                                                |
+| ------------ | ------------------------------------------------------ | ---------------------------------------------------------- |
+| `svg_str`    | `str`                                                  | SVG document as a string.                                  |
+| `color_key`  | `str`                                                  | Color bucket key to keep (e.g. '#ff0000' or '\_no_color'). |
+| `color_attr` | `svg.color.ColorAttr = raygeo.svg.color.ColorAttr.ANY` | Color attribute to bucket by.                              |
+| _Returns_    | `str`                                                  | The filtered SVG document as a string.                     |
+| _Complexity_ |                                                        | O(n) where n = size of SVG document                        |
 
 ### `geometry_to_svg_path()`
 
@@ -143,22 +54,6 @@ dimensions via width and height, with the Y axis flipped (SVG Y increases downwa
 | `height`     | `int`          | Target pixel height.                           |
 | _Returns_    | `str`          | SVG path d attribute string.                   |
 | _Complexity_ |                | O(n) where n = number of commands              |
-
-### `parse_svg_length()`
-
-```python
-parse_svg_length(length_str: str) -> tuple[float, str]
-```
-
-Parse an SVG length string into a (value, unit) tuple.
-
-Supports: mm, cm, in, pt, pc, px. Unitless values default to 'px'.
-
-| Parameter    | Type                | Description                                      |
-| ------------ | ------------------- | ------------------------------------------------ |
-| `length_str` | `str`               | SVG length string (e.g. '10mm', '2.5in', '100'). |
-| _Returns_    | `tuple[float, str]` | Tuple of (value, unit).                          |
-| _Complexity_ |                     | O(1)                                             |
 
 ### `parse_svg_path_data()`
 
@@ -185,52 +80,6 @@ Supports M/m, L/l, H/h, V/v, C/c, Z/z commands. Cubic Bezier curves are flattene
 | _Returns_    | `list[geo.Geometry]`                              | List of Geometry objects, one per subpath.              |
 | _Complexity_ |                                                   | O(n) where n = length of path data                      |
 
-### `parse_svg_transform()`
-
-```python
-parse_svg_transform(transform_str: str) -> numpy.NDArray[numpy.float64]
-```
-
-Parse an SVG transform attribute string (translate only).
-
-Returns a 3x3 identity matrix with translation applied.
-
-| Parameter       | Type                           | Description                                      |
-| --------------- | ------------------------------ | ------------------------------------------------ |
-| `transform_str` | `str`                          | SVG transform attribute value.                   |
-| _Returns_       | `numpy.NDArray[numpy.float64]` | 3x3 affine transformation matrix as numpy array. |
-| _Complexity_    |                                | O(1)                                             |
-
-### `svg_length_to_mm()`
-
-```python
-svg_length_to_mm(length_str: str, dpi: float = 96) -> float
-```
-
-Parse an SVG length string and convert to millimetres.
-
-| Parameter    | Type         | Description                                                   |
-| ------------ | ------------ | ------------------------------------------------------------- |
-| `length_str` | `str`        | SVG length string (e.g. '10mm', '2.5in', '100').              |
-| `dpi`        | `float = 96` | Pixels per inch used for px/unitless conversion (default 96). |
-| _Returns_    | `float`      | Length in millimetres.                                        |
-| _Complexity_ |              | O(1)                                                          |
-
-### `svg_length_to_px()`
-
-```python
-svg_length_to_px(length_str: str, dpi: float = 96) -> float
-```
-
-Parse an SVG length string and convert to pixels.
-
-| Parameter    | Type         | Description                                                   |
-| ------------ | ------------ | ------------------------------------------------------------- |
-| `length_str` | `str`        | SVG length string (e.g. '10mm', '2.5in', '100').              |
-| `dpi`        | `float = 96` | Pixels per inch used for px/unitless conversion (default 96). |
-| _Returns_    | `float`      | Length in pixels.                                             |
-| _Complexity_ |              | O(1)                                                          |
-
 ### `svg_string_to_geometries()`
 
 ```python
@@ -253,6 +102,32 @@ them to Geometry.
 | `scale_y`    | `float = 1`          | Y-axis scale factor for coordinate transform.    |
 | _Returns_    | `list[geo.Geometry]` | List of Geometry objects from all path elements. |
 | _Complexity_ |                      | O(n) where n = size of SVG document              |
+
+### `svg_string_to_geometries_by_color()`
+
+```python
+svg_string_to_geometries_by_color(
+    svg_str: str,
+    scale_x: float = 1,
+    scale_y: float = 1,
+    color_attr: svg.color.ColorAttr = raygeo.svg.color.ColorAttr.FILL,
+) -> list[tuple[str, list[geo.Geometry]]]
+```
+
+Extract geometries grouped by color.
+
+Walks the entire SVG tree and buckets shapes by their resolved fill/stroke color, applying SVG
+inheritance for presentation attributes. Bucket keys are lowercase #rrggbb hex strings; shapes with
+no usable color go into a '\_no_color' bucket.
+
+| Parameter    | Type                                                    | Description                                   |
+| ------------ | ------------------------------------------------------- | --------------------------------------------- |
+| `svg_str`    | `str`                                                   | SVG document as a string.                     |
+| `scale_x`    | `float = 1`                                             | X-axis scale factor for coordinate transform. |
+| `scale_y`    | `float = 1`                                             | Y-axis scale factor for coordinate transform. |
+| `color_attr` | `svg.color.ColorAttr = raygeo.svg.color.ColorAttr.FILL` | Color attribute to bucket by.                 |
+| _Returns_    | `list[tuple[str, list[geo.Geometry]]]`                  | List of (color_key, geometry_list) tuples.    |
+| _Complexity_ |                                                         | O(n) where n = size of SVG document           |
 
 ### `svg_string_to_geometries_by_layer()`
 
@@ -299,6 +174,31 @@ Python-side merge loop.
 | `scale_y`    | `float = 1`    | Y-axis scale factor for coordinate transform. |
 | _Returns_    | `geo.Geometry` | A single Geometry containing all paths.       |
 | _Complexity_ |                | O(n) where n = size of SVG document           |
+
+### `svg_string_to_geometry_by_color()`
+
+```python
+svg_string_to_geometry_by_color(
+    svg_str: str,
+    scale_x: float = 1,
+    scale_y: float = 1,
+    color_attr: svg.color.ColorAttr = raygeo.svg.color.ColorAttr.FILL,
+) -> list[tuple[str, geo.Geometry]]
+```
+
+Extract geometries grouped by color, merged into one Geometry each.
+
+Like svg_string_to_geometries_by_color but merges each color bucket's subpaths into a single
+Geometry, avoiding a Python merge loop.
+
+| Parameter    | Type                                                    | Description                                   |
+| ------------ | ------------------------------------------------------- | --------------------------------------------- |
+| `svg_str`    | `str`                                                   | SVG document as a string.                     |
+| `scale_x`    | `float = 1`                                             | X-axis scale factor for coordinate transform. |
+| `scale_y`    | `float = 1`                                             | Y-axis scale factor for coordinate transform. |
+| `color_attr` | `svg.color.ColorAttr = raygeo.svg.color.ColorAttr.FILL` | Color attribute to bucket by.                 |
+| _Returns_    | `list[tuple[str, geo.Geometry]]`                        | List of (color_key, merged_geometry) tuples.  |
+| _Complexity_ |                                                         | O(n) where n = size of SVG document           |
 
 ### `svg_string_to_geometry_by_layer()`
 

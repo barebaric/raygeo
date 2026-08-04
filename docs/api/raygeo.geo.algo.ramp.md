@@ -10,6 +10,11 @@ when the ramp angle exceeds the maximum.
 
 ## RampStyle
 
+**Values:**
+
+- `Linear`
+- `ZigZag`
+
 ## Functions
 
 ### `generate_ramp_3d()`

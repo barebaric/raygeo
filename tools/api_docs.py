@@ -592,6 +592,17 @@ def is_property(item: ast.stmt) -> bool:
     return False
 
 
+def _is_enum_class(item: ast.ClassDef) -> bool:
+    """Return True when the class inherits from enum.Enum (a pyo3 enum)."""
+    for base in item.bases:
+        if isinstance(base, ast.Attribute):
+            if isinstance(base.value, ast.Name) and base.value.id == "enum":
+                return True
+        elif isinstance(base, ast.Name) and base.id == "Enum":
+            return True
+    return False
+
+
 def is_setter(item: ast.stmt) -> bool:
     if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
         for dec in item.decorator_list:
@@ -688,8 +699,10 @@ def collect_members(body: list[ast.stmt]) -> dict:
                 "doc": doc,
                 "methods": [],
                 "properties": [],
+                "enum_members": [],
                 "nested_classes": [],
             }
+            is_enum = _is_enum_class(item)
             for sub in item.body:
                 if isinstance(sub, ast.ClassDef):
                     sub_doc = get_docstring(sub.body)
@@ -701,6 +714,24 @@ def collect_members(body: list[ast.stmt]) -> dict:
                             "properties": [],
                         }
                     )
+                elif is_enum and isinstance(sub, (ast.Assign, ast.AnnAssign)):
+                    targets = (
+                        [sub.target]
+                        if isinstance(sub, ast.AnnAssign)
+                        else sub.targets
+                    )
+                    for target in targets:
+                        if isinstance(
+                            target, ast.Name
+                        ) and not target.id.startswith("_"):
+                            cls_info["enum_members"].append(
+                                {
+                                    "name": target.id,
+                                    "doc": trailing_docstring(
+                                        item.body, item.body.index(sub)
+                                    ),
+                                }
+                            )
                 elif is_property(sub) and isinstance(sub, ast.FunctionDef):
                     sub_doc = get_docstring(sub.body)
                     ret = format_annotation(sub.returns) if sub.returns else ""
@@ -874,6 +905,20 @@ def render_members(members: dict, mod_doc: str | None) -> str:
             doc, _, _, _ = format_docstring(cls["doc"])
             if doc:
                 lines.append(doc)
+                lines.append("")
+
+            public_enum = sorted(
+                (m for m in cls["enum_members"]),
+                key=lambda x: x["name"],
+            )
+            if public_enum:
+                lines.append("**Values:**")
+                lines.append("")
+                for m in public_enum:
+                    mdoc, _, _, _ = format_docstring(m["doc"])
+                    lines.append(
+                        f"* ``{m['name']}``" + (f" — {mdoc}" if mdoc else "")
+                    )
                 lines.append("")
 
             public_props = sorted(

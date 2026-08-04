@@ -10,6 +10,11 @@ Provides generation of 3D helical polylines (cylindrical or conical) with config
 
 ## HelixDirection
 
+**Values:**
+
+- `Ccw`
+- `Cw`
+
 ## Functions
 
 ### `generate_helix_3d()`

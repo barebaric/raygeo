@@ -10,6 +10,11 @@ Which corner type to find in \[`find_polygon_corners`\].
 - `CornerType.Convex`: convex corners (interior angle < 180°).
 - `CornerType.Concave`: concave / reflex corners (default).
 
+**Values:**
+
+- `Concave`
+- `Convex`
+
 ## JoinStyle
 
 Corner join style for polygon offset operations.
@@ -17,6 +22,12 @@ Corner join style for polygon offset operations.
 - `JoinStyle.Miter`: Extends edges until they meet (default).
 - `JoinStyle.Round`: Adds a circular arc at the corner.
 - `JoinStyle.Square`: Extends edges by the offset distance.
+
+**Values:**
+
+- `Miter`
+- `Round`
+- `Square`
 
 ## Functions
 

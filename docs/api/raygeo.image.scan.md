@@ -84,6 +84,11 @@ Scan mode for raster operations.
 `SEGMENTED` skips zero-power gaps within a scan line. `FULL_SWEEP` emits the full line with power
 values (zeros included).
 
+**Values:**
+
+- `FULL_SWEEP`
+- `SEGMENTED`
+
 ## Functions
 
 ### `downsample_power_values()`

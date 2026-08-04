@@ -10,6 +10,12 @@ Execution phase of a transformer.
 Phases are applied in this order: `GEOMETRY_REFINEMENT` first, then `PATH_INTERRUPTION`, then
 `POST_PROCESSING`.
 
+**Values:**
+
+- `GEOMETRY_REFINEMENT`
+- `PATH_INTERRUPTION`
+- `POST_PROCESSING`
+
 ## Functions
 
 ### `is_position_sensitive()`
