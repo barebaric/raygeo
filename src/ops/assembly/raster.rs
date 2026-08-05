@@ -324,11 +324,15 @@ pub fn assemble_raster(
                             "raster",
                             Some(rm),
                         )
-                        .map_err(|e| RaygeoError::ContourError(e.to_string()))?;
+                        .map_err(|e| {
+                            RaygeoError::ContourError(e.to_string())
+                        })?;
                     wrapped.extend(&pass_section);
                     wrapped
                         .ops_section_end(SectionType::RasterFill, Some(rm))
-                        .map_err(|e| RaygeoError::ContourError(e.to_string()))?;
+                        .map_err(|e| {
+                            RaygeoError::ContourError(e.to_string())
+                        })?;
                     combined.extend(&wrapped);
                 }
             } else {
