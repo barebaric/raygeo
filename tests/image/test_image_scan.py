@@ -48,12 +48,14 @@ class TestScanLine:
     def test_pixel_to_mm_horizontal(self):
         sl = ScanLine(0, (0.0, 0.5), (10.0, 0.5), [], 0.1)
         x, y = sl.pixel_to_mm(50, 5, (10.0, 10.0))
-        assert abs(x - 5.0) < 0.01
+        # Pixel centres: (50 + 0.5) / 10 = 5.05, (5 + 0.5) / 10 = 0.55.
+        assert abs(x - 5.05) < 0.01
 
     def test_pixel_to_mm_vertical(self):
         sl = ScanLine(0, (0.5, 0.0), (0.5, 10.0), [], 0.1)
         x, y = sl.pixel_to_mm(5, 50, (10.0, 10.0))
-        assert abs(y - 5.0) < 0.01
+        # Pixel centres: (50 + 0.5) / 10 = 5.05.
+        assert abs(y - 5.05) < 0.01
 
 
 class TestLinePixels:

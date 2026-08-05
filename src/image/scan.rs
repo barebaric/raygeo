@@ -34,8 +34,8 @@ impl ScanLine {
         pixels_per_mm: (f64, f64),
     ) -> (f64, f64) {
         let (px_per_mm_x, px_per_mm_y) = pixels_per_mm;
-        let px_mm = px as f64 / px_per_mm_x;
-        let py_mm = py as f64 / px_per_mm_y;
+        let px_mm = (px as f64 + 0.5) / px_per_mm_x;
+        let py_mm = (py as f64 + 0.5) / px_per_mm_y;
 
         let dx = self.end_mm.0 - self.start_mm.0;
         let dy = self.end_mm.1 - self.start_mm.1;

@@ -178,7 +178,7 @@ fn rewrite_buffered_line(
         } else {
             0.0
         };
-        let num_pad = (distance_mm * pixels_per_mm).round() as usize;
+        let num_pad = (distance_mm * pixels_per_mm).ceil() as usize;
         let pad = vec![0u8; num_pad];
 
         let mut padded =

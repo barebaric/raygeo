@@ -51,6 +51,22 @@ fn dot_width_trim_px(
     (dot_width_correction_mm * samples_per_mm).round() as usize
 }
 
+/// Half the size of one pixel along the scan line's own direction, in
+/// millimetres. Used to extend a pixel-centre endpoint out to the edge
+/// of the pixel so the scan covers the full pixel area rather than
+/// stopping at pixel centres (which shrinks the raster by up to one
+/// pixel at each end).
+fn half_pixel_mm(
+    scan_line: &ScanLine,
+    pixels_per_mm: (f64, f64),
+) -> (f64, f64) {
+    let (px_per_mm_x, px_per_mm_y) = pixels_per_mm;
+    let (dir_x, dir_y) = scan_line.direction();
+    let half_x = 0.5 / px_per_mm_x * dir_x.abs();
+    let half_y = 0.5 / px_per_mm_y * dir_y.abs();
+    (half_x, half_y)
+}
+
 fn line_endpoints_mm(
     scan_line: &ScanLine,
     pixels_per_mm: (f64, f64),
@@ -59,9 +75,16 @@ fn line_endpoints_mm(
         return ((0.0, 0.0), (0.0, 0.0));
     };
     let last = scan_line.pixels.last().unwrap_or(first);
-    (
+    let (s, e) = (
         scan_line.pixel_to_mm(first.0, first.1, pixels_per_mm),
         scan_line.pixel_to_mm(last.0, last.1, pixels_per_mm),
+    );
+    let (hx, hy) = half_pixel_mm(scan_line, pixels_per_mm);
+    let dir_x = if e.0 >= s.0 { 1.0 } else { -1.0 };
+    let dir_y = if e.1 >= s.1 { 1.0 } else { -1.0 };
+    (
+        (s.0 - hx * dir_x, s.1 - hy * dir_y),
+        (e.0 + hx * dir_x, e.1 + hy * dir_y),
     )
 }
 
@@ -77,9 +100,16 @@ fn segment_endpoints_mm(
     } else {
         (scan_line.pixels[start_idx], scan_line.pixels[end_idx - 1])
     };
-    (
+    let (s, e) = (
         scan_line.pixel_to_mm(sp.0, sp.1, pixels_per_mm),
         scan_line.pixel_to_mm(ep.0, ep.1, pixels_per_mm),
+    );
+    let (hx, hy) = half_pixel_mm(scan_line, pixels_per_mm);
+    let dir_x = if e.0 >= s.0 { 1.0 } else { -1.0 };
+    let dir_y = if e.1 >= s.1 { 1.0 } else { -1.0 };
+    (
+        (s.0 - hx * dir_x, s.1 - hy * dir_y),
+        (e.0 + hx * dir_x, e.1 + hy * dir_y),
     )
 }
 
