@@ -22,9 +22,9 @@ Combines a parametric **ToolModel** (measurements), a **ToolCategory** (type-saf
 ```python
 tool = Tool(
     label="6mm EM",
-    category=ToolCategory.EndMill,
+    category=ToolCategory.END_MILL,
     model=ToolModel(diameter=6.0, ...),
-    material=ToolMaterial.Carbide,
+    material=ToolMaterial.CARBIDE,
     stickout=15.0,
 )
 ```
@@ -98,18 +98,18 @@ Type-safe classification of a tool, for operation-compatibility checks (e.g. cha
 
 **Values:**
 
-- `BallNose`
-- `BullNose`
-- `Chamfer`
-- `Dovetail`
-- `Drill`
-- `EndMill`
-- `Probe`
-- `Reamer`
-- `SlittingSaw`
-- `Tap`
-- `ThreadMill`
-- `Vbit`
+- `BALL_NOSE`
+- `BULL_NOSE`
+- `CHAMFER`
+- `DOVETAIL`
+- `DRILL`
+- `END_MILL`
+- `PROBE`
+- `REAMER`
+- `SLITTING_SAW`
+- `TAP`
+- `THREAD_MILL`
+- `VBIT`
 
 ## ToolMaterial
 
@@ -117,10 +117,10 @@ Tool substrate material.
 
 **Values:**
 
+- `CARBIDE`
 - `CBN`
-- `Carbide`
-- `Ceramic`
-- `Diamond`
+- `CERAMIC`
+- `DIAMOND`
 - `HSS`
 - `HSSE`
 

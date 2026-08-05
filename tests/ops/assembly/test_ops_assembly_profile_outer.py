@@ -102,7 +102,7 @@ def test_profile_outer_stays_close_to_offset():
         cut_direction="ccw",
     )
     ops = result.ops
-    offset_polys = offset_polygon(boundary, 3.0, JoinStyle.Round)
+    offset_polys = offset_polygon(boundary, 3.0, JoinStyle.ROUND)
     max_drift = 0.0
     for i in range(ops.len()):
         if not ops.is_cutting(i):

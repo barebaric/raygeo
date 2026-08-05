@@ -31,13 +31,13 @@ def _rect(cx, cy, w, h):
 
 
 def _valid_tool_area(boundary, islands, radius):
-    inset = offset_polygon(boundary, -radius, JoinStyle.Miter)
+    inset = offset_polygon(boundary, -radius, JoinStyle.MITER)
     if not inset:
         return [], 0.0
     if islands:
         island_bufs = []
         for island in islands:
-            island_bufs.extend(offset_polygon(island, radius, JoinStyle.Miter))
+            island_bufs.extend(offset_polygon(island, radius, JoinStyle.MITER))
         region = get_polygons_group_difference(inset, island_bufs)
     else:
         region = inset

@@ -270,9 +270,9 @@ def generate_offset():
 
     triangle = [(0.0, 0.0), (20.0, 0.0), (10.0, 18.0)]
     styles = [
-        (JoinStyle.Miter, "Miter"),
-        (JoinStyle.Round, "Round"),
-        (JoinStyle.Square, "Square"),
+        (JoinStyle.MITER, "MITER"),
+        (JoinStyle.ROUND, "ROUND"),
+        (JoinStyle.SQUARE, "SQUARE"),
     ]
     style_colors = ["limegreen", "tomato", "dodgerblue"]
 
@@ -797,8 +797,8 @@ def generate_find_polygon_corners():
         (0.0, 20.0),
     ]
 
-    concave = find_polygon_corners(poly, CornerType.Concave, 0.0)
-    convex = find_polygon_corners(poly, CornerType.Convex, 0.0)
+    concave = find_polygon_corners(poly, CornerType.CONCAVE, 0.0)
+    convex = find_polygon_corners(poly, CornerType.CONVEX, 0.0)
 
     fig, ax = plt.subplots(figsize=(7, 6))
 

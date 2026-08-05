@@ -41,7 +41,7 @@ def generate_profile_outer_rect():
 
     fig = plot_ops(result.ops, boundary=boundary)
     ax = fig.axes[1]
-    offset_polys = offset_polygon(boundary, 3.0, JoinStyle.Round)
+    offset_polys = offset_polygon(boundary, 3.0, JoinStyle.ROUND)
     offset = offset_polys[0]
     ox = [p[0] for p in offset] + [offset[0][0]]
     oy = [p[1] for p in offset] + [offset[0][1]]
@@ -66,7 +66,7 @@ def generate_profile_outer_circle():
 
     fig, ax = plt.subplots(figsize=(8, 8))
 
-    offset_polys = offset_polygon(boundary, 3.0, JoinStyle.Round)
+    offset_polys = offset_polygon(boundary, 3.0, JoinStyle.ROUND)
     offset = offset_polys[0]
     ox = [p[0] for p in offset] + [offset[0][0]]
     oy = [p[1] for p in offset] + [offset[0][1]]
@@ -103,7 +103,7 @@ def generate_profile_outer_concave_pocket():
 
     fig, ax = plt.subplots(figsize=(8, 8))
 
-    offset_polys = offset_polygon(boundary, 3.0, JoinStyle.Round)
+    offset_polys = offset_polygon(boundary, 3.0, JoinStyle.ROUND)
     offset = offset_polys[0]
     ox = [p[0] for p in offset] + [offset[0][0]]
     oy = [p[1] for p in offset] + [offset[0][1]]
@@ -185,13 +185,13 @@ def generate_profile_inner_rect_with_square_island_2d():
 
     fig, ax = plt.subplots(figsize=(8, 8))
 
-    inset_polys = offset_polygon(boundary, -3.0, JoinStyle.Round)
+    inset_polys = offset_polygon(boundary, -3.0, JoinStyle.ROUND)
     inset = inset_polys[0]
     ox = [p[0] for p in inset] + [inset[0][0]]
     oy = [p[1] for p in inset] + [inset[0][1]]
     ax.plot(ox, oy, "b--", linewidth=1.0, label="Inset outer polygon")
 
-    grown_polys = offset_polygon(island, 3.0, JoinStyle.Round)
+    grown_polys = offset_polygon(island, 3.0, JoinStyle.ROUND)
     grown = grown_polys[0]
     gx = [p[0] for p in grown] + [grown[0][0]]
     gy = [p[1] for p in grown] + [grown[0][1]]
@@ -225,14 +225,14 @@ def generate_profile_inner_rect_with_two_islands_2d():
 
     fig, ax = plt.subplots(figsize=(8, 8))
 
-    inset_polys = offset_polygon(boundary, -3.0, JoinStyle.Round)
+    inset_polys = offset_polygon(boundary, -3.0, JoinStyle.ROUND)
     inset = inset_polys[0]
     ox = [p[0] for p in inset] + [inset[0][0]]
     oy = [p[1] for p in inset] + [inset[0][1]]
     ax.plot(ox, oy, "b--", linewidth=1.0, label="Inset outer polygon")
 
     for i, island in enumerate([island1, island2]):
-        grown_polys = offset_polygon(island, 3.0, JoinStyle.Round)
+        grown_polys = offset_polygon(island, 3.0, JoinStyle.ROUND)
         grown = grown_polys[0]
         gx = [p[0] for p in grown] + [grown[0][0]]
         gy = [p[1] for p in grown] + [grown[0][1]]
@@ -309,13 +309,13 @@ def generate_profile_inner_narrow_channel_skips_island():
         label="Blocked island (skipped)",
     )
 
-    inset_polys = offset_polygon(boundary, -3.0, JoinStyle.Round)
+    inset_polys = offset_polygon(boundary, -3.0, JoinStyle.ROUND)
     inset = inset_polys[0]
     ox = [p[0] for p in inset] + [inset[0][0]]
     oy = [p[1] for p in inset] + [inset[0][1]]
     ax.plot(ox, oy, "b--", linewidth=1.0, label="Inset outer polygon")
 
-    grown_polys = offset_polygon(accessible, 3.0, JoinStyle.Round)
+    grown_polys = offset_polygon(accessible, 3.0, JoinStyle.ROUND)
     grown = grown_polys[0]
     gx = [p[0] for p in grown] + [grown[0][0]]
     gy = [p[1] for p in grown] + [grown[0][1]]

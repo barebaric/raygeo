@@ -7,27 +7,27 @@ sidebar_label: raygeo.geo.shape.polygon
 
 Which corner type to find in \[`find_polygon_corners`\].
 
-- `CornerType.Convex`: convex corners (interior angle < 180°).
-- `CornerType.Concave`: concave / reflex corners (default).
+- `CornerType.CONVEX`: convex corners (interior angle < 180°).
+- `CornerType.CONCAVE`: concave / reflex corners (default).
 
 **Values:**
 
-- `Concave`
-- `Convex`
+- `CONCAVE`
+- `CONVEX`
 
 ## JoinStyle
 
 Corner join style for polygon offset operations.
 
-- `JoinStyle.Miter`: Extends edges until they meet (default).
-- `JoinStyle.Round`: Adds a circular arc at the corner.
-- `JoinStyle.Square`: Extends edges by the offset distance.
+- `JoinStyle.MITER`: Extends edges until they meet (default).
+- `JoinStyle.ROUND`: Adds a circular arc at the corner.
+- `JoinStyle.SQUARE`: Extends edges by the offset distance.
 
 **Values:**
 
-- `Miter`
-- `Round`
-- `Square`
+- `MITER`
+- `ROUND`
+- `SQUARE`
 
 ## Functions
 
@@ -174,7 +174,7 @@ find_entry_edges(
 ```python
 find_polygon_corners(
     polygon: Sequence[tuple[float, float]],
-    corner_type: CornerType = CornerType.Concave,
+    corner_type: CornerType = CornerType.CONCAVE,
     threshold_deg: float = 90,
 ) -> list[tuple[int, float]]
 ```
@@ -187,7 +187,7 @@ least *threshold_deg*. Winding is auto-detected from the signed area.
 | Parameter       | Type                              | Description                                            |
 | --------------- | --------------------------------- | ------------------------------------------------------ |
 | `polygon`       | `Sequence[tuple[float, float]]`   | Polygon vertices (closed or open; treated as closed).  |
-| `corner_type`   | `CornerType = CornerType.Concave` | `CornerType.Concave` (default) or `CornerType.Convex`. |
+| `corner_type`   | `CornerType = CornerType.CONCAVE` | `CornerType.CONCAVE` (default) or `CornerType.CONVEX`. |
 | `threshold_deg` | `float = 90`                      | Minimum interior angle in degrees (default 90).        |
 | _Returns_       | `list[tuple[int, float]]`         | List of (vertex_index, interior_angle_deg) tuples.     |
 
@@ -886,7 +886,7 @@ Normalize polygons from numpy arrays.
 offset_polygon(
     polygon: Sequence[types.Point],
     offset: float,
-    join_style: JoinStyle = JoinStyle.Miter,
+    join_style: JoinStyle = JoinStyle.MITER,
 ) -> list[types.Polygon]
 ```
 
@@ -896,7 +896,7 @@ Offset (inflate/deflate) a polygon.
 | ------------ | ----------------------------- | ----------------------------------------------------------- |
 | `polygon`    | `Sequence[types.Point]`       | Polygon as (x, y) points.                                   |
 | `offset`     | `float`                       | Offset distance (positive to inflate, negative to deflate). |
-| `join_style` | `JoinStyle = JoinStyle.Miter` | Corner join style (default: `JoinStyle.Miter`).             |
+| `join_style` | `JoinStyle = JoinStyle.MITER` | Corner join style (default: `JoinStyle.MITER`).             |
 | _Returns_    | `list[types.Polygon]`         | Offset polygon(s).                                          |
 | _Complexity_ |                               | O(n log n)                                                  |
 

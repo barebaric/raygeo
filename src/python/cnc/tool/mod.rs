@@ -49,17 +49,29 @@ pub fn register(parent: &Bound<'_, PyModule>) -> PyResult<()> {
 )]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum PyToolCategory {
+    #[pyo3(name = "END_MILL")]
     EndMill,
+    #[pyo3(name = "BALL_NOSE")]
     BallNose,
+    #[pyo3(name = "BULL_NOSE")]
     BullNose,
+    #[pyo3(name = "CHAMFER")]
     Chamfer,
+    #[pyo3(name = "DRILL")]
     Drill,
+    #[pyo3(name = "PROBE")]
     Probe,
+    #[pyo3(name = "VBIT")]
     Vbit,
+    #[pyo3(name = "SLITTING_SAW")]
     SlittingSaw,
+    #[pyo3(name = "REAMER")]
     Reamer,
+    #[pyo3(name = "TAP")]
     Tap,
+    #[pyo3(name = "THREAD_MILL")]
     ThreadMill,
+    #[pyo3(name = "DOVETAIL")]
     Dovetail,
 }
 
@@ -110,18 +122,18 @@ impl PyToolCategory {
 
 fn category_name(c: &PyToolCategory) -> &'static str {
     match c {
-        PyToolCategory::EndMill => "EndMill",
-        PyToolCategory::BallNose => "BallNose",
-        PyToolCategory::BullNose => "BullNose",
-        PyToolCategory::Chamfer => "Chamfer",
-        PyToolCategory::Drill => "Drill",
-        PyToolCategory::Probe => "Probe",
-        PyToolCategory::Vbit => "Vbit",
-        PyToolCategory::SlittingSaw => "SlittingSaw",
-        PyToolCategory::Reamer => "Reamer",
-        PyToolCategory::Tap => "Tap",
-        PyToolCategory::ThreadMill => "ThreadMill",
-        PyToolCategory::Dovetail => "Dovetail",
+        PyToolCategory::EndMill => "END_MILL",
+        PyToolCategory::BallNose => "BALL_NOSE",
+        PyToolCategory::BullNose => "BULL_NOSE",
+        PyToolCategory::Chamfer => "CHAMFER",
+        PyToolCategory::Drill => "DRILL",
+        PyToolCategory::Probe => "PROBE",
+        PyToolCategory::Vbit => "VBIT",
+        PyToolCategory::SlittingSaw => "SLITTING_SAW",
+        PyToolCategory::Reamer => "REAMER",
+        PyToolCategory::Tap => "TAP",
+        PyToolCategory::ThreadMill => "THREAD_MILL",
+        PyToolCategory::Dovetail => "DOVETAIL",
     }
 }
 
@@ -138,11 +150,17 @@ fn category_name(c: &PyToolCategory) -> &'static str {
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum PyToolMaterial {
+    #[pyo3(name = "CARBIDE")]
     Carbide,
+    #[pyo3(name = "HSS")]
     HSS,
+    #[pyo3(name = "HSSE")]
     HSSE,
+    #[pyo3(name = "DIAMOND")]
     Diamond,
+    #[pyo3(name = "CBN")]
     CBN,
+    #[pyo3(name = "CERAMIC")]
     Ceramic,
 }
 
@@ -176,12 +194,12 @@ impl From<PyToolMaterial> for ToolMaterial {
 impl PyToolMaterial {
     fn __repr__(&self) -> String {
         let name = match self {
-            PyToolMaterial::Carbide => "Carbide",
+            PyToolMaterial::Carbide => "CARBIDE",
             PyToolMaterial::HSS => "HSS",
             PyToolMaterial::HSSE => "HSSE",
-            PyToolMaterial::Diamond => "Diamond",
+            PyToolMaterial::Diamond => "DIAMOND",
             PyToolMaterial::CBN => "CBN",
-            PyToolMaterial::Ceramic => "Ceramic",
+            PyToolMaterial::Ceramic => "CERAMIC",
         };
         format!("ToolMaterial.{name}")
     }
@@ -287,9 +305,9 @@ impl PyToolModel {
 ///
 ///    tool = Tool(
 ///        label="6mm EM",
-///        category=ToolCategory.EndMill,
+///        category=ToolCategory.END_MILL,
 ///        model=ToolModel(diameter=6.0, ...),
-///        material=ToolMaterial.Carbide,
+///        material=ToolMaterial.CARBIDE,
 ///        stickout=15.0,
 ///    )
 #[gen_stub_pyclass(module = "raygeo.cnc.tool")]

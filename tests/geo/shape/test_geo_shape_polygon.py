@@ -783,21 +783,21 @@ class TestPolygonOffset:
         """offset_polygon defaults to miter join style (backward compat)."""
         polygon = P((0, 0), (10, 0), (5, 10))
         miter = offset_polygon(polygon, 1.0)
-        explicit = offset_polygon(polygon, 1.0, join_style=JoinStyle.Miter)
+        explicit = offset_polygon(polygon, 1.0, join_style=JoinStyle.MITER)
         assert miter == explicit
 
     def test_join_style_round(self):
         """Round join style produces different geometry from miter."""
         polygon = P((0, 0), (10, 0), (5, 10))
-        miter = offset_polygon(polygon, 1.0, join_style=JoinStyle.Miter)
-        round_ = offset_polygon(polygon, 1.0, join_style=JoinStyle.Round)
+        miter = offset_polygon(polygon, 1.0, join_style=JoinStyle.MITER)
+        round_ = offset_polygon(polygon, 1.0, join_style=JoinStyle.ROUND)
         # Round joins should produce more points than miter joins
         assert len(round_[0]) > len(miter[0])
 
     def test_join_style_square(self):
         """Square join style should succeed without error."""
         polygon = P((0, 0), (10, 0), (5, 10))
-        result = offset_polygon(polygon, 1.0, join_style=JoinStyle.Square)
+        result = offset_polygon(polygon, 1.0, join_style=JoinStyle.SQUARE)
         assert len(result) >= 1
 
     def test_grow_rect_by_radius(self):
@@ -805,7 +805,7 @@ class TestPolygonOffset:
         rect = [
             (x - 30, y - 30) for x, y in [(0, 0), (60, 0), (60, 60), (0, 60)]
         ]
-        polys = offset_polygon(rect, 3, JoinStyle.Round)
+        polys = offset_polygon(rect, 3, JoinStyle.ROUND)
         assert len(polys) == 1
         xs = [p[0] for p in polys[0]]
         ys = [p[1] for p in polys[0]]
@@ -2507,7 +2507,7 @@ def test_enclose_circle_concave_not_enclosing():
 class TestFindPolygonCorners:
     def test_square_no_concave(self):
         square = P((0, 0), (10, 0), (10, 10), (0, 10))
-        assert find_polygon_corners(square, CornerType.Concave, 90.0) == []
+        assert find_polygon_corners(square, CornerType.CONCAVE, 90.0) == []
 
     def test_star_concave(self):
         star = []
@@ -2515,7 +2515,7 @@ class TestFindPolygonCorners:
             angle = math.pi / 2 + i * math.pi / 5
             r = 10.0 if i % 2 == 0 else 4.0
             star.append((r * math.cos(angle), r * math.sin(angle)))
-        result = find_polygon_corners(star, CornerType.Concave, 90.0)
+        result = find_polygon_corners(star, CornerType.CONCAVE, 90.0)
         assert len(result) == 5
         for _idx, angle_deg in result:
             assert angle_deg > 90.0
@@ -2523,7 +2523,7 @@ class TestFindPolygonCorners:
 
     def test_l_shape_threshold_180(self):
         l_shape = P((0, 0), (10, 0), (10, 5), (5, 5), (5, 10), (0, 10))
-        result = find_polygon_corners(l_shape, CornerType.Concave, 180.0)
+        result = find_polygon_corners(l_shape, CornerType.CONCAVE, 180.0)
         assert len(result) == 1
         idx, angle_deg = result[0]
         assert idx == 3
@@ -2531,18 +2531,18 @@ class TestFindPolygonCorners:
 
     def test_empty_polygon(self):
         assert (
-            find_polygon_corners(cast(Polygon, []), CornerType.Concave, 90.0)
+            find_polygon_corners(cast(Polygon, []), CornerType.CONCAVE, 90.0)
             == []
         )
-        assert find_polygon_corners(P((0, 0)), CornerType.Concave, 90.0) == []
+        assert find_polygon_corners(P((0, 0)), CornerType.CONCAVE, 90.0) == []
         assert (
-            find_polygon_corners(P((0, 0), (1, 1)), CornerType.Concave, 90.0)
+            find_polygon_corners(P((0, 0), (1, 1)), CornerType.CONCAVE, 90.0)
             == []
         )
 
     def test_square_convex(self):
         square = P((0, 0), (10, 0), (10, 10), (0, 10))
-        result = find_polygon_corners(square, CornerType.Convex, 0.0)
+        result = find_polygon_corners(square, CornerType.CONVEX, 0.0)
         assert len(result) == 4
         for _idx, angle_deg in result:
             assert abs(angle_deg - 90.0) < 1e-9
@@ -2553,7 +2553,7 @@ class TestFindPolygonCorners:
 
     def test_default_threshold_is_90(self):
         l_shape = P((0, 0), (10, 0), (10, 5), (5, 5), (5, 10), (0, 10))
-        assert len(find_polygon_corners(l_shape, CornerType.Concave)) == 1
+        assert len(find_polygon_corners(l_shape, CornerType.CONCAVE)) == 1
 
 
 class TestFindEntryEdges:

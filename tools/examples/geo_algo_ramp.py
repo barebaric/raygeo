@@ -19,7 +19,7 @@ def generate_linear_zigzag():
         z_start=0,
         z_end=-10,
         max_ramp_angle_deg=45,
-        style=RampStyle.Linear,
+        style=RampStyle.LINEAR,
     )
     xs, ys, zs = _extract(pts)
     ax1.plot(xs, ys, zs, "steelblue", linewidth=2.5)
@@ -36,7 +36,7 @@ def generate_linear_zigzag():
         z_start=0,
         z_end=-10,
         max_ramp_angle_deg=45,
-        style=RampStyle.ZigZag,
+        style=RampStyle.ZIG_ZAG,
         lateral_amplitude=5,
     )
     xs, ys, zs = _extract(pts)

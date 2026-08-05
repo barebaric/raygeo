@@ -13,7 +13,7 @@ def test_ramp_linear_basic():
         z_start=0,
         z_end=-5,
         max_ramp_angle_deg=45,
-        style=RampStyle.Linear,
+        style=RampStyle.LINEAR,
     )
     assert len(pts) >= 2
     assert approx_eq(pts[0][0], 0)
@@ -35,7 +35,7 @@ def test_ramp_linear_steep_extension():
         z_start=0,
         z_end=-50,
         max_ramp_angle_deg=15,
-        style=RampStyle.Linear,
+        style=RampStyle.LINEAR,
     )
     assert len(pts) >= 2
     # XY extent should be > the direct 50mm (needs ~186.6mm at 15°)
@@ -55,7 +55,7 @@ def test_ramp_zigzag():
         z_start=0,
         z_end=-5,
         max_ramp_angle_deg=45,
-        style=RampStyle.ZigZag,
+        style=RampStyle.ZIG_ZAG,
         lateral_amplitude=2.0,
     )
     assert len(pts) >= 2
@@ -75,7 +75,7 @@ def test_ramp_zigzag_zero_amplitude():
         z_start=0,
         z_end=-5,
         max_ramp_angle_deg=45,
-        style=RampStyle.ZigZag,
+        style=RampStyle.ZIG_ZAG,
         lateral_amplitude=0,
     )
     for p in pts:
@@ -90,7 +90,7 @@ def test_ramp_no_descent():
         z_start=0,
         z_end=5,
         max_ramp_angle_deg=45,
-        style=RampStyle.Linear,
+        style=RampStyle.LINEAR,
     )
     assert pts == []
 
@@ -103,7 +103,7 @@ def test_ramp_no_xy_motion():
         z_start=0,
         z_end=-5,
         max_ramp_angle_deg=45,
-        style=RampStyle.Linear,
+        style=RampStyle.LINEAR,
     )
     assert pts == []
 
@@ -116,7 +116,7 @@ def test_ramp_non_axial():
         z_start=0,
         z_end=-10,
         max_ramp_angle_deg=30,
-        style=RampStyle.Linear,
+        style=RampStyle.LINEAR,
     )
     assert len(pts) >= 2
     # Points should lie along the line from start to end
@@ -134,7 +134,7 @@ def test_ramp_very_shallow():
         z_start=0,
         z_end=-5,
         max_ramp_angle_deg=45,
-        style=RampStyle.Linear,
+        style=RampStyle.LINEAR,
     )
     # Angle = atan(5/500) ≈ 0.57°, well under 45°, so no extension
     assert abs(pts[0][0]) < 1
@@ -149,7 +149,7 @@ def test_ramp_zero_max_angle():
         z_start=0,
         z_end=-5,
         max_ramp_angle_deg=0,
-        style=RampStyle.Linear,
+        style=RampStyle.LINEAR,
     )
     assert len(pts) >= 2
     assert approx_eq(pts[0][2] - pts[-1][2], 5, 0.5)

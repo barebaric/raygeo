@@ -134,7 +134,7 @@ def generate_multi_island():
     isl1 = [(30, 20), (50, 20), (50, 40), (30, 40)]
     isl2 = [(110, 60), (130, 60), (130, 80), (110, 80)]
     m_area = offset_contour_group(
-        mb, [isl1, isl2], -5.0, join_style=JoinStyle.Round
+        mb, [isl1, isl2], -5.0, join_style=JoinStyle.ROUND
     )
 
     # Union all valid-area fragments so holes are properly subtracted

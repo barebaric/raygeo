@@ -89,7 +89,7 @@ fn concentric_offsets_py(
         solid_path: collections.abc.Sequence[raygeo.geo.types.Point],
         hole_paths: collections.abc.Sequence[collections.abc.Sequence[raygeo.geo.types.Point]],
         offset: float,
-        join_style: raygeo.geo.shape.polygon.JoinStyle = raygeo.geo.shape.polygon.JoinStyle.Miter,
+        join_style: raygeo.geo.shape.polygon.JoinStyle = raygeo.geo.shape.polygon.JoinStyle.MITER,
     ) -> list[raygeo.geo.types.Polygon]:
         """Offset a solid contour with its hole contours.
 
@@ -100,7 +100,7 @@ fn concentric_offsets_py(
         :param solid_path: Outer boundary polygon as (x, y) points.
         :param hole_paths: List of hole polygons.
         :param offset: Offset distance (positive to inflate, negative to deflate).
-        :param join_style: Corner join style (default: ``JoinStyle.Miter``).
+        :param join_style: Corner join style (default: ``JoinStyle.MITER``).
         :returns: Offset polygon(s) with holes subtracted.
         :complexity: O(n log n)
         """

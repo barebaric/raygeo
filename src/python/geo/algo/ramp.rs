@@ -30,7 +30,9 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 #[pyclass(module = "raygeo.geo.algo.ramp", name = "RampStyle", from_py_object)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PyRampStyle {
+    #[pyo3(name = "LINEAR")]
     Linear,
+    #[pyo3(name = "ZIG_ZAG")]
     ZigZag,
 }
 
@@ -47,8 +49,8 @@ impl From<PyRampStyle> for RustRampStyle {
 impl PyRampStyle {
     fn __repr__(&self) -> String {
         match self {
-            PyRampStyle::Linear => "RampStyle.Linear".to_string(),
-            PyRampStyle::ZigZag => "RampStyle.ZigZag".to_string(),
+            PyRampStyle::Linear => "RampStyle.LINEAR".to_string(),
+            PyRampStyle::ZigZag => "RampStyle.ZIG_ZAG".to_string(),
         }
     }
 
@@ -68,7 +70,7 @@ impl PyRampStyle {
         z_start: float,
         z_end: float,
         max_ramp_angle_deg: float = 45.0,
-        style: RampStyle = RampStyle.Linear,
+        style: RampStyle = RampStyle.LINEAR,
         lateral_amplitude: float = 1.0,
     ) -> list[tuple[float, float, float]]:
         """Generate a ramp entry polyline.
@@ -81,7 +83,7 @@ impl PyRampStyle {
         :param z_start: Starting Z height.
         :param z_end: Ending Z height (must be lower than z_start).
         :param max_ramp_angle_deg: Maximum allowed ramp angle in degrees (default 45).
-        :param style: Ramp style — Linear or ZigZag (default Linear).
+        :param style: Ramp style — LINEAR or ZIG_ZAG (default LINEAR).
         :param lateral_amplitude: Lateral oscillation amplitude for ZigZag (default 1.0).
         :returns: List of (x, y, z) points along the ramp.
         :complexity: O(n) time, O(n) space where n is proportional to path length

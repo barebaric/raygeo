@@ -18,10 +18,10 @@ __all__ = [
 
 @typing.final
 class RampStyle(enum.Enum):
-    Linear = ...
-    ZigZag = ...
+    LINEAR = ...
+    ZIG_ZAG = ...
 
-def generate_ramp_3d(start: tuple[float, float], end: tuple[float, float], z_start: float, z_end: float, max_ramp_angle_deg: float = 45, style: RampStyle = RampStyle.Linear, lateral_amplitude: float = 1) -> list[tuple[float, float, float]]:
+def generate_ramp_3d(start: tuple[float, float], end: tuple[float, float], z_start: float, z_end: float, max_ramp_angle_deg: float = 45, style: RampStyle = RampStyle.LINEAR, lateral_amplitude: float = 1) -> list[tuple[float, float, float]]:
     r"""
     Generate a ramp entry polyline.
     
@@ -33,7 +33,7 @@ def generate_ramp_3d(start: tuple[float, float], end: tuple[float, float], z_sta
     :param z_start: Starting Z height.
     :param z_end: Ending Z height (must be lower than z_start).
     :param max_ramp_angle_deg: Maximum allowed ramp angle in degrees (default 45).
-    :param style: Ramp style — Linear or ZigZag (default Linear).
+    :param style: Ramp style — LINEAR or ZIG_ZAG (default LINEAR).
     :param lateral_amplitude: Lateral oscillation amplitude for ZigZag (default 1.0).
     :returns: List of (x, y, z) points along the ramp.
     :complexity: O(n) time, O(n) space where n is proportional to path length

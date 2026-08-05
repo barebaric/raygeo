@@ -61,43 +61,43 @@ def test_model_equality():
 
 def test_category_enum_variants():
     for cat in (
-        ToolCategory.EndMill,
-        ToolCategory.BallNose,
-        ToolCategory.BullNose,
-        ToolCategory.Chamfer,
-        ToolCategory.Drill,
-        ToolCategory.Probe,
-        ToolCategory.Vbit,
-        ToolCategory.SlittingSaw,
-        ToolCategory.Reamer,
-        ToolCategory.Tap,
-        ToolCategory.ThreadMill,
-        ToolCategory.Dovetail,
+        ToolCategory.END_MILL,
+        ToolCategory.BALL_NOSE,
+        ToolCategory.BULL_NOSE,
+        ToolCategory.CHAMFER,
+        ToolCategory.DRILL,
+        ToolCategory.PROBE,
+        ToolCategory.VBIT,
+        ToolCategory.SLITTING_SAW,
+        ToolCategory.REAMER,
+        ToolCategory.TAP,
+        ToolCategory.THREAD_MILL,
+        ToolCategory.DOVETAIL,
     ):
         assert cat == cat
-    assert ToolCategory.EndMill != ToolCategory.BallNose
+    assert ToolCategory.END_MILL != ToolCategory.BALL_NOSE
 
 
 def test_material_enum_variants():
     for mat in (
-        ToolMaterial.Carbide,
+        ToolMaterial.CARBIDE,
         ToolMaterial.HSS,
         ToolMaterial.HSSE,
-        ToolMaterial.Diamond,
+        ToolMaterial.DIAMOND,
         ToolMaterial.CBN,
-        ToolMaterial.Ceramic,
+        ToolMaterial.CERAMIC,
     ):
         assert mat == mat
-    assert ToolMaterial.Carbide != ToolMaterial.HSS
+    assert ToolMaterial.CARBIDE != ToolMaterial.HSS
 
 
 def test_tool_construction_and_accessors():
     m = _end_mill_model()
     t = Tool(
         label="6mm EM",
-        category=ToolCategory.EndMill,
+        category=ToolCategory.END_MILL,
         model=m,
-        material=ToolMaterial.Carbide,
+        material=ToolMaterial.CARBIDE,
         stickout=15.0,
         coating="TiAlN",
     )
@@ -106,14 +106,14 @@ def test_tool_construction_and_accessors():
     assert t.coating == "TiAlN"
     assert t.diameter() == 6.0
     assert t.default_stickout() == 18.0
-    assert t.category == ToolCategory.EndMill
-    assert t.material == ToolMaterial.Carbide
+    assert t.category == ToolCategory.END_MILL
+    assert t.material == ToolMaterial.CARBIDE
 
 
 def test_tool_coating_optional():
     t = Tool(
         label="plain",
-        category=ToolCategory.Drill,
+        category=ToolCategory.DRILL,
         model=ToolModel(diameter=4.0),
         material=ToolMaterial.HSS,
         stickout=10.0,
@@ -125,9 +125,9 @@ def test_tool_model_round_trips():
     m = _end_mill_model(corner_radius=0.5)
     t = Tool(
         label="x",
-        category=ToolCategory.BullNose,
+        category=ToolCategory.BULL_NOSE,
         model=m,
-        material=ToolMaterial.Carbide,
+        material=ToolMaterial.CARBIDE,
         stickout=12.0,
     )
     assert t.model == m
@@ -139,9 +139,9 @@ def test_default_stickout_reads_cutting_edge_height():
     m = _end_mill_model(cutting_edge_height=22.0)
     t = Tool(
         label="x",
-        category=ToolCategory.EndMill,
+        category=ToolCategory.END_MILL,
         model=m,
-        material=ToolMaterial.Carbide,
+        material=ToolMaterial.CARBIDE,
         stickout=20.0,
     )
     assert t.default_stickout() == 25.0
@@ -149,10 +149,10 @@ def test_default_stickout_reads_cutting_edge_height():
 
 def test_category_is_type_safe_identifier():
     # The category discriminates tools without string comparisons.
-    slotting_ok = ToolCategory.EndMill
-    slotting_rejected = ToolCategory.Probe
+    slotting_ok = ToolCategory.END_MILL
+    slotting_rejected = ToolCategory.PROBE
     assert slotting_ok != slotting_rejected
-    assert slotting_ok is ToolCategory.EndMill
+    assert slotting_ok is ToolCategory.END_MILL
 
 
 if __name__ == "__main__":

@@ -34,7 +34,9 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 )]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PyHelixDirection {
+    #[pyo3(name = "CW")]
     Cw,
+    #[pyo3(name = "CCW")]
     Ccw,
 }
 
@@ -51,8 +53,8 @@ impl From<PyHelixDirection> for RustHelixDirection {
 impl PyHelixDirection {
     fn __repr__(&self) -> String {
         match self {
-            PyHelixDirection::Cw => "HelixDirection.Cw".to_string(),
-            PyHelixDirection::Ccw => "HelixDirection.Ccw".to_string(),
+            PyHelixDirection::Cw => "HelixDirection.CW".to_string(),
+            PyHelixDirection::Ccw => "HelixDirection.CCW".to_string(),
         }
     }
 

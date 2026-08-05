@@ -147,15 +147,15 @@ def test_offset_contour_group_shrink():
 def test_offset_contour_group_join_style_round():
     """Round join style produces distinct geometry from miter."""
     poly = P((0, 0), (10, 0), (5, 10))
-    miter = offset_contour_group(poly, [], 1.0, join_style=JoinStyle.Miter)
-    round_ = offset_contour_group(poly, [], 1.0, join_style=JoinStyle.Round)
+    miter = offset_contour_group(poly, [], 1.0, join_style=JoinStyle.MITER)
+    round_ = offset_contour_group(poly, [], 1.0, join_style=JoinStyle.ROUND)
     assert len(round_[0]) > len(miter[0])
 
 
 def test_offset_contour_group_join_style_square():
     """Square join style should succeed without error."""
     poly = P((0, 0), (10, 0), (5, 10))
-    result = offset_contour_group(poly, [], 1.0, join_style=JoinStyle.Square)
+    result = offset_contour_group(poly, [], 1.0, join_style=JoinStyle.SQUARE)
     assert len(result) >= 1
 
 
@@ -178,7 +178,7 @@ def poly_area(poly):
 def test_find_deepest_cores_simple_rect():
     """Find the centre of a rectangle."""
     boundary = rect_poly(100.0, 80.0)
-    area = offset_contour_group(boundary, [], -5.0, join_style=JoinStyle.Round)
+    area = offset_contour_group(boundary, [], -5.0, join_style=JoinStyle.ROUND)
     cores = find_deepest_cores(area, step_over=10.0)
     assert len(cores) > 0
     cx, cy = cores[0]
@@ -194,7 +194,7 @@ def test_find_deepest_cores_empty_input():
 def test_find_deepest_cores_zero_stepover():
     """step_over ≤ 0 → empty result."""
     boundary = rect_poly(100.0, 80.0)
-    area = offset_contour_group(boundary, [], -5.0, join_style=JoinStyle.Round)
+    area = offset_contour_group(boundary, [], -5.0, join_style=JoinStyle.ROUND)
     assert find_deepest_cores(area, step_over=0.0) == []
 
 
@@ -217,7 +217,7 @@ def test_find_deepest_cores_single_point_for_small_pocket():
     # 10x10 rect, tool offset 5 → 0x0 (collapses), so valid area is just
     # whatever offset_contour_group returns for -5
     boundary = [(0, 0), (10, 0), (10, 10), (0, 10)]
-    area = offset_contour_group(boundary, [], -5.0, join_style=JoinStyle.Round)
+    area = offset_contour_group(boundary, [], -5.0, join_style=JoinStyle.ROUND)
     if area:
         # If any valid area remains, it should collapse in one step
         cores = find_deepest_cores(area, step_over=100.0)

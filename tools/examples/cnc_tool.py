@@ -65,7 +65,7 @@ def generate_tool_shapes():
     specs = [
         (
             "End Mill",
-            ToolCategory.EndMill,
+            ToolCategory.END_MILL,
             dict(
                 diameter=6,
                 cutting_edge_height=15,
@@ -76,7 +76,7 @@ def generate_tool_shapes():
         ),
         (
             "Ball Nose",
-            ToolCategory.BallNose,
+            ToolCategory.BALL_NOSE,
             dict(
                 diameter=6,
                 cutting_edge_height=15,
@@ -87,7 +87,7 @@ def generate_tool_shapes():
         ),
         (
             "Bull Nose",
-            ToolCategory.BullNose,
+            ToolCategory.BULL_NOSE,
             dict(
                 diameter=8,
                 corner_radius=1,
@@ -106,16 +106,16 @@ def generate_tool_shapes():
             label=title,
             category=category,
             model=model,
-            material=ToolMaterial.Carbide,
+            material=ToolMaterial.CARBIDE,
             stickout=model.cutting_edge_height() + 3,
         )
         diameter = model.diameter()
         ceh = model.cutting_edge_height()
         overall = model.get_parameter("overall_length")
         assert overall is not None
-        if category is ToolCategory.EndMill:
+        if category is ToolCategory.END_MILL:
             _draw_endmill(ax, diameter, ceh, overall)
-        elif category is ToolCategory.BallNose:
+        elif category is ToolCategory.BALL_NOSE:
             _draw_ballnose(ax, diameter, ceh, overall)
         else:
             _draw_bullnose(ax, diameter, model.corner_radius(), ceh, overall)

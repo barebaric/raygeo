@@ -58,7 +58,7 @@ def find_deepest_cores(regions: collections.abc.Sequence[raygeo.geo.types.Polygo
     :complexity: O(n * k) where k is the number of iterations
     """
 
-def offset_contour_group(solid_path: collections.abc.Sequence[raygeo.geo.types.Point], hole_paths: collections.abc.Sequence[collections.abc.Sequence[raygeo.geo.types.Point]], offset: float, join_style: raygeo.geo.shape.polygon.JoinStyle = raygeo.geo.shape.polygon.JoinStyle.Miter) -> list[raygeo.geo.types.Polygon]:
+def offset_contour_group(solid_path: collections.abc.Sequence[raygeo.geo.types.Point], hole_paths: collections.abc.Sequence[collections.abc.Sequence[raygeo.geo.types.Point]], offset: float, join_style: raygeo.geo.shape.polygon.JoinStyle = raygeo.geo.shape.polygon.JoinStyle.MITER) -> list[raygeo.geo.types.Polygon]:
     r"""
     Offset a solid contour with its hole contours.
     
@@ -69,7 +69,7 @@ def offset_contour_group(solid_path: collections.abc.Sequence[raygeo.geo.types.P
     :param solid_path: Outer boundary polygon as (x, y) points.
     :param hole_paths: List of hole polygons.
     :param offset: Offset distance (positive to inflate, negative to deflate).
-    :param join_style: Corner join style (default: ``JoinStyle.Miter``).
+    :param join_style: Corner join style (default: ``JoinStyle.MITER``).
     :returns: Offset polygon(s) with holes subtracted.
     :complexity: O(n log n)
     """

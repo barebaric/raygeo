@@ -244,7 +244,7 @@ def generate_slot_path_scenarios():
         (10 + 7 * math.sin(2 * math.pi * y / 30), y) for y in range(0, 45)
     ]
     s_slot = _build_smooth_s(centerline, half_width=3.0)
-    eroded_s = offset_polygon(s_slot, -s_radius, JoinStyle.Miter)
+    eroded_s = offset_polygon(s_slot, -s_radius, JoinStyle.MITER)
     closing_edge = len(s_slot) - 1
     _scenario(
         axes[3],

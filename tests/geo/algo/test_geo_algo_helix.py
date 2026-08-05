@@ -16,7 +16,7 @@ def test_helix_cylindrical():
         z_start=0,
         z_end=-10,
         pitch=5,
-        direction=HelixDirection.Ccw,
+        direction=HelixDirection.CCW,
         angular_step=math.pi / 4,
     )
     assert len(pts) > 2
@@ -48,7 +48,7 @@ def test_helix_conical_expand():
         z_start=0,
         z_end=-10,
         pitch=5,
-        direction=HelixDirection.Ccw,
+        direction=HelixDirection.CCW,
         angular_step=0.5,
     )
     assert len(pts) > 2
@@ -72,7 +72,7 @@ def test_helix_conical_reduce():
         z_start=0,
         z_end=-10,
         pitch=5,
-        direction=HelixDirection.Ccw,
+        direction=HelixDirection.CCW,
         angular_step=0.5,
     )
     r0 = math.hypot(pts[0][0], pts[0][1])
@@ -90,7 +90,7 @@ def test_helix_cw_direction():
         z_start=0,
         z_end=-5,
         pitch=5,
-        direction=HelixDirection.Cw,
+        direction=HelixDirection.CW,
         angular_step=math.pi / 2,
     )
     ccw = generate_helix_3d(
@@ -100,7 +100,7 @@ def test_helix_cw_direction():
         z_start=0,
         z_end=-5,
         pitch=5,
-        direction=HelixDirection.Ccw,
+        direction=HelixDirection.CCW,
         angular_step=math.pi / 2,
     )
     assert len(cw) == len(ccw)
@@ -118,7 +118,7 @@ def test_helix_min_revolutions():
         z_start=0,
         z_end=-1,
         pitch=5,
-        direction=HelixDirection.Ccw,
+        direction=HelixDirection.CCW,
         angular_step=0.5,
         min_revolutions=3,
     )
@@ -134,7 +134,7 @@ def test_helix_no_descent():
         z_start=0,
         z_end=5,
         pitch=5,
-        direction=HelixDirection.Ccw,
+        direction=HelixDirection.CCW,
         angular_step=0.5,
     )
     assert pts == []
@@ -149,7 +149,7 @@ def test_helix_zero_pitch():
         z_start=0,
         z_end=-10,
         pitch=0,
-        direction=HelixDirection.Ccw,
+        direction=HelixDirection.CCW,
         angular_step=0.5,
     )
     assert pts == []
@@ -164,7 +164,7 @@ def test_helix_non_origin_center():
         z_start=0,
         z_end=-10,
         pitch=5,
-        direction=HelixDirection.Ccw,
+        direction=HelixDirection.CCW,
         angular_step=0.5,
     )
     # Check points are centered around (5, 10)
@@ -182,7 +182,7 @@ def test_helix_angular_step_controls_resolution():
         z_start=0,
         z_end=-10,
         pitch=5,
-        direction=HelixDirection.Ccw,
+        direction=HelixDirection.CCW,
         angular_step=2.0,
     )
     fine = generate_helix_3d(
@@ -192,7 +192,7 @@ def test_helix_angular_step_controls_resolution():
         z_start=0,
         z_end=-10,
         pitch=5,
-        direction=HelixDirection.Ccw,
+        direction=HelixDirection.CCW,
         angular_step=0.1,
     )
     assert len(coarse) < len(fine)
@@ -207,7 +207,7 @@ def test_helix_z_end_exact():
         z_start=10,
         z_end=-30,
         pitch=10,
-        direction=HelixDirection.Ccw,
+        direction=HelixDirection.CCW,
         angular_step=0.2,
     )
     assert approx_eq(pts[0][2], 10)

@@ -98,7 +98,7 @@ def test_profile_inner_island_paths_on_grown_polygon():
     ops = result.ops
     radius = 3.0
     offset_dist = radius
-    grown_polys = offset_polygon(island, offset_dist, JoinStyle.Round)
+    grown_polys = offset_polygon(island, offset_dist, JoinStyle.ROUND)
     grown = grown_polys[0]
     gxs = [p[0] for p in grown]
     gys = [p[1] for p in grown]

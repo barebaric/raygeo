@@ -76,12 +76,15 @@ fn _polygons_to_numpy_list(
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 /// Corner join style for polygon offset operations.
 ///
-/// - ``JoinStyle.Miter``: Extends edges until they meet (default).
-/// - ``JoinStyle.Round``: Adds a circular arc at the corner.
-/// - ``JoinStyle.Square``: Extends edges by the offset distance.
+/// - ``JoinStyle.MITER``: Extends edges until they meet (default).
+/// - ``JoinStyle.ROUND``: Adds a circular arc at the corner.
+/// - ``JoinStyle.SQUARE``: Extends edges by the offset distance.
 pub enum PyJoinStyle {
+    #[pyo3(name = "MITER")]
     Miter,
+    #[pyo3(name = "ROUND")]
     Round,
+    #[pyo3(name = "SQUARE")]
     Square,
 }
 
@@ -99,9 +102,9 @@ impl From<PyJoinStyle> for JoinStyle {
 impl PyJoinStyle {
     fn __repr__(&self) -> String {
         match self {
-            PyJoinStyle::Miter => "JoinStyle.Miter".to_string(),
-            PyJoinStyle::Round => "JoinStyle.Round".to_string(),
-            PyJoinStyle::Square => "JoinStyle.Square".to_string(),
+            PyJoinStyle::Miter => "JoinStyle.MITER".to_string(),
+            PyJoinStyle::Round => "JoinStyle.ROUND".to_string(),
+            PyJoinStyle::Square => "JoinStyle.SQUARE".to_string(),
         }
     }
 
@@ -119,11 +122,13 @@ impl PyJoinStyle {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 /// Which corner type to find in [`find_polygon_corners`].
 ///
-/// - ``CornerType.Convex``: convex corners (interior angle < 180°).
-/// - ``CornerType.Concave``: concave / reflex corners (default).
+/// - ``CornerType.CONVEX``: convex corners (interior angle < 180°).
+/// - ``CornerType.CONCAVE``: concave / reflex corners (default).
 pub enum PyCornerType {
+    #[pyo3(name = "CONVEX")]
     Convex,
     #[default]
+    #[pyo3(name = "CONCAVE")]
     Concave,
 }
 
@@ -140,8 +145,8 @@ impl From<PyCornerType> for CornerType {
 impl PyCornerType {
     fn __repr__(&self) -> String {
         match self {
-            PyCornerType::Convex => "CornerType.Convex".to_string(),
-            PyCornerType::Concave => "CornerType.Concave".to_string(),
+            PyCornerType::Convex => "CornerType.CONVEX".to_string(),
+            PyCornerType::Concave => "CornerType.CONCAVE".to_string(),
         }
     }
 
@@ -888,7 +893,7 @@ fn is_polygon_convex_py(polygon: Vec<PyPoint2D>) -> bool {
 
     def find_polygon_corners(
         polygon: collections.abc.Sequence[tuple[float, float]],
-        corner_type: CornerType = CornerType.Concave,
+        corner_type: CornerType = CornerType.CONCAVE,
         threshold_deg: float = 90.0,
     ) -> list[tuple[int, float]]:
         """Find corners of a polygon matching *corner_type*.
@@ -898,7 +903,7 @@ fn is_polygon_convex_py(polygon: Vec<PyPoint2D>) -> bool {
         Winding is auto-detected from the signed area.
 
         :param polygon: Polygon vertices (closed or open; treated as closed).
-        :param corner_type: ``CornerType.Concave`` (default) or ``CornerType.Convex``.
+        :param corner_type: ``CornerType.CONCAVE`` (default) or ``CornerType.CONVEX``.
         :param threshold_deg: Minimum interior angle in degrees (default 90).
         :returns: List of (vertex_index, interior_angle_deg) tuples.
         """
@@ -1076,13 +1081,13 @@ fn does_polygon_enclose_circle_py(
     def offset_polygon(
         polygon: collections.abc.Sequence[types.Point],
         offset: float,
-        join_style: JoinStyle = JoinStyle.Miter,
+        join_style: JoinStyle = JoinStyle.MITER,
     ) -> list[types.Polygon]:
         """Offset (inflate/deflate) a polygon.
 
         :param polygon: Polygon as (x, y) points.
         :param offset: Offset distance (positive to inflate, negative to deflate).
-        :param join_style: Corner join style (default: ``JoinStyle.Miter``).
+        :param join_style: Corner join style (default: ``JoinStyle.MITER``).
         :returns: Offset polygon(s).
         :complexity: O(n log n)
         """

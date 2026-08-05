@@ -12,8 +12,8 @@ Provides generation of 3D helical polylines (cylindrical or conical) with config
 
 **Values:**
 
-- `Ccw`
-- `Cw`
+- `CCW`
+- `CW`
 
 ## Functions
 

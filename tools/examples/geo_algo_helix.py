@@ -17,7 +17,7 @@ def generate_helical():
         z_start=0,
         z_end=-30,
         pitch=10,
-        direction=HelixDirection.Ccw,
+        direction=HelixDirection.CCW,
         angular_step=0.05,
         min_revolutions=3,
     )
@@ -41,7 +41,7 @@ def generate_helical():
         z_start=0,
         z_end=-30,
         pitch=10,
-        direction=HelixDirection.Cw,
+        direction=HelixDirection.CW,
         angular_step=0.05,
         min_revolutions=3,
     )

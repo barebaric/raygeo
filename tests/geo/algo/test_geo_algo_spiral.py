@@ -16,7 +16,7 @@ def test_spiral_outward():
         start_radius=5,
         end_radius=30,
         revolutions=3,
-        direction=HelixDirection.Ccw,
+        direction=HelixDirection.CCW,
         angular_step=math.pi / 4,
     )
     assert len(pts) > 2
@@ -38,7 +38,7 @@ def test_spiral_inward():
         start_radius=30,
         end_radius=5,
         revolutions=3,
-        direction=HelixDirection.Ccw,
+        direction=HelixDirection.CCW,
         angular_step=math.pi / 4,
     )
     r0 = math.hypot(pts[0][0], pts[0][1])
@@ -59,7 +59,7 @@ def test_spiral_constant_z():
         start_radius=5,
         end_radius=30,
         revolutions=2,
-        direction=HelixDirection.Ccw,
+        direction=HelixDirection.CCW,
         angular_step=0.5,
     )
     for _, _, z in pts:
@@ -74,7 +74,7 @@ def test_spiral_cw_vs_ccw():
         start_radius=10,
         end_radius=20,
         revolutions=1,
-        direction=HelixDirection.Cw,
+        direction=HelixDirection.CW,
         angular_step=math.pi / 2,
     )
     ccw = generate_spiral_3d(
@@ -83,7 +83,7 @@ def test_spiral_cw_vs_ccw():
         start_radius=10,
         end_radius=20,
         revolutions=1,
-        direction=HelixDirection.Ccw,
+        direction=HelixDirection.CCW,
         angular_step=math.pi / 2,
     )
     assert len(cw) == len(ccw)
@@ -100,7 +100,7 @@ def test_spiral_equal_radii():
         start_radius=10,
         end_radius=10,
         revolutions=3,
-        direction=HelixDirection.Ccw,
+        direction=HelixDirection.CCW,
         angular_step=0.5,
     )
     assert pts == []
@@ -114,7 +114,7 @@ def test_spiral_zero_revolutions():
         start_radius=5,
         end_radius=30,
         revolutions=0,
-        direction=HelixDirection.Ccw,
+        direction=HelixDirection.CCW,
         angular_step=0.5,
     )
     assert pts == []
@@ -128,7 +128,7 @@ def test_spiral_zero_angular_step():
         start_radius=5,
         end_radius=30,
         revolutions=3,
-        direction=HelixDirection.Ccw,
+        direction=HelixDirection.CCW,
         angular_step=0,
     )
     assert pts == []
@@ -142,7 +142,7 @@ def test_spiral_non_origin_center():
         start_radius=5,
         end_radius=15,
         revolutions=2,
-        direction=HelixDirection.Ccw,
+        direction=HelixDirection.CCW,
         angular_step=0.5,
     )
     for x, y, z in pts:
@@ -159,7 +159,7 @@ def test_spiral_fractional_revolution():
         start_radius=10,
         end_radius=20,
         revolutions=0.5,
-        direction=HelixDirection.Ccw,
+        direction=HelixDirection.CCW,
         angular_step=0.1,
     )
     assert len(pts) > 2
@@ -177,7 +177,7 @@ def test_spiral_angular_step_controls_resolution():
         start_radius=5,
         end_radius=30,
         revolutions=3,
-        direction=HelixDirection.Ccw,
+        direction=HelixDirection.CCW,
         angular_step=2.0,
     )
     fine = generate_spiral_3d(
@@ -186,7 +186,7 @@ def test_spiral_angular_step_controls_resolution():
         start_radius=5,
         end_radius=30,
         revolutions=3,
-        direction=HelixDirection.Ccw,
+        direction=HelixDirection.CCW,
         angular_step=0.1,
     )
     assert len(coarse) < len(fine)

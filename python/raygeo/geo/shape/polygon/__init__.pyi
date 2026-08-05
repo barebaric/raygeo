@@ -80,24 +80,24 @@ class CornerType(enum.Enum):
     r"""
     Which corner type to find in [`find_polygon_corners`].
     
-    - ``CornerType.Convex``: convex corners (interior angle < 180°).
-    - ``CornerType.Concave``: concave / reflex corners (default).
+    - ``CornerType.CONVEX``: convex corners (interior angle < 180°).
+    - ``CornerType.CONCAVE``: concave / reflex corners (default).
     """
-    Convex = ...
-    Concave = ...
+    CONVEX = ...
+    CONCAVE = ...
 
 @typing.final
 class JoinStyle(enum.Enum):
     r"""
     Corner join style for polygon offset operations.
     
-    - ``JoinStyle.Miter``: Extends edges until they meet (default).
-    - ``JoinStyle.Round``: Adds a circular arc at the corner.
-    - ``JoinStyle.Square``: Extends edges by the offset distance.
+    - ``JoinStyle.MITER``: Extends edges until they meet (default).
+    - ``JoinStyle.ROUND``: Adds a circular arc at the corner.
+    - ``JoinStyle.SQUARE``: Extends edges by the offset distance.
     """
-    Miter = ...
-    Round = ...
-    Square = ...
+    MITER = ...
+    ROUND = ...
+    SQUARE = ...
 
 def apply_minimum_curvature(polygon: collections.abc.Sequence[types.Point], r_min: float) -> list[types.Polygon]:
     r"""
@@ -165,7 +165,7 @@ def does_polygon_enclose_circle(center: types.Point, radius: float, polygon: col
 
 def find_entry_edges(polygon: collections.abc.Sequence[tuple[float, float]], boundaries: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]], dist_tol: float = 1) -> list[int]: ...
 
-def find_polygon_corners(polygon: collections.abc.Sequence[tuple[float, float]], corner_type: CornerType = CornerType.Concave, threshold_deg: float = 90) -> list[tuple[int, float]]:
+def find_polygon_corners(polygon: collections.abc.Sequence[tuple[float, float]], corner_type: CornerType = CornerType.CONCAVE, threshold_deg: float = 90) -> list[tuple[int, float]]:
     r"""
     Find corners of a polygon matching *corner_type*.
     
@@ -174,7 +174,7 @@ def find_polygon_corners(polygon: collections.abc.Sequence[tuple[float, float]],
     Winding is auto-detected from the signed area.
     
     :param polygon: Polygon vertices (closed or open; treated as closed).
-    :param corner_type: ``CornerType.Concave`` (default) or ``CornerType.Convex``.
+    :param corner_type: ``CornerType.CONCAVE`` (default) or ``CornerType.CONVEX``.
     :param threshold_deg: Minimum interior angle in degrees (default 90).
     :returns: List of (vertex_index, interior_angle_deg) tuples.
     """
@@ -556,13 +556,13 @@ def normalize_polygons_numpy(polygons: collections.abc.Sequence[numpy.typing.NDA
     :complexity: O(n log n)
     """
 
-def offset_polygon(polygon: collections.abc.Sequence[types.Point], offset: float, join_style: JoinStyle = JoinStyle.Miter) -> list[types.Polygon]:
+def offset_polygon(polygon: collections.abc.Sequence[types.Point], offset: float, join_style: JoinStyle = JoinStyle.MITER) -> list[types.Polygon]:
     r"""
     Offset (inflate/deflate) a polygon.
     
     :param polygon: Polygon as (x, y) points.
     :param offset: Offset distance (positive to inflate, negative to deflate).
-    :param join_style: Corner join style (default: ``JoinStyle.Miter``).
+    :param join_style: Corner join style (default: ``JoinStyle.MITER``).
     :returns: Offset polygon(s).
     :complexity: O(n log n)
     """

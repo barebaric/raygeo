@@ -71,7 +71,7 @@ def test_central_island():
     """Central-island pocket — pole in the ring, not in the island."""
     cb = [(0, 0), (100, 0), (100, 100), (0, 100)]
     cisl = [(35, 35), (65, 35), (65, 65), (35, 65)]
-    area = offset_contour_group(cb, [cisl], -5.0, join_style=JoinStyle.Round)
+    area = offset_contour_group(cb, [cisl], -5.0, join_style=JoinStyle.ROUND)
 
     shell = None
     holes = []
@@ -96,7 +96,7 @@ def test_multi_island_pocket():
     isl1 = [(30, 20), (50, 20), (50, 40), (30, 40)]
     isl2 = [(110, 60), (130, 60), (130, 80), (110, 80)]
     area = offset_contour_group(
-        boundary, [isl1, isl2], -5.0, join_style=JoinStyle.Round
+        boundary, [isl1, isl2], -5.0, join_style=JoinStyle.ROUND
     )
 
     assert area

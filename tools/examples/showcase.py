@@ -385,7 +385,7 @@ def _plot_conical_helix(ax):
         z_start=0,
         z_end=-30,
         pitch=10,
-        direction=HelixDirection.Cw,
+        direction=HelixDirection.CW,
         angular_step=0.05,
         min_revolutions=3,
     )

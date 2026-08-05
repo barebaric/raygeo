@@ -17,7 +17,7 @@ def generate_inward_outward():
         start_radius=5,
         end_radius=30,
         revolutions=3,
-        direction=HelixDirection.Ccw,
+        direction=HelixDirection.CCW,
         angular_step=0.05,
     )
 
@@ -38,7 +38,7 @@ def generate_inward_outward():
         start_radius=30,
         end_radius=5,
         revolutions=3,
-        direction=HelixDirection.Cw,
+        direction=HelixDirection.CW,
         angular_step=0.05,
     )
     ax2 = fig.add_subplot(122, projection="3d")
