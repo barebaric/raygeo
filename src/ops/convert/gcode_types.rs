@@ -67,6 +67,9 @@ fn default_true() -> bool {
 fn default_gcode_precision() -> u8 {
     3
 }
+fn default_unit_scale() -> f64 {
+    1.0
+}
 fn default_spindle_on_cw() -> String {
     "M3 S{rpm}".to_string()
 }
@@ -143,6 +146,12 @@ pub struct EncodeContext {
     /// Max travel (rapid) speed in mm/min, used to clamp rapid rates.
     #[serde(default)]
     pub max_travel_speed: f64,
+    /// Multiplier applied to convert internal mm values into the
+    /// machine's unit system at G-code emission time. ``1.0`` for
+    /// metric machines, ``1/25.4`` for imperial. Coordinates and
+    /// feed rates are multiplied by this before formatting.
+    #[serde(default = "default_unit_scale")]
+    pub unit_scale: f64,
     /// UID of the default laser head (used when no SetHead has run).
     #[serde(default)]
     pub default_head_uid: String,

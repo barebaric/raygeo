@@ -424,8 +424,14 @@ def _ensure_code_block_blank_lines(text: str) -> str:
     lines = text.split("\n")
     result: list[str] = []
     prev_blank = True
+    in_fence = False
     for line in lines:
-        is_indented = line.startswith("    ") and line.strip()
+        if line.lstrip().startswith("```"):
+            in_fence = not in_fence
+            result.append(line)
+            prev_blank = False
+            continue
+        is_indented = not in_fence and line.startswith("    ") and line.strip()
         if is_indented and not prev_blank:
             result.append("")
             prev_blank = True

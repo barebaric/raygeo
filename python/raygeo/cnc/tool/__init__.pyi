@@ -26,15 +26,17 @@ class Tool:
     
     Combines a parametric :class:`ToolModel` (measurements), a
     :class:`ToolCategory` (type-safe classification), a
-    :class:`ToolMaterial`, and setup parameters::
+    :class:`ToolMaterial`, and setup parameters:
     
-        tool = Tool(
-            label="6mm EM",
-            category=ToolCategory.EndMill,
-            model=ToolModel(diameter=6.0, ...),
-            material=ToolMaterial.Carbide,
-            stickout=15.0,
-        )
+    .. code-block:: python
+    
+       tool = Tool(
+           label="6mm EM",
+           category=ToolCategory.EndMill,
+           model=ToolModel(diameter=6.0, ...),
+           material=ToolMaterial.Carbide,
+           stickout=15.0,
+       )
     """
     @property
     def label(self) -> builtins.str: ...
@@ -68,15 +70,17 @@ class ToolModel:
     Parametric model describing a tool's geometry.
     
     A single, hierarchy-free class: a bag of named parameters. Construct
-    with keyword arguments for each parameter::
+    with keyword arguments for each parameter:
     
-        model = ToolModel(
-            diameter=6.0,
-            shank_diameter=6.0,
-            cutting_edge_height=15.0,
-            flute_count=3.0,
-            overall_length=50.0,
-        )
+    .. code-block:: python
+    
+       model = ToolModel(
+           diameter=6.0,
+           shank_diameter=6.0,
+           cutting_edge_height=15.0,
+           flute_count=3.0,
+           overall_length=50.0,
+       )
     
     The type-safe tool *classification* (end-mill vs. probe vs. ...) lives
     on :class:`Tool` as the :class:`ToolCategory` enum; a ``ToolModel``

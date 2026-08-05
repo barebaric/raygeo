@@ -128,7 +128,8 @@ pub struct RotaryMappingSpec {
     /// Name of the world axis the rotary replaces, or None for
     /// TRUE_4TH_AXIS mode (e.g. "Y").
     pub replaced_axis: Option<String>,
-    /// Machine units per full rotation (for AXIS_REPLACEMENT
-    /// degrees→scaled-mu conversion).  Zero means no conversion.
-    pub mu_per_rotation: f64,
+    /// Millimetres of travel per full 360° rotation (for
+    /// AXIS_REPLACEMENT degrees→mm conversion).  Zero means no
+    /// conversion (raw degrees emitted on the replaced axis).
+    pub mm_per_rotation: f64,
 }

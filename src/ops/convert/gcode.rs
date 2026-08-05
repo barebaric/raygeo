@@ -136,6 +136,19 @@ impl<'a> GcodeEncoder<'a> {
     }
 
     fn format_coord(&self, value: f64) -> String {
+        let scaled = value * self.ctx.unit_scale;
+        let v = if scaled.abs() < COORD_TOLERANCE {
+            0.0
+        } else {
+            scaled
+        };
+        strip_trailing_zeros(&format_with_precision(v, self.fmt_precision()))
+    }
+
+    /// Format an angular value (rotary axis position in degrees).
+    /// Angular values are unit-system agnostic and are never scaled
+    /// by ``unit_scale``.
+    fn format_angular(&self, value: f64) -> String {
         let v = if value.abs() < COORD_TOLERANCE {
             0.0
         } else {
@@ -145,8 +158,9 @@ impl<'a> GcodeEncoder<'a> {
     }
 
     fn format_feed(&self, value: f64) -> String {
+        let scaled = value * self.ctx.unit_scale;
         strip_trailing_zeros(&format_with_precision(
-            value,
+            scaled,
             self.fmt_precision(),
         ))
     }
@@ -250,7 +264,7 @@ impl<'a> GcodeEncoder<'a> {
                 let letter = letter_for_axis(axis);
                 let prev_val = self.current_pos.get(axis);
                 let mut formatted =
-                    format!(" {letter}{}", self.format_coord(value));
+                    format!(" {letter}{}", self.format_angular(value));
                 if self.dialect.omit_unchanged_coords
                     && (value - prev_val).abs() < 1e-12
                 {
@@ -294,8 +308,9 @@ impl<'a> GcodeEncoder<'a> {
         if !self.dialect.set_speed.is_empty()
             && Some(speed) != self.emitted_speed
         {
+            let scaled = speed * self.ctx.unit_scale;
             let mut vars = NamedVars::default();
-            vars.set_num("speed", speed);
+            vars.set_num("speed", scaled);
             let out = render_named(&self.dialect.set_speed, &vars);
             if !out.is_empty() {
                 self.push_line(out);

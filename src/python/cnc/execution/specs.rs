@@ -767,9 +767,9 @@ pub struct PyRotaryMappingSpec {
     /// Replaced world axis name or None for TRUE_4TH_AXIS.
     #[pyo3(get)]
     pub replaced_axis: Option<String>,
-    /// Machine units per full rotation (0 = no conversion).
+    /// Millimetres per full rotation (0 = no conversion).
     #[pyo3(get)]
-    pub mu_per_rotation: f64,
+    pub mm_per_rotation: f64,
 }
 
 impl PyRotaryMappingSpec {
@@ -783,7 +783,7 @@ impl PyRotaryMappingSpec {
             cylinder_dir: self.cylinder_dir,
             rotary_axis: self.rotary_axis.clone(),
             replaced_axis: self.replaced_axis.clone(),
-            mu_per_rotation: self.mu_per_rotation,
+            mm_per_rotation: self.mm_per_rotation,
         }
     }
 }
@@ -801,7 +801,7 @@ impl PyRotaryMappingSpec {
         cylinder_dir,
         rotary_axis,
         replaced_axis,
-        mu_per_rotation,
+        mm_per_rotation,
     ))]
     #[allow(clippy::too_many_arguments)]
     fn new(
@@ -813,7 +813,7 @@ impl PyRotaryMappingSpec {
         cylinder_dir: [f64; 3],
         rotary_axis: String,
         replaced_axis: Option<String>,
-        mu_per_rotation: f64,
+        mm_per_rotation: f64,
     ) -> Self {
         PyRotaryMappingSpec {
             layer_uid,
@@ -824,7 +824,7 @@ impl PyRotaryMappingSpec {
             cylinder_dir,
             rotary_axis,
             replaced_axis,
-            mu_per_rotation,
+            mm_per_rotation,
         }
     }
 }

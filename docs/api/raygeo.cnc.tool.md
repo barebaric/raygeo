@@ -17,9 +17,9 @@ are implemented in Rust and consumed by the CNC layer's signatures.
 A physical cutting tool.
 
 Combines a parametric **ToolModel** (measurements), a **ToolCategory** (type-safe classification), a
-**ToolMaterial**, and setup parameters::
+**ToolMaterial**, and setup parameters:
 
-```
+```python
 tool = Tool(
     label="6mm EM",
     category=ToolCategory.EndMill,
@@ -129,9 +129,9 @@ Tool substrate material.
 Parametric model describing a tool's geometry.
 
 A single, hierarchy-free class: a bag of named parameters. Construct with keyword arguments for each
-parameter::
+parameter:
 
-```
+```python
 model = ToolModel(
     diameter=6.0,
     shank_diameter=6.0,

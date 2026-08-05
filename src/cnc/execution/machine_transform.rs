@@ -205,8 +205,7 @@ impl MachineTransformCompute {
                 continue;
             };
 
-            let scaled =
-                degrees_to_scaled_mu(degrees, rm.mu_per_rotation, rm.reverse);
+            let scaled = degrees_to_mm(degrees, rm.mm_per_rotation, rm.reverse);
             let mut ea_vec: Vec<(Axis, f64)> = ops.commands[i]
                 .extra_axes()
                 .map(|ea| ea.to_vec())
@@ -225,14 +224,14 @@ impl MachineTransformCompute {
                     match cmd {
                         MoveCmd::BezierTo { control1, control2 } => {
                             if let Some(ref replaced) = rm.replaced_axis {
-                                let v1 = degrees_to_scaled_mu(
+                                let v1 = degrees_to_mm(
                                     control1.y,
-                                    rm.mu_per_rotation,
+                                    rm.mm_per_rotation,
                                     rm.reverse,
                                 );
-                                let v2 = degrees_to_scaled_mu(
+                                let v2 = degrees_to_mm(
                                     control2.y,
-                                    rm.mu_per_rotation,
+                                    rm.mm_per_rotation,
                                     rm.reverse,
                                 );
                                 if replaced == "Y" {
@@ -248,9 +247,9 @@ impl MachineTransformCompute {
                         }
                         MoveCmd::QuadraticBezierTo { control } => {
                             if let Some(ref replaced) = rm.replaced_axis {
-                                let v = degrees_to_scaled_mu(
+                                let v = degrees_to_mm(
                                     control.y,
-                                    rm.mu_per_rotation,
+                                    rm.mm_per_rotation,
                                     rm.reverse,
                                 );
                                 if replaced == "Y" {
@@ -263,9 +262,9 @@ impl MachineTransformCompute {
                         }
                         MoveCmd::ArcTo { center, .. } => {
                             if let Some(ref _replaced) = rm.replaced_axis {
-                                center.y = degrees_to_scaled_mu(
+                                center.y = degrees_to_mm(
                                     center.y,
-                                    rm.mu_per_rotation,
+                                    rm.mm_per_rotation,
                                     rm.reverse,
                                 );
                             }
@@ -379,7 +378,7 @@ impl Compute for MachineTransformCompute {
             ops.transform(combined);
         }
 
-        // 4. AXIS_REPLACEMENT degrees→scaled-mu (per-layer, machine-space).
+        // 4. AXIS_REPLACEMENT degrees→mm (per-layer, machine-space).
         self.apply_axis_replacement(&mut ops);
 
         Ok(Box::new(AggregateOutput { ops, time_estimate }))
@@ -440,19 +439,15 @@ fn mu_to_degrees(
     degrees
 }
 
-fn degrees_to_scaled_mu(
-    degrees: f64,
-    mu_per_rotation: f64,
-    reverse: bool,
-) -> f64 {
-    if mu_per_rotation <= 0.0 {
+fn degrees_to_mm(degrees: f64, mm_per_rotation: f64, reverse: bool) -> f64 {
+    if mm_per_rotation <= 0.0 {
         return degrees;
     }
-    let mut scaled = degrees * mu_per_rotation / 360.0;
+    let mut mm = degrees * mm_per_rotation / 360.0;
     if reverse {
-        scaled = -scaled;
+        mm = -mm;
     }
-    scaled
+    mm
 }
 
 fn array_to_dmat4(arr: &[[f64; 4]; 4]) -> DMat4 {
@@ -485,7 +480,7 @@ fn set_axis_value(end: &mut Point3D, axis: &str, value: f64) {
         "Z" => end.z = value,
         // Non-XYZ axes (A/B/C/U) are replaced axes that map to the Y
         // position in the 3-axis coordinate system, matching the
-        // Python KinematicMapping.degrees_to_scaled_mu_pass behaviour
+        // Python KinematicMapping.degrees_to_mm_pass behaviour
         // where _AXIS_TO_INDEX.get(non_xyz, 1) defaults to index 1 (Y).
         _ => end.y = value,
     }

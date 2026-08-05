@@ -492,9 +492,9 @@ class RotaryMappingSpec:
         Replaced world axis name or None for TRUE_4TH_AXIS.
         """
     @property
-    def mu_per_rotation(self) -> builtins.float:
+    def mm_per_rotation(self) -> builtins.float:
         r"""
-        Machine units per full rotation (0 = no conversion).
+        Millimetres per full rotation (0 = no conversion).
         """
-    def __new__(cls, layer_uid: builtins.str, diameter: builtins.float, gear_ratio: builtins.float, reverse: builtins.bool, axis_position_3d: typing.Sequence[builtins.float], cylinder_dir: typing.Sequence[builtins.float], rotary_axis: builtins.str, replaced_axis: typing.Optional[builtins.str], mu_per_rotation: builtins.float) -> RotaryMappingSpec: ...
+    def __new__(cls, layer_uid: builtins.str, diameter: builtins.float, gear_ratio: builtins.float, reverse: builtins.bool, axis_position_3d: typing.Sequence[builtins.float], cylinder_dir: typing.Sequence[builtins.float], rotary_axis: builtins.str, replaced_axis: typing.Optional[builtins.str], mm_per_rotation: builtins.float) -> RotaryMappingSpec: ...
 

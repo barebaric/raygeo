@@ -468,13 +468,13 @@ layer_uid: str
 
 UID of the layer this rotary config applies to.
 
-### `mu_per_rotation`
+### `mm_per_rotation`
 
 ```python
-mu_per_rotation: float
+mm_per_rotation: float
 ```
 
-Machine units per full rotation (0 = no conversion).
+Millimetres per full rotation (0 = no conversion).
 
 ### `replaced_axis`
 
