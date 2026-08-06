@@ -145,6 +145,52 @@ def test_empty_geometry_yields_single_default_face():
     assert f.stock_region.islands == []
 
 
+# ── Open contours are preserved ──────────────────────────────────
+
+
+def _outer_with_line_geo() -> Geometry:
+    """A closed rectangle plus an open line running beside it."""
+    g = Geometry()
+    g.extend(_rect(0, 0, 10, 10))
+    g.move_to(15, 0)
+    g.line_to(15, 10)
+    return g
+
+
+def test_open_contours_are_kept_on_default_face():
+    p = Part.from_geometry_multi_face(
+        _outer_with_line_geo(), size_mm=(20.0, 10.0)
+    )
+    assert p.face_ids == [""]
+    f = p.face("")
+    assert f is not None
+    assert f.geometry is not None
+    # The default face geometry carries the rectangle AND the open line.
+    rect = f.geometry.rect()
+    assert rect[2] >= 10.0  # spans both the rect and the line
+    assert rect[0] <= 15.0  # reaches the line's x position
+    # ... and the stock region stays the closed rectangle only.
+    assert f.stock_region.islands == []
+
+
+def test_open_contours_kept_when_pockets_split_into_faces():
+    """Open cut lines must survive when multiple pockets produce
+    several faces; they land on the default (largest) face."""
+    g = Geometry()
+    g.extend(_rect(0, 0, 10, 10))  # large pocket -> default face
+    g.extend(_rect(20, 20, 4, 4))  # small pocket -> face "1"
+    g.move_to(30, 0)  # open line, outside any pocket
+    g.line_to(30, 4)
+    p = Part.from_geometry_multi_face(g, size_mm=(40.0, 30.0))
+    assert set(p.face_ids) == {"", "1"}
+    default = p.face("")
+    assert default is not None
+    assert default.geometry is not None
+    rect = default.geometry.rect()
+    assert rect[0] <= 30.0 <= rect[2]
+    assert rect[3] >= 4.0
+
+
 # ── face_ids getter ──────────────────────────────────────────────
 
 

@@ -1,8 +1,14 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
 
+use crate::constants::{EPSILON_BOUNDARY, EPSILON_MERGE};
+use crate::geo::algo::fitting::linearize_data;
+use crate::geo::algo::topology::{
+    split_inner_and_outer_contours, split_into_contours,
+};
 use crate::geo::shape::polygon::{
-    get_polygon_area, get_polygon_centroid, is_point_inside_polygon,
+    get_polygon_area, get_polygon_centroid, get_polygon_from_points,
+    is_point_inside_polygon,
 };
 use crate::geo::types::{Point, Polygon};
 use crate::geo::Geometry;
@@ -244,14 +250,65 @@ impl Part {
         geometry: Geometry,
         size_mm: (f64, f64),
     ) -> Self {
-        // 1. Linearize + split into contours, classified by nesting
-        //    depth into outers and inners.
-        let (outers, inners) = geometry.split_inner_and_outer_polygons();
+        // 1. Linearize + split into contours, separating closed
+        //    contours (which form pockets) from open contours (cut
+        //    lines such as engraved strokes) that must be preserved.
+        let mut linearized = geometry.copy();
+        if !linearized.data.is_empty() {
+            linearized.data =
+                linearize_data(&linearized.data, EPSILON_BOUNDARY);
+        }
+        let contours = split_into_contours(&linearized);
+        let mut closed: Vec<Geometry> = Vec::new();
+        let mut open: Vec<Geometry> = Vec::new();
+        for contour in &contours {
+            if contour.is_closed(EPSILON_BOUNDARY) {
+                closed.push(contour.copy());
+            } else {
+                open.push(contour.copy());
+            }
+        }
+
+        if closed.is_empty() {
+            // No pockets: keep the geometry as-is so open paths are
+            // not lost.
+            return Part::new(Some(geometry), size_mm);
+        }
+
+        // 2. Classify closed contours by nesting depth into outers and
+        //    inners.
+        let closed_refs: Vec<&Geometry> = closed.iter().collect();
+        let (inner_indices, outer_indices) =
+            split_inner_and_outer_contours(&closed_refs);
+
+        let contour_to_poly = |i: usize| -> Option<Polygon> {
+            let segs = closed[i].segments();
+            for seg in &segs {
+                let poly_2d: Polygon =
+                    seg.iter().map(|p| Point::new(p.x, p.y)).collect();
+                if let Some(cleaned) =
+                    get_polygon_from_points(&poly_2d, 0.01 * EPSILON_MERGE)
+                {
+                    return Some(cleaned);
+                }
+            }
+            None
+        };
+
+        let outers: Vec<Polygon> = outer_indices
+            .iter()
+            .filter_map(|&i| contour_to_poly(i))
+            .collect();
+        let inners: Vec<Polygon> = inner_indices
+            .iter()
+            .filter_map(|&i| contour_to_poly(i))
+            .collect();
+
         if outers.is_empty() {
             return Part::new(Some(geometry), size_mm);
         }
 
-        // 2. Sort outers by area descending so the largest becomes "".
+        // 3. Sort outers by area descending so the largest becomes "".
         let mut sorted_outers = outers;
         sorted_outers.sort_by(|a, b| {
             let aa = get_polygon_area(a);
@@ -259,7 +316,7 @@ impl Part {
             ab.partial_cmp(&aa).unwrap_or(std::cmp::Ordering::Equal)
         });
 
-        // 3. Associate each island with the containing outer (centroid
+        // 4. Associate each island with the containing outer (centroid
         //    test). An island goes to the first (largest) outer that
         //    contains it, so nested islands stay with their pocket.
         let mut used_inner = vec![false; inners.len()];
@@ -302,6 +359,15 @@ impl Part {
                         face_geo.line_to(p.x, p.y, 0.0);
                     }
                     face_geo.close_path();
+                }
+            }
+
+            // 5. Re-append open contours so cut lines are not lost.
+            //    Open paths are not part of any pocket, so they are
+            //    attached to the default (largest) face.
+            if face_id.is_empty() {
+                for contour in &open {
+                    face_geo.extend(&contour.copy());
                 }
             }
 
