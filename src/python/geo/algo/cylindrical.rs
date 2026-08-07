@@ -15,6 +15,7 @@ use crate::geo::algo::cylindrical;
         diameter: float,
         colors: numpy.typing.NDArray[numpy.float32] | None = None,
         degrees_input: bool = False,
+        radial_offset: float = 0.0,
     ) -> tuple[
         numpy.typing.NDArray[numpy.float32],
         numpy.typing.NDArray[numpy.float32] | None,
@@ -38,6 +39,9 @@ use crate::geo::algo::cylindrical;
         :param degrees_input: If True, Y values are in degrees and converted
                               directly. If False (default), they are in motor
                               units (mu) and converted via mu_to_degrees.
+        :param radial_offset: Outward radial offset (mm) applied to every
+                              vertex. Used to lift overlay lines off the
+                              cylinder surface to avoid Z-fighting.
         :returns: Tuple of (transformed_vertices, expanded_colors, cum_subs).
                   cum_subs is a cumulative subdivision count array.
         :complexity: O(N * subdivisions)
@@ -46,13 +50,14 @@ use crate::geo::algo::cylindrical;
     module = "raygeo.geo.algo.cylindrical"
 )]
 #[pyfunction(name = "transform_to_cylinder")]
-#[pyo3(signature = (verts, diameter, colors=None, degrees_input=false))]
+#[pyo3(signature = (verts, diameter, colors=None, degrees_input=false, radial_offset=0.0))]
 fn py_transform_to_cylinder(
     py: Python<'_>,
     verts: &Bound<'_, PyAny>,
     diameter: f64,
     colors: Option<&Bound<'_, PyAny>>,
     degrees_input: bool,
+    radial_offset: f64,
 ) -> PyResult<Py<PyAny>> {
     let numpy = py.import("numpy")?;
 
@@ -81,6 +86,7 @@ fn py_transform_to_cylinder(
             diameter,
             col_flat.as_deref(),
             degrees_input,
+            radial_offset,
         );
 
     let verts_arr = result_verts.into_pyarray(py);

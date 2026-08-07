@@ -13,6 +13,7 @@ transform_to_cylinder(
     diameter: float,
     colors: numpy.NDArray[numpy.float32] | None = None,
     degrees_input: bool = False,
+    radial_offset: float = 0,
 ) -> tuple[numpy.NDArray[numpy.float32], numpy.NDArray[numpy.float32] | None, numpy.NDArray[numpy.int32]]
 ```
 
@@ -35,6 +36,7 @@ interior.
 | `diameter`      | `float`                                                                                                     | Cylinder diameter in mm.                                                                                                                   |
 | `colors`        | `numpy.NDArray[numpy.float32] &#124; None = None`                                                           | Optional float32 array of shape (N, 4) RGBA colors.                                                                                        |
 | `degrees_input` | `bool = False`                                                                                              | If True, Y values are in degrees and converted directly. If False (default), they are in motor units (mu) and converted via mu_to_degrees. |
+| `radial_offset` | `float = 0`                                                                                                 | Outward radial offset (mm) applied to every vertex. Used to lift overlay lines off the cylinder surface to avoid Z-fighting.               |
 | _Returns_       | `tuple[numpy.NDArray[numpy.float32], numpy.NDArray[numpy.float32] &#124; None, numpy.NDArray[numpy.int32]]` | Tuple of (transformed_vertices, expanded_colors, cum_subs). cum_subs is a cumulative subdivision count array.                              |
 | _Complexity_    |                                                                                                             | O(N * subdivisions)                                                                                                                        |
 

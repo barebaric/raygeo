@@ -7,7 +7,7 @@ __all__ = [
     "transform_to_cylinder",
 ]
 
-def transform_to_cylinder(verts: numpy.typing.NDArray[numpy.float32], diameter: float, colors: numpy.typing.NDArray[numpy.float32] | None = None, degrees_input: bool = False) -> tuple[numpy.typing.NDArray[numpy.float32], numpy.typing.NDArray[numpy.float32] | None, numpy.typing.NDArray[numpy.int32]]:
+def transform_to_cylinder(verts: numpy.typing.NDArray[numpy.float32], diameter: float, colors: numpy.typing.NDArray[numpy.float32] | None = None, degrees_input: bool = False, radial_offset: float = 0) -> tuple[numpy.typing.NDArray[numpy.float32], numpy.typing.NDArray[numpy.float32] | None, numpy.typing.NDArray[numpy.int32]]:
     r"""
     Transform flat vertex pairs to cylindrical coordinates.
     
@@ -27,6 +27,9 @@ def transform_to_cylinder(verts: numpy.typing.NDArray[numpy.float32], diameter: 
     :param degrees_input: If True, Y values are in degrees and converted
                           directly. If False (default), they are in motor
                           units (mu) and converted via mu_to_degrees.
+    :param radial_offset: Outward radial offset (mm) applied to every
+                          vertex. Used to lift overlay lines off the
+                          cylinder surface to avoid Z-fighting.
     :returns: Tuple of (transformed_vertices, expanded_colors, cum_subs).
               cum_subs is a cumulative subdivision count array.
     :complexity: O(N * subdivisions)

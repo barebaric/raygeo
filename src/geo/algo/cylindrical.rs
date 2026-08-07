@@ -1,6 +1,7 @@
 use std::f64::consts::PI;
 
-const MAX_ANGLE_PER_SEGMENT: f64 = PI / 12.0; // 15 degrees
+const MAX_SAGITTA: f64 = 0.05;
+pub const OVERLAY_RADIAL_OFFSET: f64 = 0.1;
 
 fn mu_to_degrees(mu: f64, diameter: f64) -> f64 {
     if diameter <= 0.0 {
@@ -49,19 +50,24 @@ fn deinterleave_pairs(verts: &[f32], num_pairs: usize) -> DeinterleavedPairs {
     p
 }
 
-fn compute_subdivisions(theta1: &[f64], theta2: &[f64]) -> (Vec<i32>, i32) {
+fn compute_subdivisions(
+    theta1: &[f64],
+    theta2: &[f64],
+    radius: f64,
+) -> (Vec<i32>, i32) {
+    let max_angle = if MAX_SAGITTA < radius {
+        2.0 * (1.0 - MAX_SAGITTA / radius).acos()
+    } else {
+        PI / 12.0
+    };
+
     let mut num_subs = Vec::with_capacity(theta1.len());
     let mut total_segments = 0i32;
 
     for i in 0..theta1.len() {
-        let mut delta_theta = theta2[i] - theta1[i];
-        delta_theta = (delta_theta + PI) % (2.0 * PI);
-        if delta_theta < 0.0 {
-            delta_theta += 2.0 * PI;
-        }
-        delta_theta -= PI;
+        let delta_theta = theta2[i] - theta1[i];
 
-        let subs = (delta_theta.abs() / MAX_ANGLE_PER_SEGMENT).ceil() as i32;
+        let subs = (delta_theta.abs() / max_angle).ceil() as i32;
         let subs = subs.max(1);
         num_subs.push(subs);
         total_segments += subs;
@@ -70,6 +76,7 @@ fn compute_subdivisions(theta1: &[f64], theta2: &[f64]) -> (Vec<i32>, i32) {
     (num_subs, total_segments)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn subdivide_and_map(
     pairs: &DeinterleavedPairs,
     num_subs: &[i32],
@@ -78,6 +85,7 @@ fn subdivide_and_map(
     diameter: f64,
     degrees_input: bool,
     colors: Option<&[f32]>,
+    radial_offset: f64,
 ) -> (Vec<f32>, Option<Vec<f32>>) {
     let total = total_segments as usize;
     let mut result_verts: Vec<f32> = Vec::with_capacity(total * 6);
@@ -99,9 +107,9 @@ fn subdivide_and_map(
         let mut d_src = src2 - src1;
         let d_theta = theta2 - theta1;
 
-        if d_theta > PI {
+        if d_theta >= 2.0 * PI {
             d_src -= full_src;
-        } else if d_theta < -PI {
+        } else if d_theta <= -2.0 * PI {
             d_src += full_src;
         }
 
@@ -116,8 +124,8 @@ fn subdivide_and_map(
             let curr_src = src1 + curr_t * d_src;
             let curr_z = pairs.z1[pair] + curr_t * d_z;
 
-            let prev_eff_r = radius + prev_z;
-            let curr_eff_r = radius + curr_z;
+            let prev_eff_r = radius + prev_z + radial_offset;
+            let curr_eff_r = radius + curr_z + radial_offset;
 
             let theta_prev = src_to_radians(prev_src, diameter, degrees_input);
             let theta_curr = src_to_radians(curr_src, diameter, degrees_input);
@@ -162,6 +170,7 @@ pub fn transform_to_cylinder(
     diameter: f64,
     colors: Option<&[f32]>,
     degrees_input: bool,
+    radial_offset: f64,
 ) -> (Vec<f32>, Option<Vec<f32>>, Vec<i32>) {
     if verts.is_empty() || diameter <= 0.0 {
         return (verts.to_vec(), colors.map(|c| c.to_vec()), vec![0]);
@@ -187,7 +196,8 @@ pub fn transform_to_cylinder(
         .map(|&s| src_to_radians(s, diameter, degrees_input))
         .collect();
 
-    let (num_subs, total_segments) = compute_subdivisions(&theta1, &theta2);
+    let (num_subs, total_segments) =
+        compute_subdivisions(&theta1, &theta2, radius);
 
     let (result_verts, result_colors) = subdivide_and_map(
         &pairs,
@@ -197,6 +207,7 @@ pub fn transform_to_cylinder(
         diameter,
         degrees_input,
         colors,
+        radial_offset,
     );
 
     let cum_subs = cumulative_offsets(&num_subs);

@@ -28,6 +28,15 @@ def _flat_group(data):
     return groups[0]
 
 
+def _rotary_group(data):
+    groups = data.groups
+    assert len(groups) >= 1, f"expected >=1 group, got {len(groups)}"
+    for g in groups:
+        if g.is_rotary:
+            return g
+    return groups[0]
+
+
 # ── Basic structure ─────────────────────────────────────────────
 
 
@@ -438,6 +447,82 @@ def test_overlay_laser_index():
     ov_lid = g.overlay_attrib[1::4]
     assert ov_lid[0] == 0
     assert ov_lid[1] == 0
+
+
+def test_rotary_overlay_offsets_subdivided():
+    """Rotary overlay cmd_offsets are remapped after cylinder subdivision.
+
+    A scanline spanning >15 degrees of angular travel triggers
+    subdivision in transform_to_cylinder.  The overlay_cmd_offsets
+    must reflect the *post-subdivision* vertex count, otherwise the
+    3D canvas fades later segments as "pending" (fragmented lines).
+    """
+    ops = Ops()
+    ops.layer_start("rot")
+    ops.move_to(0.0, 0.0, 0.0, extra={Axis.A: 0.0})
+    ops.scan_to(
+        10.0,
+        0.0,
+        0.0,
+        power_values=bytes([255, 255, 255, 255]),
+        extra={Axis.A: 90.0},
+    )
+    ops.layer_end("rot")
+
+    configs = {
+        "rot": {
+            "rotary_enabled": True,
+            "rotary_diameter": 50.0,
+        },
+    }
+    data = _compile(ops, configs)
+    g = _rotary_group(data)
+
+    ov_pos = g.overlay_positions.reshape(-1, 3)
+    total_ov_verts = ov_pos.shape[0]
+
+    assert total_ov_verts > 2, "expected subdivision for 90-degree span"
+
+    ov_off = g.overlay_cmd_offsets
+    assert ov_off[-1] == total_ov_verts, (
+        f"overlay_cmd_offsets[-1]={ov_off[-1]} "
+        f"!= actual vertex count {total_ov_verts}; "
+        f"offsets were not remapped after subdivision"
+    )
+
+
+def test_rotary_overlay_offsets_parallel():
+    """Rotary overlay offsets are correct when scanlines are parallel
+    to the cylinder axis (no subdivision, small angular span)."""
+    ops = Ops()
+    ops.layer_start("rot")
+    ops.move_to(0.0, 0.0, 0.0, extra={Axis.A: 0.0})
+    ops.scan_to(
+        10.0,
+        0.0,
+        0.0,
+        power_values=bytes([255, 255, 255, 255]),
+        extra={Axis.A: 5.0},
+    )
+    ops.layer_end("rot")
+
+    configs = {
+        "rot": {
+            "rotary_enabled": True,
+            "rotary_diameter": 50.0,
+        },
+    }
+    data = _compile(ops, configs)
+    g = _rotary_group(data)
+
+    ov_pos = g.overlay_positions.reshape(-1, 3)
+    total_ov_verts = ov_pos.shape[0]
+    ov_off = g.overlay_cmd_offsets
+
+    assert ov_off[-1] == total_ov_verts, (
+        f"overlay_cmd_offsets[-1]={ov_off[-1]} "
+        f"!= actual vertex count {total_ov_verts}"
+    )
 
 
 # ── PyO3 binding: PySceneSpec / LayerConfig (Phase 4) ──────────

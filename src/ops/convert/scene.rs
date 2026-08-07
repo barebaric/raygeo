@@ -12,7 +12,9 @@
 use std::collections::HashMap;
 use std::f64::consts::PI;
 
-use crate::geo::algo::cylindrical::transform_to_cylinder;
+use crate::geo::algo::cylindrical::{
+    transform_to_cylinder, OVERLAY_RADIAL_OFFSET,
+};
 use crate::geo::shape::arc::linearize_arc;
 use crate::geo::shape::bezier::linearize_bezier_segment;
 use crate::geo::types::Point3D;
@@ -358,6 +360,7 @@ struct CylinderWrapped {
     ov_pos: Vec<f32>,
     ov_attrib: Vec<f32>,
     pv_expansion: Vec<(usize, Vec<i32>)>,
+    ov_expansion: Vec<(usize, Vec<i32>)>,
 }
 
 fn finalize_rotary_cylinder(acc: &Accumulator) -> Option<CylinderWrapped> {
@@ -368,6 +371,7 @@ fn finalize_rotary_cylinder(acc: &Accumulator) -> Option<CylinderWrapped> {
     let mut exp_ov_pos: Vec<Vec<f32>> = Vec::new();
     let mut exp_ov_attrib: Vec<Vec<f32>> = Vec::new();
     let mut pv_expansion: Vec<(usize, Vec<i32>)> = Vec::new();
+    let mut ov_expansion: Vec<(usize, Vec<i32>)> = Vec::new();
 
     for seg in &acc.rotary_segments {
         let d = seg.diameter;
@@ -379,7 +383,7 @@ fn finalize_rotary_cylinder(acc: &Accumulator) -> Option<CylinderWrapped> {
             let slice = &acc.pv[seg.pv_start * 3..seg.pv_end * 3];
             let colors = &acc.pva[seg.pv_start * 4..seg.pv_end * 4];
             let (wv, wc, cum) =
-                transform_to_cylinder(slice, d, Some(colors), true);
+                transform_to_cylinder(slice, d, Some(colors), true, 0.0);
             exp_pv.push(wv);
             exp_pva.push(wc.unwrap_or_default());
             pv_expansion.push((seg.pv_start, cum));
@@ -387,23 +391,29 @@ fn finalize_rotary_cylinder(acc: &Accumulator) -> Option<CylinderWrapped> {
 
         if seg.tv_end > seg.tv_start {
             let slice = &acc.tv[seg.tv_start * 3..seg.tv_end * 3];
-            let (wv, _, _) = transform_to_cylinder(slice, d, None, true);
+            let (wv, _, _) = transform_to_cylinder(slice, d, None, true, 0.0);
             exp_tv.push(wv);
         }
 
         if seg.zpv_end > seg.zpv_start {
             let slice = &acc.zpv[seg.zpv_start * 3..seg.zpv_end * 3];
-            let (wv, _, _) = transform_to_cylinder(slice, d, None, true);
+            let (wv, _, _) = transform_to_cylinder(slice, d, None, true, 0.0);
             exp_zpv.push(wv);
         }
 
         if seg.ov_end > seg.ov_start {
             let slice = &acc.ov_pos[seg.ov_start * 3..seg.ov_end * 3];
             let colors = &acc.ov_attrib[seg.ov_start * 4..seg.ov_end * 4];
-            let (wv, wc, _) =
-                transform_to_cylinder(slice, d, Some(colors), true);
+            let (wv, wc, cum) = transform_to_cylinder(
+                slice,
+                d,
+                Some(colors),
+                true,
+                OVERLAY_RADIAL_OFFSET,
+            );
             exp_ov_pos.push(wv);
             exp_ov_attrib.push(wc.unwrap_or_default());
+            ov_expansion.push((seg.ov_start, cum));
         }
     }
 
@@ -430,6 +440,7 @@ fn finalize_rotary_cylinder(acc: &Accumulator) -> Option<CylinderWrapped> {
         ov_pos,
         ov_attrib,
         pv_expansion,
+        ov_expansion,
     })
 }
 
@@ -888,6 +899,12 @@ fn finalize_acc(
                 remap_offsets(&acc.pv_off, &w.pv_expansion)
             };
 
+            let ov_off = if w.ov_expansion.is_empty() {
+                acc.ov_off.clone()
+            } else {
+                remap_offsets(&acc.ov_off, &w.ov_expansion)
+            };
+
             return VertexGroupData {
                 is_rotary: true,
                 powered_verts: w.pv,
@@ -898,7 +915,7 @@ fn finalize_acc(
                 travel_cmd_offsets: acc.tv_off.clone(),
                 overlay_positions: w.ov_pos,
                 overlay_attrib: w.ov_attrib,
-                overlay_cmd_offsets: acc.ov_off.clone(),
+                overlay_cmd_offsets: ov_off,
             };
         }
     } else {
