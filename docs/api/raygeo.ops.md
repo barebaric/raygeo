@@ -607,6 +607,30 @@ Add a cubic bezier curve to the given endpoint.
 | _Returns_    | `None`                       |                                     |
 | _Complexity_ |                              | O(1) time, O(1) space               |
 
+### `build_cumulative_time_index()`
+
+```python
+build_cumulative_time_index(
+    default_feed_rate: float = 1000.0,
+    default_rapid_rate: float = 3000.0,
+    acceleration: float = 1000.0,
+) -> list[float]
+```
+
+Cumulative execution time (seconds) of every command in the sequence.
+
+Returns a list with one entry per command, where entry *i* is the total simulated time elapsed once
+command *i* has executed. State changes (except dwells) and markers contribute zero time. The result
+is cached per parameter set and invalidated when the ops are mutated.
+
+| Parameter            | Type             | Description                                           |
+| -------------------- | ---------------- | ----------------------------------------------------- |
+| `default_feed_rate`  | `float = 1000.0` | Default feed rate (default 1000.0).                   |
+| `default_rapid_rate` | `float = 3000.0` | Default rapid rate (default 3000.0).                  |
+| `acceleration`       | `float = 1000.0` | Acceleration value (default 1000.0).                  |
+| _Returns_            | `list[float]`    | List of cumulative times in seconds, one per command. |
+| _Complexity_         |                  | O(n) time, O(1) space                                 |
+
 ### `category()`
 
 ```python
@@ -931,7 +955,8 @@ estimate_command_times(
 Estimate the time of each individual command in the sequence.
 
 Returns a list with one entry per command. Moving commands (MoveTo, LineTo, ArcTo, etc.) yield their
-estimated execution time in seconds. Non-moving commands (state changes, markers) yield 0.0.
+estimated execution time in seconds. Dwell commands yield their dwell duration in seconds. Other
+non-moving commands (state changes, markers) yield 0.0.
 
 | Parameter            | Type             | Description                                          |
 | -------------------- | ---------------- | ---------------------------------------------------- |
@@ -1002,6 +1027,31 @@ Extract commands `[start, end)` into a new Ops.
 | `start`   | `int` |             |
 | `end`     | `int` |             |
 | _Returns_ | `Ops` |             |
+
+### `find_index_at_time()`
+
+```python
+find_index_at_time(
+    t: float,
+    default_feed_rate: float = 1000.0,
+    default_rapid_rate: float = 3000.0,
+    acceleration: float = 1000.0,
+) -> int
+```
+
+Find the command index in effect at simulated time *t* (seconds).
+
+Returns the largest index whose cumulative execution time is \<= *t*, clamped to `[0, len-1]`.
+Returns 0 for an empty ops or for times before the first command's completion.
+
+| Parameter            | Type             | Description                              |
+| -------------------- | ---------------- | ---------------------------------------- |
+| `t`                  | `float`          | Simulated time in seconds.               |
+| `default_feed_rate`  | `float = 1000.0` | Default feed rate (default 1000.0).      |
+| `default_rapid_rate` | `float = 3000.0` | Default rapid rate (default 3000.0).     |
+| `acceleration`       | `float = 1000.0` | Acceleration value (default 1000.0).     |
+| _Returns_            | `int`            | The command index in effect at time *t*. |
+| _Complexity_         |                  | O(n) time, O(1) space                    |
 
 ### `flip_ops()`
 
@@ -1254,6 +1304,30 @@ and alpha channel, then emits move-to/scan-to commands with the modulated power.
 | `dot_width_correction_mm` | `float = 0.0`                             | Shortens laser firing by this distance at each end of every engraved run, compensating for the laser spot's physical width. Geometry is unaffected. |
 | _Returns_                 | `Ops`                                     | A new **Ops** container.                                                                                                                            |
 | _Complexity_              |                                           | O(h * w + n * p) where h, w = image dimensions, n = scan lines, p = pixels per line                                                                 |
+
+### `get_cumulative_time_at()`
+
+```python
+get_cumulative_time_at(
+    idx: int,
+    default_feed_rate: float = 1000.0,
+    default_rapid_rate: float = 3000.0,
+    acceleration: float = 1000.0,
+) -> float
+```
+
+Cumulative simulated time (seconds) up to and including command *idx*.
+
+Out-of-range indices clamp to the nearest valid command; empty ops yield 0.0.
+
+| Parameter            | Type             | Description                           |
+| -------------------- | ---------------- | ------------------------------------- |
+| `idx`                | `int`            | Command index.                        |
+| `default_feed_rate`  | `float = 1000.0` | Default feed rate (default 1000.0).   |
+| `default_rapid_rate` | `float = 3000.0` | Default rapid rate (default 3000.0).  |
+| `acceleration`       | `float = 1000.0` | Acceleration value (default 1000.0).  |
+| _Returns_            | `float`          | Cumulative simulated time in seconds. |
+| _Complexity_         |                  | O(n) time, O(1) space                 |
 
 ### `get_frame()`
 
@@ -1825,7 +1899,7 @@ Get the feed/rapid rate from a SetFeedRate or SetRapidRate command.
 | Parameter    | Type  | Description           |
 | ------------ | ----- | --------------------- |
 | `idx`        | `int` | Command index.        |
-| _Returns_    | `int` | Rate in mm/s.         |
+| _Returns_    | `int` | Rate in mm/min.       |
 | _Complexity_ |       | O(1) time, O(1) space |
 
 ### `rect()`
@@ -2095,11 +2169,11 @@ set_feed_rate(feed_rate: float) -> None
 
 Set the feed rate for subsequent commands.
 
-| Parameter    | Type    | Description                    |
-| ------------ | ------- | ------------------------------ |
-| `feed_rate`  | `float` | Feed rate in units per second. |
-| _Returns_    | `None`  |                                |
-| _Complexity_ |         | O(1) time, O(1) space          |
+| Parameter    | Type    | Description           |
+| ------------ | ------- | --------------------- |
+| `feed_rate`  | `float` | Feed rate in mm/min.  |
+| _Returns_    | `None`  |                       |
+| _Complexity_ |         | O(1) time, O(1) space |
 
 ### `set_frequency()`
 
@@ -2179,11 +2253,11 @@ set_rapid_rate(rapid_rate: float) -> None
 
 Set the rapid (traverse) rate for subsequent commands.
 
-| Parameter    | Type    | Description                     |
-| ------------ | ------- | ------------------------------- |
-| `rapid_rate` | `float` | Rapid rate in units per second. |
-| _Returns_    | `None`  |                                 |
-| _Complexity_ |         | O(1) time, O(1) space           |
+| Parameter    | Type    | Description           |
+| ------------ | ------- | --------------------- |
+| `rapid_rate` | `float` | Rapid rate in mm/min. |
+| _Returns_    | `None`  |                       |
+| _Complexity_ |         | O(1) time, O(1) space |
 
 ### `set_spindle_rpm()`
 

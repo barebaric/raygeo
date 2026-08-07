@@ -17,6 +17,7 @@ pub struct Ops {
     pub time_dirty: bool,
     pub cached_time: f64,
     pub time_params: Option<(f64, f64, f64)>,
+    pub cached_time_index: Vec<f64>,
 }
 
 impl Ops {
@@ -27,6 +28,7 @@ impl Ops {
             time_dirty: true,
             cached_time: 0.0,
             time_params: None,
+            cached_time_index: Vec::new(),
         }
     }
 
@@ -454,6 +456,7 @@ impl Ops {
         new_ops.time_dirty = self.time_dirty;
         new_ops.cached_time = self.cached_time;
         new_ops.time_params = self.time_params;
+        new_ops.cached_time_index = self.cached_time_index.clone();
         new_ops
     }
 

@@ -475,7 +475,7 @@ class Ops:
         Get the feed/rapid rate from a SetFeedRate or SetRapidRate command.
         
         :param idx: Command index.
-        :returns: Rate in mm/s.
+        :returns: Rate in mm/min.
         :raises TypeError: If the command is not a rate command.
         :complexity: O(1) time, O(1) space
         """
@@ -654,14 +654,14 @@ class Ops:
         r"""
         Set the feed rate for subsequent commands.
         
-        :param feed_rate: Feed rate in units per second.
+        :param feed_rate: Feed rate in mm/min.
         :complexity: O(1) time, O(1) space
         """
     def set_rapid_rate(self, rapid_rate: builtins.float) -> None:
         r"""
         Set the rapid (traverse) rate for subsequent commands.
         
-        :param rapid_rate: Rapid rate in units per second.
+        :param rapid_rate: Rapid rate in mm/min.
         :complexity: O(1) time, O(1) space
         """
     def dwell(self, duration_ms: builtins.float) -> None:
@@ -1238,7 +1238,8 @@ class Ops:
         
         Returns a list with one entry per command. Moving commands
         (MoveTo, LineTo, ArcTo, etc.) yield their estimated execution
-        time in seconds. Non-moving commands (state changes, markers)
+        time in seconds. Dwell commands yield their dwell duration in
+        seconds. Other non-moving commands (state changes, markers)
         yield 0.0.
         
         :param default_feed_rate: Default feed rate (default 1000.0).
@@ -1246,6 +1247,52 @@ class Ops:
         :param acceleration: Acceleration value (default 1000.0).
         :returns: List of estimated times in seconds, one per command.
         :complexity: O(n) time, O(n) space
+        """
+    def build_cumulative_time_index(self, default_feed_rate: builtins.float = 1000.0, default_rapid_rate: builtins.float = 3000.0, acceleration: builtins.float = 1000.0) -> builtins.list[builtins.float]:
+        r"""
+        Cumulative execution time (seconds) of every command in the
+        sequence.
+        
+        Returns a list with one entry per command, where entry *i* is
+        the total simulated time elapsed once command *i* has executed.
+        State changes (except dwells) and markers contribute zero time.
+        The result is cached per parameter set and invalidated when the
+        ops are mutated.
+        
+        :param default_feed_rate: Default feed rate (default 1000.0).
+        :param default_rapid_rate: Default rapid rate (default 3000.0).
+        :param acceleration: Acceleration value (default 1000.0).
+        :returns: List of cumulative times in seconds, one per command.
+        :complexity: O(n) time, O(1) space
+        """
+    def find_index_at_time(self, t: builtins.float, default_feed_rate: builtins.float = 1000.0, default_rapid_rate: builtins.float = 3000.0, acceleration: builtins.float = 1000.0) -> builtins.int:
+        r"""
+        Find the command index in effect at simulated time *t* (seconds).
+        
+        Returns the largest index whose cumulative execution time is
+        <= *t*, clamped to ``[0, len-1]``. Returns 0 for an empty ops
+        or for times before the first command's completion.
+        
+        :param t: Simulated time in seconds.
+        :param default_feed_rate: Default feed rate (default 1000.0).
+        :param default_rapid_rate: Default rapid rate (default 3000.0).
+        :param acceleration: Acceleration value (default 1000.0).
+        :returns: The command index in effect at time *t*.
+        :complexity: O(n) time, O(1) space
+        """
+    def get_cumulative_time_at(self, idx: builtins.int, default_feed_rate: builtins.float = 1000.0, default_rapid_rate: builtins.float = 3000.0, acceleration: builtins.float = 1000.0) -> builtins.float:
+        r"""
+        Cumulative simulated time (seconds) up to and including command *idx*.
+        
+        Out-of-range indices clamp to the nearest valid command; empty
+        ops yield 0.0.
+        
+        :param idx: Command index.
+        :param default_feed_rate: Default feed rate (default 1000.0).
+        :param default_rapid_rate: Default rapid rate (default 3000.0).
+        :param acceleration: Acceleration value (default 1000.0).
+        :returns: Cumulative simulated time in seconds.
+        :complexity: O(n) time, O(1) space
         """
     def to_dict(self) -> dict:
         r"""

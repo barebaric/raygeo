@@ -1093,7 +1093,7 @@ impl PyOps {
     /// Get the feed/rapid rate from a SetFeedRate or SetRapidRate command.
     ///
     /// :param idx: Command index.
-    /// :returns: Rate in mm/s.
+    /// :returns: Rate in mm/min.
     /// :raises TypeError: If the command is not a rate command.
     /// :complexity: O(1) time, O(1) space
     fn rate(&self, idx: usize) -> PyResult<i32> {
@@ -1545,7 +1545,7 @@ impl PyOps {
 
     /// Set the feed rate for subsequent commands.
     ///
-    /// :param feed_rate: Feed rate in units per second.
+    /// :param feed_rate: Feed rate in mm/min.
     /// :complexity: O(1) time, O(1) space
     fn set_feed_rate(&mut self, feed_rate: f64) {
         self.inner.set_feed_rate(feed_rate as i32);
@@ -1553,7 +1553,7 @@ impl PyOps {
 
     /// Set the rapid (traverse) rate for subsequent commands.
     ///
-    /// :param rapid_rate: Rapid rate in units per second.
+    /// :param rapid_rate: Rapid rate in mm/min.
     /// :complexity: O(1) time, O(1) space
     fn set_rapid_rate(&mut self, rapid_rate: f64) {
         self.inner.set_rapid_rate(rapid_rate as i32);
@@ -2702,7 +2702,8 @@ impl PyOps {
     ///
     /// Returns a list with one entry per command. Moving commands
     /// (MoveTo, LineTo, ArcTo, etc.) yield their estimated execution
-    /// time in seconds. Non-moving commands (state changes, markers)
+    /// time in seconds. Dwell commands yield their dwell duration in
+    /// seconds. Other non-moving commands (state changes, markers)
     /// yield 0.0.
     ///
     /// :param default_feed_rate: Default feed rate (default 1000.0).
@@ -2718,6 +2719,91 @@ impl PyOps {
         acceleration: f64,
     ) -> Vec<f64> {
         self.inner.estimate_command_times(
+            default_feed_rate,
+            default_rapid_rate,
+            acceleration,
+        )
+    }
+
+    /// Cumulative execution time (seconds) of every command in the
+    /// sequence.
+    ///
+    /// Returns a list with one entry per command, where entry *i* is
+    /// the total simulated time elapsed once command *i* has executed.
+    /// State changes (except dwells) and markers contribute zero time.
+    /// The result is cached per parameter set and invalidated when the
+    /// ops are mutated.
+    ///
+    /// :param default_feed_rate: Default feed rate (default 1000.0).
+    /// :param default_rapid_rate: Default rapid rate (default 3000.0).
+    /// :param acceleration: Acceleration value (default 1000.0).
+    /// :returns: List of cumulative times in seconds, one per command.
+    /// :complexity: O(n) time, O(1) space
+    #[pyo3(signature = (default_feed_rate = 1000.0, default_rapid_rate = 3000.0, acceleration = 1000.0))]
+    fn build_cumulative_time_index(
+        &mut self,
+        default_feed_rate: f64,
+        default_rapid_rate: f64,
+        acceleration: f64,
+    ) -> Vec<f64> {
+        self.inner
+            .build_cumulative_time_index(
+                default_feed_rate,
+                default_rapid_rate,
+                acceleration,
+            )
+            .to_vec()
+    }
+
+    /// Find the command index in effect at simulated time *t* (seconds).
+    ///
+    /// Returns the largest index whose cumulative execution time is
+    /// <= *t*, clamped to ``[0, len-1]``. Returns 0 for an empty ops
+    /// or for times before the first command's completion.
+    ///
+    /// :param t: Simulated time in seconds.
+    /// :param default_feed_rate: Default feed rate (default 1000.0).
+    /// :param default_rapid_rate: Default rapid rate (default 3000.0).
+    /// :param acceleration: Acceleration value (default 1000.0).
+    /// :returns: The command index in effect at time *t*.
+    /// :complexity: O(n) time, O(1) space
+    #[pyo3(signature = (t, default_feed_rate = 1000.0, default_rapid_rate = 3000.0, acceleration = 1000.0))]
+    fn find_index_at_time(
+        &mut self,
+        t: f64,
+        default_feed_rate: f64,
+        default_rapid_rate: f64,
+        acceleration: f64,
+    ) -> usize {
+        self.inner.find_index_at_time(
+            t,
+            default_feed_rate,
+            default_rapid_rate,
+            acceleration,
+        )
+    }
+
+    /// Cumulative simulated time (seconds) up to and including command *idx*.
+    ///
+    /// Out-of-range indices clamp to the nearest valid command; empty
+    /// ops yield 0.0.
+    ///
+    /// :param idx: Command index.
+    /// :param default_feed_rate: Default feed rate (default 1000.0).
+    /// :param default_rapid_rate: Default rapid rate (default 3000.0).
+    /// :param acceleration: Acceleration value (default 1000.0).
+    /// :returns: Cumulative simulated time in seconds.
+    /// :complexity: O(n) time, O(1) space
+    #[pyo3(signature = (idx, default_feed_rate = 1000.0, default_rapid_rate = 3000.0, acceleration = 1000.0))]
+    fn get_cumulative_time_at(
+        &mut self,
+        idx: usize,
+        default_feed_rate: f64,
+        default_rapid_rate: f64,
+        acceleration: f64,
+    ) -> f64 {
+        self.inner.get_cumulative_time_at(
+            idx,
             default_feed_rate,
             default_rapid_rate,
             acceleration,

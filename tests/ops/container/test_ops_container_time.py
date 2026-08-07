@@ -458,3 +458,325 @@ def test_estimate_time_complex_path():
     time_est = ops.estimate_time(acceleration=0)
     expected_time = 8.0 + 2.0 + 3.0
     assert time_est == pytest.approx(expected_time, rel=1e-3)
+
+
+# --- build_cumulative_time_index ---
+
+
+def test_build_cumulative_time_index_empty():
+    ops = Ops()
+    assert ops.build_cumulative_time_index() == []
+
+
+def test_build_cumulative_time_index_length_matches_commands():
+    ops = Ops()
+    ops.move_to(10, 10, 0)
+    ops.set_feed_rate(500)
+    ops.line_to(20, 0, 0)
+    ops.set_power(0.5)
+    ops.line_to(30, 0, 0)
+    index = ops.build_cumulative_time_index()
+    assert len(index) == ops.len()
+
+
+def test_build_cumulative_time_index_monotonic():
+    ops = Ops()
+    ops.move_to(0, 0)
+    ops.line_to(10, 0)
+    ops.move_to(10, 10)
+    ops.line_to(0, 10)
+    index = ops.build_cumulative_time_index()
+    assert all(a <= b for a, b in zip(index, index[1:]))
+
+
+def test_build_cumulative_time_index_last_equals_estimate_time():
+    ops = Ops()
+    ops.move_to(0, 0)
+    ops.set_feed_rate(600)
+    ops.line_to(50, 0)
+    ops.set_rapid_rate(1200)
+    ops.move_to(50, 50)
+    ops.line_to(0, 0)
+    index = ops.build_cumulative_time_index()
+    total = ops.estimate_time()
+    assert index[-1] == pytest.approx(total, rel=1e-10)
+
+
+def test_build_cumulative_time_index_matches_prefix_sums():
+    ops = Ops()
+    ops.move_to(0, 0)
+    ops.set_feed_rate(600)
+    ops.line_to(50, 0)
+    ops.set_rapid_rate(1200)
+    ops.move_to(50, 50)
+    ops.line_to(0, 0)
+    index = ops.build_cumulative_time_index(acceleration=0)
+    times = ops.estimate_command_times(acceleration=0)
+    running = 0.0
+    for cum, t in zip(index, times):
+        running += t
+        assert cum == pytest.approx(running, rel=1e-10)
+
+
+def test_build_cumulative_time_index_state_commands_share_time():
+    ops = Ops()
+    ops.line_to(10, 0, 0)
+    ops.set_feed_rate(600)
+    ops.set_power(0.8)
+    ops.line_to(20, 0, 0)
+    index = ops.build_cumulative_time_index(acceleration=0)
+    # State commands contribute zero time: indices 1 and 2 equal index 0.
+    assert index[1] == pytest.approx(index[0], rel=1e-10)
+    assert index[2] == pytest.approx(index[0], rel=1e-10)
+    assert index[3] > index[2]
+
+
+def test_build_cumulative_time_index_dwell_advances_time():
+    ops = Ops()
+    ops.line_to(10, 0, 0)
+    ops.dwell(500.0)
+    index = ops.build_cumulative_time_index(acceleration=0)
+    assert len(index) == 2
+    assert index[1] == pytest.approx(index[0] + 0.5, rel=1e-10)
+
+
+def test_build_cumulative_time_index_dwell_in_estimate():
+    ops = Ops()
+    ops.line_to(10, 0, 0)
+    ops.dwell(250.0)
+    total = ops.estimate_time(acceleration=0)
+    assert total == pytest.approx(0.6 + 0.25, rel=1e-9)
+
+
+def test_build_cumulative_time_index_caching():
+    ops = Ops()
+    ops.line_to(60, 0, 0)
+    index1 = ops.build_cumulative_time_index(acceleration=0)
+    index2 = ops.build_cumulative_time_index(acceleration=0)
+    assert index1 == index2
+
+
+def test_build_cumulative_time_index_cache_keyed_on_params():
+    ops = Ops()
+    ops.line_to(60, 0, 0)
+    index_fast = ops.build_cumulative_time_index(
+        default_feed_rate=1200.0, acceleration=0
+    )
+    index_slow = ops.build_cumulative_time_index(
+        default_feed_rate=600.0, acceleration=0
+    )
+    assert index_fast[-1] == pytest.approx(3.0, rel=1e-9)
+    assert index_slow[-1] == pytest.approx(6.0, rel=1e-9)
+
+
+def test_build_cumulative_time_index_cache_invalidated_on_add():
+    ops = Ops()
+    ops.line_to(10, 0, 0)
+    index_before = ops.build_cumulative_time_index(acceleration=0)
+    ops.line_to(20, 0, 0)
+    index_after = ops.build_cumulative_time_index(acceleration=0)
+    assert index_after[-1] != index_before[-1]
+    assert len(index_after) == 2
+
+
+def test_build_cumulative_time_index_cache_invalidated_on_clear():
+    ops = Ops()
+    ops.line_to(10, 0, 0)
+    ops.build_cumulative_time_index()
+    ops.clear()
+    assert ops.build_cumulative_time_index() == []
+
+
+def test_build_cumulative_time_index_with_acceleration():
+    ops = Ops()
+    ops.line_to(10, 0, 0)
+    index_no_accel = ops.build_cumulative_time_index(acceleration=0)
+    index_accel = ops.build_cumulative_time_index(acceleration=1000.0)
+    assert index_accel[-1] > index_no_accel[-1]
+
+
+# --- find_index_at_time ---
+
+
+def test_find_index_at_time_empty():
+    ops = Ops()
+    assert ops.find_index_at_time(1.0) == 0
+
+
+def test_find_index_at_time_zero():
+    ops = Ops()
+    ops.line_to(60, 0, 0)
+    assert ops.find_index_at_time(0.0) == 0
+
+
+def test_find_index_at_time_before_first_completion():
+    ops = Ops()
+    ops.line_to(60, 0, 0)  # 60mm at default feed 1000mm/min = 3.6s
+    index = ops.build_cumulative_time_index(acceleration=0)
+    assert index[0] == pytest.approx(3.6, rel=1e-9)
+    # Any t < 3.6s maps to index 0.
+    assert ops.find_index_at_time(3.0, acceleration=0) == 0
+
+
+def test_find_index_at_time_after_end():
+    ops = Ops()
+    ops.line_to(60, 0, 0)
+    assert ops.find_index_at_time(100.0) == 0
+    ops.line_to(60, 60, 0)
+    assert ops.find_index_at_time(100.0) == 1
+
+
+def test_find_index_at_time_exact_boundary():
+    ops = Ops()
+    ops.set_feed_rate(600)  # 10 mm/s
+    ops.line_to(50, 0, 0)  # 5s
+    ops.line_to(50, 25, 0)  # 2.5s
+    # Cum times: [0, 5, 7.5].
+    # Before the first move completes, we stay at index 0.
+    assert ops.find_index_at_time(0.5, acceleration=0) == 0
+    assert ops.find_index_at_time(4.9, acceleration=0) == 0
+    # At t=5.0, the 5s move (index 1) has completed.
+    assert ops.find_index_at_time(5.0, acceleration=0) == 1
+    # During the second move the playhead still sits on index 1.
+    assert ops.find_index_at_time(7.4, acceleration=0) == 1
+    # At t=7.5 the second move completes.
+    assert ops.find_index_at_time(7.5, acceleration=0) == 2
+    assert ops.find_index_at_time(7.6, acceleration=0) == 2
+
+
+def test_find_index_at_time_skips_state_commands():
+    ops = Ops()
+    ops.set_feed_rate(600)  # 10 mm/s
+    ops.line_to(60, 0, 0)  # 6s
+    ops.set_feed_rate(1200)  # 20 mm/s
+    ops.line_to(60, 60, 0)  # 3s
+    ops.set_power(0.5)
+    ops.line_to(60, 0, 0)  # 3s
+    index = ops.build_cumulative_time_index(acceleration=0)
+    # Cum times: [0, 6, 6, 9, 9, 12].
+    assert ops.find_index_at_time(0.5, acceleration=0) == 0
+    # The 6s move (index 1) completes at t=6; the state command at
+    # index 2 shares the same cumulative time, so it is the largest
+    # completed index.
+    assert ops.find_index_at_time(6.0, acceleration=0) == 2
+    assert ops.find_index_at_time(8.9, acceleration=0) == 2
+    # The state command at index 4 shares cum time with move at index 3.
+    assert ops.find_index_at_time(9.0, acceleration=0) == 4
+    assert ops.find_index_at_time(11.9, acceleration=0) == 4
+    assert ops.find_index_at_time(12.0, acceleration=0) == 5
+    assert index[-1] == pytest.approx(12.0, rel=1e-9)
+
+
+def test_find_index_at_time_custom_speeds():
+    ops = Ops()
+    ops.move_to(100, 0, 0)  # 100mm travel at 2400mm/min = 2.5s
+    ops.line_to(200, 0, 0)  # 100mm cut at 1200mm/min = 5s
+    index = ops.build_cumulative_time_index(
+        default_feed_rate=1200.0,
+        default_rapid_rate=2400.0,
+        acceleration=0,
+    )
+    assert index == [2.5, 7.5]
+    # The playhead rests on the last completed command: index 0 until
+    # the second command completes at t=7.5.
+    assert (
+        ops.find_index_at_time(
+            2.4,
+            default_feed_rate=1200.0,
+            default_rapid_rate=2400.0,
+            acceleration=0,
+        )
+        == 0
+    )
+    assert (
+        ops.find_index_at_time(
+            2.5,
+            default_feed_rate=1200.0,
+            default_rapid_rate=2400.0,
+            acceleration=0,
+        )
+        == 0
+    )
+    assert (
+        ops.find_index_at_time(
+            7.4,
+            default_feed_rate=1200.0,
+            default_rapid_rate=2400.0,
+            acceleration=0,
+        )
+        == 0
+    )
+    assert (
+        ops.find_index_at_time(
+            7.5,
+            default_feed_rate=1200.0,
+            default_rapid_rate=2400.0,
+            acceleration=0,
+        )
+        == 1
+    )
+
+
+def test_find_index_at_time_with_acceleration():
+    ops = Ops()
+    ops.line_to(10, 0, 0)
+    no_accel = ops.build_cumulative_time_index(acceleration=0)
+    accel = ops.build_cumulative_time_index(acceleration=1000.0)
+    assert accel[-1] > no_accel[-1]
+    # A time just past the no-accel completion is still inside the
+    # accelerated move (which takes longer).
+    t = no_accel[-1] + 0.01
+    assert ops.find_index_at_time(t, acceleration=1000.0) == 0
+
+
+def test_find_index_at_time_cache_invalidated_on_add():
+    ops = Ops()
+    ops.line_to(60, 0, 0)
+    assert ops.find_index_at_time(9.5) == 0
+    ops.line_to(60, 60, 0)
+    assert ops.find_index_at_time(9.5) == 1
+
+
+# --- get_cumulative_time_at ---
+
+
+def test_get_cumulative_time_at_empty():
+    ops = Ops()
+    assert ops.get_cumulative_time_at(0) == 0.0
+
+
+def test_get_cumulative_time_at_matches_index():
+    ops = Ops()
+    ops.move_to(0, 0)
+    ops.set_feed_rate(600)
+    ops.line_to(50, 0)
+    ops.set_rapid_rate(1200)
+    ops.move_to(50, 50)
+    index = ops.build_cumulative_time_index(acceleration=0)
+    for i in range(ops.len()):
+        assert ops.get_cumulative_time_at(i, acceleration=0) == pytest.approx(
+            index[i], rel=1e-10
+        )
+
+
+def test_get_cumulative_time_at_out_of_range():
+    ops = Ops()
+    ops.move_to(0, 0)
+    ops.line_to(50, 0)
+    total = ops.estimate_time(acceleration=0)
+    assert ops.get_cumulative_time_at(99, acceleration=0) == pytest.approx(
+        total, rel=1e-10
+    )
+
+
+def test_get_cumulative_time_at_last_equals_estimate_time():
+    ops = Ops()
+    ops.move_to(0, 0)
+    ops.set_feed_rate(600)
+    ops.line_to(50, 0)
+    ops.set_rapid_rate(1200)
+    ops.move_to(50, 50)
+    total = ops.estimate_time()
+    assert ops.get_cumulative_time_at(ops.len() - 1) == pytest.approx(
+        total, rel=1e-10
+    )
