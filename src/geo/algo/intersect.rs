@@ -114,7 +114,7 @@ fn data_intersect(
 
     for ri1 in &rows1 {
         let query = ri1.aabb();
-        for ri2 in tree.locate_in_envelope_intersecting(&query) {
+        for ri2 in tree.locate_in_envelope_intersecting(query) {
             if is_self_check && ri2.index <= ri1.index {
                 continue;
             }
