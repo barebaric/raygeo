@@ -189,7 +189,7 @@ pub fn find_narrow_passages(
         let edy = entry.b.y - entry.a.y;
         let elen2 = edx * edx + edy * edy;
 
-        for candidate in tree.locate_in_envelope(&bbox) {
+        for candidate in tree.locate_in_envelope(bbox) {
             if is_excluded(
                 entry.poly_id,
                 entry.edge_idx,

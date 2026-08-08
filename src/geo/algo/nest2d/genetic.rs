@@ -1,5 +1,5 @@
 use rand::rngs::ThreadRng;
-use rand::Rng;
+use rand::RngExt;
 
 /// Probability of flipping a part horizontally or vertically when generating
 /// a random individual.

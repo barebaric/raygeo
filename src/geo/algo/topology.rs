@@ -205,8 +205,7 @@ pub fn build_hierarchy(contours: &[&Geometry]) -> ContourHierarchy {
 
         // O(log n + k) query: only check contours whose bounding boxes contain the test point.
         let point_envelope = AABB::from_point(tp);
-        for candidate in rtree.locate_in_envelope_intersecting(&point_envelope)
-        {
+        for candidate in rtree.locate_in_envelope_intersecting(point_envelope) {
             let j = candidate.index;
             if i == j {
                 continue;

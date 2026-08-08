@@ -220,7 +220,7 @@ fn kdtree_order_workpieces(metas: &mut [WorkpieceMeta]) -> Vec<WorkpieceMeta> {
     });
 
     while ordered.len() < n {
-        let sp = match tree.nearest_neighbor(&current_pos) {
+        let sp = match tree.nearest_neighbor(current_pos) {
             Some(sp) => sp,
             None => break,
         };
@@ -433,7 +433,7 @@ fn kdtree_order_segments(segments: &mut [Ops], allow_flip: bool) -> Vec<Ops> {
     });
 
     while ordered.len() < n {
-        let sp = match tree.nearest_neighbor(&current_pos) {
+        let sp = match tree.nearest_neighbor(current_pos) {
             Some(sp) => sp,
             None => break,
         };
