@@ -19,8 +19,6 @@ exercise both external invalidation and the cache-hit / cache-miss
 behavior.
 """
 
-from typing import List
-
 from conftest import (
     make_square_part,
     result_ops,
@@ -94,7 +92,7 @@ def _contour_node(
 
 def _run_pipeline(p: Pipeline, nodes):
     """Run nodes through the given Pipeline, return completions by key."""
-    completed: List[CompletedNode] = []
+    completed: list[CompletedNode] = []
     p.execute(nodes, completed.append, None)
     return {c.key: c for c in completed}
 

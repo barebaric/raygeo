@@ -20,8 +20,6 @@ excluded here so the suite stays fast; they have their own
 dedicated files.
 """
 
-from typing import List
-
 import numpy as np
 from conftest import (
     collect_completions,
@@ -103,7 +101,7 @@ def _leaf(key: str, assembler: Assembler, part: Part) -> NodeRequest:
     )
 
 
-def _aggregate(key: str, source_keys: List[str]) -> NodeRequest:
+def _aggregate(key: str, source_keys: list[str]) -> NodeRequest:
     return NodeRequest(
         key=key,
         generation_id=1,
@@ -145,7 +143,7 @@ def _encode(key: str, source_key: str) -> NodeRequest:
     )
 
 
-def _build_leaves() -> List[NodeRequest]:
+def _build_leaves() -> list[NodeRequest]:
     # Each leaf gets its OWN fresh Part instance: the converter
     # empties the Python-side Part on dispatch, so an instance may
     # only be used by a single compute node.

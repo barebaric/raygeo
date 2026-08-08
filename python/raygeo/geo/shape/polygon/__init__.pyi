@@ -406,7 +406,7 @@ def get_polygons_difference(poly1: collections.abc.Sequence[types.Point], poly2:
     :complexity: O(n log n)
     """
 
-def get_polygons_group_difference(subject: typing.Sequence[types.Polygon], clip: typing.Sequence[types.Polygon]) -> list[types.Polygon]:
+def get_polygons_group_difference(subject: collections.abc.Sequence[types.Polygon], clip: collections.abc.Sequence[types.Polygon]) -> list[types.Polygon]:
     r"""
     Subtract clip polygons from subject polygons.
     
@@ -416,7 +416,7 @@ def get_polygons_group_difference(subject: typing.Sequence[types.Polygon], clip:
     :complexity: O(n log n)
     """
 
-def get_polygons_group_intersection(subject: typing.Sequence[types.Polygon], clip: typing.Sequence[types.Polygon]) -> list[types.Polygon]:
+def get_polygons_group_intersection(subject: collections.abc.Sequence[types.Polygon], clip: collections.abc.Sequence[types.Polygon]) -> list[types.Polygon]:
     r"""
     Intersect two groups of polygons (subject & clip).
     

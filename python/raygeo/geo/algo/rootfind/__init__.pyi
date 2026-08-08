@@ -4,6 +4,7 @@ r"""
 1D root-finding methods: bisection, solve_secant, Illinois.
 """
 
+import collections.abc
 import typing
 __all__ = [
     "bisect",
@@ -15,7 +16,7 @@ __all__ = [
     "solve_secant_tracked",
 ]
 
-def bisect(f: typing.Callable[[float], float], lo: float, hi: float, tol: float = 0.0000000001, max_iter: int = 100) -> tuple[float, str, int]:
+def bisect(f: collections.abc.Callable[[float], float], lo: float, hi: float, tol: float = 0.0000000001, max_iter: int = 100) -> tuple[float, str, int]:
     r"""
     Bisection root-finding.
     
@@ -39,7 +40,7 @@ def bisect_tracked(f: typing.Any, lo: float, hi: float, tol: float = 0.000000000
     :returns: ``(root, status_string, iteration_count, history)``.
     """
 
-def bracket_grid(f: typing.Callable[[float], float], heading: float, max_deflection: float) -> tuple[float, str, int]:
+def bracket_grid(f: collections.abc.Callable[[float], float], heading: float, max_deflection: float) -> tuple[float, str, int]:
     r"""
     7-sample angular grid search with linear interpolation.
     
@@ -55,7 +56,7 @@ def bracket_grid(f: typing.Callable[[float], float], heading: float, max_deflect
     :returns: ``(root, status_string, sample_count)``.
     """
 
-def solve_illinois(f: typing.Callable[[float], float], lo: float, hi: float, tol: float = 0.0000000001, max_iter: int = 100) -> tuple[float, str, int]:
+def solve_illinois(f: collections.abc.Callable[[float], float], lo: float, hi: float, tol: float = 0.0000000001, max_iter: int = 100) -> tuple[float, str, int]:
     r"""
     Illinois (safeguarded false-position) root-finding.
     
@@ -79,7 +80,7 @@ def solve_illinois_tracked(f: typing.Any, lo: float, hi: float, tol: float = 0.0
     :returns: ``(root, status_string, iteration_count, history)``.
     """
 
-def solve_secant(f: typing.Callable[[float], float], x0: float, x1: float, tol: float = 0.0000000001, max_iter: int = 100) -> tuple[float, str, int]:
+def solve_secant(f: collections.abc.Callable[[float], float], x0: float, x1: float, tol: float = 0.0000000001, max_iter: int = 100) -> tuple[float, str, int]:
     r"""
     Secant root-finding.
     

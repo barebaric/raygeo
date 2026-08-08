@@ -16,8 +16,6 @@ does not cache results, so transformer caching there is a no-op
 non-caching application verification).
 """
 
-from typing import List
-
 import pytest
 from conftest import (
     collect_completions,
@@ -63,7 +61,7 @@ def _contour_node(key: str, transformers=None) -> NodeRequest:
     )
 
 
-def _agg(key: str, source_keys: List[str], transformers=None) -> NodeRequest:
+def _agg(key: str, source_keys: list[str], transformers=None) -> NodeRequest:
     return NodeRequest(
         key=key,
         generation_id=1,

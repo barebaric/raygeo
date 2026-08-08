@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 import pytest
 
@@ -400,7 +400,7 @@ SPEC_CLASSES = {
 }
 
 
-def _load_spec(spec_dict: Dict[str, Any]):
+def _load_spec(spec_dict: dict[str, Any]):
     cls = SPEC_CLASSES[spec_dict["__type__"]]
     kwargs = {k: v for k, v in spec_dict.items() if k != "__type__"}
     if cls is TabsSpec:
@@ -412,7 +412,7 @@ def _load_spec(spec_dict: Dict[str, Any]):
     return cls(**kwargs)
 
 
-def _fixture_names() -> List[str]:
+def _fixture_names() -> list[str]:
     ops_files = sorted(FIXTURE_DIR.glob("*.ops.json"))
     return [f.stem.removesuffix(".ops") for f in ops_files]
 

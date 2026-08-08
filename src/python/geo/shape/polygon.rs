@@ -1225,12 +1225,12 @@ fn get_polygons_difference_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    import typing
+    import collections.abc
     import raygeo.geo.types
 
     def get_polygons_group_intersection(
-        subject: typing.Sequence[types.Polygon],
-        clip: typing.Sequence[types.Polygon],
+        subject: collections.abc.Sequence[types.Polygon],
+        clip: collections.abc.Sequence[types.Polygon],
     ) -> list[types.Polygon]:
         """Intersect two groups of polygons (subject & clip).
 
@@ -1257,12 +1257,12 @@ fn get_polygons_group_intersection_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    import typing
+    import collections.abc
     import raygeo.geo.types
 
     def get_polygons_group_difference(
-        subject: typing.Sequence[types.Polygon],
-        clip: typing.Sequence[types.Polygon],
+        subject: collections.abc.Sequence[types.Polygon],
+        clip: collections.abc.Sequence[types.Polygon],
     ) -> list[types.Polygon]:
         """Subtract clip polygons from subject polygons.
 

@@ -9,6 +9,7 @@ intersections, point-on-segment tests, point-in-rectangle tests, rectangle
 containment checks, and angle-at-vertex computation.
 """
 
+import collections.abc
 from raygeo.geo import types
 import typing
 __all__ = [
@@ -151,7 +152,7 @@ def get_line_segment_length(p1: types.Point, p2: types.Point) -> float:
     :complexity: O(1) time, O(1) space
     """
 
-def get_line_segment_polygon_intersections(p1: types.Point, p2: types.Point, polygon: typing.Sequence[types.Polygon]) -> list[float]:
+def get_line_segment_polygon_intersections(p1: types.Point, p2: types.Point, polygon: collections.abc.Sequence[types.Polygon]) -> list[float]:
     r"""
     Get t-values where a line segment intersects a polygon.
     

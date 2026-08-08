@@ -1,5 +1,3 @@
-from typing import List
-
 from raygeo.ops import Ops
 from raygeo.ops.state import AirAssistMode, CoolantMode, HeadCoolantMode, State
 from raygeo.ops.types import CommandType
@@ -53,7 +51,7 @@ def test_group_by_command_type_state_commands():
     assert ops.is_state(indices[2][0])
 
 
-def _create_ops_with_states(states_config: List[bool]) -> Ops:
+def _create_ops_with_states(states_config: list[bool]) -> Ops:
     """Helper to create ops with specified coolant states."""
     ops = Ops()
     for i, flood_on in enumerate(states_config):
@@ -69,7 +67,7 @@ def _create_ops_with_states(states_config: List[bool]) -> Ops:
     return ops
 
 
-def _create_ops_with_air_assist_states(states_config: List[bool]) -> Ops:
+def _create_ops_with_air_assist_states(states_config: list[bool]) -> Ops:
     """Helper to create ops with specified air assist states."""
     ops = Ops()
     for i, on in enumerate(states_config):
@@ -85,7 +83,7 @@ def _create_ops_with_air_assist_states(states_config: List[bool]) -> Ops:
     return ops
 
 
-def _create_ops_with_head_coolant_states(states_config: List[bool]) -> Ops:
+def _create_ops_with_head_coolant_states(states_config: list[bool]) -> Ops:
     """Helper to create ops with specified head coolant states."""
     ops = Ops()
     for i, on in enumerate(states_config):

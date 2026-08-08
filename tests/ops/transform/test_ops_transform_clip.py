@@ -1,5 +1,4 @@
 import math
-from typing import List, Tuple
 
 import pytest
 
@@ -11,7 +10,7 @@ CLIP_RECT = (0.0, 0.0, 100.0, 100.0)
 
 def make_square_region(
     x: float, y: float, w: float, h: float
-) -> List[Tuple[float, float]]:
+) -> list[tuple[float, float]]:
     return [(x, y), (x + w, y), (x + w, y + h), (x, y + h)]
 
 

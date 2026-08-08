@@ -5,7 +5,6 @@ Verifies Z preservation through all boolean and offset operations.
 """
 
 import math
-from typing import List, Tuple
 
 from raygeo.geo.shape.point import get_circumcenter_3d
 from raygeo.geo.shape.polygon3d import (
@@ -39,10 +38,10 @@ from raygeo.geo.shape.polygon3d import (
     walk_along_polyline_3d,
 )
 
-Polygon3D = List[Tuple[float, float, float]]
+Polygon3D = list[tuple[float, float, float]]
 
 
-def P3(*points: Tuple[float, float, float]) -> Polygon3D:
+def P3(*points: tuple[float, float, float]) -> Polygon3D:
     """Helper to create a 3D polygon from point tuples."""
     return [(float(x), float(y), float(z)) for x, y, z in points]
 

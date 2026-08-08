@@ -394,13 +394,13 @@ fn does_line_segment_intersect_circle_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    import typing
+    import collections.abc
     import raygeo.geo.types
 
     def get_line_segment_polygon_intersections(
         p1: types.Point,
         p2: types.Point,
-        polygon: typing.Sequence[types.Polygon],
+        polygon: collections.abc.Sequence[types.Polygon],
     ) -> list[float]:
         """Get t-values where a line segment intersects a polygon.
 

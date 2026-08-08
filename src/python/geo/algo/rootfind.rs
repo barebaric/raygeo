@@ -38,10 +38,10 @@ fn call_f(f: &Bound<'_, PyAny>, x: f64) -> f64 {
 
 #[gen_stub_pyfunction(
     python = r#"
-    import typing
+    import collections.abc
 
     def bisect(
-        f: typing.Callable[[float], float],
+        f: collections.abc.Callable[[float], float],
         lo: float,
         hi: float,
         tol: float = 1e-10,
@@ -73,10 +73,10 @@ fn bisect_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    import typing
+    import collections.abc
 
     def solve_secant(
-        f: typing.Callable[[float], float],
+        f: collections.abc.Callable[[float], float],
         x0: float,
         x1: float,
         tol: float = 1e-10,
@@ -109,10 +109,10 @@ fn secant_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    import typing
+    import collections.abc
 
     def solve_illinois(
-        f: typing.Callable[[float], float],
+        f: collections.abc.Callable[[float], float],
         lo: float,
         hi: float,
         tol: float = 1e-10,
@@ -245,10 +245,10 @@ fn illinois_tracked_py(
 
 #[gen_stub_pyfunction(
     python = r#"
-    import typing
+    import collections.abc
 
     def bracket_grid(
-        f: typing.Callable[[float], float],
+        f: collections.abc.Callable[[float], float],
         heading: float,
         max_deflection: float,
     ) -> tuple[float, str, int]:

@@ -3,7 +3,7 @@ Tests for raygeo.polygon module.
 """
 
 import math
-from typing import List, cast
+from typing import cast
 
 import numpy as np
 import pytest
@@ -1255,7 +1255,7 @@ class TestNormalizePolygons:
         assert normalized[0] == polygon
 
     def test_empty_list(self):
-        normalized, min_x, min_y = normalize_polygons(cast(List[Polygon], []))
+        normalized, min_x, min_y = normalize_polygons(cast(list[Polygon], []))
         assert normalized == []
         assert min_x == 0.0
         assert min_y == 0.0
