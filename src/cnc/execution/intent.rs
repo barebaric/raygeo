@@ -73,6 +73,7 @@ pub fn create_intent(
                 compute_fn: Box::new(compute),
             },
             Box::new(NoCallbacks),
+            true,
         ));
 
         prev_key = Some(key);
@@ -116,6 +117,7 @@ pub fn create_intent(
             aggregate_fn: Box::new(aggregate),
         },
         Box::new(NoCallbacks),
+        true,
     ));
 
     nodes

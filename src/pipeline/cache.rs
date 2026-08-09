@@ -26,6 +26,13 @@ pub struct Cache {
     clock: u64,
     insert_counter: u64,
     node_epochs: HashMap<String, u64>,
+    /// Per-key pin counts: pinned entries are skipped by LRU eviction.
+    /// Used to guarantee cache-hit dependents stay resident while a
+    /// node is skipped (see ``execute.rs``).
+    pins: HashMap<String, usize>,
+    /// Last ``version_token`` each non-cacheable node ran with, used to
+    /// detect that re-running it would reproduce the same output.
+    fingerprints: HashMap<String, u64>,
 }
 
 impl std::fmt::Debug for Cache {
@@ -53,6 +60,8 @@ impl Cache {
             clock: 0,
             insert_counter: 0,
             node_epochs: HashMap::new(),
+            pins: HashMap::new(),
+            fingerprints: HashMap::new(),
         }
     }
 
@@ -140,6 +149,7 @@ impl Cache {
         let evict_key = self
             .entries
             .iter()
+            .filter(|(k, _)| self.pins.get(&k.tag).copied().unwrap_or(0) == 0)
             .min_by_key(|(_, e)| e.generation)
             .map(|(k, _)| k.clone());
         if let Some(key) = evict_key {
@@ -151,9 +161,31 @@ impl Cache {
         false
     }
 
+    /// Increment the pin count for *key*, protecting its entry from
+    /// LRU eviction until :meth:`clear_pins` is called.
+    pub fn pin(&mut self, key: &str) {
+        *self.pins.entry(key.to_string()).or_insert(0) += 1;
+    }
+
+    /// Drop all pins (called at the start of each execution run).
+    pub fn clear_pins(&mut self) {
+        self.pins.clear();
+    }
+
+    /// The ``version_token`` a non-cacheable node last ran with, if any.
+    pub fn fingerprint(&self, key: &str) -> Option<u64> {
+        self.fingerprints.get(key).copied()
+    }
+
+    /// Record the ``version_token`` a non-cacheable node ran with.
+    pub fn set_fingerprint(&mut self, key: &str, token: u64) {
+        self.fingerprints.insert(key.to_string(), token);
+    }
+
     pub fn clear(&mut self) {
         self.entries.clear();
         self.used_bytes = 0;
+        self.fingerprints.clear();
     }
 
     pub fn clear_prefix(&mut self, prefix: &str) {
@@ -167,6 +199,7 @@ impl Cache {
             if let Some(entry) = self.entries.remove(&key) {
                 self.used_bytes -= entry.size_bytes;
             }
+            self.fingerprints.remove(&key.tag);
         }
     }
 
@@ -186,5 +219,6 @@ impl Cache {
         if let Some(entry) = self.entries.remove(&cache_key) {
             self.used_bytes -= entry.size_bytes;
         }
+        self.fingerprints.remove(key);
     }
 }

@@ -23,6 +23,9 @@ pub enum PyErrorKind {
     /// The cache budget does not allow storing this node's output.
     #[pyo3(name = "CACHE_BUDGET_EXCEEDED")]
     CacheBudgetExceeded,
+    /// The pipeline cache mutex is poisoned.
+    #[pyo3(name = "CACHE_LOCK_POISONED")]
+    CacheLockPoisoned,
     /// Any other execution failure.
     #[pyo3(name = "OTHER")]
     Other,
@@ -36,6 +39,9 @@ impl PyErrorKind {
             PyErrorKind::UpstreamFailed => "ErrorKind.UPSTREAM_FAILED".into(),
             PyErrorKind::CacheBudgetExceeded => {
                 "ErrorKind.CACHE_BUDGET_EXCEEDED".into()
+            }
+            PyErrorKind::CacheLockPoisoned => {
+                "ErrorKind.CACHE_LOCK_POISONED".into()
             }
             PyErrorKind::Other => "ErrorKind.OTHER".into(),
         }
@@ -51,6 +57,7 @@ impl PyErrorKind {
             PyErrorKind::Cancelled => "cancelled",
             PyErrorKind::UpstreamFailed => "upstream_failed",
             PyErrorKind::CacheBudgetExceeded => "cache_budget_exceeded",
+            PyErrorKind::CacheLockPoisoned => "cache_lock_poisoned",
             PyErrorKind::Other => "other",
         }
     }

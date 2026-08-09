@@ -24,7 +24,13 @@ from conftest import (
     result_ops,
 )
 
-from raygeo.cnc.execution.specs import ComputePayload
+from raygeo.cnc.execution.specs import (
+    AggregateGroup,
+    AggregateInput,
+    AggregateSpec,
+    ComputePayload,
+    MachineParams,
+)
 from raygeo.ops.assembly import Assembler
 from raygeo.ops.assembly.adaptive import AdaptiveClearingSpec
 from raygeo.ops.assembly.contour import ContourSpec
@@ -35,6 +41,13 @@ from raygeo.pipeline.completed import CompletedNode
 from raygeo.pipeline.execute import Pipeline
 from raygeo.pipeline.request import NodeRequest
 from raygeo.pipeline.stage import StageSpec
+
+IDENTITY = [
+    [1.0, 0.0, 0.0, 0.0],
+    [0.0, 1.0, 0.0, 0.0],
+    [0.0, 0.0, 1.0, 0.0],
+    [0.0, 0.0, 0.0, 1.0],
+]
 
 # ── Helpers ────────────────────────────────────────────────────────
 
@@ -76,16 +89,53 @@ def _contour_node(
     spec: ContourSpec | None = None,
     transformers=None,
     generation_id: int = 1,
+    cacheable: bool = True,
+    version_token: int = 0,
 ) -> NodeRequest:
     return NodeRequest(
         key=key,
         generation_id=generation_id,
+        version_token=version_token,
         stage=StageSpec.Compute(
             part=make_square_part(),
             params=ComputePayload(
                 assembler=Assembler(spec or ContourSpec()),
                 transformers=transformers or [],
             ),
+        ),
+        cacheable=cacheable,
+    )
+
+
+def _agg_node(
+    key: str, source_keys: list[str], version_token: int = 0
+) -> NodeRequest:
+    return NodeRequest(
+        key=key,
+        generation_id=1,
+        version_token=version_token,
+        stage=StageSpec.Aggregate(
+            spec=AggregateSpec(
+                wrap_start=[],
+                groups=[
+                    AggregateGroup(
+                        start_markers=[],
+                        inputs=[
+                            AggregateInput(
+                                source_key=sk,
+                                placement_matrix=IDENTITY,
+                                uid="",
+                                target_dimensions=(0.0, 0.0),
+                            )
+                            for sk in source_keys
+                        ],
+                        end_markers=[],
+                    )
+                ],
+                wrap_end=[],
+                machine=MachineParams(),
+                transformers=[],
+            )
         ),
     )
 
@@ -473,3 +523,165 @@ def test_cache_eviction_reduces_usage():
     assert generous_bytes > tight_bytes, (
         "tight budget should evict entries, resulting in less cache usage"
     )
+
+
+# ── Per-node cacheability ──────────────────────────────────────────
+
+
+def test_non_cacheable_node_does_not_populate_cache():
+    """A node with cacheable=False runs but is never stored in the
+    cache."""
+    p = Pipeline()
+    out = _run_pipeline(
+        p, [_contour_node("c", ContourSpec(), cacheable=False)]
+    )
+    assert out["c"].error is None
+    assert out["c"].output is not None
+    assert p.cache_used_bytes == 0, (
+        "non-cacheable node must not add a cache entry"
+    )
+
+
+def test_non_cacheable_node_reruns_every_time():
+    """Re-running a non-cacheable node executes it again instead of
+    hitting the cache."""
+    p = Pipeline()
+    first = _run_pipeline(
+        p, [_contour_node("c", ContourSpec(), cacheable=False)]
+    )
+    assert first["c"].error is None
+    assert p.cache_used_bytes == 0
+    second = _run_pipeline(
+        p, [_contour_node("c", ContourSpec(), cacheable=False)]
+    )
+    assert second["c"].error is None
+    assert p.cache_used_bytes == 0, (
+        "non-cacheable node must never grow the cache"
+    )
+
+
+def test_non_cacheable_compute_feeds_cached_aggregate():
+    """A non-cacheable compute can still feed a downstream aggregate;
+    only its own cache entry is skipped."""
+    p = Pipeline()
+    nodes = [
+        _contour_node("c", ContourSpec(), cacheable=False),
+        _agg_node("agg", ["c"]),
+    ]
+    out = _run_pipeline(p, nodes)
+    assert out["c"].error is None
+    assert out["agg"].error is None
+    assert out["agg"].output is not None
+    assert p.cache_used_bytes > 0, (
+        "the aggregate's own entry should still be cached"
+    )
+
+
+def test_mixed_cacheability_hits_only_cacheable_entries():
+    """With one cacheable and one non-cacheable node of the same key,
+    the second run re-executes the non-cacheable node while the
+    cacheable entry is reused."""
+    p = Pipeline()
+    first = _run_pipeline(
+        p, [_contour_node("c", ContourSpec(), cacheable=False)]
+    )
+    assert first["c"].error is None
+    assert p.cache_used_bytes == 0
+    second = _run_pipeline(
+        p, [_contour_node("c", ContourSpec(), cacheable=True)]
+    )
+    assert second["c"].error is None
+    assert p.cache_used_bytes > 0, (
+        "cacheable node should populate the cache on the second run"
+    )
+
+
+# ── Non-cacheable node skipping ────────────────────────────────────
+
+
+def test_non_cacheable_node_skipped_when_token_unchanged():
+    """A non-cacheable node whose version token is unchanged since the
+    last run is skipped instead of re-executed: its completion carries
+    no output."""
+    p = Pipeline()
+    node = _contour_node("c", ContourSpec(), cacheable=False)
+    first = _run_pipeline(p, [node])
+    assert first["c"].error is None
+    assert first["c"].output is not None
+
+    second = _run_pipeline(p, [node])
+    assert second["c"].error is None
+    assert second["c"].output is None, (
+        "unchanged non-cacheable node should be skipped"
+    )
+    assert p.cache_used_bytes == 0
+
+
+def test_non_cacheable_node_reruns_when_token_changes():
+    """Changing the version token forces a non-cacheable node to run
+    again (and updates the fingerprint)."""
+    p = Pipeline()
+    spec = ContourSpec()
+    first = _run_pipeline(
+        p, [_contour_node("c", spec, cacheable=False, version_token=1)]
+    )
+    assert first["c"].output is not None
+
+    second = _run_pipeline(
+        p, [_contour_node("c", spec, cacheable=False, version_token=2)]
+    )
+    assert second["c"].output is not None, (
+        "token change should force a re-run"
+    )
+
+    third = _run_pipeline(
+        p, [_contour_node("c", spec, cacheable=False, version_token=2)]
+    )
+    assert third["c"].output is None, (
+        "repeated token should be skipped again"
+    )
+
+
+def test_skipped_non_cacheable_feeds_cached_downstream():
+    """When a non-cacheable node is skipped, its cacheable dependent
+    still cache-hits and produces an output."""
+    p = Pipeline()
+    nodes = [
+        _contour_node("c", ContourSpec(), cacheable=False),
+        _agg_node("agg", ["c"]),
+    ]
+    first = _run_pipeline(p, nodes)
+    assert first["c"].output is not None
+    assert first["agg"].output is not None
+    assert p.cache_used_bytes > 0
+
+    second = _run_pipeline(p, nodes)
+    assert second["c"].error is None
+    assert second["c"].output is None, (
+        "unchanged non-cacheable node should be skipped"
+    )
+    assert second["agg"].error is None
+    assert second["agg"].output is not None, (
+        "aggregate should cache-hit even though its dep was skipped"
+    )
+
+
+def test_evicted_downstream_forces_non_cacheable_rerun():
+    """If a dependent's cache entry is gone, the non-cacheable node
+    must run again even when its token is unchanged."""
+    p = Pipeline()
+    nodes = [
+        _contour_node("c", ContourSpec(), cacheable=False),
+        _agg_node("agg", ["c"]),
+    ]
+    first = _run_pipeline(p, nodes)
+    assert first["c"].output is not None
+
+    p.clear_cache_prefix("agg")
+    second = _run_pipeline(p, nodes)
+    assert second["c"].error is None
+    assert second["c"].output is not None, (
+        "missing dependent entry must force the node to run"
+    )
+    assert second["agg"].error is None
+    assert second["agg"].output is not None

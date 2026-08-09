@@ -191,6 +191,7 @@ pub(crate) fn convert_node_request(
             req.version_token,
             convert_stage(py, &stage)?,
             Box::new(callbacks),
+            req.cacheable,
         ));
     }
 
@@ -209,6 +210,7 @@ pub(crate) fn convert_node_request(
             req.version_token,
             stage,
             Box::new(callbacks),
+            req.cacheable,
         ));
     }
 
@@ -228,6 +230,7 @@ pub(crate) fn convert_node_request(
             req.version_token,
             stage,
             Box::new(callbacks),
+            req.cacheable,
         ));
     }
 
@@ -280,6 +283,9 @@ pub(crate) fn completed_node_from_core(
         crate::pipeline::completed::PipelineError::CacheBudgetExceeded {
             ..
         } => PyErrorKind::CacheBudgetExceeded,
+        crate::pipeline::completed::PipelineError::CacheLockPoisoned => {
+            PyErrorKind::CacheLockPoisoned
+        }
         crate::pipeline::completed::PipelineError::Other(_) => {
             PyErrorKind::Other
         }

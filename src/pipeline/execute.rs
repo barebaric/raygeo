@@ -5,13 +5,13 @@ use std::sync::{Arc, Mutex};
 
 use rayon::Scope;
 
-use crate::pipeline::aggregate::{AggregateCtx, DepMap};
-use crate::pipeline::cache::Cache;
+use crate::pipeline::aggregate::DepMap;
+use crate::pipeline::cache::{Cache, CacheKey};
 use crate::pipeline::callbacks::Callbacks;
 use crate::pipeline::completed::{CompletedNode, PipelineError};
-use crate::pipeline::compute::ComputeCtx;
 use crate::pipeline::request::NodeRequest;
 use crate::pipeline::stage::StageSpec;
+use crate::pipeline::stage_cache;
 
 /// Best-effort return of freed heap pages to the OS.
 ///
@@ -41,6 +41,10 @@ pub fn execute_stages(
             cb(1.0, String::new());
         }
         return Ok(());
+    }
+
+    if let Ok(mut c) = cache.lock() {
+        c.clear_pins();
     }
 
     let mut groups: HashMap<String, Vec<NodeRequest>> = HashMap::new();
@@ -153,9 +157,10 @@ fn spawn_one(s: &Scope<'_>, shared: &Arc<SharedState>, key: String) {
         let NodeRequest {
             key: node_key,
             generation_id,
-            version_token: _,
+            version_token,
             stage,
             callbacks,
+            cacheable,
         } = node;
 
         let scheduled_epoch = shared
@@ -164,15 +169,53 @@ fn spawn_one(s: &Scope<'_>, shared: &Arc<SharedState>, key: String) {
             .map(|c| c.get_epoch(&node_key))
             .unwrap_or(0);
 
+        // A non-cacheable node can be skipped when it last ran with the
+        // same version token (its output would be identical) and every
+        // dependent already has a cache entry (so none of them needs a
+        // fresh output).  The dependent entries are pinned so a
+        // concurrent LRU eviction cannot invalidate the decision.
+        let skipped = if cacheable {
+            false
+        } else {
+            shared
+                .cache
+                .lock()
+                .ok()
+                .map(|mut c| {
+                    if c.fingerprint(&node_key) != Some(version_token) {
+                        return false;
+                    }
+                    let dependents = shared
+                        .dependents
+                        .get(&node_key)
+                        .cloned()
+                        .unwrap_or_default();
+                    let all_cached = dependents
+                        .iter()
+                        .all(|d| c.get(&CacheKey::new(d)).is_some());
+                    if all_cached {
+                        for d in dependents {
+                            c.pin(&d);
+                        }
+                    }
+                    all_cached
+                })
+                .unwrap_or(false)
+        };
+
         let wrapper = ProgressWrapper {
             inner: &*callbacks,
             key: node_key.clone(),
             shared: &shared,
         };
 
-        let result = {
+        let result = if skipped {
+            None
+        } else {
             let deps_lock = shared.dep_map.lock().unwrap();
-            dispatch_stage(stage, &wrapper, &shared, &node_key, &deps_lock)
+            Some(dispatch_stage(
+                stage, &wrapper, &shared, &node_key, &deps_lock, cacheable,
+            ))
         };
 
         let current_epoch = shared
@@ -181,7 +224,16 @@ fn spawn_one(s: &Scope<'_>, shared: &Arc<SharedState>, key: String) {
             .map(|c| c.get_epoch(&node_key))
             .unwrap_or(0);
 
-        let output_arc = if scheduled_epoch != current_epoch {
+        let output_arc = if skipped {
+            let node = CompletedNode {
+                key: node_key.clone(),
+                generation_id,
+                output: None,
+                error: None,
+            };
+            (shared.on_completed)(node);
+            None
+        } else if scheduled_epoch != current_epoch {
             let node = CompletedNode::err(
                 node_key.clone(),
                 generation_id,
@@ -190,7 +242,7 @@ fn spawn_one(s: &Scope<'_>, shared: &Arc<SharedState>, key: String) {
             (shared.on_completed)(node);
             None
         } else {
-            match result {
+            match result.expect("result must exist when not skipped") {
                 Err(e) => {
                     let cancelled = matches!(&e, PipelineError::Cancelled);
                     if cancelled {
@@ -202,6 +254,11 @@ fn spawn_one(s: &Scope<'_>, shared: &Arc<SharedState>, key: String) {
                     None
                 }
                 Ok(boxed) => {
+                    if !cacheable {
+                        if let Ok(mut c) = shared.cache.lock() {
+                            c.set_fingerprint(&node_key, version_token);
+                        }
+                    }
                     let arc: Arc<dyn Any + Send + Sync> = boxed.into();
                     shared
                         .dep_map
@@ -264,7 +321,7 @@ fn spawn_one(s: &Scope<'_>, shared: &Arc<SharedState>, key: String) {
                 .collect()
         };
 
-        if output_arc.is_some() {
+        if skipped || output_arc.is_some() {
             for dep_key in new_ready {
                 spawn_one(s, &shared, dep_key);
             }
@@ -357,85 +414,26 @@ fn dispatch_stage(
     shared: &Arc<SharedState>,
     node_key: &str,
     deps: &DepMap,
+    cacheable: bool,
 ) -> Result<Box<dyn Any + Send + Sync>, PipelineError> {
     match stage {
-        StageSpec::Compute { mut compute_fn } => {
-            let cache_key = compute_fn.cache_key(node_key);
-            if let Some(key) = &cache_key {
-                let mut c = shared.cache.lock().map_err(|_| {
-                    PipelineError::Other("cache lock poisoned".into())
-                })?;
-                if let Some(cached) = c.get(key) {
-                    let restored = compute_fn.restore_from_cache(&**cached);
-                    if let Ok(out) = restored {
-                        return Ok(out);
-                    }
-                }
-            }
-
-            let mut ctx = ComputeCtx { callbacks, deps };
-            let result = compute_fn.run(&mut ctx);
-
-            if let Ok(ref out) = result {
-                if let Some(key) = cache_key {
-                    if let Some((entry, size)) =
-                        compute_fn.prepare_cache_entry(out.as_ref())
-                    {
-                        if let Ok(mut c) = shared.cache.lock() {
-                            let node_tag = key.tag.clone();
-                            if !c.insert(key, entry, size) {
-                                return Err(
-                                    PipelineError::CacheBudgetExceeded {
-                                        node_key: node_tag,
-                                        size,
-                                        budget: c.budget_bytes(),
-                                    },
-                                );
-                            }
-                        }
-                    }
-                }
-            }
-            result
-        }
+        StageSpec::Compute { mut compute_fn } => stage_cache::dispatch_cached(
+            &mut compute_fn,
+            callbacks,
+            &shared.cache,
+            node_key,
+            deps,
+            cacheable,
+        ),
         StageSpec::Aggregate { mut aggregate_fn } => {
-            let cache_key = aggregate_fn.cache_key(node_key);
-            if let Some(key) = &cache_key {
-                let mut c = shared.cache.lock().map_err(|_| {
-                    PipelineError::Other("cache lock poisoned".into())
-                })?;
-                if let Some(cached) = c.get(key) {
-                    let restored = aggregate_fn.restore_from_cache(&**cached);
-                    if let Ok(out) = restored {
-                        return Ok(out);
-                    }
-                }
-            }
-
-            let mut agg_ctx = AggregateCtx::new(callbacks);
-            let result = aggregate_fn.run(&mut agg_ctx, deps);
-
-            if let Ok(ref out) = result {
-                if let Some(key) = cache_key {
-                    if let Some((entry, size)) =
-                        aggregate_fn.prepare_cache_entry(out.as_ref())
-                    {
-                        if let Ok(mut c) = shared.cache.lock() {
-                            let node_tag = key.tag.clone();
-                            if !c.insert(key, entry, size) {
-                                return Err(
-                                    PipelineError::CacheBudgetExceeded {
-                                        node_key: node_tag,
-                                        size,
-                                        budget: c.budget_bytes(),
-                                    },
-                                );
-                            }
-                        }
-                    }
-                }
-            }
-            result
+            stage_cache::dispatch_cached(
+                &mut aggregate_fn,
+                callbacks,
+                &shared.cache,
+                node_key,
+                deps,
+                cacheable,
+            )
         }
     }
 }

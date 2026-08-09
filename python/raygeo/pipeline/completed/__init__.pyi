@@ -42,6 +42,10 @@ class ErrorKind(enum.Enum):
     r"""
     The cache budget does not allow storing this node's output.
     """
+    CACHE_LOCK_POISONED = ...
+    r"""
+    The pipeline cache mutex is poisoned.
+    """
     OTHER = ...
     r"""
     Any other execution failure.

@@ -7,6 +7,7 @@ pub struct NodeRequest {
     pub version_token: u64,
     pub stage: StageSpec,
     pub callbacks: Box<dyn Callbacks>,
+    pub cacheable: bool,
 }
 
 impl std::fmt::Debug for NodeRequest {
@@ -17,6 +18,7 @@ impl std::fmt::Debug for NodeRequest {
             .field("version_token", &self.version_token)
             .field("stage", &self.stage)
             .field("callbacks", &"<Callbacks>")
+            .field("cacheable", &self.cacheable)
             .finish()
     }
 }
@@ -28,6 +30,7 @@ impl NodeRequest {
         version_token: u64,
         stage: StageSpec,
         callbacks: Box<dyn Callbacks>,
+        cacheable: bool,
     ) -> Self {
         NodeRequest {
             key: key.into(),
@@ -35,6 +38,7 @@ impl NodeRequest {
             version_token,
             stage,
             callbacks,
+            cacheable,
         }
     }
 }

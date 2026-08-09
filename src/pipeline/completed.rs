@@ -15,6 +15,8 @@ pub enum PipelineError {
         size: usize,
         budget: usize,
     },
+    /// The pipeline cache mutex is poisoned.
+    CacheLockPoisoned,
     /// Any other execution failure.
     Other(String),
 }
@@ -28,6 +30,7 @@ impl PipelineError {
             PipelineError::CacheBudgetExceeded { .. } => {
                 "cache_budget_exceeded"
             }
+            PipelineError::CacheLockPoisoned => "cache_lock_poisoned",
             PipelineError::Other(_) => "other",
         }
     }
@@ -49,6 +52,9 @@ impl fmt::Display for PipelineError {
                      but the cache budget is {budget} bytes. Reduce scene complexity \
                      or increase the cache budget.",
                 )
+            }
+            PipelineError::CacheLockPoisoned => {
+                write!(f, "cache lock poisoned")
             }
             PipelineError::Other(msg) => write!(f, "{msg}"),
         }

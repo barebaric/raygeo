@@ -26,3 +26,4 @@ pub mod execute;
 pub mod pipeline;
 pub mod request;
 pub mod stage;
+mod stage_cache;

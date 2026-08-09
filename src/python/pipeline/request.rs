@@ -27,13 +27,15 @@ pub struct PyNodeRequest {
     pub on_cancelled: Option<Py<PyAny>>,
     #[pyo3(get)]
     pub on_chunk: Option<Py<PyAny>>,
+    #[pyo3(get)]
+    pub cacheable: bool,
 }
 
 #[gen_stub_pymethods]
 #[pyo3::pymethods]
 impl PyNodeRequest {
     #[new]
-    #[pyo3(signature = (key, generation_id, stage, version_token=0, on_progress=None, on_cancelled=None, on_chunk=None))]
+    #[pyo3(signature = (key, generation_id, stage, version_token=0, on_progress=None, on_cancelled=None, on_chunk=None, cacheable=true))]
     #[allow(clippy::too_many_arguments)]
     fn new(
         key: String,
@@ -43,6 +45,7 @@ impl PyNodeRequest {
         on_progress: Option<Py<PyAny>>,
         on_cancelled: Option<Py<PyAny>>,
         on_chunk: Option<Py<PyAny>>,
+        cacheable: bool,
     ) -> Self {
         PyNodeRequest {
             key,
@@ -52,6 +55,7 @@ impl PyNodeRequest {
             on_progress,
             on_cancelled,
             on_chunk,
+            cacheable,
         }
     }
 }
