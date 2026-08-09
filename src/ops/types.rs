@@ -125,7 +125,7 @@ pub enum OpCategory {
 #[derive(Clone, Debug)]
 pub struct OpNode {
     pub category: OpCategory,
-    pub state: Option<State>,
+    pub state: Option<Box<State>>,
     pub extra_axes: Option<Arc<[(Axis, f64)]>>,
 }
 
@@ -564,11 +564,11 @@ impl OpNode {
     }
 
     pub fn state(&self) -> Option<&State> {
-        self.state.as_ref()
+        self.state.as_deref()
     }
 
     pub fn set_state(&mut self, st: State) {
-        self.state = Some(st);
+        self.state = Some(Box::new(st));
     }
 
     pub fn extra_axes(&self) -> Option<&[(Axis, f64)]> {

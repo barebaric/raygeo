@@ -1119,7 +1119,7 @@ fn clip_and_refit_arc(
     valid_regions: &[Polygon],
     tolerance: f64,
 ) -> Option<Point3D> {
-    let arc_state = node.state.clone();
+    let arc_state = node.state().cloned();
     let linearized = super::linearize::linearize_node(node, last_point);
 
     let mut kept_pairs: Vec<(Point3D, Point3D)> = Vec::new();
@@ -1207,7 +1207,7 @@ fn clip_and_refit_bezier(
     valid_regions: &[Polygon],
     tolerance: f64,
 ) -> Option<Point3D> {
-    let bezier_state = node.state.clone();
+    let bezier_state = node.state().cloned();
     let linearized = super::linearize::linearize_node(node, last_point);
 
     let mut kept_pairs: Vec<(Point3D, Point3D)> = Vec::new();

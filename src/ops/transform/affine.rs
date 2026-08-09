@@ -60,7 +60,7 @@ impl Ops {
                                     tv.z,
                                     extra.clone(),
                                 );
-                                if let Some(s) = &node.state {
+                                if let Some(s) = node.state() {
                                     lcmd.set_state(s.clone());
                                 }
                                 new_cmds.push(lcmd);

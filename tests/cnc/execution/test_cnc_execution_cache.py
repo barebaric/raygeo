@@ -456,13 +456,20 @@ def test_cache_eviction_reduces_usage():
         _run_pipeline(generous, [_contour_node(f"g{i}", ContourSpec())])
     generous_bytes = generous.cache_used_bytes
 
-    # Run the same keys with a tight budget.
-    budget = 3000
+    # Run the same keys with a tight budget (half the footprint, so
+    # eviction is guaranteed regardless of per-node struct size).
+    budget = max(1, generous_bytes // 2)
     tight = Pipeline(budget_bytes=budget)
     for i in range(3):
         _run_pipeline(tight, [_contour_node(f"t{i}", ContourSpec())])
     tight_bytes = tight.cache_used_bytes
 
+    assert budget < generous_bytes, (
+        "tight budget must be smaller than the unconstrained footprint"
+    )
+    assert tight_bytes <= budget, (
+        "cache usage must stay within the tight budget after eviction"
+    )
     assert generous_bytes > tight_bytes, (
         "tight budget should evict entries, resulting in less cache usage"
     )

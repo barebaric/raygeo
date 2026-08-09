@@ -70,7 +70,7 @@ pub fn flip_ops(ops: &Ops) -> Ops {
                 }
             };
 
-            if let Some(ref s) = orig_node.state {
+            if let Some(s) = orig_node.state() {
                 new_node.set_state(s.clone());
             }
             result.commands.push(new_node);
