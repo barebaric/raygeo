@@ -478,6 +478,7 @@ impl Ops {
     pub fn extend(&mut self, other: &Ops) {
         if !other.is_empty() {
             let dst = self.cmds_mut();
+            dst.reserve(other.commands.len());
             for cmd in other.commands.iter() {
                 dst.push(cmd.clone());
             }
@@ -496,17 +497,21 @@ impl Ops {
     }
 
     pub fn replace_all(&mut self, source: &Ops) {
-        self.cmds_mut().clear();
+        let dst = self.cmds_mut();
+        dst.clear();
+        dst.reserve(source.commands.len());
         for cmd in source.commands.iter() {
-            self.cmds_mut().push(cmd.clone());
+            dst.push(cmd.clone());
         }
         self.invalidate_time_cache();
     }
 
     pub fn replace_with(&mut self, source: &Ops) {
-        self.cmds_mut().clear();
+        let dst = self.cmds_mut();
+        dst.clear();
+        dst.reserve(source.commands.len());
         for cmd in source.commands.iter() {
-            self.cmds_mut().push(cmd.clone());
+            dst.push(cmd.clone());
         }
         self.last_move_to = source.last_move_to;
         self.invalidate_time_cache();
@@ -610,6 +615,9 @@ impl std::ops::Add<&Ops> for &Ops {
 
     fn add(self, other: &Ops) -> Ops {
         let mut result = Ops::new();
+        result.commands = Arc::new(Vec::with_capacity(
+            self.commands.len() + other.commands.len(),
+        ));
         for cmd in self.commands.iter() {
             result.cmds_mut().push(cmd.clone());
         }
@@ -625,6 +633,8 @@ impl std::ops::Mul<usize> for &Ops {
 
     fn mul(self, other: usize) -> Ops {
         let mut result = Ops::new();
+        result.commands =
+            Arc::new(Vec::with_capacity(self.commands.len() * other));
         for _ in 0..other {
             for cmd in self.commands.iter() {
                 result.cmds_mut().push(cmd.clone());

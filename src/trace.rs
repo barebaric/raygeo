@@ -27,26 +27,24 @@ use crate::trace_types::{
 
 /// Internal state for an active trace file.
 struct TracerInner {
-    file: std::fs::File,
+    file: std::io::BufWriter<std::fs::File>,
     count: u32,
-    /// Buffered length-prefixed msgpack blobs, flushed in [`finish`] (or [`Drop`]).
-    records: Vec<u8>,
-    /// Set by [`flush`]; when `false` the [`Drop`] impl writes buffered
-    /// records and patches the record count.
+    /// Set by [`flush`]; when `false` the [`Drop`] impl flushes
+    /// buffered records and patches the record count.
     finalized: bool,
 }
 
 impl TracerInner {
     fn new(path: &PathBuf) -> std::io::Result<Self> {
-        let mut file = std::fs::File::create(path)?;
-        file.write_all(b"RGEO")?;
-        file.write_all(&3u16.to_le_bytes())?; // format version = 3
-        file.write_all(&0u16.to_le_bytes())?; // reserved
-        file.write_all(&0u32.to_le_bytes())?; // record count placeholder
+        let file = std::fs::File::create(path)?;
+        let mut writer = std::io::BufWriter::new(file);
+        writer.write_all(b"RGEO")?;
+        writer.write_all(&3u16.to_le_bytes())?; // format version = 3
+        writer.write_all(&0u16.to_le_bytes())?; // reserved
+        writer.write_all(&0u32.to_le_bytes())?; // record count placeholder
         Ok(Self {
-            file,
+            file: writer,
             count: 0,
-            records: Vec::new(),
             finalized: false,
         })
     }
@@ -55,9 +53,12 @@ impl TracerInner {
         let bytes = rmp_serde::to_vec_named(record).unwrap_or_else(|e| {
             panic!("failed to serialize trace record: {e}")
         });
-        self.records
-            .extend_from_slice(&(bytes.len() as u32).to_le_bytes());
-        self.records.extend_from_slice(&bytes);
+        self.file
+            .write_all(&(bytes.len() as u32).to_le_bytes())
+            .unwrap_or_else(|e| panic!("failed to write trace record: {e}"));
+        self.file
+            .write_all(&bytes)
+            .unwrap_or_else(|e| panic!("failed to write trace record: {e}"));
         self.count += 1;
     }
 
@@ -65,9 +66,10 @@ impl TracerInner {
         if self.finalized {
             return Ok(());
         }
-        self.file.write_all(&self.records)?;
+        self.file.flush()?;
         self.file.seek(SeekFrom::Start(8))?;
         self.file.write_all(&self.count.to_le_bytes())?;
+        self.file.flush()?;
         self.finalized = true;
         Ok(())
     }
@@ -78,7 +80,7 @@ impl Drop for TracerInner {
         if self.finalized {
             return;
         }
-        let _ = self.file.write_all(&self.records);
+        let _ = self.file.flush();
         let _ = self.file.seek(SeekFrom::Start(8));
         let _ = self.file.write_all(&self.count.to_le_bytes());
     }
