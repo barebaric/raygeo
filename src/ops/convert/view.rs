@@ -407,6 +407,7 @@ fn draw_texture(
         h_px as u32,
         (eff_ppm_x, eff_ppm_y),
         (origin_x_mm, origin_y_mm),
+        0,
     );
 
     if power_map.is_empty() {

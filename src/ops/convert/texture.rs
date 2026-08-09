@@ -7,6 +7,33 @@ use crate::ops::container::Ops;
 use crate::ops::convert::{EncodeCtx, EncodeOutput, Encoder};
 use crate::ops::enums::CommandType;
 
+/// Stamp a square brush of half-size ``radius_px`` centered on ``(cx, cy)``,
+/// writing ``power`` (max-merged) into every covered pixel. Out-of-bounds
+/// coverage is dropped (bounds-clamped), never wrapped.
+fn stamp_square(
+    buffer: &mut [u8],
+    width: i32,
+    height: i32,
+    cx: i32,
+    cy: i32,
+    radius_px: i32,
+    power: u8,
+) {
+    let x_lo = (cx - radius_px).max(0);
+    let x_hi = (cx + radius_px).min(width - 1);
+    let y_lo = (cy - radius_px).max(0);
+    let y_hi = (cy + radius_px).min(height - 1);
+    for ry in y_lo..=y_hi {
+        let row_start = (ry * width) as usize;
+        for xi in x_lo..=x_hi {
+            let idx = row_start + xi as usize;
+            if power > buffer[idx] {
+                buffer[idx] = power;
+            }
+        }
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 fn bresenham_line(
     buffer: &mut [u8],
@@ -17,6 +44,7 @@ fn bresenham_line(
     x1: i32,
     y1: i32,
     power: u8,
+    radius_px: i32,
 ) {
     let dx = (x1 - x0).abs();
     let dy = -(y1 - y0).abs();
@@ -26,12 +54,7 @@ fn bresenham_line(
     let (mut x, mut y) = (x0, y0);
 
     loop {
-        if x >= 0 && x < width && y >= 0 && y < height {
-            let idx = (y * width + x) as usize;
-            if power > buffer[idx] {
-                buffer[idx] = power;
-            }
-        }
+        stamp_square(buffer, width, height, x, y, radius_px, power);
         if x == x1 && y == y1 {
             break;
         }
@@ -56,18 +79,20 @@ fn rasterize_horizontal(
     x: f64,
     dx: f64,
     pwr: &[u8],
+    radius_px: i32,
 ) -> bool {
     let mut has_content = false;
     if iy < 0 || iy >= height_px {
         return false;
     }
-    let row_start = (iy * width_px) as usize;
+    let row_lo = (iy - radius_px).max(0);
+    let row_hi = (iy + radius_px).min(height_px - 1);
     let mut cx = x;
 
     for &p in pwr {
         if p > 0 {
-            let mut x0 = cx.round() as i32;
-            let mut x1 = (cx + dx).round() as i32;
+            let mut x0 = cx.round() as i32 - radius_px;
+            let mut x1 = (cx + dx).round() as i32 + radius_px;
             if x0 > x1 {
                 std::mem::swap(&mut x0, &mut x1);
             }
@@ -77,10 +102,13 @@ fn rasterize_horizontal(
             if x1 >= width_px {
                 x1 = width_px - 1;
             }
-            for xi in x0..=x1 {
-                let idx = row_start + xi as usize;
-                if p > buffer[idx] {
-                    buffer[idx] = p;
+            for ry in row_lo..=row_hi {
+                let row_start = (ry * width_px) as usize;
+                for xi in x0..=x1 {
+                    let idx = row_start + xi as usize;
+                    if p > buffer[idx] {
+                        buffer[idx] = p;
+                    }
                 }
             }
             has_content = true;
@@ -100,6 +128,7 @@ fn rasterize_diagonal(
     dx: f64,
     dy: f64,
     pwr: &[u8],
+    radius_px: i32,
 ) -> bool {
     let mut has_content = false;
     let mut cx = x;
@@ -113,16 +142,14 @@ fn rasterize_diagonal(
             let pey = (cy + dy).round() as i32;
 
             if psx == pex && psy == pey {
-                if psx >= 0 && psx < width_px && psy >= 0 && psy < height_px {
-                    let idx = (psy * width_px + psx) as usize;
-                    if p > buffer[idx] {
-                        buffer[idx] = p;
-                        has_content = true;
-                    }
-                }
+                stamp_square(
+                    buffer, width_px, height_px, psx, psy, radius_px, p,
+                );
+                has_content = true;
             } else {
                 bresenham_line(
                     buffer, width_px, height_px, psx, psy, pex, pey, p,
+                    radius_px,
                 );
                 has_content = true;
             }
@@ -139,12 +166,18 @@ impl Ops {
     /// Iterates all scanline commands, converts their mm coordinates
     /// to pixel space, and returns a `Vec<u8>` where each pixel holds
     /// the maximum power value written to it.
+    ///
+    /// When `radius_px` is greater than zero, each rasterized sample is
+    /// expanded to a square brush of side `2*radius_px + 1` (max-merged),
+    /// which is equivalent to a square morphological dilation of the thin
+    /// raster. Coverage is bounds-clamped at the texture edges.
     pub fn to_texture(
         &self,
         width_px: u32,
         height_px: u32,
         px_per_mm: (f64, f64),
         origin_mm: (f64, f64),
+        radius_px: i32,
     ) -> Vec<u8> {
         let w = width_px as i32;
         let h = height_px as i32;
@@ -152,6 +185,7 @@ impl Ops {
         if size == 0 {
             return Vec::new();
         }
+        let radius_px = radius_px.max(0);
 
         let (ox, oy) = origin_mm;
         let (px_mm_x, px_mm_y) = px_per_mm;
@@ -197,6 +231,7 @@ impl Ops {
                     sx,
                     dx,
                     &power_values,
+                    radius_px,
                 );
             } else if dx != 0.0 || dy != 0.0 {
                 rasterize_diagonal(
@@ -208,6 +243,7 @@ impl Ops {
                     dx,
                     dy,
                     &power_values,
+                    radius_px,
                 );
             }
 
@@ -245,6 +281,7 @@ impl Encoder for TextureSpec {
             self.height_px,
             self.px_per_mm,
             self.origin_mm,
+            0,
         );
         ctx.callbacks.report_progress(1.0, "texture: done");
         Ok(EncodeOutput::Texture {

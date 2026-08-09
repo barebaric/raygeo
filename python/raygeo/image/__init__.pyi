@@ -31,7 +31,7 @@ __all__ = [
     "transparency",
 ]
 
-def rasterize_scanlines(ops: ops.Ops, width_px: int, height_px: int, px_per_mm: tuple[float, float], origin_mm: tuple[float, float] = (0, 0)) -> numpy.typing.NDArray[numpy.uint8]:
+def rasterize_scanlines(ops: ops.Ops, width_px: int, height_px: int, px_per_mm: tuple[float, float], origin_mm: tuple[float, float] = (0, 0), radius_px: int = 0) -> numpy.typing.NDArray[numpy.uint8]:
     r"""
     Rasterize ScanLine commands from *ops* into a 2D power-map buffer.
     
@@ -39,12 +39,19 @@ def rasterize_scanlines(ops: ops.Ops, width_px: int, height_px: int, px_per_mm: 
     to pixel space using *px_per_mm*, and returns a uint8 array where each
     pixel holds the maximum power value written to it.
     
+    When *radius_px* is greater than zero, each rasterized sample is
+    expanded to a square brush of side ``2*radius_px + 1`` (max-merged),
+    equivalent to a square morphological dilation of the thin raster.
+    Coverage is bounds-clamped at the texture edges (no wraparound).
+    
     :param ops: Command sequence to rasterize.
     :param width_px: Width of the output texture in pixels.
     :param height_px: Height of the output texture in pixels.
     :param px_per_mm: (x, y) resolution in pixels per millimeter.
     :param origin_mm: (x, y) origin offset in mm (default ``(0.0, 0.0)``).
+    :param radius_px: Half-size of the dilation brush in pixels
+        (default ``0`` -- no dilation).
     :returns: 2D uint8 array of shape (height_px, width_px).
-    :complexity: O(scanline_pixels)
+    :complexity: O(scanline_pixels * (2*radius_px + 1))
     """
 

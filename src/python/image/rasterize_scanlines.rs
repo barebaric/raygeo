@@ -16,6 +16,7 @@ use crate::python::ops::container::PyOps;
         height_px: int,
         px_per_mm: tuple[float, float],
         origin_mm: tuple[float, float] = (0.0, 0.0),
+        radius_px: int = 0,
     ) -> numpy.typing.NDArray[numpy.uint8]:
         """Rasterize ScanLine commands from *ops* into a 2D power-map buffer.
 
@@ -23,19 +24,26 @@ use crate::python::ops::container::PyOps;
         to pixel space using *px_per_mm*, and returns a uint8 array where each
         pixel holds the maximum power value written to it.
 
+        When *radius_px* is greater than zero, each rasterized sample is
+        expanded to a square brush of side ``2*radius_px + 1`` (max-merged),
+        equivalent to a square morphological dilation of the thin raster.
+        Coverage is bounds-clamped at the texture edges (no wraparound).
+
         :param ops: Command sequence to rasterize.
         :param width_px: Width of the output texture in pixels.
         :param height_px: Height of the output texture in pixels.
         :param px_per_mm: (x, y) resolution in pixels per millimeter.
         :param origin_mm: (x, y) origin offset in mm (default ``(0.0, 0.0)``).
+        :param radius_px: Half-size of the dilation brush in pixels
+            (default ``0`` -- no dilation).
         :returns: 2D uint8 array of shape (height_px, width_px).
-        :complexity: O(scanline_pixels)
+        :complexity: O(scanline_pixels * (2*radius_px + 1))
         """
     "#,
     module = "raygeo.image"
 )]
 #[pyfunction(name = "rasterize_scanlines")]
-#[pyo3(signature = (ops, width_px, height_px, px_per_mm, origin_mm=(0.0, 0.0)))]
+#[pyo3(signature = (ops, width_px, height_px, px_per_mm, origin_mm=(0.0, 0.0), radius_px=0))]
 fn py_rasterize_scanlines(
     py: Python<'_>,
     ops: &PyOps,
@@ -43,10 +51,15 @@ fn py_rasterize_scanlines(
     height_px: u32,
     px_per_mm: (f64, f64),
     origin_mm: (f64, f64),
+    radius_px: u32,
 ) -> PyResult<Py<PyAny>> {
-    let buffer = ops
-        .inner
-        .to_texture(width_px, height_px, px_per_mm, origin_mm);
+    let buffer = ops.inner.to_texture(
+        width_px,
+        height_px,
+        px_per_mm,
+        origin_mm,
+        radius_px as i32,
+    );
 
     let numpy = py.import("numpy")?;
     if buffer.is_empty() {
