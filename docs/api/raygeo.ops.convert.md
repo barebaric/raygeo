@@ -18,20 +18,20 @@ Texture height in pixels. Returns `None` unless this is the `Texture` variant.
 ### `machine_code_to_op`
 
 ```python
-machine_code_to_op: Optional[dict[int, int]]
+machine_code_to_op: Optional[Any]
 ```
 
-Mapping `machine-code line index -> op_index`. Returns `None` unless this is the `MachineCode`
-variant.
+Mapping `machine-code line index -> op_index` (`-1` = no op). Returns `None` unless this is the
+`MachineCode` variant.
 
 ### `op_to_machine_code`
 
 ```python
-op_to_machine_code: Optional[dict[int, list[int]]]
+op_to_machine_code: Optional[Any]
 ```
 
-Mapping `op_index -> list of machine-code line indices`. Returns `None` unless this is the
-`MachineCode` variant.
+Mapping `op_index -> (start_line, line_count)` span. Returns `None` unless this is the `MachineCode`
+variant.
 
 ### `power_texture`
 
@@ -80,17 +80,17 @@ Texture width in pixels. Returns `None` unless this is the `Texture` variant.
 @classmethod
 MachineCode(
     text: str,
-    op_to_machine_code: Mapping[int, Sequence[int]],
-    machine_code_to_op: Mapping[int, int],
+    op_to_machine_code: Sequence[tuple[int, int]],
+    machine_code_to_op: Sequence[int],
 ) -> EncodeOutput
 ```
 
-| Parameter            | Type                          | Description |
-| -------------------- | ----------------------------- | ----------- |
-| `text`               | `str`                         |             |
-| `op_to_machine_code` | `Mapping[int, Sequence[int]]` |             |
-| `machine_code_to_op` | `Mapping[int, int]`           |             |
-| _Returns_            | `EncodeOutput`                |             |
+| Parameter            | Type                        | Description |
+| -------------------- | --------------------------- | ----------- |
+| `text`               | `str`                       |             |
+| `op_to_machine_code` | `Sequence[tuple[int, int]]` |             |
+| `machine_code_to_op` | `Sequence[int]`             |             |
+| _Returns_            | `EncodeOutput`              |             |
 
 ## Encoder
 

@@ -565,8 +565,7 @@ def test_op_map_job_start():
     ops.job_start()
     ops.job_end()
     result = _encode(ops)
-    assert 0 in result["op_to_machine_code"]
-    assert len(result["op_to_machine_code"][0]) >= 1
+    assert result["op_to_machine_code"][0][1] >= 1
 
 
 def test_op_map_move():
@@ -575,8 +574,7 @@ def test_op_map_move():
     ops.move_to(10.0, 0.0, 0.0)
     ops.job_end()
     result = _encode(ops)
-    assert 1 in result["op_to_machine_code"]
-    assert len(result["op_to_machine_code"][1]) >= 1
+    assert result["op_to_machine_code"][1][1] >= 1
 
 
 def test_machine_code_to_op():

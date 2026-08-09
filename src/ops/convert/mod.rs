@@ -17,6 +17,7 @@
 //! three traits take their callbacks from [`crate::ops::callbacks`].
 
 use crate::ops::container::Ops;
+use crate::ops::convert::gcode_types::OpLineRange;
 use crate::ops::convert::scene::CompiledSceneData;
 use crate::ops::convert::vertex_arrays::VertexArrays;
 
@@ -44,10 +45,10 @@ pub enum EncodeOutput {
     MachineCode {
         /// The machine-code text.
         text: String,
-        /// Op index → list of emitted line indices.
-        op_to_machine_code: std::collections::HashMap<usize, Vec<usize>>,
-        /// Emitted line index → op index.
-        machine_code_to_op: std::collections::HashMap<usize, usize>,
+        /// Op index → emitted line span ``[start, start + len)``.
+        op_to_machine_code: Vec<OpLineRange>,
+        /// Emitted line index → op index (``usize::MAX`` = no op).
+        machine_code_to_op: Vec<usize>,
     },
     /// GPU-friendly flat vertex buffers.
     VertexArrays(VertexArrays),
@@ -87,14 +88,10 @@ impl EncodeOutput {
                 op_to_machine_code,
                 machine_code_to_op,
             } => {
-                let inner_vecs: usize = op_to_machine_code
-                    .values()
-                    .map(|v| v.len() * std::mem::size_of::<usize>())
-                    .sum();
                 text.len()
-                    + inner_vecs
-                    + machine_code_to_op.len()
-                        * std::mem::size_of::<(usize, usize)>()
+                    + op_to_machine_code.len()
+                        * std::mem::size_of::<OpLineRange>()
+                    + machine_code_to_op.len() * std::mem::size_of::<usize>()
             }
             EncodeOutput::VertexArrays(va) => {
                 let f32_size = std::mem::size_of::<f32>();

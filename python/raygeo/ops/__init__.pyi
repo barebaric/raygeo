@@ -1492,8 +1492,10 @@ class Ops:
         :param dialect: A :class:`raygeo.ops.convert.GcodeDialectSpec` instance.
         :param context_dict: JSON-serialisable dict matching the Rust
             ``EncodeContext`` schema.
-        :returns: ``{"text": str, "op_to_machine_code": {int: [int]},
-            "machine_code_to_op": {int: int}}``
+        :returns: ``{"text": str, "op_to_machine_code": [(int, int)],
+            "machine_code_to_op": [int]}`` — the op map is one
+            ``(start, len)`` span per op index; the line map is indexed
+            by line with ``-1`` for lines owned by no op.
         :raises ValueError: If deserialization fails.
         """
     @staticmethod

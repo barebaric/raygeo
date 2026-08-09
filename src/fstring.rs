@@ -62,11 +62,19 @@ impl NamedVars {
 /// Rust's `{:.Nf}`-style format. Currently `:spec` is parsed as `.Nf`
 /// where N is an unsigned integer.
 pub fn render_named(template: &str, vars: &NamedVars) -> String {
+    let mut out = String::with_capacity(template.len());
+    render_named_into(&mut out, template, vars);
+    out
+}
+
+/// Like [`render_named`], but appends into an existing buffer so
+/// callers can reuse an allocation across many lines.
+pub fn render_named_into(out: &mut String, template: &str, vars: &NamedVars) {
     if !template.contains('{') {
-        return template.to_string();
+        out.push_str(template);
+        return;
     }
 
-    let mut out = String::with_capacity(template.len());
     let mut rest = template;
 
     while let Some(open) = rest.find('{') {
@@ -75,7 +83,7 @@ pub fn render_named(template: &str, vars: &NamedVars) -> String {
 
         let Some(close_rel) = rest[1..].find('}') else {
             out.push_str(rest);
-            return out;
+            return;
         };
         let inner = &rest[1..1 + close_rel];
 
@@ -106,7 +114,6 @@ pub fn render_named(template: &str, vars: &NamedVars) -> String {
     }
 
     out.push_str(rest);
-    out
 }
 
 /// Apply a Python-style format spec (`.Nf`, `.Ns`, `.N`, `d`, etc.)

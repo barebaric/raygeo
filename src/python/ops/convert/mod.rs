@@ -1,8 +1,6 @@
-use std::collections::HashMap;
-
 use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;
-use pyo3::types::{PyAny, PyDict, PyType};
+use pyo3::types::{PyAny, PyDict, PyList, PyType};
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::ops::convert::{
@@ -554,13 +552,28 @@ impl PyEncodeOutput {
     fn MachineCode(
         _cls: &Bound<'_, PyType>,
         text: String,
-        op_to_machine_code: HashMap<usize, Vec<usize>>,
-        machine_code_to_op: HashMap<usize, usize>,
+        op_to_machine_code: Vec<(u32, u32)>,
+        machine_code_to_op: Vec<isize>,
     ) -> Self {
+        use crate::ops::convert::gcode_types::{
+            OpLineRange, MACHINE_CODE_TO_OP_NONE,
+        };
         PyEncodeOutput::from_core(EncodeOutput::MachineCode {
             text,
-            op_to_machine_code,
-            machine_code_to_op,
+            op_to_machine_code: op_to_machine_code
+                .into_iter()
+                .map(|(start, len)| OpLineRange { start, len })
+                .collect(),
+            machine_code_to_op: machine_code_to_op
+                .into_iter()
+                .map(|v| {
+                    if v < 0 {
+                        MACHINE_CODE_TO_OP_NONE
+                    } else {
+                        v as usize
+                    }
+                })
+                .collect(),
         })
     }
 
@@ -609,26 +622,50 @@ impl PyEncodeOutput {
         }
     }
 
-    /// Mapping ``op_index -> list of machine-code line indices``.
-    /// Returns ``None`` unless this is the ``MachineCode`` variant.
+    /// Mapping ``op_index -> (start_line, line_count)`` span. Returns
+    /// ``None`` unless this is the ``MachineCode`` variant.
     #[getter]
-    fn op_to_machine_code(&self) -> Option<HashMap<usize, Vec<usize>>> {
+    fn op_to_machine_code(&self, py: Python<'_>) -> Option<Py<PyAny>> {
         match self.enc() {
             EncodeOutput::MachineCode {
                 op_to_machine_code, ..
-            } => Some(op_to_machine_code.clone()),
+            } => Some(
+                PyList::new(
+                    py,
+                    op_to_machine_code.iter().map(|r| (r.start, r.len)),
+                )
+                .expect("op line spans to Python list")
+                .into_any()
+                .unbind(),
+            ),
             _ => None,
         }
     }
 
-    /// Mapping ``machine-code line index -> op_index``.
-    /// Returns ``None`` unless this is the ``MachineCode`` variant.
+    /// Mapping ``machine-code line index -> op_index`` (``-1`` = no
+    /// op). Returns ``None`` unless this is the ``MachineCode``
+    /// variant.
     #[getter]
-    fn machine_code_to_op(&self) -> Option<HashMap<usize, usize>> {
+    fn machine_code_to_op(&self, py: Python<'_>) -> Option<Py<PyAny>> {
+        use crate::ops::convert::gcode_types::MACHINE_CODE_TO_OP_NONE;
         match self.enc() {
             EncodeOutput::MachineCode {
                 machine_code_to_op, ..
-            } => Some(machine_code_to_op.clone()),
+            } => Some(
+                PyList::new(
+                    py,
+                    machine_code_to_op.iter().map(|&v| {
+                        if v == MACHINE_CODE_TO_OP_NONE {
+                            -1
+                        } else {
+                            v as isize
+                        }
+                    }),
+                )
+                .expect("machine code map to Python list")
+                .into_any()
+                .unbind(),
+            ),
             _ => None,
         }
     }

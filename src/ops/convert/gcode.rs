@@ -6,11 +6,13 @@
 //! boundary per command.
 
 use std::collections::{HashMap, HashSet};
+use std::fmt::Write as FmtWrite;
 
 use serde::de::DeserializeOwned;
 
 use crate::fstring::{
-    parse_include_directive, render_named, resolve_path_vars, NamedVars,
+    parse_include_directive, render_named, render_named_into,
+    resolve_path_vars, NamedVars,
 };
 use crate::geo::types::Point3D;
 use crate::ops::axis::Axis;
@@ -18,6 +20,7 @@ use crate::ops::callbacks::Callbacks;
 use crate::ops::container::Ops;
 use crate::ops::convert::gcode_types::{
     EncodeContext, EncodeResult, GcodeDialectSpec, Macro, MacroTable,
+    OpLineRange, MACHINE_CODE_TO_OP_NONE,
 };
 use crate::ops::convert::{EncodeCtx, EncodeOutput, Encoder};
 use crate::ops::enums::CommandType;
@@ -26,9 +29,22 @@ use crate::ops::types::MoveCmd;
 
 const COORD_TOLERANCE: f64 = 1e-6;
 
-/// Format a float with the given number of decimal places.
-fn format_with_precision(value: f64, precision: u8) -> String {
-    format!("{:.*}", precision as usize, value)
+/// Format a float into *buf* with the given decimal places, then strip
+/// trailing zeros the same way ``strip_trailing_zeros`` did.  Writes
+/// directly into the caller's buffer so a per-line ``String``
+/// allocation is avoided.
+fn write_scaled(buf: &mut String, value: f64, precision: u8) {
+    let start = buf.len();
+    write!(buf, "{:.*}", precision as usize, value)
+        .expect("writing into a String cannot fail");
+    let segment = &buf[start..];
+    if segment.contains('.') {
+        let trimmed = segment.trim_end_matches('0');
+        let trimmed = trimmed.trim_end_matches('.');
+        if !(trimmed.is_empty() || trimmed == "-") {
+            buf.truncate(start + trimmed.len());
+        }
+    }
 }
 
 /// Small fixed-size map keyed by the single-axis bit position.
@@ -101,9 +117,13 @@ pub(crate) struct GcodeEncoder<'a> {
     pub(crate) active_wcs: Option<String>,
     pub(crate) path_vars: HashMap<String, String>,
 
-    pub(crate) gcode: Vec<String>,
-    pub(crate) op_to_machine_code: HashMap<usize, Vec<usize>>,
-    pub(crate) machine_code_to_op: HashMap<usize, usize>,
+    pub(crate) gcode: String,
+    pub(crate) line_count: usize,
+    pub(crate) line_buf: String,
+    pub(crate) var_pool: Vec<String>,
+    pub(crate) vars: NamedVars,
+    pub(crate) op_to_machine_code: Vec<OpLineRange>,
+    pub(crate) machine_code_to_op: Vec<usize>,
 }
 
 impl<'a> GcodeEncoder<'a> {
@@ -129,47 +149,60 @@ impl<'a> GcodeEncoder<'a> {
             current_pos: AxisMap::default(),
             active_wcs: None,
             path_vars: ctx.path_vars.clone(),
-            gcode: Vec::new(),
-            op_to_machine_code: HashMap::new(),
-            machine_code_to_op: HashMap::new(),
+            gcode: String::new(),
+            line_count: 0,
+            line_buf: String::new(),
+            var_pool: Vec::new(),
+            vars: NamedVars::default(),
+            op_to_machine_code: Vec::new(),
+            machine_code_to_op: Vec::new(),
         }
     }
 
-    fn format_coord(&self, value: f64) -> String {
+    /// Take a scratch string from the pool, or allocate a fresh one.
+    fn take_var(&mut self) -> String {
+        self.var_pool.pop().unwrap_or_default()
+    }
+
+    /// Return a scratch string to the pool (cleared, bounded capacity).
+    fn give_var(&mut self, mut value: String) {
+        value.clear();
+        if value.capacity() <= 256 {
+            self.var_pool.push(value);
+        }
+    }
+
+    /// Zero out values inside the coordinate tolerance, then write
+    /// them into *buf* at the given scale.
+    fn write_coord(&self, buf: &mut String, value: f64) {
         let scaled = value * self.ctx.unit_scale;
         let v = if scaled.abs() < COORD_TOLERANCE {
             0.0
         } else {
             scaled
         };
-        strip_trailing_zeros(&format_with_precision(v, self.fmt_precision()))
+        write_scaled(buf, v, self.fmt_precision());
     }
 
-    /// Format an angular value (rotary axis position in degrees).
+    /// Write an angular value (rotary axis position in degrees).
     /// Angular values are unit-system agnostic and are never scaled
     /// by ``unit_scale``.
-    fn format_angular(&self, value: f64) -> String {
+    fn write_angular(&self, buf: &mut String, value: f64) {
         let v = if value.abs() < COORD_TOLERANCE {
             0.0
         } else {
             value
         };
-        strip_trailing_zeros(&format_with_precision(v, self.fmt_precision()))
+        write_scaled(buf, v, self.fmt_precision());
     }
 
-    fn format_feed(&self, value: f64) -> String {
+    fn write_feed(&self, buf: &mut String, value: f64) {
         let scaled = value * self.ctx.unit_scale;
-        strip_trailing_zeros(&format_with_precision(
-            scaled,
-            self.fmt_precision(),
-        ))
+        write_scaled(buf, scaled, self.fmt_precision());
     }
 
-    fn format_power(&self, value: f64) -> String {
-        strip_trailing_zeros(&format_with_precision(
-            value,
-            self.fmt_precision(),
-        ))
+    fn write_power(&self, buf: &mut String, value: f64) {
+        write_scaled(buf, value, self.fmt_precision());
     }
 
     fn fmt_precision(&self) -> u8 {
@@ -207,20 +240,22 @@ impl<'a> GcodeEncoder<'a> {
         }
     }
 
-    fn push_line(&mut self, line: impl Into<String>) {
-        self.gcode.push(line.into());
+    fn push_line(&mut self, line: &str) {
+        self.gcode.push_str(line);
+        self.gcode.push('\n');
+        self.line_count += 1;
     }
 
     fn record_op_lines(&mut self, op_idx: usize, start_line: usize) {
-        let end_line = self.gcode.len();
-        if end_line > start_line {
-            self.op_to_machine_code
-                .insert(op_idx, (start_line..end_line).collect());
-            for ln in start_line..end_line {
-                self.machine_code_to_op.insert(ln, op_idx);
-            }
-        } else {
-            self.op_to_machine_code.insert(op_idx, Vec::new());
+        let end_line = self.line_count;
+        self.op_to_machine_code.push(OpLineRange {
+            start: start_line as u32,
+            len: (end_line - start_line) as u32,
+        });
+        self.machine_code_to_op
+            .resize(end_line, MACHINE_CODE_TO_OP_NONE);
+        for ln in start_line..end_line {
+            self.machine_code_to_op[ln] = op_idx;
         }
     }
 
@@ -232,7 +267,7 @@ impl<'a> GcodeEncoder<'a> {
         let lines =
             expand_macro(m, &self.ctx.macros, &self.path_vars, &mut call_stack);
         for line in lines {
-            self.push_line(line);
+            self.push_line(&line);
         }
     }
 
@@ -244,76 +279,84 @@ impl<'a> GcodeEncoder<'a> {
     }
 
     fn build_coord_commands(
-        &self,
+        &mut self,
         x: f64,
         y: f64,
         z: f64,
         extra_axes: Option<&[(Axis, f64)]>,
-    ) -> CoordVars {
+    ) {
         let prev_x = self.current_pos.x;
         let prev_y = self.current_pos.y;
         let prev_z = self.current_pos.z;
 
-        let x_cmd = format!(" X{}", self.format_coord(x));
-        let y_cmd = format!(" Y{}", self.format_coord(y));
-        let z_cmd = format!(" Z{}", self.format_coord(z));
+        let mut x_val = self.take_var();
+        self.write_coord(&mut x_val, x);
+        let mut y_val = self.take_var();
+        self.write_coord(&mut y_val, y);
+        let mut z_val = self.take_var();
+        self.write_coord(&mut z_val, z);
 
-        let mut extra_cmd = String::new();
+        let mut x_cmd = self.take_var();
+        write!(x_cmd, " X{x_val}").expect("writing into a String");
+        let mut y_cmd = self.take_var();
+        write!(y_cmd, " Y{y_val}").expect("writing into a String");
+        let mut z_cmd = self.take_var();
+        write!(z_cmd, " Z{z_val}").expect("writing into a String");
+
+        let mut extra_cmd = self.take_var();
         if let Some(ea) = extra_axes {
             for &(axis, value) in ea {
                 let letter = letter_for_axis(axis);
                 let prev_val = self.current_pos.get(axis);
-                let mut formatted =
-                    format!(" {letter}{}", self.format_angular(value));
+                let start = extra_cmd.len();
+                extra_cmd.push(' ');
+                extra_cmd.push_str(letter);
+                self.write_angular(&mut extra_cmd, value);
                 if self.dialect.omit_unchanged_coords
                     && (value - prev_val).abs() < 1e-12
                 {
-                    formatted.clear();
+                    extra_cmd.truncate(start);
                 }
-                extra_cmd.push_str(&formatted);
             }
         }
 
-        let (x_cmd, y_cmd, z_cmd) = if self.dialect.omit_unchanged_coords {
+        if self.dialect.omit_unchanged_coords {
             let x_changed = (x - prev_x).abs() > 1e-12;
             let y_changed = (y - prev_y).abs() > 1e-12;
             let z_changed = (z - prev_z).abs() > 1e-12;
             let none_changed = !x_changed && !y_changed && !z_changed;
-
-            (
-                if x_changed || none_changed {
-                    x_cmd
-                } else {
-                    String::new()
-                },
-                if y_changed { y_cmd } else { String::new() },
-                if z_changed { z_cmd } else { String::new() },
-            )
-        } else {
-            (x_cmd, y_cmd, z_cmd)
-        };
-
-        CoordVars {
-            x: self.format_coord(x),
-            y: self.format_coord(y),
-            z: self.format_coord(z),
-            x_cmd,
-            y_cmd,
-            z_cmd,
-            extra_cmd,
+            if !(x_changed || none_changed) {
+                self.give_var(x_cmd);
+                x_cmd = String::new();
+            }
+            if !y_changed {
+                self.give_var(y_cmd);
+                y_cmd = String::new();
+            }
+            if !z_changed {
+                self.give_var(z_cmd);
+                z_cmd = String::new();
+            }
         }
+
+        self.vars.set("x", x_val);
+        self.vars.set("y", y_val);
+        self.vars.set("z", z_val);
+        self.vars.set("x_cmd", x_cmd);
+        self.vars.set("y_cmd", y_cmd);
+        self.vars.set("z_cmd", z_cmd);
+        self.vars.set("extra_cmd", extra_cmd);
     }
 
     fn emit_modal_speed(&mut self, speed: f64) {
-        if !self.dialect.set_speed.is_empty()
-            && Some(speed) != self.emitted_speed
-        {
+        let dialect = self.dialect;
+        if !dialect.set_speed.is_empty() && Some(speed) != self.emitted_speed {
             let scaled = speed * self.ctx.unit_scale;
             let mut vars = NamedVars::default();
             vars.set_num("speed", scaled);
-            let out = render_named(&self.dialect.set_speed, &vars);
+            let out = render_named(&dialect.set_speed, &vars);
             if !out.is_empty() {
-                self.push_line(out);
+                self.push_line(&out);
             }
             self.emitted_speed = Some(speed);
         }
@@ -330,9 +373,10 @@ impl<'a> GcodeEncoder<'a> {
                     let power_abs = self.power.unwrap_or(0.0) * max_power;
                     let mut vars = NamedVars::default();
                     vars.set_num("power", power_abs);
-                    let out = render_named(&self.dialect.laser_on, &vars);
+                    let dialect = self.dialect;
+                    let out = render_named(&dialect.laser_on, &vars);
                     if !out.is_empty() {
-                        self.push_line(out);
+                        self.push_line(&out);
                     }
                 }
                 self.laser_active = true;
@@ -341,9 +385,10 @@ impl<'a> GcodeEncoder<'a> {
     }
 
     fn laser_off(&mut self) {
-        if self.laser_active && !self.dialect.continuous_laser_mode {
-            if !self.dialect.laser_off.is_empty() {
-                self.push_line(self.dialect.laser_off.clone());
+        let dialect = self.dialect;
+        if self.laser_active && !dialect.continuous_laser_mode {
+            if !dialect.laser_off.is_empty() {
+                self.push_line(&dialect.laser_off);
             }
             self.laser_active = false;
         }
@@ -365,9 +410,10 @@ impl<'a> GcodeEncoder<'a> {
                     let power_abs = power * max_power;
                     let mut vars = NamedVars::default();
                     vars.set_num("power", power_abs);
-                    let out = render_named(&self.dialect.laser_on, &vars);
+                    let dialect = self.dialect;
+                    let out = render_named(&dialect.laser_on, &vars);
                     if !out.is_empty() {
-                        self.push_line(out);
+                        self.push_line(&out);
                     }
                 }
             } else {
@@ -382,13 +428,14 @@ impl<'a> GcodeEncoder<'a> {
             return;
         }
         self.air_assist = on;
+        let dialect = self.dialect;
         let cmd = if on {
-            &self.dialect.air_assist_on
+            &dialect.air_assist_on
         } else {
-            &self.dialect.air_assist_off
+            &dialect.air_assist_off
         };
         if !cmd.is_empty() {
-            self.push_line(cmd.clone());
+            self.push_line(cmd);
         }
     }
 
@@ -396,33 +443,35 @@ impl<'a> GcodeEncoder<'a> {
         if Some(mode) == self.coolant_mode {
             return;
         }
+        let dialect = self.dialect;
         let cmd = match mode {
-            CoolantMode::Flood => &self.dialect.coolant_flood,
-            CoolantMode::Mist => &self.dialect.coolant_mist,
-            CoolantMode::Off => &self.dialect.coolant_off,
+            CoolantMode::Flood => &dialect.coolant_flood,
+            CoolantMode::Mist => &dialect.coolant_mist,
+            CoolantMode::Off => &dialect.coolant_off,
         };
         if !cmd.is_empty() {
-            self.push_line(cmd.clone());
+            self.push_line(cmd);
         }
         self.coolant_mode = Some(mode);
     }
 
     fn handle_spindle(&mut self, rpm: u32) {
+        let dialect = self.dialect;
         if rpm > 0 {
             if self.spindle_rpm > 0
                 && rpm != self.spindle_rpm
-                && !self.dialect.spindle_off.is_empty()
+                && !dialect.spindle_off.is_empty()
             {
-                self.push_line(self.dialect.spindle_off.clone());
+                self.push_line(&dialect.spindle_off);
             }
             let mut vars = NamedVars::default();
             vars.set_str("rpm", &rpm.to_string());
-            let out = render_named(&self.dialect.spindle_on_cw, &vars);
+            let out = render_named(&dialect.spindle_on_cw, &vars);
             if !out.is_empty() {
-                self.push_line(out);
+                self.push_line(&out);
             }
-        } else if self.spindle_rpm > 0 && !self.dialect.spindle_off.is_empty() {
-            self.push_line(self.dialect.spindle_off.clone());
+        } else if self.spindle_rpm > 0 && !dialect.spindle_off.is_empty() {
+            self.push_line(&dialect.spindle_off);
         }
         self.spindle_rpm = rpm;
     }
@@ -440,11 +489,26 @@ impl<'a> GcodeEncoder<'a> {
         if let Some(tn) = tool_number {
             let mut vars = NamedVars::default();
             vars.set_str("tool_number", &tn.to_string());
-            let out = render_named(&self.dialect.tool_change, &vars);
+            let dialect = self.dialect;
+            let out = render_named(&dialect.tool_change, &vars);
             if !out.is_empty() {
-                self.push_line(out);
+                self.push_line(&out);
             }
             self.active_laser_uid = Some(laser_uid.to_string());
+        }
+    }
+    /// Render ``self.vars`` through *template* into the reusable line
+    /// buffer, emit it, then return every var string to the pool and
+    /// clear the vars bag (keeping its capacity).
+    fn emit_line(&mut self, template: &str) {
+        let mut line = std::mem::take(&mut self.line_buf);
+        line.clear();
+        render_named_into(&mut line, template, &self.vars);
+        self.push_line(&line);
+        self.line_buf = line;
+        let pairs = std::mem::take(&mut self.vars.pairs);
+        for (_, value) in pairs {
+            self.give_var(value);
         }
     }
 
@@ -454,12 +518,13 @@ impl<'a> GcodeEncoder<'a> {
         y: f64,
         z: f64,
         extra_axes: Option<&[(Axis, f64)]>,
-    ) -> NamedVars {
+    ) {
         self.laser_on();
         let cut_speed = self.cut_speed.unwrap_or(0.0);
         self.emit_modal_speed(cut_speed);
 
-        let f_command = if self.dialect.modal_feedrate {
+        let mut f_command = self.take_var();
+        if self.dialect.modal_feedrate {
             let needs_emit = self.emitted_cut_feed.is_none()
                 || (Some(self.cut_speed.unwrap_or(0.0))
                     != self.emitted_cut_feed)
@@ -472,45 +537,34 @@ impl<'a> GcodeEncoder<'a> {
                         .unwrap_or(false));
             if let Some(cs) = self.cut_speed {
                 if needs_emit {
-                    let formatted = self.format_feed(cs);
+                    f_command.push_str(" F");
+                    self.write_feed(&mut f_command, cs);
                     self.emitted_cut_feed = Some(cs);
-                    format!(" F{formatted}")
-                } else {
-                    String::new()
                 }
-            } else {
-                String::new()
             }
-        } else {
-            self.cut_speed
-                .map(|s| format!(" F{}", self.format_feed(s)))
-                .unwrap_or_default()
-        };
+        } else if let Some(s) = self.cut_speed {
+            f_command.push_str(" F");
+            self.write_feed(&mut f_command, s);
+        }
 
-        let (power_abs, s_command) = match self.power {
-            Some(p) if p > 0.0 || self.dialect.continuous_laser_mode => {
+        let mut s_command = self.take_var();
+        let mut power_abs = 0.0;
+        if let Some(p) = self.power {
+            if p > 0.0 || self.dialect.continuous_laser_mode {
                 let uid = self.get_current_laser_head_uid().unwrap_or_default();
                 let max_power = self.max_power_for_head(&uid).unwrap_or(0.0);
-                let abs = p * max_power;
-                let formatted = self.format_power(abs);
-                (abs, format!(" S{formatted}"))
+                power_abs = p * max_power;
+                s_command.push_str(" S");
+                self.write_power(&mut s_command, power_abs);
             }
-            _ => (0.0, String::new()),
-        };
+        }
 
-        let coord_vars = self.build_coord_commands(x, y, z, extra_axes);
-        let mut vars = NamedVars::default();
-        vars.set_str("x", &coord_vars.x);
-        vars.set_str("y", &coord_vars.y);
-        vars.set_str("z", &coord_vars.z);
-        vars.set_str("x_cmd", &coord_vars.x_cmd);
-        vars.set_str("y_cmd", &coord_vars.y_cmd);
-        vars.set_str("z_cmd", &coord_vars.z_cmd);
-        vars.set_str("extra_cmd", &coord_vars.extra_cmd);
-        vars.set_str("f_command", &f_command);
-        vars.set_str("s_command", &s_command);
-        vars.set_num("power", power_abs);
-        vars
+        self.build_coord_commands(x, y, z, extra_axes);
+        self.vars.set("f_command", f_command);
+        self.vars.set("s_command", s_command);
+        let mut power = self.take_var();
+        write!(power, "{power_abs}").expect("writing into a String");
+        self.vars.set("power", power);
     }
 
     fn handle_move_to(
@@ -521,41 +575,30 @@ impl<'a> GcodeEncoder<'a> {
         extra_axes: Option<&[(Axis, f64)]>,
     ) {
         self.laser_off();
+        self.vars.pairs.clear();
 
-        let coord_vars = self.build_coord_commands(x, y, z, extra_axes);
-        let mut vars = NamedVars::default();
-        vars.set_str("x", &coord_vars.x);
-        vars.set_str("y", &coord_vars.y);
-        vars.set_str("z", &coord_vars.z);
-        vars.set_str("x_cmd", &coord_vars.x_cmd);
-        vars.set_str("y_cmd", &coord_vars.y_cmd);
-        vars.set_str("z_cmd", &coord_vars.z_cmd);
-        vars.set_str("extra_cmd", &coord_vars.extra_cmd);
+        self.build_coord_commands(x, y, z, extra_axes);
 
-        let mut f_command = String::new();
+        let mut f_command = self.take_var();
         if self.dialect.can_g0_with_speed {
             let travel = self.travel_speed.unwrap_or(0.0);
             self.emit_modal_speed(travel);
             if let Some(ts) = self.travel_speed {
-                let formatted = self.format_feed(ts);
-                f_command = format!(" F{formatted}");
+                f_command.push_str(" F");
+                self.write_feed(&mut f_command, ts);
                 self.emitted_cut_feed = None;
             }
-            vars.set_str("f_command", &f_command);
-        } else {
-            vars.set_str("f_command", "");
         }
+        self.vars.set("f_command", f_command);
 
-        let s_command =
-            if self.laser_active && self.dialect.continuous_laser_mode {
-                " S0".to_string()
-            } else {
-                String::new()
-            };
-        vars.set_str("s_command", &s_command);
+        let mut s_command = self.take_var();
+        if self.laser_active && self.dialect.continuous_laser_mode {
+            s_command.push_str(" S0");
+        }
+        self.vars.set("s_command", s_command);
 
-        let out = render_named(&self.dialect.travel_move, &vars);
-        self.push_line(out);
+        let dialect = self.dialect;
+        self.emit_line(&dialect.travel_move);
     }
 
     fn handle_line_to(
@@ -565,9 +608,10 @@ impl<'a> GcodeEncoder<'a> {
         z: f64,
         extra_axes: Option<&[(Axis, f64)]>,
     ) {
-        let vars = self.build_cut_move_vars(x, y, z, extra_axes);
-        let out = render_named(&self.dialect.linear_move, &vars);
-        self.push_line(out);
+        self.vars.pairs.clear();
+        self.build_cut_move_vars(x, y, z, extra_axes);
+        let dialect = self.dialect;
+        self.emit_line(&dialect.linear_move);
     }
 
     fn handle_arc_to(
@@ -577,17 +621,21 @@ impl<'a> GcodeEncoder<'a> {
         cw: bool,
         extra_axes: Option<&[(Axis, f64)]>,
     ) {
+        self.vars.pairs.clear();
+        let dialect = self.dialect;
         let template = if cw {
-            &self.dialect.arc_cw
+            &dialect.arc_cw
         } else {
-            &self.dialect.arc_ccw
+            &dialect.arc_ccw
         };
-        let mut vars =
-            self.build_cut_move_vars(end.x, end.y, end.z, extra_axes);
-        vars.set_str("i", &self.format_coord(center.0));
-        vars.set_str("j", &self.format_coord(center.1));
-        let out = render_named(template, &vars);
-        self.push_line(out);
+        self.build_cut_move_vars(end.x, end.y, end.z, extra_axes);
+        let mut i = self.take_var();
+        self.write_coord(&mut i, center.0);
+        self.vars.set("i", i);
+        let mut j = self.take_var();
+        self.write_coord(&mut j, center.1);
+        self.vars.set("j", j);
+        self.emit_line(template);
     }
 
     fn handle_bezier_to(
@@ -610,17 +658,25 @@ impl<'a> GcodeEncoder<'a> {
             return;
         }
 
+        self.vars.pairs.clear();
         let start = self.current_pos_xyz();
         let end = ops.endpoint(idx);
         let (c1, c2) = ops_bezier_params(ops, idx);
-        let mut vars =
-            self.build_cut_move_vars(end.x, end.y, end.z, extra_axes);
-        vars.set_str("i", &self.format_coord(c1.x - start.x));
-        vars.set_str("j", &self.format_coord(c1.y - start.y));
-        vars.set_str("p", &self.format_coord(c2.x - end.x));
-        vars.set_str("q", &self.format_coord(c2.y - end.y));
-        let out = render_named(&self.dialect.bezier_cubic, &vars);
-        self.push_line(out);
+        self.build_cut_move_vars(end.x, end.y, end.z, extra_axes);
+        let mut i = self.take_var();
+        self.write_coord(&mut i, c1.x - start.x);
+        self.vars.set("i", i);
+        let mut j = self.take_var();
+        self.write_coord(&mut j, c1.y - start.y);
+        self.vars.set("j", j);
+        let mut p = self.take_var();
+        self.write_coord(&mut p, c2.x - end.x);
+        self.vars.set("p", p);
+        let mut q = self.take_var();
+        self.write_coord(&mut q, c2.y - end.y);
+        self.vars.set("q", q);
+        let dialect = self.dialect;
+        self.emit_line(&dialect.bezier_cubic);
     }
 
     fn handle_moving(&mut self, ops: &Ops, idx: usize, ct: CommandType) {
@@ -694,28 +750,33 @@ impl<'a> GcodeEncoder<'a> {
                 }
             }
             CommandType::Dwell => {
-                if !self.dialect.dwell.is_empty() {
+                let dialect = self.dialect;
+                if !dialect.dwell.is_empty() {
                     let duration = ops_dwell(ops, idx);
                     let mut vars = NamedVars::default();
                     vars.set_str("seconds", &format!("{}", duration / 1000.0));
                     vars.set_str("milliseconds", &format!("{}", duration));
-                    let out = render_named(&self.dialect.dwell, &vars);
+                    let out = render_named(&dialect.dwell, &vars);
                     if !out.is_empty() {
-                        self.push_line(out);
+                        self.push_line(&out);
                     }
                 }
             }
             CommandType::JobStart => {
                 // 1. Preamble
                 let lines = self.format_script_lines(&self.dialect.preamble);
-                self.gcode.extend(lines);
+                for line in lines {
+                    self.push_line(&line);
+                }
 
                 // 2. Active WCS after preamble.
-                if self.dialect.inject_wcs_after_preamble
+                let dialect = self.dialect;
+                if dialect.inject_wcs_after_preamble
                     && !self.ctx.active_wcs.is_empty()
                 {
-                    self.push_line(self.ctx.active_wcs.clone());
-                    self.active_wcs = Some(self.ctx.active_wcs.clone());
+                    let wcs = self.ctx.active_wcs.clone();
+                    self.push_line(&wcs);
+                    self.active_wcs = Some(wcs);
                 }
             }
             CommandType::JobEnd => {
@@ -732,7 +793,9 @@ impl<'a> GcodeEncoder<'a> {
                     }
                 }
                 let lines = self.format_script_lines(&self.dialect.postscript);
-                self.gcode.extend(lines);
+                for line in lines {
+                    self.push_line(&line);
+                }
             }
             CommandType::LayerStart => {
                 let uid = ops_layer_uid(ops, idx);
@@ -744,11 +807,12 @@ impl<'a> GcodeEncoder<'a> {
                         );
                     }
                     if let Some(wcs) = self.ctx.layer_wcs.get(&uid) {
-                        if self.dialect.inject_wcs_after_preamble
+                        let dialect = self.dialect;
+                        if dialect.inject_wcs_after_preamble
                             && Some(wcs.as_str()) != self.active_wcs.as_deref()
                         {
                             if !wcs.is_empty() {
-                                self.push_line(wcs.clone());
+                                self.push_line(&wcs.clone());
                             }
                             self.active_wcs = Some(wcs.clone());
                         }
@@ -782,37 +846,16 @@ impl<'a> GcodeEncoder<'a> {
     }
 
     fn finalize(&mut self) {
-        let needs_trailing_empty = match self.gcode.last() {
-            Some(line) => !line.is_empty(),
-            None => false,
-        };
-        if needs_trailing_empty {
-            self.gcode.push(String::new());
+        // The old line-array encoder joined lines with ``\n`` and then
+        // appended a trailing empty line, so the text always ended with
+        // exactly one ``\n``.  The single buffer already appends ``\n``
+        // per line; a trailing empty line leaves ``\n\n``, which the
+        // join would have collapsed to ``\n``.
+        if self.gcode.ends_with("\n\n") {
+            self.gcode.pop();
         }
-    }
-}
-
-struct CoordVars {
-    x: String,
-    y: String,
-    z: String,
-    x_cmd: String,
-    y_cmd: String,
-    z_cmd: String,
-    extra_cmd: String,
-}
-
-fn strip_trailing_zeros(s: &str) -> String {
-    if s.find('.').is_some() {
-        let stripped = s.trim_end_matches('0');
-        let stripped = stripped.trim_end_matches('.');
-        if stripped.is_empty() || stripped == "-" {
-            s.to_string()
-        } else {
-            stripped.to_string()
-        }
-    } else {
-        s.to_string()
+        self.machine_code_to_op
+            .resize(self.line_count, MACHINE_CODE_TO_OP_NONE);
     }
 }
 
@@ -1039,12 +1082,16 @@ pub fn encode_gcode(
     callbacks: &dyn Callbacks,
 ) -> Result<EncodeResult, String> {
     let mut enc = GcodeEncoder::new(dialect, ctx);
+    // Pre-size the output buffer so the per-line push_str calls don't
+    // trigger a long reallocation cascade as the text grows.  32 bytes
+    // is a rough per-command average; the buffer still grows if needed.
+    enc.gcode.reserve(ops.len().saturating_mul(32));
 
     for i in 0..ops.len() {
         if i % 1000 == 0 && callbacks.is_cancelled() {
             return Err("cancelled".to_string());
         }
-        let start_line = enc.gcode.len();
+        let start_line = enc.line_count;
         enc.handle_command(ops, i);
         enc.record_op_lines(i, start_line);
     }
@@ -1052,7 +1099,7 @@ pub fn encode_gcode(
     enc.finalize();
 
     Ok(EncodeResult {
-        text: enc.gcode.join("\n"),
+        text: enc.gcode,
         op_to_machine_code: enc.op_to_machine_code,
         machine_code_to_op: enc.machine_code_to_op,
     })

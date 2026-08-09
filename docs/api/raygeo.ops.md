@@ -2512,11 +2512,11 @@ Returns a dict with the G-code text and bidirectional op-to-line index maps.
 
 **Raises:** `ValueError` — If deserialization fails.
 
-| Parameter      | Type                       | Description                                                                           |
-| -------------- | -------------------------- | ------------------------------------------------------------------------------------- |
-| `dialect`      | `convert.GcodeDialectSpec` | A **raygeo.ops.convert.GcodeDialectSpec** instance.                                   |
-| `context_dict` | `dict`                     | JSON-serialisable dict matching the Rust `EncodeContext` schema.                      |
-| _Returns_      | `dict`                     | `{"text": str, "op_to_machine_code": {int: [int]}, "machine_code_to_op": {int: int}}` |
+| Parameter      | Type                       | Description                                                                                                                                                                                                |
+| -------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `dialect`      | `convert.GcodeDialectSpec` | A **raygeo.ops.convert.GcodeDialectSpec** instance.                                                                                                                                                        |
+| `context_dict` | `dict`                     | JSON-serialisable dict matching the Rust `EncodeContext` schema.                                                                                                                                           |
+| _Returns_      | `dict`                     | `{"text": str, "op_to_machine_code": [(int, int)], "machine_code_to_op": [int]}` — the op map is one `(start, len)` span per op index; the line map is indexed by line with `-1` for lines owned by no op. |
 
 ### `to_geometry()`
 

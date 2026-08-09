@@ -194,6 +194,22 @@ pub struct EncodeContext {
 #[derive(Debug, Clone, Serialize)]
 pub struct EncodeResult {
     pub text: String,
-    pub op_to_machine_code: HashMap<usize, Vec<usize>>,
-    pub machine_code_to_op: HashMap<usize, usize>,
+    pub op_to_machine_code: Vec<OpLineRange>,
+    pub machine_code_to_op: Vec<usize>,
 }
+
+/// Contiguous run of emitted machine-code lines for a single op.
+///
+/// Every op's emitted lines form one contiguous span ``[start,
+/// start + len)``, so a per-op ``Vec<usize>`` can be replaced by a
+/// single (``start``, ``len``) pair — one per op index, in order.
+/// ``len == 0`` means the op produced no lines.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub struct OpLineRange {
+    pub start: u32,
+    pub len: u32,
+}
+
+/// Sentinel value for ``machine_code_to_op`` entries that have no
+/// owning op (e.g. the trailing empty line added by the encoder).
+pub const MACHINE_CODE_TO_OP_NONE: usize = usize::MAX;

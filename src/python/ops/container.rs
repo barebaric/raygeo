@@ -9,6 +9,7 @@ use pyo3_stub_gen::derive::{
 use pyo3_stub_gen::inventory::submit;
 
 use crate::geo::types::{Point, Point3D, Rect};
+use crate::ops::convert::gcode_types::{OpLineRange, MACHINE_CODE_TO_OP_NONE};
 use crate::ops::{
     Axis, CommandType, MarkerCmd, MoveCmd, OpCategory, OpsSection,
     OpsSectionRange, StateCmd,
@@ -191,33 +192,35 @@ fn py_scene_data_to_object<'py>(
     )
 }
 
-/// Convert a Rust `usize`-keyed `HashMap` into a Python dict with
-/// integer keys.
-fn usize_hashmap_to_pydict<'py>(
+/// Convert a Rust op-line span array into a Python list of
+/// ``(start, len)`` tuples, one per op index.
+fn op_line_ranges_to_pylist<'py>(
     py: Python<'py>,
-    map: &std::collections::HashMap<usize, Vec<usize>>,
-) -> PyResult<Bound<'py, PyDict>> {
-    let dict = PyDict::new(py);
-    for (&k, v) in map {
-        let py_list = PyList::empty(py);
-        for &item in v {
-            py_list.append(item)?;
-        }
-        dict.set_item(k, py_list)?;
+    ranges: &[OpLineRange],
+) -> PyResult<Bound<'py, PyList>> {
+    let list = PyList::empty(py);
+    for r in ranges {
+        list.append((r.start, r.len))?;
     }
-    Ok(dict)
+    Ok(list)
 }
 
-/// Convert a Rust `usize → usize` `HashMap` into a Python dict.
-fn usize_usize_hashmap_to_pydict<'py>(
+/// Convert a Rust line→op array into a Python list of integers,
+/// mapping the ``MACHINE_CODE_TO_OP_NONE`` sentinel to ``-1``.
+fn machine_code_to_op_to_pylist<'py>(
     py: Python<'py>,
-    map: &std::collections::HashMap<usize, usize>,
-) -> PyResult<Bound<'py, PyDict>> {
-    let dict = PyDict::new(py);
-    for (&k, &v) in map {
-        dict.set_item(k, v)?;
+    vec: &[usize],
+) -> PyResult<Bound<'py, PyList>> {
+    let list = PyList::empty(py);
+    for &v in vec {
+        let item = if v == MACHINE_CODE_TO_OP_NONE {
+            -1
+        } else {
+            v as isize
+        };
+        list.append(item)?;
     }
-    Ok(dict)
+    Ok(list)
 }
 
 /// Normalize a Python-style index (negative = from end) to a usize.
@@ -3212,8 +3215,10 @@ impl PyOps {
     /// :param dialect: A :class:`raygeo.ops.convert.GcodeDialectSpec` instance.
     /// :param context_dict: JSON-serialisable dict matching the Rust
     ///     ``EncodeContext`` schema.
-    /// :returns: ``{"text": str, "op_to_machine_code": {int: [int]},
-    ///     "machine_code_to_op": {int: int}}``
+    /// :returns: ``{"text": str, "op_to_machine_code": [(int, int)],
+    ///     "machine_code_to_op": [int]}`` — the op map is one
+    ///     ``(start, len)`` span per op index; the line map is indexed
+    ///     by line with ``-1`` for lines owned by no op.
     /// :raises ValueError: If deserialization fails.
     fn to_gcode<'py>(
         &self,
@@ -3241,11 +3246,11 @@ impl PyOps {
         dict.set_item("text", &result.text)?;
         dict.set_item(
             "op_to_machine_code",
-            usize_hashmap_to_pydict(py, &result.op_to_machine_code)?,
+            op_line_ranges_to_pylist(py, &result.op_to_machine_code)?,
         )?;
         dict.set_item(
             "machine_code_to_op",
-            usize_usize_hashmap_to_pydict(py, &result.machine_code_to_op)?,
+            machine_code_to_op_to_pylist(py, &result.machine_code_to_op)?,
         )?;
         Ok(dict)
     }

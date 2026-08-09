@@ -148,9 +148,9 @@ def test_gcode_encode_op_maps_populated():
     mo = out.machine_code_to_op
     assert om is not None and mo is not None
     assert len(om) > 0
-    for op_idx, machine_indices in om.items():
-        for mi in machine_indices:
-            assert mi in mo
+    for op_idx, (start, count) in enumerate(om):
+        for mi in range(start, start + count):
+            assert mi < len(mo)
             assert mo[mi] == op_idx
 
 

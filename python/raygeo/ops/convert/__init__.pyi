@@ -36,16 +36,17 @@ class EncodeOutput:
         ``MachineCode`` variant.
         """
     @property
-    def op_to_machine_code(self) -> typing.Optional[builtins.dict[builtins.int, builtins.list[builtins.int]]]:
+    def op_to_machine_code(self) -> typing.Optional[typing.Any]:
         r"""
-        Mapping ``op_index -> list of machine-code line indices``.
-        Returns ``None`` unless this is the ``MachineCode`` variant.
+        Mapping ``op_index -> (start_line, line_count)`` span. Returns
+        ``None`` unless this is the ``MachineCode`` variant.
         """
     @property
-    def machine_code_to_op(self) -> typing.Optional[builtins.dict[builtins.int, builtins.int]]:
+    def machine_code_to_op(self) -> typing.Optional[typing.Any]:
         r"""
-        Mapping ``machine-code line index -> op_index``.
-        Returns ``None`` unless this is the ``MachineCode`` variant.
+        Mapping ``machine-code line index -> op_index`` (``-1`` = no
+        op). Returns ``None`` unless this is the ``MachineCode``
+        variant.
         """
     @property
     def repr(self) -> typing.Optional[builtins.str]:
@@ -72,7 +73,7 @@ class EncodeOutput:
         ``Texture`` variant.
         """
     @classmethod
-    def MachineCode(cls, text: builtins.str, op_to_machine_code: typing.Mapping[builtins.int, typing.Sequence[builtins.int]], machine_code_to_op: typing.Mapping[builtins.int, builtins.int]) -> EncodeOutput: ...
+    def MachineCode(cls, text: builtins.str, op_to_machine_code: typing.Sequence[tuple[builtins.int, builtins.int]], machine_code_to_op: typing.Sequence[builtins.int]) -> EncodeOutput: ...
     def __repr__(self) -> builtins.str: ...
 
 @typing.final
