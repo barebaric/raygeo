@@ -80,6 +80,7 @@ Examples
 """
 
 from . import cnc
+from . import compressed_array
 from . import fstring
 from . import geo
 from . import image
@@ -90,6 +91,7 @@ from . import svg
 from . import trace
 __all__ = [
     "cnc",
+    "compressed_array",
     "fstring",
     "geo",
     "image",

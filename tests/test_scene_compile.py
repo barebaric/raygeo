@@ -57,12 +57,12 @@ def test_line_to():
     data = _compile(ops)
     g = _flat_group(data)
 
-    pv = g.powered_verts.reshape(-1, 3)
+    pv = g.powered_verts.to_numpy().reshape(-1, 3)
     assert pv.shape == (2, 3)
     assert np.allclose(pv[0], [0, 0, 0])
     assert np.allclose(pv[1], [10, 20, 0])
 
-    pa = g.powered_attrib
+    pa = g.powered_attrib.to_numpy()
     assert pa.shape == (8,)
     assert np.allclose(pa[0::4], [0.5, 0.5])
     assert np.allclose(pa[1::4], [0.0, 0.0])
@@ -76,7 +76,7 @@ def test_move_to_produces_travel():
     data = _compile(ops)
     g = _flat_group(data)
 
-    tv = g.travel_verts.reshape(-1, 3)
+    tv = g.travel_verts.to_numpy().reshape(-1, 3)
     assert tv.shape == (2, 3)
     assert np.allclose(tv[0], [0, 0, 0.01])
     assert np.allclose(tv[1], [10, 20, 0.01])
@@ -91,8 +91,8 @@ def test_zero_power_line():
     data = _compile(ops)
     g = _flat_group(data)
 
-    assert g.powered_verts.size == 0
-    zpv = g.zero_power_verts.reshape(-1, 3)
+    assert g.powered_verts.to_numpy().size == 0
+    zpv = g.zero_power_verts.to_numpy().reshape(-1, 3)
     assert zpv.shape == (2, 3)
     assert np.allclose(zpv[0], [0, 0, 0.01])
     assert np.allclose(zpv[1], [5, 5, 0.01])
@@ -112,7 +112,7 @@ def test_power_tracking():
     data = _compile(ops)
     g = _flat_group(data)
 
-    pa = g.powered_attrib
+    pa = g.powered_attrib.to_numpy()
     assert pa.shape == (16,)
     assert np.allclose(pa[0::4], [0.3, 0.3, 0.8, 0.8])
 
@@ -134,8 +134,8 @@ def test_laser_index():
 
     assert data.laser_uid_order == ["laser_a", "laser_b"]
 
-    assert g.powered_attrib.shape == (16,)
-    pvl = g.powered_attrib[1::4]
+    assert g.powered_attrib.to_numpy().shape == (16,)
+    pvl = g.powered_attrib.to_numpy()[1::4]
     assert pvl[0] == 0 and pvl[1] == 0
     assert pvl[2] == 1 and pvl[3] == 1
 
@@ -152,7 +152,7 @@ def test_arc_to():
     data = _compile(ops)
     g = _flat_group(data)
 
-    pv = g.powered_verts.reshape(-1, 3)
+    pv = g.powered_verts.to_numpy().reshape(-1, 3)
     assert pv.shape[0] >= 4
     assert np.allclose(pv[0], [0, 0, 0])
     assert np.allclose(pv[-1], [10, 0, 0])
@@ -174,7 +174,7 @@ def test_bezier_to():
     data = _compile(ops)
     g = _flat_group(data)
 
-    pv = g.powered_verts.reshape(-1, 3)
+    pv = g.powered_verts.to_numpy().reshape(-1, 3)
     assert pv.shape[0] >= 4
     assert np.allclose(pv[0], [0, 0, 0])
     assert np.allclose(pv[-1], [10, 0, 0])
@@ -193,14 +193,14 @@ def test_scan_line():
     data = _compile(ops)
     g = _flat_group(data)
 
-    assert g.powered_verts.size == 0
+    assert g.powered_verts.to_numpy().size == 0
 
-    zpv = g.zero_power_verts.reshape(-1, 3)
+    zpv = g.zero_power_verts.to_numpy().reshape(-1, 3)
     assert zpv.shape[0] >= 2
 
-    ov_pos = g.overlay_positions.reshape(-1, 3)
+    ov_pos = g.overlay_positions.to_numpy().reshape(-1, 3)
     assert ov_pos.shape[0] >= 2
-    oa = g.overlay_attrib
+    oa = g.overlay_attrib.to_numpy()
     assert oa.shape[0] >= 8  # 2+ vertices * 4
     assert np.allclose(oa[0::4], [1.0, 1.0])
 
@@ -214,7 +214,7 @@ def test_scan_line_all_zero():
     data = _compile(ops)
     g = _flat_group(data)
 
-    assert g.overlay_positions.size == 0
+    assert g.overlay_positions.to_numpy().size == 0
 
 
 # ── Per-command offsets ─────────────────────────────────────────
@@ -297,7 +297,7 @@ def test_world_transform():
     data = ops.compile_scene_3d(transform.tolist(), {})
     g = _flat_group(data)
 
-    pv = g.powered_verts.reshape(-1, 3)
+    pv = g.powered_verts.to_numpy().reshape(-1, 3)
     assert np.allclose(pv[0], [100, 0, 0])
     assert np.allclose(pv[1], [110, 0, 0])
 
@@ -313,7 +313,7 @@ def test_z_offset_travel():
     data = _compile(ops)
     g = _flat_group(data)
 
-    tv = g.travel_verts.reshape(-1, 3)
+    tv = g.travel_verts.to_numpy().reshape(-1, 3)
     assert abs(tv[0, 2]) > 0.0
     assert abs(tv[1, 2]) > 0.0
 
@@ -340,7 +340,7 @@ def test_rotary_basic():
     rot_groups = [g for g in data.groups if g.is_rotary]
     assert len(rot_groups) == 1
 
-    pv = rot_groups[0].powered_verts.reshape(-1, 3)
+    pv = rot_groups[0].powered_verts.to_numpy().reshape(-1, 3)
     assert pv.shape[0] >= 2
 
 
@@ -374,8 +374,8 @@ def test_overlay_all_zero():
     data = _compile(ops)
     g = _flat_group(data)
 
-    assert g.overlay_positions.size == 0
-    assert g.overlay_attrib.size == 0
+    assert g.overlay_positions.to_numpy().size == 0
+    assert g.overlay_attrib.to_numpy().size == 0
 
 
 def test_overlay_all_max():
@@ -387,12 +387,12 @@ def test_overlay_all_max():
     data = _compile(ops)
     g = _flat_group(data)
 
-    ov_pos = g.overlay_positions.reshape(-1, 3)
+    ov_pos = g.overlay_positions.to_numpy().reshape(-1, 3)
     assert ov_pos.shape == (2, 3)
     assert np.allclose(ov_pos[0], [0, 0, 0])
     assert np.allclose(ov_pos[1], [10, 0, 0])
 
-    oa = g.overlay_attrib
+    oa = g.overlay_attrib.to_numpy()
     assert oa.shape == (8,)
     assert np.allclose(oa[0::4], [1.0, 1.0])
 
@@ -406,7 +406,7 @@ def test_overlay_mixed():
     data = _compile(ops)
     g = _flat_group(data)
 
-    ov_pos = g.overlay_positions.reshape(-1, 3)
+    ov_pos = g.overlay_positions.to_numpy().reshape(-1, 3)
     assert ov_pos.shape == (4, 3)
 
     # First segment: pixels 1-3 (t=1/6 to t=3/6)
@@ -427,7 +427,7 @@ def test_overlay_power_values():
     data = _compile(ops)
     g = _flat_group(data)
 
-    oa = g.overlay_attrib
+    oa = g.overlay_attrib.to_numpy()
     assert oa.shape == (8,)
     assert abs(oa[0] - 128.0 / 255.0) < 0.01
     assert abs(oa[4] - 128.0 / 255.0) < 0.01
@@ -443,8 +443,8 @@ def test_overlay_laser_index():
     data = _compile(ops)
     g = _flat_group(data)
 
-    assert g.overlay_attrib.shape == (8,)
-    ov_lid = g.overlay_attrib[1::4]
+    assert g.overlay_attrib.to_numpy().shape == (8,)
+    ov_lid = g.overlay_attrib.to_numpy()[1::4]
     assert ov_lid[0] == 0
     assert ov_lid[1] == 0
 
@@ -478,7 +478,7 @@ def test_rotary_overlay_offsets_subdivided():
     data = _compile(ops, configs)
     g = _rotary_group(data)
 
-    ov_pos = g.overlay_positions.reshape(-1, 3)
+    ov_pos = g.overlay_positions.to_numpy().reshape(-1, 3)
     total_ov_verts = ov_pos.shape[0]
 
     assert total_ov_verts > 2, "expected subdivision for 90-degree span"
@@ -515,7 +515,7 @@ def test_rotary_overlay_offsets_parallel():
     data = _compile(ops, configs)
     g = _rotary_group(data)
 
-    ov_pos = g.overlay_positions.reshape(-1, 3)
+    ov_pos = g.overlay_positions.to_numpy().reshape(-1, 3)
     total_ov_verts = ov_pos.shape[0]
     ov_off = g.overlay_cmd_offsets
 
@@ -570,12 +570,12 @@ def test_compile_returns_numpy_float32():
     data = _compile(ops)
     g = _flat_group(data)
 
-    assert g.powered_verts.dtype == np.float32
-    assert g.powered_attrib.dtype == np.float32
-    assert g.travel_verts.dtype == np.float32
-    assert g.zero_power_verts.dtype == np.float32
-    assert g.overlay_positions.dtype == np.float32
-    assert g.overlay_attrib.dtype == np.float32
+    assert g.powered_verts.to_numpy().dtype == np.float32
+    assert g.powered_attrib.to_numpy().dtype == np.float32
+    assert g.travel_verts.to_numpy().dtype == np.float32
+    assert g.zero_power_verts.to_numpy().dtype == np.float32
+    assert g.overlay_positions.to_numpy().dtype == np.float32
+    assert g.overlay_attrib.to_numpy().dtype == np.float32
 
 
 def test_compile_returns_int32_offsets():
@@ -603,8 +603,8 @@ def test_numpy_arrays_contiguous():
     data = _compile(ops)
     g = _flat_group(data)
 
-    assert g.powered_verts.flags["C_CONTIGUOUS"]
-    assert g.powered_attrib.flags["C_CONTIGUOUS"]
+    assert g.powered_verts.to_numpy().flags["C_CONTIGUOUS"]
+    assert g.powered_attrib.to_numpy().flags["C_CONTIGUOUS"]
     assert g.powered_cmd_offsets.flags["C_CONTIGUOUS"]
 
 
@@ -619,9 +619,9 @@ def test_compile_array_shapes():
     data = _compile(ops)
     g = _flat_group(data)
 
-    assert g.powered_verts.shape == (12,)
-    assert g.powered_attrib.shape == (16,)
-    assert len(g.powered_attrib[0::4]) == 4
+    assert g.powered_verts.to_numpy().shape == (12,)
+    assert g.powered_attrib.to_numpy().shape == (16,)
+    assert len(g.powered_attrib.to_numpy()[0::4]) == 4
 
 
 def test_encode_output_scene_accessible():

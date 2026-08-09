@@ -86,6 +86,7 @@
 //! ```
 
 pub mod cnc;
+pub mod compressed_array;
 pub mod constants;
 pub mod error;
 pub mod fstring;
@@ -224,6 +225,7 @@ pub(crate) const MODULE_DOC: &str = concat!(
 #[cfg(feature = "python")]
 #[pymodule(gil_used = false)]
 fn raygeo(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    python::compressed_array::register(m)?;
     python::cnc::register(m)?;
     python::fstring::register(m)?;
     python::geo::register(m)?;

@@ -2860,6 +2860,10 @@ Extract the content commands of this section range from an Ops sequence.
 
 One rendering group (flat or rotary) with all vertex & overlay buffers.
 
+Vertex and attribute arrays are stored as **CompressedArray** to reduce memory footprint between
+compilation and GPU upload. Command offsets remain plain numpy arrays because they are small and
+accessed frequently during playback.
+
 ### `is_rotary`
 
 ```python
@@ -2869,7 +2873,7 @@ is_rotary: bool
 ### `overlay_attrib`
 
 ```python
-overlay_attrib: numpy.NDArray[numpy.float32]
+overlay_attrib: compressed_array.CompressedArray
 ```
 
 ### `overlay_cmd_offsets`
@@ -2881,13 +2885,13 @@ overlay_cmd_offsets: numpy.NDArray[numpy.int32]
 ### `overlay_positions`
 
 ```python
-overlay_positions: numpy.NDArray[numpy.float32]
+overlay_positions: compressed_array.CompressedArray
 ```
 
 ### `powered_attrib`
 
 ```python
-powered_attrib: numpy.NDArray[numpy.float32]
+powered_attrib: compressed_array.CompressedArray
 ```
 
 ### `powered_cmd_offsets`
@@ -2899,7 +2903,7 @@ powered_cmd_offsets: numpy.NDArray[numpy.int32]
 ### `powered_verts`
 
 ```python
-powered_verts: numpy.NDArray[numpy.float32]
+powered_verts: compressed_array.CompressedArray
 ```
 
 ### `travel_cmd_offsets`
@@ -2911,11 +2915,11 @@ travel_cmd_offsets: numpy.NDArray[numpy.int32]
 ### `travel_verts`
 
 ```python
-travel_verts: numpy.NDArray[numpy.float32]
+travel_verts: compressed_array.CompressedArray
 ```
 
 ### `zero_power_verts`
 
 ```python
-zero_power_verts: numpy.NDArray[numpy.float32]
+zero_power_verts: compressed_array.CompressedArray
 ```

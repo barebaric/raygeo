@@ -1,23 +1,21 @@
-use numpy::IntoPyArray;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
+use crate::python::compressed_array::PyCompressedArray;
 use crate::python::ops::container::PyOps;
 
 #[gen_stub_pyfunction(
     python = r#"
-    import numpy
-    import numpy.typing
-    from raygeo.ops import Ops
+    import raygeo
 
     def rasterize_scanlines(
-        ops: ops.Ops,
+        ops: raygeo.ops.Ops,
         width_px: int,
         height_px: int,
         px_per_mm: tuple[float, float],
         origin_mm: tuple[float, float] = (0.0, 0.0),
         radius_px: int = 0,
-    ) -> numpy.typing.NDArray[numpy.uint8]:
+    ) -> raygeo.compressed_array.CompressedArray:
         """Rasterize ScanLine commands from *ops* into a 2D power-map buffer.
 
         Iterates all scanline commands in *ops*, converts their mm coordinates
@@ -36,7 +34,7 @@ use crate::python::ops::container::PyOps;
         :param origin_mm: (x, y) origin offset in mm (default ``(0.0, 0.0)``).
         :param radius_px: Half-size of the dilation brush in pixels
             (default ``0`` -- no dilation).
-        :returns: 2D uint8 array of shape (height_px, width_px).
+        :returns: CompressedArray of shape (height_px, width_px), uint8.
         :complexity: O(scanline_pixels * (2*radius_px + 1))
         """
     "#,
@@ -61,16 +59,15 @@ fn py_rasterize_scanlines(
         radius_px as i32,
     );
 
-    let numpy = py.import("numpy")?;
-    if buffer.is_empty() {
+    if buffer.is_empty() || !buffer.iter().any(|&b| b != 0) {
+        let numpy = py.import("numpy")?;
         let empty = numpy.call_method1("array", (vec![0u8; 0],))?;
         return Ok(empty.unbind());
     }
 
-    let result = buffer.into_pyarray(py);
-    let reshaped =
-        result.call_method1("reshape", (height_px as i32, width_px as i32))?;
-    Ok(reshaped.unbind())
+    let shape = vec![height_px as usize, width_px as usize];
+    let compressed = PyCompressedArray::from_vec_u8(buffer, shape);
+    Ok(Py::new(py, compressed)?.into_any())
 }
 
 pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {

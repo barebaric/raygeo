@@ -49,7 +49,7 @@ def generate_rasterize_scanlines():
 
     rasterized = rasterize_scanlines(
         ops, img_size, img_size, (ppm, ppm), (0.0, 0.0)
-    )
+    ).to_numpy()
 
     fig, axes = plt.subplots(1, 2, figsize=(14, 6))
     max_mm = img_size / ppm

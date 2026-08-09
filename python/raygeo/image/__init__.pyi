@@ -6,9 +6,7 @@ Image processing functions for CNC engraving applications.
 Provides sRGB/linear color space conversions, RGBA-to-grayscale/binary conversions with alpha unpremultiplication, grayscale normalization with auto-levels, dithering algorithms (Floyd-Steinberg, Bayer, minimum run length) for converting grayscale images to binary output, and scanline rasterization for converting Ops scanlines into pixel buffers.
 """
 
-import numpy
-import numpy.typing
-from raygeo import ops
+import raygeo
 from . import composite
 from . import convert
 from . import dither
@@ -31,7 +29,7 @@ __all__ = [
     "transparency",
 ]
 
-def rasterize_scanlines(ops: ops.Ops, width_px: int, height_px: int, px_per_mm: tuple[float, float], origin_mm: tuple[float, float] = (0, 0), radius_px: int = 0) -> numpy.typing.NDArray[numpy.uint8]:
+def rasterize_scanlines(ops: raygeo.ops.Ops, width_px: int, height_px: int, px_per_mm: tuple[float, float], origin_mm: tuple[float, float] = (0, 0), radius_px: int = 0) -> raygeo.compressed_array.CompressedArray:
     r"""
     Rasterize ScanLine commands from *ops* into a 2D power-map buffer.
     
@@ -51,7 +49,7 @@ def rasterize_scanlines(ops: ops.Ops, width_px: int, height_px: int, px_per_mm: 
     :param origin_mm: (x, y) origin offset in mm (default ``(0.0, 0.0)``).
     :param radius_px: Half-size of the dilation brush in pixels
         (default ``0`` -- no dilation).
-    :returns: 2D uint8 array of shape (height_px, width_px).
+    :returns: CompressedArray of shape (height_px, width_px), uint8.
     :complexity: O(scanline_pixels * (2*radius_px + 1))
     """
 

@@ -14,6 +14,7 @@ use crate::ops::{
     Axis, CommandType, MarkerCmd, MoveCmd, OpCategory, OpsSection,
     OpsSectionRange, StateCmd,
 };
+use crate::python::compressed_array::PyCompressedArray;
 use crate::python::geo::flex_point::{
     point3d_to_tuple, polygons_from_tuples, tuple_to_point3d,
 };
@@ -55,27 +56,32 @@ fn from_pydict<T: serde::de::DeserializeOwned>(
 // ── Typed PyO3 objects replacing the dict handoff ──────────────
 
 /// One rendering group (flat or rotary) with all vertex & overlay buffers.
+///
+/// Vertex and attribute arrays are stored as :class:`CompressedArray`
+/// to reduce memory footprint between compilation and GPU upload.
+/// Command offsets remain plain numpy arrays because they are small
+/// and accessed frequently during playback.
 #[gen_stub_pyclass]
 #[pyclass(module = "raygeo.ops", name = "VertexGroup", skip_from_py_object)]
 pub struct PyVertexGroup {
     #[pyo3(get)]
     pub is_rotary: bool,
     #[pyo3(get)]
-    pub powered_verts: Py<PyArray1<f32>>,
+    pub powered_verts: Py<PyCompressedArray>,
     #[pyo3(get)]
-    pub powered_attrib: Py<PyArray1<f32>>,
+    pub powered_attrib: Py<PyCompressedArray>,
     #[pyo3(get)]
-    pub travel_verts: Py<PyArray1<f32>>,
+    pub travel_verts: Py<PyCompressedArray>,
     #[pyo3(get)]
-    pub zero_power_verts: Py<PyArray1<f32>>,
+    pub zero_power_verts: Py<PyCompressedArray>,
     #[pyo3(get)]
     pub powered_cmd_offsets: Py<PyArray1<i32>>,
     #[pyo3(get)]
     pub travel_cmd_offsets: Py<PyArray1<i32>>,
     #[pyo3(get)]
-    pub overlay_positions: Py<PyArray1<f32>>,
+    pub overlay_positions: Py<PyCompressedArray>,
     #[pyo3(get)]
-    pub overlay_attrib: Py<PyArray1<f32>>,
+    pub overlay_attrib: Py<PyCompressedArray>,
     #[pyo3(get)]
     pub overlay_cmd_offsets: Py<PyArray1<i32>>,
 }
@@ -117,7 +123,7 @@ pub struct PyCompiledScene3D {
 }
 
 /// Build a :class:`CompiledScene3D` from the Rust data, converting
-/// plain `Vec<f32>`/`Vec<i32>` buffers into zero-copy numpy arrays.
+/// plain `Vec<f32>`/`Vec<i32>` buffers into compressed or numpy arrays.
 fn py_scene_data_to_object<'py>(
     py: Python<'py>,
     data: crate::ops::convert::scene::CompiledSceneData,
@@ -132,13 +138,22 @@ fn py_scene_data_to_object<'py>(
                 py,
                 PyVertexGroup {
                     is_rotary: g.is_rotary,
-                    powered_verts: g.powered_verts.into_pyarray(py).unbind(),
-                    powered_attrib: g.powered_attrib.into_pyarray(py).unbind(),
-                    travel_verts: g.travel_verts.into_pyarray(py).unbind(),
-                    zero_power_verts: g
-                        .zero_power_verts
-                        .into_pyarray(py)
-                        .unbind(),
+                    powered_verts: Py::new(
+                        py,
+                        PyCompressedArray::from_vec_f32(g.powered_verts),
+                    )?,
+                    powered_attrib: Py::new(
+                        py,
+                        PyCompressedArray::from_vec_f32(g.powered_attrib),
+                    )?,
+                    travel_verts: Py::new(
+                        py,
+                        PyCompressedArray::from_vec_f32(g.travel_verts),
+                    )?,
+                    zero_power_verts: Py::new(
+                        py,
+                        PyCompressedArray::from_vec_f32(g.zero_power_verts),
+                    )?,
                     powered_cmd_offsets: g
                         .powered_cmd_offsets
                         .into_pyarray(py)
@@ -147,11 +162,14 @@ fn py_scene_data_to_object<'py>(
                         .travel_cmd_offsets
                         .into_pyarray(py)
                         .unbind(),
-                    overlay_positions: g
-                        .overlay_positions
-                        .into_pyarray(py)
-                        .unbind(),
-                    overlay_attrib: g.overlay_attrib.into_pyarray(py).unbind(),
+                    overlay_positions: Py::new(
+                        py,
+                        PyCompressedArray::from_vec_f32(g.overlay_positions),
+                    )?,
+                    overlay_attrib: Py::new(
+                        py,
+                        PyCompressedArray::from_vec_f32(g.overlay_attrib),
+                    )?,
                     overlay_cmd_offsets: g
                         .overlay_cmd_offsets
                         .into_pyarray(py)
