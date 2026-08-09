@@ -16,6 +16,8 @@ use crate::ops::enums::CommandType;
 use crate::ops::transform::{Phase, TransformCtx, Transformer};
 use crate::ops::types::{MoveCmd, OpCategory, OpNode};
 
+use std::sync::Arc;
+
 /// Parameters for the [`Ops::clip_ops_to_regions`] transformer.
 ///
 /// `regions` are pre-resolved clip polygons in ops-local space (e.g.
@@ -101,7 +103,7 @@ impl Ops {
         let mut last_point: Point3D = Point3D::new(0.0, 0.0, 0.0);
         let mut clipped_pen_pos: Option<Point3D> = None;
 
-        for node in &self.commands {
+        for node in self.commands.iter() {
             if let OpCategory::Moving { end, cmd } = &node.category {
                 match cmd {
                     MoveCmd::ScanLine { power_values } => {
@@ -127,7 +129,7 @@ impl Ops {
                         let linearized =
                             super::linearize::linearize_node(node, last_point);
                         let mut p_seg_start = last_point;
-                        for lnode in &linearized.commands {
+                        for lnode in linearized.commands.iter() {
                             let p_seg_end = lnode.end_point();
                             let clipped = clip_line_segment_with_rect(
                                 p_seg_start,
@@ -145,7 +147,7 @@ impl Ops {
                     }
                 }
             } else {
-                new_ops.commands.push(node.clone());
+                new_ops.cmds_mut().push(node.clone());
             }
         }
 
@@ -172,7 +174,7 @@ impl Ops {
             .unwrap_or(self.commands.len());
 
         for node in &self.commands[..first_move_idx] {
-            new_ops.commands.push(node.clone());
+            new_ops.cmds_mut().push(node.clone());
         }
 
         for node in &self.commands[first_move_idx..] {
@@ -200,7 +202,7 @@ impl Ops {
                         let linearized =
                             super::linearize::linearize_node(node, last_point);
                         let mut p_seg_start = last_point;
-                        for lnode in &linearized.commands {
+                        for lnode in linearized.commands.iter() {
                             let p_seg_end = lnode.end_point();
                             let kept = subtract_polygons_from_line_segment(
                                 p_seg_start,
@@ -224,7 +226,7 @@ impl Ops {
                     }
                 }
             } else {
-                new_ops.commands.push(node.clone());
+                new_ops.cmds_mut().push(node.clone());
             }
         }
 
@@ -275,7 +277,7 @@ impl Ops {
             .unwrap_or(self.commands.len());
 
         for node in &self.commands[..first_move_idx] {
-            new_ops.commands.push(node.clone());
+            new_ops.cmds_mut().push(node.clone());
         }
 
         for node in &self.commands[first_move_idx..] {
@@ -305,7 +307,7 @@ impl Ops {
                         let linearized =
                             super::linearize::linearize_node(node, last_point);
                         let mut p_seg_start = last_point;
-                        for lnode in &linearized.commands {
+                        for lnode in linearized.commands.iter() {
                             let p_seg_end = lnode.end_point();
                             let kept = clip_line_segment_with_polygons(
                                 p_seg_start,
@@ -329,7 +331,7 @@ impl Ops {
                     }
                 }
             } else {
-                new_ops.commands.push(node.clone());
+                new_ops.cmds_mut().push(node.clone());
             }
         }
 
@@ -533,7 +535,7 @@ impl Ops {
             new_cmds.push(self.commands[j].clone());
         }
 
-        self.commands = new_cmds;
+        self.commands = Arc::new(new_cmds);
         self.invalidate_time_cache();
         true
     }
@@ -568,7 +570,7 @@ impl Ops {
             .unwrap_or(self.commands.len());
 
         for node in &self.commands[..first_move_idx] {
-            new_ops.commands.push(node.clone());
+            new_ops.cmds_mut().push(node.clone());
         }
 
         for node in &self.commands[first_move_idx..] {
@@ -610,7 +612,7 @@ impl Ops {
                                     None,
                                 );
                             }
-                            new_ops.commands.push(node.clone());
+                            new_ops.cmds_mut().push(node.clone());
                             pen_pos = Some(*end);
                             last_point = *end;
                         } else {
@@ -641,7 +643,7 @@ impl Ops {
                                     None,
                                 );
                             }
-                            new_ops.commands.push(node.clone());
+                            new_ops.cmds_mut().push(node.clone());
                             pen_pos = Some(*end);
                             last_point = *end;
                         } else {
@@ -660,7 +662,7 @@ impl Ops {
                         let linearized =
                             super::linearize::linearize_node(node, last_point);
                         let mut p_seg_start = last_point;
-                        for lnode in &linearized.commands {
+                        for lnode in linearized.commands.iter() {
                             let p_seg_end = lnode.end_point();
                             let kept_segments = clip_line_segment_with_polygons(
                                 p_seg_start,
@@ -684,7 +686,7 @@ impl Ops {
                     }
                 }
             } else {
-                new_ops.commands.push(node.clone());
+                new_ops.cmds_mut().push(node.clone());
             }
         }
 
@@ -871,7 +873,7 @@ fn accumulate_distance_to_hit(
 /// - Returns: A new `Ops` with the gaps removed.
 fn build_clipped_subpath(temp_ops: &Ops, gaps: &[(f64, f64)]) -> Ops {
     let mut new_subpath = Ops::new();
-    new_subpath.commands.push(temp_ops.commands[0].clone());
+    new_subpath.cmds_mut().push(temp_ops.commands[0].clone());
 
     let mut accum_dist = 0.0;
     let mut last_pos = temp_ops.commands[0].end_point();
@@ -975,7 +977,7 @@ fn build_clipped_subpath(temp_ops: &Ops, gaps: &[(f64, f64)]) -> Ops {
                 .iter()
                 .any(|(gs, ge)| *gs <= accum_dist && accum_dist <= *ge);
             if !in_any_gap {
-                new_subpath.commands.push(node.clone());
+                new_subpath.cmds_mut().push(node.clone());
             }
         }
     }
@@ -1124,7 +1126,7 @@ fn clip_and_refit_arc(
 
     let mut kept_pairs: Vec<(Point3D, Point3D)> = Vec::new();
     let mut p_seg_start = last_point;
-    for lnode in &linearized.commands {
+    for lnode in linearized.commands.iter() {
         let p_seg_end = lnode.end_point();
         let segs = clip_line_segment_with_polygons(
             p_seg_start,
@@ -1181,7 +1183,7 @@ fn clip_and_refit_arc(
             }
             if let Some(ref s) = arc_state {
                 let last = new_ops.len() - 1;
-                new_ops.commands[last].set_state(s.clone());
+                new_ops.cmds_mut()[last].set_state(s.clone());
             }
         }
         pen_pos = Some(chain[chain.len() - 1]);
@@ -1212,7 +1214,7 @@ fn clip_and_refit_bezier(
 
     let mut kept_pairs: Vec<(Point3D, Point3D)> = Vec::new();
     let mut p_seg_start = last_point;
-    for lnode in &linearized.commands {
+    for lnode in linearized.commands.iter() {
         let p_seg_end = lnode.end_point();
         let segs = clip_line_segment_with_polygons(
             p_seg_start,
@@ -1269,7 +1271,7 @@ fn clip_and_refit_bezier(
             }
             if let Some(ref s) = bezier_state {
                 let last = new_ops.len() - 1;
-                new_ops.commands[last].set_state(s.clone());
+                new_ops.cmds_mut()[last].set_state(s.clone());
             }
         }
         pen_pos = Some(chain[chain.len() - 1]);

@@ -2382,7 +2382,9 @@ impl PyOps {
             let new_cmds = layer_ops_ref.inner.commands.clone();
             let new_len = new_cmds.len();
 
-            self.inner.commands.splice(layer_start..layer_end, new_cmds);
+            self.inner
+                .cmds_mut()
+                .splice(layer_start..layer_end, new_cmds.iter().cloned());
             i = layer_start + new_len;
         }
         self.inner.invalidate_time_cache();
@@ -2425,22 +2427,22 @@ impl PyOps {
 
             let new_end: Vec<f64> = end_py_list.extract()?;
             if let OpCategory::Moving { end: ref mut e, .. } =
-                &mut self.inner.commands[i].category
+                &mut self.inner.cmds_mut()[i].category
             {
                 *e = Point3D::new(new_end[0], new_end[1], new_end[2]);
             }
 
             let ea_vec = py_to_axis_map(&ea_arg)?;
             if ea_vec.is_empty() {
-                self.inner.commands[i].clear_extra_axes();
+                self.inner.cmds_mut()[i].clear_extra_axes();
             } else {
-                self.inner.commands[i]
+                self.inner.cmds_mut()[i]
                     .set_extra_axes(std::sync::Arc::from(ea_vec));
             }
 
             if let Some(ref aux_cb) = on_aux_point {
                 if let OpCategory::Moving { cmd, .. } =
-                    &mut self.inner.commands[i].category
+                    &mut self.inner.cmds_mut()[i].category
                 {
                     match cmd {
                         MoveCmd::ArcTo { center, .. } => {

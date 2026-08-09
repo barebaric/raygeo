@@ -192,7 +192,7 @@ pub fn generate_material_test_grid(
                 .scale(1.0, -1.0, 1.0)
                 .translate(0.0, target_height, 0.0);
             let mut prev = Point3D::ZERO;
-            for node in label_ops.commands {
+            for node in label_ops.commands.iter() {
                 let (end, is_travel) = match &node.category {
                     OpCategory::Moving {
                         end,
@@ -201,13 +201,13 @@ pub fn generate_material_test_grid(
                     } => (*end, true),
                     OpCategory::Moving { end, .. } => (*end, false),
                     _ => {
-                        trace.push_raw(node);
+                        trace.push_raw(node.clone());
                         continue;
                     }
                 };
                 let tool = trace_helpers::tool_snapshot(end, prev);
                 prev = end;
-                trace.push_raw(node);
+                trace.push_raw(node.clone());
                 if is_travel {
                     trace.move_event(MoveKind::Travel, tool, None);
                 } else {

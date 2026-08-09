@@ -352,7 +352,7 @@ impl Tracelet {
         if let OpCategory::Moving { end, .. } = &node.category {
             self.pos = *end;
         }
-        self.ops.commands.push(node);
+        self.ops.cmds_mut().push(node);
         self.ops.invalidate_time_cache();
         self.maybe_flush();
     }

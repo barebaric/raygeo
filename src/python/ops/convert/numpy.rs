@@ -439,7 +439,8 @@ pub fn ops_from_numpy_arrays(
             let ea_dict = ea_item.cast::<PyDict>()?;
             let ea_vec = py_to_axis_map_helper(ea_dict)?;
             let last_idx = ops.len() - 1;
-            ops.commands[last_idx].set_extra_axes(std::sync::Arc::from(ea_vec));
+            ops.cmds_mut()[last_idx]
+                .set_extra_axes(std::sync::Arc::from(ea_vec));
         }
     }
 

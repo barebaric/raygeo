@@ -9,10 +9,11 @@ use super::enums::{CommandCategory, CommandType, RasterMode, SectionType};
 use super::state::{AirAssistMode, CoolantMode, HeadCoolantMode, State};
 use super::types::{MarkerCmd, MoveCmd, OpCategory, OpNode, StateCmd};
 use crate::geo::types::{Point, Point3D, Rect};
+use std::sync::Arc;
 
 #[derive(Clone, Debug)]
 pub struct Ops {
-    pub commands: Vec<OpNode>,
+    pub commands: Arc<Vec<OpNode>>,
     pub last_move_to: Point3D,
     pub time_dirty: bool,
     pub cached_time: f64,
@@ -23,13 +24,17 @@ pub struct Ops {
 impl Ops {
     pub fn new() -> Self {
         Ops {
-            commands: Vec::new(),
+            commands: Arc::new(Vec::new()),
             last_move_to: Point3D::new(0.0, 0.0, 0.0),
             time_dirty: true,
             cached_time: 0.0,
             time_params: None,
             cached_time_index: Vec::new(),
         }
+    }
+
+    pub(crate) fn cmds_mut(&mut self) -> &mut Vec<OpNode> {
+        Arc::make_mut(&mut self.commands)
     }
 
     pub fn len(&self) -> usize {
@@ -104,7 +109,7 @@ impl Ops {
         idx: usize,
         end: Point3D,
     ) -> Option<Point3D> {
-        self.commands[idx].set_endpoint(end)
+        self.cmds_mut()[idx].set_endpoint(end)
     }
 
     pub fn extra_axes(&self, idx: usize) -> Option<&[(Axis, f64)]> {
@@ -112,7 +117,7 @@ impl Ops {
     }
 
     pub fn set_extra_axes(&mut self, idx: usize, ea: Vec<(Axis, f64)>) {
-        self.commands[idx].set_extra_axes(std::sync::Arc::from(ea));
+        self.cmds_mut()[idx].set_extra_axes(std::sync::Arc::from(ea));
     }
 
     pub fn state(&self, idx: usize) -> Option<&State> {
@@ -120,7 +125,7 @@ impl Ops {
     }
 
     pub fn set_state_on_moving(&mut self, state: &State) {
-        for node in &mut self.commands {
+        for node in self.cmds_mut().iter_mut() {
             if node.is_moving() {
                 node.set_state(state.clone());
             }
@@ -128,7 +133,7 @@ impl Ops {
     }
 
     pub fn set_state_at(&mut self, idx: usize, state: &State) {
-        self.commands[idx].set_state(state.clone());
+        self.cmds_mut()[idx].set_state(state.clone());
     }
 
     pub fn distance_at(&self, idx: usize, last_point: Option<Point3D>) -> f64 {
@@ -149,7 +154,7 @@ impl Ops {
     pub fn distance(&self) -> f64 {
         let mut total = 0.0;
         let mut last: Option<Point3D> = None;
-        for node in &self.commands {
+        for node in self.commands.iter() {
             if let OpCategory::Moving { end, .. } = &node.category {
                 if let Some(lp) = last {
                     let dx = end.x - lp.x;
@@ -187,7 +192,7 @@ impl Ops {
     pub fn cut_distance(&self) -> f64 {
         let mut total = 0.0;
         let mut last: Option<Point3D> = None;
-        for node in &self.commands {
+        for node in self.commands.iter() {
             if let OpCategory::Moving { end, cmd } = &node.category {
                 if let Some(lp) = last {
                     if !matches!(cmd, MoveCmd::MoveTo) {
@@ -212,7 +217,7 @@ impl Ops {
         extra: Option<Vec<(Axis, f64)>>,
     ) {
         self.last_move_to = Point3D::new(x, y, z);
-        self.commands.push(OpNode::move_to(x, y, z, extra));
+        self.cmds_mut().push(OpNode::move_to(x, y, z, extra));
         self.invalidate_time_cache();
     }
 
@@ -223,7 +228,7 @@ impl Ops {
         z: f64,
         extra: Option<Vec<(Axis, f64)>>,
     ) {
-        self.commands.push(OpNode::line_to(x, y, z, extra));
+        self.cmds_mut().push(OpNode::line_to(x, y, z, extra));
         self.invalidate_time_cache();
     }
 
@@ -247,7 +252,7 @@ impl Ops {
         z: f64,
         extra: Option<Vec<(Axis, f64)>>,
     ) {
-        self.commands
+        self.cmds_mut()
             .push(OpNode::arc_to(x, y, i, j, clockwise, z, extra));
         self.invalidate_time_cache();
     }
@@ -259,7 +264,7 @@ impl Ops {
         end: Point3D,
         extra: Option<Vec<(Axis, f64)>>,
     ) {
-        self.commands
+        self.cmds_mut()
             .push(OpNode::bezier_to(control1, control2, end, extra));
         self.invalidate_time_cache();
     }
@@ -270,7 +275,7 @@ impl Ops {
         end: Point3D,
         extra: Option<Vec<(Axis, f64)>>,
     ) {
-        self.commands
+        self.cmds_mut()
             .push(OpNode::quadratic_bezier_to(control, end, extra));
         self.invalidate_time_cache();
     }
@@ -283,62 +288,62 @@ impl Ops {
         power_values: Vec<u8>,
         extra: Option<Vec<(Axis, f64)>>,
     ) {
-        self.commands
+        self.cmds_mut()
             .push(OpNode::scan_to(x, y, z, power_values, extra));
         self.invalidate_time_cache();
     }
 
     pub fn set_power(&mut self, power: f64) {
-        self.commands.push(OpNode::set_power(power));
+        self.cmds_mut().push(OpNode::set_power(power));
     }
 
     pub fn set_feed_rate(&mut self, feed_rate: i32) {
-        self.commands.push(OpNode::set_feed_rate(feed_rate));
+        self.cmds_mut().push(OpNode::set_feed_rate(feed_rate));
         self.invalidate_time_cache();
     }
 
     pub fn set_rapid_rate(&mut self, rapid_rate: i32) {
-        self.commands.push(OpNode::set_rapid_rate(rapid_rate));
+        self.cmds_mut().push(OpNode::set_rapid_rate(rapid_rate));
         self.invalidate_time_cache();
     }
 
     pub fn dwell(&mut self, duration_ms: f64) {
-        self.commands.push(OpNode::dwell(duration_ms));
+        self.cmds_mut().push(OpNode::dwell(duration_ms));
         self.invalidate_time_cache();
     }
 
     pub fn set_head(&mut self, head_uid: &str) {
-        self.commands.push(OpNode::set_head(head_uid));
+        self.cmds_mut().push(OpNode::set_head(head_uid));
         self.invalidate_time_cache();
     }
 
     pub fn set_frequency(&mut self, frequency: i32) {
-        self.commands.push(OpNode::set_frequency(frequency));
+        self.cmds_mut().push(OpNode::set_frequency(frequency));
         self.invalidate_time_cache();
     }
 
     pub fn set_pulse_width(&mut self, pulse_width: f64) {
-        self.commands.push(OpNode::set_pulse_width(pulse_width));
+        self.cmds_mut().push(OpNode::set_pulse_width(pulse_width));
         self.invalidate_time_cache();
     }
 
     pub fn set_spindle_rpm(&mut self, rpm: u32) {
-        self.commands.push(OpNode::set_spindle_rpm(rpm));
+        self.cmds_mut().push(OpNode::set_spindle_rpm(rpm));
         self.invalidate_time_cache();
     }
 
     pub fn set_coolant(&mut self, mode: CoolantMode) {
-        self.commands.push(OpNode::set_coolant(mode));
+        self.cmds_mut().push(OpNode::set_coolant(mode));
         self.invalidate_time_cache();
     }
 
     pub fn set_air_assist(&mut self, mode: AirAssistMode) {
-        self.commands.push(OpNode::set_air_assist(mode));
+        self.cmds_mut().push(OpNode::set_air_assist(mode));
         self.invalidate_time_cache();
     }
 
     pub fn set_head_coolant(&mut self, mode: HeadCoolantMode) {
-        self.commands.push(OpNode::set_head_coolant(mode));
+        self.cmds_mut().push(OpNode::set_head_coolant(mode));
         self.invalidate_time_cache();
     }
 
@@ -380,32 +385,32 @@ impl Ops {
     }
 
     pub fn job_start(&mut self) {
-        self.commands.push(OpNode::job_start());
+        self.cmds_mut().push(OpNode::job_start());
         self.invalidate_time_cache();
     }
 
     pub fn job_end(&mut self) {
-        self.commands.push(OpNode::job_end());
+        self.cmds_mut().push(OpNode::job_end());
         self.invalidate_time_cache();
     }
 
     pub fn layer_start(&mut self, layer_uid: &str) {
-        self.commands.push(OpNode::layer_start(layer_uid));
+        self.cmds_mut().push(OpNode::layer_start(layer_uid));
         self.invalidate_time_cache();
     }
 
     pub fn layer_end(&mut self, layer_uid: &str) {
-        self.commands.push(OpNode::layer_end(layer_uid));
+        self.cmds_mut().push(OpNode::layer_end(layer_uid));
         self.invalidate_time_cache();
     }
 
     pub fn workpiece_start(&mut self, workpiece_uid: &str) {
-        self.commands.push(OpNode::workpiece_start(workpiece_uid));
+        self.cmds_mut().push(OpNode::workpiece_start(workpiece_uid));
         self.invalidate_time_cache();
     }
 
     pub fn workpiece_end(&mut self, workpiece_uid: &str) {
-        self.commands.push(OpNode::workpiece_end(workpiece_uid));
+        self.cmds_mut().push(OpNode::workpiece_end(workpiece_uid));
         self.invalidate_time_cache();
     }
 
@@ -415,7 +420,7 @@ impl Ops {
         workpiece_uid: &str,
         raster_mode: Option<RasterMode>,
     ) -> Result<(), RaygeoError> {
-        self.commands.push(OpNode::ops_section_start(
+        self.cmds_mut().push(OpNode::ops_section_start(
             section_type,
             workpiece_uid,
             raster_mode,
@@ -429,53 +434,52 @@ impl Ops {
         section_type: SectionType,
         raster_mode: Option<RasterMode>,
     ) -> Result<(), RaygeoError> {
-        self.commands
+        self.cmds_mut()
             .push(OpNode::ops_section_end(section_type, raster_mode)?);
         self.invalidate_time_cache();
         Ok(())
     }
 
     pub fn state_block_start(&mut self, name: Option<&str>) {
-        self.commands.push(OpNode::state_block_start(name));
+        self.cmds_mut().push(OpNode::state_block_start(name));
         self.invalidate_time_cache();
     }
 
     pub fn state_block_end(&mut self) {
-        self.commands.push(OpNode::state_block_end());
+        self.cmds_mut().push(OpNode::state_block_end());
         self.invalidate_time_cache();
     }
 
     // --- Copy / Transfer ---
 
     pub fn copy(&self) -> Self {
-        let mut new_ops = Ops::new();
-        for cmd in &self.commands {
-            new_ops.commands.push(cmd.clone());
+        Ops {
+            commands: Arc::clone(&self.commands),
+            last_move_to: self.last_move_to,
+            time_dirty: self.time_dirty,
+            cached_time: self.cached_time,
+            time_params: self.time_params,
+            cached_time_index: self.cached_time_index.clone(),
         }
-        new_ops.last_move_to = self.last_move_to;
-        new_ops.time_dirty = self.time_dirty;
-        new_ops.cached_time = self.cached_time;
-        new_ops.time_params = self.time_params;
-        new_ops.cached_time_index = self.cached_time_index.clone();
-        new_ops
     }
 
     pub fn copy_command_from(&mut self, source: &Ops, idx: usize) {
         let cmd = source.commands[idx].clone();
-        self.commands.push(cmd);
+        self.cmds_mut().push(cmd);
         self.invalidate_time_cache();
     }
 
     pub fn transfer_command_from(&mut self, source: &Ops, idx: usize) {
         let cmd = source.commands[idx].clone();
-        self.commands.push(cmd);
+        self.cmds_mut().push(cmd);
         self.invalidate_time_cache();
     }
 
     pub fn extend(&mut self, other: &Ops) {
         if !other.is_empty() {
-            for cmd in &other.commands {
-                self.commands.push(cmd.clone());
+            let dst = self.cmds_mut();
+            for cmd in other.commands.iter() {
+                dst.push(cmd.clone());
             }
             self.invalidate_time_cache();
         }
@@ -485,31 +489,31 @@ impl Ops {
     pub fn extract_range(&self, start: usize, end: usize) -> Ops {
         let mut result = Ops::new();
         if start < end && end <= self.commands.len() {
-            result.commands = self.commands[start..end].to_vec();
+            result.commands = Arc::new(self.commands[start..end].to_vec());
             result.invalidate_time_cache();
         }
         result
     }
 
     pub fn replace_all(&mut self, source: &Ops) {
-        self.commands.clear();
-        for cmd in &source.commands {
-            self.commands.push(cmd.clone());
+        self.cmds_mut().clear();
+        for cmd in source.commands.iter() {
+            self.cmds_mut().push(cmd.clone());
         }
         self.invalidate_time_cache();
     }
 
     pub fn replace_with(&mut self, source: &Ops) {
-        self.commands.clear();
-        for cmd in &source.commands {
-            self.commands.push(cmd.clone());
+        self.cmds_mut().clear();
+        for cmd in source.commands.iter() {
+            self.cmds_mut().push(cmd.clone());
         }
         self.last_move_to = source.last_move_to;
         self.invalidate_time_cache();
     }
 
     pub fn clear(&mut self) {
-        self.commands.clear();
+        self.cmds_mut().clear();
         self.invalidate_time_cache();
     }
 
@@ -531,7 +535,7 @@ impl Ops {
 
     pub fn preload_state(&mut self) {
         let mut state = State::default();
-        for node in &mut self.commands {
+        for node in self.cmds_mut().iter_mut() {
             if let OpCategory::State(_) = node.category {
                 Self::apply_state_at(&mut state, node);
             } else if node.is_moving() {
@@ -606,11 +610,11 @@ impl std::ops::Add<&Ops> for &Ops {
 
     fn add(self, other: &Ops) -> Ops {
         let mut result = Ops::new();
-        for cmd in &self.commands {
-            result.commands.push(cmd.clone());
+        for cmd in self.commands.iter() {
+            result.cmds_mut().push(cmd.clone());
         }
-        for cmd in &other.commands {
-            result.commands.push(cmd.clone());
+        for cmd in other.commands.iter() {
+            result.cmds_mut().push(cmd.clone());
         }
         result
     }
@@ -622,8 +626,8 @@ impl std::ops::Mul<usize> for &Ops {
     fn mul(self, other: usize) -> Ops {
         let mut result = Ops::new();
         for _ in 0..other {
-            for cmd in &self.commands {
-                result.commands.push(cmd.clone());
+            for cmd in self.commands.iter() {
+                result.cmds_mut().push(cmd.clone());
             }
         }
         result
@@ -647,7 +651,7 @@ impl Ops {
             curr_y = self.last_move_to.y;
         }
 
-        for node in &self.commands {
+        for node in self.commands.iter() {
             if let OpCategory::Moving { end, cmd } = &node.category {
                 let (end_x, end_y) = (end.x, end.y);
 
@@ -793,7 +797,7 @@ impl Ops {
         let mut max_x = f64::NEG_INFINITY;
         let mut max_y = f64::NEG_INFINITY;
 
-        for node in &self.commands {
+        for node in self.commands.iter() {
             let ct = node.command_type();
             if ct == CommandType::MoveTo || ct == CommandType::ScanLine {
                 let end = node.end_point();
@@ -825,11 +829,11 @@ impl Ops {
     /// (if present). Non-moving commands are copied as-is.
     pub fn bake_visual_positions(&self) -> Ops {
         let mut baked = Ops::new();
-        baked.commands.reserve(self.commands.len());
+        baked.cmds_mut().reserve(self.commands.len());
 
-        for node in &self.commands {
+        for node in self.commands.iter() {
             if !node.is_moving() {
-                baked.commands.push(node.clone());
+                baked.cmds_mut().push(node.clone());
                 continue;
             }
             let end = node.end_point();
@@ -840,9 +844,9 @@ impl Ops {
                 let new_end = Point3D::new(end.x, degrees, end.z);
                 let mut new_node = node.clone();
                 new_node.set_endpoint(new_end);
-                baked.commands.push(new_node);
+                baked.cmds_mut().push(new_node);
             } else {
-                baked.commands.push(node.clone());
+                baked.cmds_mut().push(node.clone());
             }
         }
         baked

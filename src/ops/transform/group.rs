@@ -2,9 +2,9 @@ use crate::ops::container::Ops;
 
 pub fn without_state(ops: &Ops) -> Ops {
     let mut result = Ops::new();
-    for node in &ops.commands {
+    for node in ops.commands.iter() {
         if !node.is_state_cmd() {
-            result.commands.push(node.clone());
+            result.cmds_mut().push(node.clone());
         }
     }
     result.invalidate_time_cache();
@@ -63,7 +63,7 @@ pub fn group_by_auxiliary_state(ops: &Ops) -> Vec<Ops> {
     for seg in &seg_indices {
         let mut seg_ops = Ops::new();
         for &idx in seg {
-            seg_ops.commands.push(ops.commands[idx].clone());
+            seg_ops.cmds_mut().push(ops.commands[idx].clone());
         }
         seg_ops.invalidate_time_cache();
         result.push(seg_ops);

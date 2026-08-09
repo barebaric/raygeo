@@ -77,7 +77,7 @@ impl MachineTransformCompute {
 
             // Mutate endpoint and control points.
             {
-                let node = &mut ops.commands[i];
+                let node = &mut ops.cmds_mut()[i];
                 if let OpCategory::Moving { end, cmd } = &mut node.category {
                     let degrees = mu_to_degrees(
                         end.y,
@@ -133,9 +133,9 @@ impl MachineTransformCompute {
 
             // Set extra_axes (mutable borrow released).
             if ea_vec.is_empty() {
-                ops.commands[i].clear_extra_axes();
+                ops.cmds_mut()[i].clear_extra_axes();
             } else {
-                ops.commands[i].set_extra_axes(Arc::from(ea_vec));
+                ops.cmds_mut()[i].set_extra_axes(Arc::from(ea_vec));
             }
 
             i += 1;
@@ -213,7 +213,7 @@ impl MachineTransformCompute {
 
             // Mutate endpoint and control points.
             {
-                let node = &mut ops.commands[i];
+                let node = &mut ops.cmds_mut()[i];
                 if let OpCategory::Moving { end, cmd } = &mut node.category {
                     if let Some(ref replaced) = rm.replaced_axis {
                         set_axis_value(end, replaced, scaled);
@@ -276,9 +276,9 @@ impl MachineTransformCompute {
 
             // Set extra_axes (mutable borrow released).
             if ea_vec.is_empty() {
-                ops.commands[i].clear_extra_axes();
+                ops.cmds_mut()[i].clear_extra_axes();
             } else {
-                ops.commands[i].set_extra_axes(Arc::from(ea_vec));
+                ops.cmds_mut()[i].set_extra_axes(Arc::from(ea_vec));
             }
 
             i += 1;

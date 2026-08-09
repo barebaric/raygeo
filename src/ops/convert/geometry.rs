@@ -53,7 +53,7 @@ impl Ops {
 
     pub fn to_geometry(&self) -> Geometry {
         let mut geo = Geometry::new();
-        for node in &self.commands {
+        for node in self.commands.iter() {
             if let OpCategory::Moving { end, cmd } = &node.category {
                 match cmd {
                     MoveCmd::MoveTo => {

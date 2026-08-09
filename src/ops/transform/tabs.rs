@@ -116,12 +116,12 @@ pub fn apply_tab_gaps(ops: &mut Ops, clips: &[ClipPoint]) {
         let content_indices = &sec_range.content_indices;
 
         for &mi in marker_indices {
-            new_ops.commands.push(ops.commands[mi].clone());
+            new_ops.cmds_mut().push(ops.commands[mi].clone());
         }
 
         if sec_type != Some(SectionType::VectorOutline) {
             for &ci in content_indices {
-                new_ops.commands.push(ops.commands[ci].clone());
+                new_ops.cmds_mut().push(ops.commands[ci].clone());
             }
             continue;
         }
@@ -158,7 +158,7 @@ pub fn apply_tab_gaps(ops: &mut Ops, clips: &[ClipPoint]) {
                 }
             } else {
                 for &si in sp_indices {
-                    new_ops.commands.push(content_ops.commands[si].clone());
+                    new_ops.cmds_mut().push(content_ops.commands[si].clone());
                 }
             }
         }
@@ -195,12 +195,12 @@ pub fn apply_tab_power(
         let content_indices = &sec_range.content_indices;
 
         for &mi in marker_indices {
-            new_ops.commands.push(ops.commands[mi].clone());
+            new_ops.cmds_mut().push(ops.commands[mi].clone());
         }
 
         if sec_type != Some(SectionType::VectorOutline) {
             for &ci in content_indices {
-                new_ops.commands.push(ops.commands[ci].clone());
+                new_ops.cmds_mut().push(ops.commands[ci].clone());
             }
             continue;
         }
@@ -223,7 +223,7 @@ pub fn apply_tab_power(
                 new_ops.extend(&processed);
             } else {
                 for &si in sp_indices {
-                    new_ops.commands.push(content_ops.commands[si].clone());
+                    new_ops.cmds_mut().push(content_ops.commands[si].clone());
                 }
             }
         }
@@ -313,7 +313,7 @@ fn clip_subpath_with_gaps(sub_ops: &Ops, clips: &[ClipPoint]) -> Ops {
         let cat = sub_ops.category(i);
 
         if ct == CommandType::MoveTo {
-            result.commands.push(sub_ops.commands[i].clone());
+            result.cmds_mut().push(sub_ops.commands[i].clone());
             last_pos = Some(sub_ops.endpoint(i));
             accum_dist = 0.0;
             continue;
@@ -321,7 +321,7 @@ fn clip_subpath_with_gaps(sub_ops: &Ops, clips: &[ClipPoint]) -> Ops {
 
         if cat != CommandCategory::Moving {
             if !in_any_gap(accum_dist, &gap_regions) {
-                result.commands.push(sub_ops.commands[i].clone());
+                result.cmds_mut().push(sub_ops.commands[i].clone());
             }
             continue;
         }
@@ -330,7 +330,7 @@ fn clip_subpath_with_gaps(sub_ops: &Ops, clips: &[ClipPoint]) -> Ops {
         let start_pt = match last_pos {
             Some(p) => p,
             None => {
-                result.commands.push(sub_ops.commands[i].clone());
+                result.cmds_mut().push(sub_ops.commands[i].clone());
                 last_pos = Some(end_pt);
                 continue;
             }
@@ -406,7 +406,7 @@ fn clip_subpath_with_gaps(sub_ops: &Ops, clips: &[ClipPoint]) -> Ops {
                 }
             }
         } else {
-            result.commands.push(sub_ops.commands[i].clone());
+            result.cmds_mut().push(sub_ops.commands[i].clone());
         }
 
         accum_dist += seg_len;
@@ -528,19 +528,19 @@ fn insert_power_commands_curve_aware(
         let cat = sub_ops.category(i);
 
         if ct == CommandType::MoveTo {
-            result.commands.push(sub_ops.commands[i].clone());
+            result.cmds_mut().push(sub_ops.commands[i].clone());
             last_pos = Some(sub_ops.endpoint(i));
             accum_dist = 0.0;
             continue;
         }
 
         if ct == CommandType::SetPower {
-            result.commands.push(sub_ops.commands[i].clone());
+            result.cmds_mut().push(sub_ops.commands[i].clone());
             continue;
         }
 
         if cat != CommandCategory::Moving {
-            result.commands.push(sub_ops.commands[i].clone());
+            result.cmds_mut().push(sub_ops.commands[i].clone());
             continue;
         }
 
@@ -548,7 +548,7 @@ fn insert_power_commands_curve_aware(
         let start_pt = match last_pos {
             Some(p) => p,
             None => {
-                result.commands.push(sub_ops.commands[i].clone());
+                result.cmds_mut().push(sub_ops.commands[i].clone());
                 last_pos = Some(end_pt);
                 continue;
             }
@@ -573,7 +573,7 @@ fn insert_power_commands_curve_aware(
         let events = collect_events(seg_start, seg_end, &tab_regions);
 
         if events.is_empty() {
-            result.commands.push(sub_ops.commands[i].clone());
+            result.cmds_mut().push(sub_ops.commands[i].clone());
         } else if ct == CommandType::BezierTo {
             let (control1, control2) = bezier_params(sub_ops, i);
             split_bezier_with_power(
@@ -604,7 +604,7 @@ fn insert_power_commands_curve_aware(
                     current_power = target;
                 }
             }
-            result.commands.push(sub_ops.commands[i].clone());
+            result.cmds_mut().push(sub_ops.commands[i].clone());
         }
 
         accum_dist += seg_len;
@@ -879,7 +879,7 @@ fn build_commands_with_power(
     original_power: f64,
 ) -> Ops {
     let mut result = Ops::new();
-    result.commands.push(temp_ops.commands[0].clone());
+    result.cmds_mut().push(temp_ops.commands[0].clone());
 
     let mut accum_dist = 0.0;
     let mut current_power = original_power;
@@ -916,16 +916,16 @@ fn build_commands_with_power(
                     &mut current_power,
                 );
             } else {
-                result.commands.push(temp_ops.commands[i].clone());
+                result.cmds_mut().push(temp_ops.commands[i].clone());
             }
 
             last_pos = p2;
             accum_dist += seg_len;
         } else if ct == CommandType::MoveTo {
-            result.commands.push(temp_ops.commands[i].clone());
+            result.cmds_mut().push(temp_ops.commands[i].clone());
             last_pos = temp_ops.endpoint(i);
         } else {
-            result.commands.push(temp_ops.commands[i].clone());
+            result.cmds_mut().push(temp_ops.commands[i].clone());
         }
     }
 
@@ -993,7 +993,7 @@ fn process_segment_events(
     }
 
     if seg_start + seg_len > last_dist + 1e-9 {
-        result.commands.push(src_ops.commands[src_idx].clone());
+        result.cmds_mut().push(src_ops.commands[src_idx].clone());
     }
 }
 

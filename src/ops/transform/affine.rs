@@ -7,6 +7,8 @@ use crate::geo::types::{Point, Point3D};
 use crate::ops::container::Ops;
 use crate::ops::types::{MoveCmd, OpCategory, OpNode};
 
+use std::sync::Arc;
+
 impl Ops {
     pub fn transform(&mut self, matrix: DMat4) -> &mut Self {
         let vx = DVec2::new(matrix.x_axis.x, matrix.x_axis.y);
@@ -21,7 +23,7 @@ impl Ops {
         let mut new_cmds = Vec::new();
         let mut last_point_untransformed: Option<Point3D> = None;
 
-        for node in &self.commands {
+        for node in self.commands.iter() {
             let mut new_node = node.clone();
             let mut original_cmd_end = None;
 
@@ -113,7 +115,7 @@ impl Ops {
             }
         }
 
-        self.commands = new_cmds;
+        self.commands = Arc::new(new_cmds);
         self.invalidate_time_cache();
         self.last_move_to = transform_point_3d(matrix, self.last_move_to);
         self

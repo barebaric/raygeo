@@ -119,7 +119,7 @@ pub fn merge_overlapping_lines(ops: &mut Ops, tolerance: f64) {
                     if dist3d(machine_pos, p1) > 1e-5 {
                         new_ops.move_to(p1.x, p1.y, p1.z, None);
                     }
-                    new_ops.commands.push(ops.commands[idx].clone());
+                    new_ops.cmds_mut().push(ops.commands[idx].clone());
                     machine_pos = Some(ops.endpoint(idx));
                 }
 
@@ -137,7 +137,7 @@ pub fn merge_overlapping_lines(ops: &mut Ops, tolerance: f64) {
                     }
                 }
 
-                new_ops.commands.push(ops.commands[idx].clone());
+                new_ops.cmds_mut().push(ops.commands[idx].clone());
 
                 if is_moving {
                     let end_pt = ops.endpoint(idx);

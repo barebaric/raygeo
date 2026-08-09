@@ -39,7 +39,7 @@ impl Ops {
         let mut feed_rate = default_feed_rate;
         let mut rapid_rate = default_rapid_rate;
 
-        for node in &self.commands {
+        for node in self.commands.iter() {
             let cmd_time = command_duration(
                 node,
                 &mut last_point,
@@ -233,7 +233,7 @@ fn compute_cumulative_time_index(
     let mut feed_rate = default_feed_rate;
     let mut rapid_rate = default_rapid_rate;
 
-    for node in &ops.commands {
+    for node in ops.commands.iter() {
         acc += command_duration(
             node,
             &mut last_point,

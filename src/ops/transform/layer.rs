@@ -12,7 +12,7 @@ impl Ops {
         let mut active_offset = default_offset;
         let mut in_named_layer = false;
 
-        for node in &mut self.commands {
+        for node in self.cmds_mut().iter_mut() {
             match &mut node.category {
                 OpCategory::Marker(MarkerCmd::LayerStart(uid)) => {
                     if let Some(offsets) = layer_offsets {

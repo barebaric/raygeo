@@ -83,7 +83,7 @@ impl Ops {
 
         let mut arc_buf: Vec<(Point3D, Point3D)> = Vec::new();
 
-        for node in &self.commands {
+        for node in self.commands.iter() {
             let ct = node.command_type();
 
             if ct == CommandType::SetPower {

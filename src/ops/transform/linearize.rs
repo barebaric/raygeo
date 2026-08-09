@@ -4,6 +4,8 @@ use crate::ops::axis::Axis;
 use crate::ops::container::Ops;
 use crate::ops::types::{MoveCmd, OpCategory, OpNode};
 
+use std::sync::Arc;
+
 fn linearize_scanline(
     end: Point3D,
     start_point: Point3D,
@@ -174,7 +176,7 @@ impl Ops {
         let mut new_cmds = Vec::new();
         let mut last_point: Point3D = Point3D::new(0.0, 0.0, 0.0);
 
-        for node in &self.commands {
+        for node in self.commands.iter() {
             if let OpCategory::Moving {
                 cmd: MoveCmd::MoveTo,
                 end,
@@ -185,10 +187,10 @@ impl Ops {
             }
         }
 
-        for node in &self.commands {
+        for node in self.commands.iter() {
             if node.is_moving() {
                 let linearized = linearize_node(node, last_point);
-                for cmd in &linearized.commands {
+                for cmd in linearized.commands.iter() {
                     new_cmds.push(cmd.clone());
                     if cmd.is_moving() {
                         last_point = cmd.end_point();
@@ -199,7 +201,7 @@ impl Ops {
             }
         }
 
-        self.commands = new_cmds;
+        self.commands = Arc::new(new_cmds);
         self.invalidate_time_cache();
     }
 
@@ -207,7 +209,7 @@ impl Ops {
         let mut new_cmds = Vec::new();
         let mut last_point: Point3D = Point3D::new(0.0, 0.0, 0.0);
 
-        for node in &self.commands {
+        for node in self.commands.iter() {
             if let OpCategory::Moving { end, cmd } = &node.category {
                 if matches!(cmd, MoveCmd::MoveTo) {
                     last_point = *end;
@@ -216,7 +218,7 @@ impl Ops {
                     MoveCmd::BezierTo { .. }
                     | MoveCmd::QuadraticBezierTo { .. } => {
                         let linearized = linearize_node(node, last_point);
-                        for cmd in &linearized.commands {
+                        for cmd in linearized.commands.iter() {
                             new_cmds.push(cmd.clone());
                             if cmd.is_moving() {
                                 last_point = cmd.end_point();
@@ -233,7 +235,7 @@ impl Ops {
             }
         }
 
-        self.commands = new_cmds;
+        self.commands = Arc::new(new_cmds);
         self.invalidate_time_cache();
     }
 
@@ -241,7 +243,7 @@ impl Ops {
         let mut new_cmds = Vec::new();
         let mut last_point: Point3D = Point3D::new(0.0, 0.0, 0.0);
 
-        for node in &self.commands {
+        for node in self.commands.iter() {
             if let OpCategory::Moving { end, cmd } = &node.category {
                 if matches!(cmd, MoveCmd::MoveTo) {
                     last_point = *end;
@@ -249,7 +251,7 @@ impl Ops {
                 match cmd {
                     MoveCmd::ArcTo { .. } => {
                         let linearized = linearize_node(node, last_point);
-                        for cmd in &linearized.commands {
+                        for cmd in linearized.commands.iter() {
                             new_cmds.push(cmd.clone());
                             if cmd.is_moving() {
                                 last_point = cmd.end_point();
@@ -266,7 +268,7 @@ impl Ops {
             }
         }
 
-        self.commands = new_cmds;
+        self.commands = Arc::new(new_cmds);
         self.invalidate_time_cache();
     }
 }

@@ -25,7 +25,7 @@ pub fn flip_ops(ops: &Ops) -> Ops {
     if let Some(ref s) = first_state {
         first_cmd.set_state(s.clone());
     }
-    result.commands.push(first_cmd);
+    result.cmds_mut().push(first_cmd);
 
     for k in (0..moving_indices.len() - 1).rev() {
         let orig_k_idx = moving_indices[k + 1];
@@ -73,9 +73,9 @@ pub fn flip_ops(ops: &Ops) -> Ops {
             if let Some(s) = orig_node.state() {
                 new_node.set_state(s.clone());
             }
-            result.commands.push(new_node);
+            result.cmds_mut().push(new_node);
         } else {
-            result.commands.push(orig_node.clone());
+            result.cmds_mut().push(orig_node.clone());
         }
     }
 

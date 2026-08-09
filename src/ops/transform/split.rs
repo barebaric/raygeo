@@ -6,7 +6,7 @@ impl Ops {
         let mut result = Ops::new();
         for &i in indices {
             let cmd = self.commands[i].clone();
-            result.commands.push(cmd);
+            result.cmds_mut().push(cmd);
         }
         result.invalidate_time_cache();
         result

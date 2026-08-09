@@ -6,7 +6,7 @@ use crate::ops::Ops;
 fn ops_from_indices(ops: &Ops, indices: &[usize]) -> Ops {
     let mut result = Ops::new();
     for &idx in indices {
-        result.commands.push(ops.commands[idx].clone());
+        result.cmds_mut().push(ops.commands[idx].clone());
     }
     result.invalidate_time_cache();
     result
