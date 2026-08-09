@@ -1002,6 +1002,7 @@ dependencies = [
  "clipper2",
  "fontdb",
  "glam 0.33.1",
+ "libc",
  "nalgebra",
  "nalgebra-sparse",
  "num_enum",

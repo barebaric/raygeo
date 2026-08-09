@@ -13,6 +13,20 @@ use crate::pipeline::compute::ComputeCtx;
 use crate::pipeline::request::NodeRequest;
 use crate::pipeline::stage::StageSpec;
 
+/// Best-effort return of freed heap pages to the OS.
+///
+/// glibc caches freed heap arenas, so after a large pipeline build the
+/// resident set can far exceed the live footprint. This hints the
+/// allocator to release that memory. Safe to call: it only acts on
+/// already-freed memory and can never invalidate a live allocation.
+/// No-op on non-glibc targets (musl has no ``malloc_trim``).
+fn trim_allocator() {
+    #[cfg(all(target_os = "linux", target_env = "gnu"))]
+    unsafe {
+        libc::malloc_trim(0);
+    }
+}
+
 #[derive(Debug)]
 pub struct Cancelled;
 
@@ -88,6 +102,8 @@ pub fn execute_stages(
             spawn_one(s, &shared, key);
         }
     });
+
+    trim_allocator();
 
     let leftover: Vec<String> =
         shared.node_by_key.lock().unwrap().keys().cloned().collect();

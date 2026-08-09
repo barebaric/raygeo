@@ -10,6 +10,7 @@ python = ["dep:pyo3", "dep:pyo3-stub-gen", "dep:numpy"]
 
 [dependencies]
 prof-macros = { path = "prof-macros" }
+libc = "0.2"
 pyo3 = { version = "0.28", features = ["abi3", "abi3-py311", "py-clone"], optional = true }
 numpy = { version = "0.28", optional = true }
 rand = "0.10"
