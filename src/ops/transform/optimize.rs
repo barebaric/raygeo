@@ -14,6 +14,7 @@ use crate::ops::container::Ops;
 use crate::ops::enums::{CommandCategory, CommandType};
 use crate::ops::state::State;
 use crate::ops::transform::{Phase, TransformCtx, Transformer};
+use crate::ops::types::{MoveCmd, OpCategory};
 
 const TWO_OPT_SEGMENT_THRESHOLD: usize = 1000;
 const TWO_OPT_COMMAND_LIMIT: usize = 10000;
@@ -346,6 +347,7 @@ fn split_scanline(move_idx: usize, scan_idx: usize, ops: &Ops) -> Vec<Ops> {
     }
 
     let mut result = Ops::new();
+    result.cmds_mut().reserve(2);
     result.transfer_command_from(ops, move_idx);
     result.transfer_command_from(ops, scan_idx);
     vec![result]
@@ -530,15 +532,40 @@ enum OptJob {
     },
 }
 
-fn prepare_optimization_jobs(long_segments: &[Ops]) -> Vec<OptJob> {
-    let mut jobs = Vec::new();
-    let mut two_opt_candidates: Vec<(usize, Vec<Ops>, usize)> = Vec::new();
+/// True when *ops* consists solely of strict ``(MoveTo, ScanLine)``
+/// pairs — the raster assembler's segmented-mode output, where every
+/// travel is immediately followed by one scanline run and there are no
+/// other cutting commands.
+fn is_scanline_only(ops: &Ops) -> bool {
+    if ops.is_empty() {
+        return false;
+    }
+    let mut expect_travel = true;
+    for i in 0..ops.len() {
+        if expect_travel {
+            if !ops.is_travel(i) {
+                return false;
+            }
+            expect_travel = false;
+        } else if !ops.is_scanline(i) {
+            return false;
+        } else {
+            expect_travel = true;
+        }
+    }
+    !expect_travel
+}
 
-    for (i, long_segment) in long_segments.iter().enumerate() {
+fn prepare_optimization_jobs(long_segments: &[(usize, &Ops)]) -> Vec<OptJob> {
+    let mut jobs = Vec::with_capacity(long_segments.len());
+    let mut two_opt_candidates: Vec<(usize, Vec<Ops>, usize)> =
+        Vec::with_capacity(long_segments.len());
+
+    for (original_index, long_segment) in long_segments {
         if long_segment.is_empty() || long_segment.is_marker(0) {
             jobs.push(OptJob::Passthrough {
-                original_index: i,
-                segment: long_segment.clone(),
+                original_index: *original_index,
+                segment: (*long_segment).clone(),
             });
             continue;
         }
@@ -555,21 +582,25 @@ fn prepare_optimization_jobs(long_segments: &[Ops]) -> Vec<OptJob> {
 
         if num_sub_segments <= 1 {
             jobs.push(OptJob::Passthrough {
-                original_index: i,
-                segment: long_segment.clone(),
+                original_index: *original_index,
+                segment: (*long_segment).clone(),
             });
             continue;
         }
 
         if num_sub_segments > TWO_OPT_SEGMENT_THRESHOLD {
             jobs.push(OptJob::KdtreeOnly {
-                original_index: i,
+                original_index: *original_index,
                 sub_segments,
             });
         } else {
             let command_count: usize =
                 sub_segments.iter().map(|s| s.len()).sum();
-            two_opt_candidates.push((i, sub_segments, command_count));
+            two_opt_candidates.push((
+                *original_index,
+                sub_segments,
+                command_count,
+            ));
         }
     }
 
@@ -592,6 +623,255 @@ fn prepare_optimization_jobs(long_segments: &[Ops]) -> Vec<OptJob> {
     }
 
     jobs
+}
+
+/// One ``(MoveTo, ScanLine)`` run of a scanline-only segment, addressed
+/// by command indices into the source ops. `flip` marks runs whose
+/// direction was reversed by the optimizer.
+#[derive(Clone, Copy)]
+struct ScanRun {
+    move_idx: usize,
+    scan_idx: usize,
+    flip: bool,
+}
+
+/// True when the ScanLine command at *idx* carries any non-zero power.
+fn run_is_nonzero(ops: &Ops, idx: usize) -> bool {
+    match &ops.commands[idx].category {
+        OpCategory::Moving {
+            cmd: MoveCmd::ScanLine { power_values },
+            ..
+        } => !power_values.is_empty() && power_values.iter().any(|&b| b != 0),
+        _ => false,
+    }
+}
+
+/// Effective start point of a run (flip-aware).
+fn run_start(long_segment: &Ops, run: &ScanRun) -> Point3D {
+    if run.flip {
+        long_segment.endpoint(run.scan_idx)
+    } else {
+        long_segment.endpoint(run.move_idx)
+    }
+}
+
+/// Effective end point of a run (flip-aware).
+fn run_end(long_segment: &Ops, run: &ScanRun) -> Point3D {
+    if run.flip {
+        long_segment.endpoint(run.move_idx)
+    } else {
+        long_segment.endpoint(run.scan_idx)
+    }
+}
+
+/// Optimize a scanline-only long segment in place as index ranges.
+///
+/// The raster assembler's segmented mode emits one ``(MoveTo,
+/// ScanLine)`` pair per zero-power-delimited run, already in
+/// near-optimal order. Reordering hundreds of thousands of runs through
+/// the classic segment path would materialize an ``Ops`` object per
+/// run, so the runs are kept as index ranges into *long_segment* and
+/// reordered with the same KD-tree nearest-neighbor walk (plus 2-opt
+/// refinement for small run counts).
+///
+/// Returns ``None`` when the segment has at most one non-empty run —
+/// the caller then keeps the segment as-is, matching the classic
+/// passthrough behavior.
+fn optimize_scanline_runs(
+    long_segment: &Ops,
+    allow_flip: bool,
+    callbacks: &dyn Callbacks,
+) -> Option<Vec<ScanRun>> {
+    let mut runs: Vec<ScanRun> = Vec::with_capacity(long_segment.len() / 2);
+    let mut i = 0;
+    while i + 1 < long_segment.len() {
+        if long_segment.is_travel(i) && long_segment.is_scanline(i + 1) {
+            if run_is_nonzero(long_segment, i + 1) {
+                runs.push(ScanRun {
+                    move_idx: i,
+                    scan_idx: i + 1,
+                    flip: false,
+                });
+            }
+            i += 2;
+        } else {
+            return None;
+        }
+    }
+
+    if runs.len() <= 1 {
+        return None;
+    }
+
+    let mut ordered = kdtree_order_runs(&runs, long_segment, allow_flip);
+    if ordered.len() <= TWO_OPT_SEGMENT_THRESHOLD {
+        two_opt_runs(&mut ordered, long_segment, allow_flip, callbacks);
+    }
+    Some(ordered)
+}
+
+fn kdtree_order_runs(
+    runs: &[ScanRun],
+    long_segment: &Ops,
+    allow_flip: bool,
+) -> Vec<ScanRun> {
+    let n = runs.len();
+    let mut entry_points: Vec<Point2D> = Vec::with_capacity(n);
+    let mut exit_points: Vec<Point2D> = Vec::with_capacity(n);
+    let mut points: Vec<SegmentPoint> = Vec::with_capacity(n * 2);
+    for (i, run) in runs.iter().enumerate() {
+        let start = long_segment.endpoint(run.move_idx);
+        let end = long_segment.endpoint(run.scan_idx);
+        let start_pt = Point2D([start.x, start.y]);
+        let end_pt = Point2D([end.x, end.y]);
+        entry_points.push(start_pt);
+        exit_points.push(end_pt);
+        points.push(SegmentPoint {
+            point: start_pt,
+            segment_idx: i,
+            is_exit: false,
+        });
+        points.push(SegmentPoint {
+            point: end_pt,
+            segment_idx: i,
+            is_exit: true,
+        });
+    }
+
+    let mut tree = RTree::bulk_load(points);
+    let mut ordered: Vec<ScanRun> = Vec::with_capacity(n);
+
+    ordered.push(runs[0]);
+    let last = long_segment.endpoint(runs[0].scan_idx);
+    let mut current_pos = Point2D([last.x, last.y]);
+
+    tree.remove(&SegmentPoint {
+        point: entry_points[0],
+        segment_idx: 0,
+        is_exit: false,
+    });
+    tree.remove(&SegmentPoint {
+        point: exit_points[0],
+        segment_idx: 0,
+        is_exit: true,
+    });
+
+    while ordered.len() < n {
+        let sp = match tree.nearest_neighbor(current_pos) {
+            Some(sp) => sp,
+            None => break,
+        };
+
+        let seg_idx = sp.segment_idx;
+        let mut next_run = runs[seg_idx];
+        if sp.is_exit && allow_flip {
+            next_run.flip = true;
+        }
+
+        let last = run_end(long_segment, &next_run);
+        current_pos = Point2D([last.x, last.y]);
+        ordered.push(next_run);
+
+        tree.remove(&SegmentPoint {
+            point: entry_points[seg_idx],
+            segment_idx: seg_idx,
+            is_exit: false,
+        });
+        tree.remove(&SegmentPoint {
+            point: exit_points[seg_idx],
+            segment_idx: seg_idx,
+            is_exit: true,
+        });
+    }
+
+    ordered
+}
+
+fn two_opt_runs(
+    ordered: &mut [ScanRun],
+    long_segment: &Ops,
+    allow_flip: bool,
+    callbacks: &dyn Callbacks,
+) {
+    let n = ordered.len();
+    if n < 3 {
+        return;
+    }
+
+    let mut iter_count = 0;
+    let mut improved = true;
+
+    while improved && iter_count < TWO_OPT_MAX_ITER {
+        if callbacks.is_cancelled() {
+            return;
+        }
+        improved = false;
+        for i in 0..n - 2 {
+            for j in i + 2..n {
+                let a_end = run_end(long_segment, &ordered[i]);
+                let b_start = run_start(long_segment, &ordered[i + 1]);
+                let e_end = run_end(long_segment, &ordered[j]);
+
+                let (curr_cost, new_cost) = if j < n - 1 {
+                    let f_start = run_start(long_segment, &ordered[j + 1]);
+                    let curr =
+                        dist_xy(a_end, b_start) + dist_xy(e_end, f_start);
+                    let new_ =
+                        dist_xy(a_end, e_end) + dist_xy(b_start, f_start);
+                    (curr, new_)
+                } else {
+                    (dist_xy(a_end, b_start), dist_xy(a_end, e_end))
+                };
+
+                if new_cost < curr_cost {
+                    if allow_flip {
+                        for run in ordered.iter_mut().take(j + 1).skip(i + 1) {
+                            run.flip = !run.flip;
+                        }
+                    }
+                    ordered[i + 1..=j].reverse();
+                    improved = true;
+                }
+            }
+        }
+        iter_count += 1;
+    }
+}
+
+fn emit_scanline_runs(
+    out: &mut Ops,
+    long_segment: &Ops,
+    runs: &[ScanRun],
+    prev: &mut State,
+) {
+    for run in runs {
+        if run.flip {
+            let scan_end = long_segment.endpoint(run.scan_idx);
+            let move_end = long_segment.endpoint(run.move_idx);
+            if let Some(state) = long_segment.state(run.move_idx) {
+                *prev = sync_state_commands(out, state, prev);
+            }
+            out.move_to(scan_end.x, scan_end.y, scan_end.z, None);
+            if let Some(state) = long_segment.state(run.scan_idx) {
+                *prev = sync_state_commands(out, state, prev);
+            }
+            let power: Vec<u8> = long_segment
+                .scanline_data(run.scan_idx)
+                .into_iter()
+                .rev()
+                .collect();
+            let extra =
+                long_segment.extra_axes(run.scan_idx).map(|ea| ea.to_vec());
+            out.scan_to(move_end.x, move_end.y, move_end.z, power, extra);
+        } else {
+            for j in [run.move_idx, run.scan_idx] {
+                if let Some(state) = long_segment.state(j) {
+                    *prev = sync_state_commands(out, state, prev);
+                }
+                out.transfer_command_from(long_segment, j);
+            }
+        }
+    }
 }
 
 fn sync_state_commands(ops: &mut Ops, state: &State, prev: &State) -> State {
@@ -786,7 +1066,35 @@ fn optimize_segments(
         "Analyzing and bucketing path segments...",
     );
 
-    let jobs = prepare_optimization_jobs(&long_segments);
+    // Scanline-only long segments (the raster assembler's segmented
+    // output): every run is already a zero-power-delimited (MoveTo,
+    // ScanLine) pair, so they are optimized in place as index ranges
+    // instead of materializing an Ops object per run (a dense engraving
+    // has hundreds of thousands).  Segments with at most one non-empty
+    // run fall back to the classic passthrough path.
+    let mut scanline_units: std::collections::HashMap<usize, Vec<ScanRun>> =
+        std::collections::HashMap::new();
+    let mut processed_results: std::collections::HashMap<usize, Vec<Ops>> =
+        std::collections::HashMap::new();
+    let mut opt_inputs: Vec<(usize, &Ops)> =
+        Vec::with_capacity(long_segments.len());
+    for (i, seg) in long_segments.iter().enumerate() {
+        let contains_scanline = (0..seg.len()).any(|j| seg.is_scanline(j));
+        if contains_scanline && is_scanline_only(seg) {
+            match optimize_scanline_runs(seg, allow_flip, callbacks) {
+                Some(runs) => {
+                    scanline_units.insert(i, runs);
+                }
+                None => {
+                    processed_results.insert(i, vec![seg.clone()]);
+                }
+            }
+        } else {
+            opt_inputs.push((i, seg));
+        }
+    }
+
+    let jobs = prepare_optimization_jobs(&opt_inputs);
 
     let total_workload: usize = jobs
         .iter()
@@ -798,8 +1106,6 @@ fn optimize_segments(
         .max()
         .unwrap_or(1);
 
-    let mut processed_results: std::collections::HashMap<usize, Vec<Ops>> =
-        std::collections::HashMap::new();
     let mut cumulative_workload: usize = 0;
 
     for (i, job) in jobs.iter().enumerate() {
@@ -857,28 +1163,30 @@ fn optimize_segments(
 
     report_progress(callbacks, 0.9, "Reassembling optimized paths...");
 
-    let mut flat_result: Vec<Ops> = Vec::new();
-    for i in 0..long_segments.len() {
-        if let Some(segments) = processed_results.get(&i) {
-            flat_result.extend(segments.iter().cloned());
-        }
-    }
-
     ops.clear();
     let mut prev = State::default();
-    for segment_ops in &flat_result {
-        if segment_ops.is_empty() {
+    for (i, seg) in long_segments.iter().enumerate() {
+        if let Some(runs) = scanline_units.get(&i) {
+            emit_scanline_runs(ops, seg, runs, &mut prev);
             continue;
         }
-        if segment_ops.is_marker(0) {
-            ops.transfer_command_from(segment_ops, 0);
+        let Some(segments) = processed_results.get(&i) else {
             continue;
-        }
-        for j in 0..segment_ops.len() {
-            if let Some(state) = segment_ops.state(j) {
-                prev = sync_state_commands(ops, state, &prev);
+        };
+        for segment_ops in segments {
+            if segment_ops.is_empty() {
+                continue;
             }
-            ops.transfer_command_from(segment_ops, j);
+            if segment_ops.is_marker(0) {
+                ops.transfer_command_from(segment_ops, 0);
+                continue;
+            }
+            for j in 0..segment_ops.len() {
+                if let Some(state) = segment_ops.state(j) {
+                    prev = sync_state_commands(ops, state, &prev);
+                }
+                ops.transfer_command_from(segment_ops, j);
+            }
         }
     }
 

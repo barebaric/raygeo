@@ -339,6 +339,14 @@ class Ops:
         :returns: Number of travel commands.
         :complexity: O(n) time, O(1) space
         """
+    def count_scanline(self) -> builtins.int:
+        r"""
+        Return the number of ScanLine (raster power) commands in this
+        sequence.
+        
+        :returns: Number of scanline commands.
+        :complexity: O(n) time, O(1) space
+        """
     def is_travel(self, idx: builtins.int) -> builtins.bool:
         r"""
         Check whether the command at *idx* is a travel (non-cutting) move.

@@ -467,6 +467,42 @@ class TestOptimizeScanline:
         # Scanlines are atomic — never split at zero-power gaps
         assert len(scan_indices) == 1
 
+    def test_many_scanline_runs_are_reordered(self):
+        """Scanline-only content is still optimized: the runs are
+        reordered by nearest-neighbor travel without being split into
+        separate ops."""
+        runs = [
+            ((0.0, 0.0), (10.0, 0.0)),
+            ((40.0, 0.0), (50.0, 0.0)),
+            ((80.0, 0.0), (90.0, 0.0)),
+            ((120.0, 0.0), (130.0, 0.0)),
+            ((160.0, 0.0), (170.0, 0.0)),
+        ]
+        ops = Ops()
+        ops.set_power(1.0)
+        # Deliberately scrambled emission order: 0, 2, 4, 1, 3.
+        for idx in (0, 2, 4, 1, 3):
+            start, end = runs[idx]
+            ops.move_to(start[0], start[1], 0.0)
+            ops.scan_to(
+                end[0], end[1], 0.0, power_values=bytearray([50, 60, 50])
+            )
+        before = _travel_distance(ops)
+        assert before == pytest.approx(340.0)
+
+        ops.optimize_travel()
+        ops.preload_state()
+
+        scan_indices = [
+            i
+            for i in range(ops.len())
+            if ops.command_type(i) == CommandType.SCAN_LINE
+        ]
+        assert len(scan_indices) == 5, "runs must be preserved, not split"
+        assert _travel_distance(ops) == pytest.approx(120.0)
+        for si in scan_indices:
+            assert ops.command_type(si - 1) == CommandType.MOVE_TO
+
     def test_overscanned_scanline_not_split(self):
         ops = Ops()
         ops.set_power(1.0)

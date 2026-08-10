@@ -828,6 +828,19 @@ Counts all LineTo, ArcTo, BezierTo, QuadraticBezierTo, and ScanLine commands.
 | _Returns_    | `int` | Number of cutting commands. |
 | _Complexity_ |       | O(n) time, O(1) space       |
 
+### `count_scanline()`
+
+```python
+count_scanline() -> int
+```
+
+Return the number of ScanLine (raster power) commands in this sequence.
+
+| Parameter    | Type  | Description                  |
+| ------------ | ----- | ---------------------------- |
+| _Returns_    | `int` | Number of scanline commands. |
+| _Complexity_ |       | O(n) time, O(1) space        |
+
 ### `count_travel()`
 
 ```python

@@ -801,6 +801,15 @@ impl PyOps {
         self.inner.count_travel()
     }
 
+    /// Return the number of ScanLine (raster power) commands in this
+    /// sequence.
+    ///
+    /// :returns: Number of scanline commands.
+    /// :complexity: O(n) time, O(1) space
+    fn count_scanline(&self) -> usize {
+        self.inner.count_scanline()
+    }
+
     /// Check whether the command at *idx* is a travel (non-cutting) move.
     ///
     /// :param idx: Command index.

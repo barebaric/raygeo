@@ -607,6 +607,22 @@ impl Ops {
             .count()
     }
 
+    /// Count ScanLine (raster power) commands.
+    pub fn count_scanline(&self) -> usize {
+        self.commands
+            .iter()
+            .filter(|c| {
+                matches!(
+                    c.category,
+                    OpCategory::Moving {
+                        cmd: MoveCmd::ScanLine { .. },
+                        ..
+                    }
+                )
+            })
+            .count()
+    }
+
     // --- Arithmetic ---
 }
 

@@ -1,7 +1,10 @@
+use std::sync::Arc;
+
 use crate::ops::container::Ops;
 
 pub fn without_state(ops: &Ops) -> Ops {
     let mut result = Ops::new();
+    result.cmds_mut().reserve(ops.commands.len());
     for node in ops.commands.iter() {
         if !node.is_state_cmd() {
             result.cmds_mut().push(node.clone());
@@ -15,56 +18,50 @@ pub fn without_state(ops: &Ops) -> Ops {
 /// head_coolant) only. For full parameter-regime grouping, use
 /// `StateBlockStart`/`StateBlockEnd` markers.
 pub fn group_by_auxiliary_state(ops: &Ops) -> Vec<Ops> {
-    if ops.is_empty() {
+    let n = ops.commands.len();
+    if n == 0 {
         return Vec::new();
     }
 
-    let mut seg_indices: Vec<Vec<usize>> = Vec::new();
-    let mut current: Vec<usize> = Vec::new();
+    // Segments are contiguous index runs; track them as ranges so no
+    // per-segment index Vec is allocated (raster jobs can produce
+    // hundreds of thousands of segments).
+    let mut ranges: Vec<(usize, usize)> = Vec::new();
+    let mut start = 0usize;
 
-    for (i, node) in ops.commands.iter().enumerate() {
+    for i in 0..n {
+        let node = &ops.commands[i];
         if node.is_marker() {
-            if !current.is_empty() {
-                seg_indices.push(current);
+            if i > start {
+                ranges.push((start, i));
             }
-            seg_indices.push(vec![i]);
-            current = Vec::new();
+            ranges.push((i, i + 1));
+            start = i + 1;
             continue;
         }
-
-        if current.is_empty() {
-            current.push(i);
-            continue;
-        }
-
-        let last_state = ops.commands[current[current.len() - 1]].state();
-        let op_state = node.state();
-        if let (Some(ls), Some(os)) = (last_state, op_state) {
-            if ls.coolant == os.coolant
-                && ls.air_assist == os.air_assist
-                && ls.head_coolant == os.head_coolant
-            {
-                current.push(i);
-            } else {
-                seg_indices.push(current);
-                current = vec![i];
+        if i > start {
+            let same = match (ops.commands[i - 1].state(), node.state()) {
+                (Some(ls), Some(os)) => {
+                    ls.coolant == os.coolant
+                        && ls.air_assist == os.air_assist
+                        && ls.head_coolant == os.head_coolant
+                }
+                _ => false,
+            };
+            if !same {
+                ranges.push((start, i));
+                start = i;
             }
-        } else {
-            seg_indices.push(current);
-            current = vec![i];
         }
     }
-
-    if !current.is_empty() {
-        seg_indices.push(current);
+    if start < n {
+        ranges.push((start, n));
     }
 
-    let mut result = Vec::new();
-    for seg in &seg_indices {
+    let mut result = Vec::with_capacity(ranges.len());
+    for (start, end) in ranges {
         let mut seg_ops = Ops::new();
-        for &idx in seg {
-            seg_ops.cmds_mut().push(ops.commands[idx].clone());
-        }
+        seg_ops.commands = Arc::new(ops.commands[start..end].to_vec());
         seg_ops.invalidate_time_cache();
         result.push(seg_ops);
     }
