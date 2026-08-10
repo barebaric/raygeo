@@ -35,6 +35,8 @@ rmp-serde = "1"
 swash = { version = "0.2", features = ["scale", "render"] }
 fontdb = "0.24"
 zstd = "0.13"
+mimalloc = "0.1"
+libmimalloc-sys = { version = "0.1", features = ["extended"] }
 
 [dev-dependencies]
 approx = "0.5"

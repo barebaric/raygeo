@@ -85,6 +85,62 @@
 //! let rect = geo.rect();
 //! ```
 
+/// Global allocator.
+///
+/// mimalloc returns freed pages to the OS eagerly and fragments far
+/// less than glibc malloc, which keeps the process RSS near the live
+/// data size instead of the historical allocation peak.
+///
+/// Purges run immediately: mimalloc's default 10 ms purge delay keeps
+/// the churn pages from a pipeline run committed long enough to stick
+/// in RSS (measured ~500 MB higher in the rayforge app).
+use std::alloc::{GlobalAlloc, Layout};
+use std::sync::Once;
+
+/// `mi_option_purge_delay` in the mimalloc v3 option enum (not
+/// exposed by libmimalloc-sys): delay in ms before freed memory is
+/// purged back to the OS; 0 = immediate.
+const MI_OPTION_PURGE_DELAY: libmimalloc_sys::mi_option_t = 15;
+
+static CONFIGURE_MIMALLOC: Once = Once::new();
+
+fn configure_mimalloc() {
+    CONFIGURE_MIMALLOC.call_once(|| unsafe {
+        libmimalloc_sys::mi_option_set(MI_OPTION_PURGE_DELAY, 0);
+    });
+}
+
+struct RaygeoAlloc;
+
+unsafe impl GlobalAlloc for RaygeoAlloc {
+    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+        configure_mimalloc();
+        mimalloc::MiMalloc.alloc(layout)
+    }
+
+    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+        mimalloc::MiMalloc.dealloc(ptr, layout)
+    }
+
+    unsafe fn alloc_zeroed(&self, layout: Layout) -> *mut u8 {
+        configure_mimalloc();
+        mimalloc::MiMalloc.alloc_zeroed(layout)
+    }
+
+    unsafe fn realloc(
+        &self,
+        ptr: *mut u8,
+        layout: Layout,
+        new_size: usize,
+    ) -> *mut u8 {
+        configure_mimalloc();
+        mimalloc::MiMalloc.realloc(ptr, layout, new_size)
+    }
+}
+
+#[global_allocator]
+static GLOBAL: RaygeoAlloc = RaygeoAlloc;
+
 pub mod cnc;
 pub mod compressed_array;
 pub mod constants;
