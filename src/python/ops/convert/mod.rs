@@ -1,6 +1,6 @@
 use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;
-use pyo3::types::{PyAny, PyDict, PyList, PyType};
+use pyo3::types::{PyAny, PyByteArray, PyDict, PyType};
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::ops::convert::{
@@ -552,20 +552,83 @@ impl PyEncodeOutput {
     fn MachineCode(
         _cls: &Bound<'_, PyType>,
         text: String,
-        op_to_machine_code: Vec<(u32, u32)>,
-        machine_code_to_op: Vec<isize>,
-    ) -> Self {
+        op_to_machine_code: &Bound<'_, PyAny>,
+        machine_code_to_op: &Bound<'_, PyAny>,
+    ) -> PyResult<Self> {
         use crate::ops::convert::gcode_types::{
             OpLineRange, MACHINE_CODE_TO_OP_NONE,
         };
-        PyEncodeOutput::from_core(EncodeOutput::MachineCode {
-            text,
-            op_to_machine_code: op_to_machine_code
-                .into_iter()
-                .map(|(start, len)| OpLineRange { start, len })
-                .collect(),
-            machine_code_to_op: machine_code_to_op
-                .into_iter()
+
+        // op_to_machine_code: bytearray of interleaved i32 (start,
+        // count) pairs (as produced by the getter), or a list of
+        // (start, count) tuples.
+        let spans: Vec<OpLineRange> = if op_to_machine_code
+            .is_instance_of::<PyByteArray>()
+        {
+            let ba = op_to_machine_code
+                .cast::<PyByteArray>()
+                .expect("bytearray downcast");
+            let bytes = unsafe { ba.as_bytes() };
+            if bytes.len() % 8 != 0 {
+                return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                    "op_to_machine_code bytearray length must be a multiple of 8",
+                ));
+            }
+            let raw: &[u32] = unsafe {
+                std::slice::from_raw_parts(
+                    bytes.as_ptr().cast::<u32>(),
+                    bytes.len() / 4,
+                )
+            };
+            raw.chunks_exact(2)
+                .map(|c| OpLineRange {
+                    start: c[0],
+                    len: c[1],
+                })
+                .collect()
+        } else {
+            let spans: Vec<(i32, i32)> = op_to_machine_code.extract()?;
+            spans
+                .iter()
+                .map(|(s, c)| OpLineRange {
+                    start: *s as u32,
+                    len: *c as u32,
+                })
+                .collect()
+        };
+
+        // machine_code_to_op: bytearray of i32 (as produced by the
+        // getter), or a list of ints.
+        let mc_to_op: Vec<usize> = if machine_code_to_op
+            .is_instance_of::<PyByteArray>()
+        {
+            let ba = machine_code_to_op
+                .cast::<PyByteArray>()
+                .expect("bytearray downcast");
+            let bytes = unsafe { ba.as_bytes() };
+            if bytes.len() % 4 != 0 {
+                return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                    "machine_code_to_op bytearray length must be a multiple of 4",
+                ));
+            }
+            let raw: &[i32] = unsafe {
+                std::slice::from_raw_parts(
+                    bytes.as_ptr().cast::<i32>(),
+                    bytes.len() / 4,
+                )
+            };
+            raw.iter()
+                .map(|&v| {
+                    if v < 0 {
+                        MACHINE_CODE_TO_OP_NONE
+                    } else {
+                        v as usize
+                    }
+                })
+                .collect()
+        } else {
+            let raw: Vec<i32> = machine_code_to_op.extract()?;
+            raw.into_iter()
                 .map(|v| {
                     if v < 0 {
                         MACHINE_CODE_TO_OP_NONE
@@ -573,8 +636,14 @@ impl PyEncodeOutput {
                         v as usize
                     }
                 })
-                .collect(),
-        })
+                .collect()
+        };
+
+        Ok(PyEncodeOutput::from_core(EncodeOutput::MachineCode {
+            text,
+            op_to_machine_code: spans,
+            machine_code_to_op: mc_to_op,
+        }))
     }
 
     fn __repr__(&self) -> String {
@@ -624,20 +693,35 @@ impl PyEncodeOutput {
 
     /// Mapping ``op_index -> (start_line, line_count)`` span. Returns
     /// ``None`` unless this is the ``MachineCode`` variant.
+    ///
+    /// Returned as a :class:`bytearray` of interleaved ``i32`` pairs
+    /// ``(start, count)`` (8 bytes per op) to avoid the per-element
+    /// Python tuple/int overhead of a list-of-tuples.  Decode with
+    /// ``np.frombuffer(ba, dtype=np.int32).reshape(-1, 2)``.
     #[getter]
-    fn op_to_machine_code(&self, py: Python<'_>) -> Option<Py<PyAny>> {
+    fn op_to_machine_code(&self, py: Python<'_>) -> Option<Py<PyByteArray>> {
         match self.enc() {
             EncodeOutput::MachineCode {
                 op_to_machine_code, ..
-            } => Some(
-                PyList::new(
-                    py,
-                    op_to_machine_code.iter().map(|r| (r.start, r.len)),
-                )
-                .expect("op line spans to Python list")
-                .into_any()
-                .unbind(),
-            ),
+            } => {
+                let n = op_to_machine_code.len();
+                let buf =
+                    PyByteArray::new_with(py, n * 8, |bytes: &mut [u8]| {
+                        let out = unsafe {
+                            std::slice::from_raw_parts_mut(
+                                bytes.as_mut_ptr().cast::<u32>(),
+                                n * 2,
+                            )
+                        };
+                        for (i, r) in op_to_machine_code.iter().enumerate() {
+                            out[i * 2] = r.start;
+                            out[i * 2 + 1] = r.len;
+                        }
+                        Ok(())
+                    })
+                    .expect("op span bytearray");
+                Some(buf.unbind())
+            }
             _ => None,
         }
     }
@@ -645,27 +729,38 @@ impl PyEncodeOutput {
     /// Mapping ``machine-code line index -> op_index`` (``-1`` = no
     /// op). Returns ``None`` unless this is the ``MachineCode``
     /// variant.
+    ///
+    /// Returned as a :class:`bytearray` of ``i32`` values (4 bytes per
+    /// line) to avoid the per-element Python int overhead of a list.
+    /// Decode with ``np.frombuffer(ba, dtype=np.int32)``.
     #[getter]
-    fn machine_code_to_op(&self, py: Python<'_>) -> Option<Py<PyAny>> {
+    fn machine_code_to_op(&self, py: Python<'_>) -> Option<Py<PyByteArray>> {
         use crate::ops::convert::gcode_types::MACHINE_CODE_TO_OP_NONE;
         match self.enc() {
             EncodeOutput::MachineCode {
                 machine_code_to_op, ..
-            } => Some(
-                PyList::new(
-                    py,
-                    machine_code_to_op.iter().map(|&v| {
-                        if v == MACHINE_CODE_TO_OP_NONE {
-                            -1
-                        } else {
-                            v as isize
+            } => {
+                let n = machine_code_to_op.len();
+                let buf =
+                    PyByteArray::new_with(py, n * 4, |bytes: &mut [u8]| {
+                        let out = unsafe {
+                            std::slice::from_raw_parts_mut(
+                                bytes.as_mut_ptr().cast::<i32>(),
+                                n,
+                            )
+                        };
+                        for (i, &v) in machine_code_to_op.iter().enumerate() {
+                            out[i] = if v == MACHINE_CODE_TO_OP_NONE {
+                                -1
+                            } else {
+                                v as i32
+                            };
                         }
-                    }),
-                )
-                .expect("machine code map to Python list")
-                .into_any()
-                .unbind(),
-            ),
+                        Ok(())
+                    })
+                    .expect("machine code to op bytearray");
+                Some(buf.unbind())
+            }
             _ => None,
         }
     }

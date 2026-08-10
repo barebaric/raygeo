@@ -36,17 +36,26 @@ class EncodeOutput:
         ``MachineCode`` variant.
         """
     @property
-    def op_to_machine_code(self) -> typing.Optional[typing.Any]:
+    def op_to_machine_code(self) -> typing.Optional[bytearray]:
         r"""
         Mapping ``op_index -> (start_line, line_count)`` span. Returns
         ``None`` unless this is the ``MachineCode`` variant.
+        
+        Returned as a :class:`bytearray` of interleaved ``i32`` pairs
+        ``(start, count)`` (8 bytes per op) to avoid the per-element
+        Python tuple/int overhead of a list-of-tuples.  Decode with
+        ``np.frombuffer(ba, dtype=np.int32).reshape(-1, 2)``.
         """
     @property
-    def machine_code_to_op(self) -> typing.Optional[typing.Any]:
+    def machine_code_to_op(self) -> typing.Optional[bytearray]:
         r"""
         Mapping ``machine-code line index -> op_index`` (``-1`` = no
         op). Returns ``None`` unless this is the ``MachineCode``
         variant.
+        
+        Returned as a :class:`bytearray` of ``i32`` values (4 bytes per
+        line) to avoid the per-element Python int overhead of a list.
+        Decode with ``np.frombuffer(ba, dtype=np.int32)``.
         """
     @property
     def repr(self) -> typing.Optional[builtins.str]:
@@ -73,7 +82,7 @@ class EncodeOutput:
         ``Texture`` variant.
         """
     @classmethod
-    def MachineCode(cls, text: builtins.str, op_to_machine_code: typing.Sequence[tuple[builtins.int, builtins.int]], machine_code_to_op: typing.Sequence[builtins.int]) -> EncodeOutput: ...
+    def MachineCode(cls, text: builtins.str, op_to_machine_code: typing.Any, machine_code_to_op: typing.Any) -> EncodeOutput: ...
     def __repr__(self) -> builtins.str: ...
 
 @typing.final

@@ -1,7 +1,7 @@
 use glam::{DMat4, DVec4};
 use numpy::PyArray1;
 use pyo3::prelude::*;
-use pyo3::types::{PyBytes, PyDict, PyList, PyType};
+use pyo3::types::{PyByteArray, PyBytes, PyDict, PyList, PyType};
 use pyo3::{Bound, Py, PyAny, PyResult};
 use pyo3_stub_gen::derive::{
     gen_methods_from_python, gen_stub_pyclass, gen_stub_pymethods,
@@ -9,7 +9,7 @@ use pyo3_stub_gen::derive::{
 use pyo3_stub_gen::inventory::submit;
 
 use crate::geo::types::{Point, Point3D, Rect};
-use crate::ops::convert::gcode_types::{OpLineRange, MACHINE_CODE_TO_OP_NONE};
+use crate::ops::convert::gcode_types::OpLineRange;
 use crate::ops::{
     Axis, CommandType, MarkerCmd, MoveCmd, OpCategory, OpsSection,
     OpsSectionRange, StateCmd,
@@ -210,35 +210,53 @@ fn py_scene_data_to_object<'py>(
     )
 }
 
-/// Convert a Rust op-line span array into a Python list of
-/// ``(start, len)`` tuples, one per op index.
-fn op_line_ranges_to_pylist<'py>(
+/// Convert a Rust op-line span array into a Python bytearray of
+/// interleaved ``i32`` ``(start, len)`` pairs, one per op index.
+/// Decode with ``np.frombuffer(ba, dtype=np.int32).reshape(-1, 2)``.
+fn op_line_ranges_to_pybytes<'py>(
     py: Python<'py>,
     ranges: &[OpLineRange],
-) -> PyResult<Bound<'py, PyList>> {
-    let list = PyList::empty(py);
-    for r in ranges {
-        list.append((r.start, r.len))?;
-    }
-    Ok(list)
+) -> PyResult<Bound<'py, PyByteArray>> {
+    let n = ranges.len();
+    let buf = PyByteArray::new_with(py, n * 8, |bytes: &mut [u8]| {
+        let out = unsafe {
+            std::slice::from_raw_parts_mut(
+                bytes.as_mut_ptr().cast::<u32>(),
+                n * 2,
+            )
+        };
+        for (i, r) in ranges.iter().enumerate() {
+            out[i * 2] = r.start;
+            out[i * 2 + 1] = r.len;
+        }
+        Ok(())
+    })?;
+    Ok(buf)
 }
 
-/// Convert a Rust line→op array into a Python list of integers,
-/// mapping the ``MACHINE_CODE_TO_OP_NONE`` sentinel to ``-1``.
-fn machine_code_to_op_to_pylist<'py>(
+/// Convert a Rust line→op array into a Python bytearray of ``i32``
+/// values, mapping the ``MACHINE_CODE_TO_OP_NONE`` sentinel to ``-1``.
+/// Decode with ``np.frombuffer(ba, dtype=np.int32)``.
+fn machine_code_to_op_to_pybytes<'py>(
     py: Python<'py>,
     vec: &[usize],
-) -> PyResult<Bound<'py, PyList>> {
-    let list = PyList::empty(py);
-    for &v in vec {
-        let item = if v == MACHINE_CODE_TO_OP_NONE {
-            -1
-        } else {
-            v as isize
+) -> PyResult<Bound<'py, PyByteArray>> {
+    use crate::ops::convert::gcode_types::MACHINE_CODE_TO_OP_NONE;
+    let n = vec.len();
+    let buf = PyByteArray::new_with(py, n * 4, |bytes: &mut [u8]| {
+        let out = unsafe {
+            std::slice::from_raw_parts_mut(bytes.as_mut_ptr().cast::<i32>(), n)
         };
-        list.append(item)?;
-    }
-    Ok(list)
+        for (i, &v) in vec.iter().enumerate() {
+            out[i] = if v == MACHINE_CODE_TO_OP_NONE {
+                -1
+            } else {
+                v as i32
+            };
+        }
+        Ok(())
+    })?;
+    Ok(buf)
 }
 
 /// Normalize a Python-style index (negative = from end) to a usize.
@@ -3264,11 +3282,11 @@ impl PyOps {
         dict.set_item("text", &result.text)?;
         dict.set_item(
             "op_to_machine_code",
-            op_line_ranges_to_pylist(py, &result.op_to_machine_code)?,
+            op_line_ranges_to_pybytes(py, &result.op_to_machine_code)?,
         )?;
         dict.set_item(
             "machine_code_to_op",
-            machine_code_to_op_to_pylist(py, &result.machine_code_to_op)?,
+            machine_code_to_op_to_pybytes(py, &result.machine_code_to_op)?,
         )?;
         Ok(dict)
     }

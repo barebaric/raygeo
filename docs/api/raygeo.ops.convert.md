@@ -18,20 +18,27 @@ Texture height in pixels. Returns `None` unless this is the `Texture` variant.
 ### `machine_code_to_op`
 
 ```python
-machine_code_to_op: Optional[Any]
+machine_code_to_op: Optional[bytearray]
 ```
 
 Mapping `machine-code line index -> op_index` (`-1` = no op). Returns `None` unless this is the
 `MachineCode` variant.
 
+Returned as a **bytearray** of `i32` values (4 bytes per line) to avoid the per-element Python int
+overhead of a list. Decode with `np.frombuffer(ba, dtype=np.int32)`.
+
 ### `op_to_machine_code`
 
 ```python
-op_to_machine_code: Optional[Any]
+op_to_machine_code: Optional[bytearray]
 ```
 
 Mapping `op_index -> (start_line, line_count)` span. Returns `None` unless this is the `MachineCode`
 variant.
+
+Returned as a **bytearray** of interleaved `i32` pairs `(start, count)` (8 bytes per op) to avoid
+the per-element Python tuple/int overhead of a list-of-tuples. Decode with
+`np.frombuffer(ba, dtype=np.int32).reshape(-1, 2)`.
 
 ### `power_texture`
 
@@ -80,17 +87,17 @@ Texture width in pixels. Returns `None` unless this is the `Texture` variant.
 @classmethod
 MachineCode(
     text: str,
-    op_to_machine_code: Sequence[tuple[int, int]],
-    machine_code_to_op: Sequence[int],
+    op_to_machine_code: Any,
+    machine_code_to_op: Any,
 ) -> EncodeOutput
 ```
 
-| Parameter            | Type                        | Description |
-| -------------------- | --------------------------- | ----------- |
-| `text`               | `str`                       |             |
-| `op_to_machine_code` | `Sequence[tuple[int, int]]` |             |
-| `machine_code_to_op` | `Sequence[int]`             |             |
-| _Returns_            | `EncodeOutput`              |             |
+| Parameter            | Type           | Description |
+| -------------------- | -------------- | ----------- |
+| `text`               | `str`          |             |
+| `op_to_machine_code` | `Any`          |             |
+| `machine_code_to_op` | `Any`          |             |
+| _Returns_            | `EncodeOutput` |             |
 
 ## Encoder
 

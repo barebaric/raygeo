@@ -7,6 +7,12 @@ Node request types.
 
 ## NodeRequest
 
+### `cacheable`
+
+```python
+cacheable: bool
+```
+
 ### `generation_id`
 
 ```python
