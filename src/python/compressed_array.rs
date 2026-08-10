@@ -80,25 +80,22 @@ impl PyCompressedArray {
     fn to_numpy<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
         match self.inner.dtype {
             Dtype::Float32 => {
-                let data = self
-                    .inner
-                    .decompress_to_vec_f32()
+                let data = py
+                    .detach(|| self.inner.decompress_to_vec_f32())
                     .map_err(pyo3::exceptions::PyValueError::new_err)?;
                 let array = data.into_pyarray(py);
                 self.reshape_if_needed(array.into_any())
             }
             Dtype::Int32 => {
-                let data = self
-                    .inner
-                    .decompress_to_vec_i32()
+                let data = py
+                    .detach(|| self.inner.decompress_to_vec_i32())
                     .map_err(pyo3::exceptions::PyValueError::new_err)?;
                 let array = data.into_pyarray(py);
                 self.reshape_if_needed(array.into_any())
             }
             Dtype::UInt8 => {
-                let data = self
-                    .inner
-                    .decompress_to_vec_u8()
+                let data = py
+                    .detach(|| self.inner.decompress_to_vec_u8())
                     .map_err(pyo3::exceptions::PyValueError::new_err)?;
                 let array = data.into_pyarray(py);
                 self.reshape_if_needed(array.into_any())

@@ -3222,7 +3222,7 @@ impl PyOps {
             layer_configs: configs,
         };
 
-        let data = self.inner.compile_scene_3d(&spec);
+        let data = py.detach(|| self.inner.compile_scene_3d(&spec));
         py_scene_data_to_object(py, data)
     }
 
@@ -3230,8 +3230,8 @@ impl PyOps {
     ///
     /// Returns ``None`` if there are no scanlines. Otherwise returns
     /// ``(min_x, min_y, width, height)`` using visual endpoints.
-    fn scanline_bbox(&self) -> Option<(f64, f64, f64, f64)> {
-        self.inner.scanline_bbox()
+    fn scanline_bbox(&self, py: Python<'_>) -> Option<(f64, f64, f64, f64)> {
+        py.detach(|| self.inner.scanline_bbox())
     }
 
     /// Bake visual positions into a new Ops.
@@ -3239,7 +3239,7 @@ impl PyOps {
     /// For every moving command, replaces Y with the rotary degrees
     /// value from extra_axes. Non-moving commands are copied as-is.
     fn bake_visual_positions(&self, py: Python<'_>) -> PyResult<Py<PyOps>> {
-        let baked = self.inner.bake_visual_positions();
+        let baked = py.detach(|| self.inner.bake_visual_positions());
         Py::new(py, PyOps { inner: baked })
     }
 
@@ -3250,7 +3250,7 @@ impl PyOps {
         start: usize,
         end: usize,
     ) -> PyResult<Py<PyOps>> {
-        let sub = self.inner.extract_range(start, end);
+        let sub = py.detach(|| self.inner.extract_range(start, end));
         Py::new(py, PyOps { inner: sub })
     }
 

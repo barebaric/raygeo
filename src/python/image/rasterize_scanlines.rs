@@ -51,13 +51,15 @@ fn py_rasterize_scanlines(
     origin_mm: (f64, f64),
     radius_px: u32,
 ) -> PyResult<Py<PyAny>> {
-    let buffer = ops.inner.to_texture(
-        width_px,
-        height_px,
-        px_per_mm,
-        origin_mm,
-        radius_px as i32,
-    );
+    let buffer = py.detach(|| {
+        ops.inner.to_texture(
+            width_px,
+            height_px,
+            px_per_mm,
+            origin_mm,
+            radius_px as i32,
+        )
+    });
 
     if buffer.is_empty() || !buffer.iter().any(|&b| b != 0) {
         let numpy = py.import("numpy")?;
