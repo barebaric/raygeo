@@ -5,6 +5,8 @@ Each test builds an Ops sequence, calls ops.to_gcode(), and asserts
 on the emitted G-code text and op-map.
 """
 
+import numpy as np
+
 from raygeo.ops import Ops
 from raygeo.ops.axis import Axis
 from raygeo.ops.convert import GcodeDialectSpec
@@ -565,7 +567,10 @@ def test_op_map_job_start():
     ops.job_start()
     ops.job_end()
     result = _encode(ops)
-    assert result["op_to_machine_code"][0][1] >= 1
+    spans = np.frombuffer(
+        result["op_to_machine_code"], dtype=np.int32
+    ).reshape(-1, 2)
+    assert spans[0][1] >= 1
 
 
 def test_op_map_move():
@@ -574,7 +579,10 @@ def test_op_map_move():
     ops.move_to(10.0, 0.0, 0.0)
     ops.job_end()
     result = _encode(ops)
-    assert result["op_to_machine_code"][1][1] >= 1
+    spans = np.frombuffer(
+        result["op_to_machine_code"], dtype=np.int32
+    ).reshape(-1, 2)
+    assert spans[1][1] >= 1
 
 
 def test_machine_code_to_op():

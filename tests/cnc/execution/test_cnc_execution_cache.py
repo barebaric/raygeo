@@ -630,16 +630,12 @@ def test_non_cacheable_node_reruns_when_token_changes():
     second = _run_pipeline(
         p, [_contour_node("c", spec, cacheable=False, version_token=2)]
     )
-    assert second["c"].output is not None, (
-        "token change should force a re-run"
-    )
+    assert second["c"].output is not None, "token change should force a re-run"
 
     third = _run_pipeline(
         p, [_contour_node("c", spec, cacheable=False, version_token=2)]
     )
-    assert third["c"].output is None, (
-        "repeated token should be skipped again"
-    )
+    assert third["c"].output is None, "repeated token should be skipped again"
 
 
 def test_skipped_non_cacheable_feeds_cached_downstream():

@@ -148,10 +148,12 @@ def test_gcode_encode_op_maps_populated():
     mo = out.machine_code_to_op
     assert om is not None and mo is not None
     assert len(om) > 0
-    for op_idx, (start, count) in enumerate(om):
+    spans = np.frombuffer(om, dtype=np.int32).reshape(-1, 2)
+    owners = np.frombuffer(mo, dtype=np.int32)
+    for op_idx, (start, count) in enumerate(spans):
         for mi in range(start, start + count):
-            assert mi < len(mo)
-            assert mo[mi] == op_idx
+            assert mi < len(owners)
+            assert owners[mi] == op_idx
 
 
 # ── Vertex-array encoder ──────────────────────────────────────────
