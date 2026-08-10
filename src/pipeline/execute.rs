@@ -297,7 +297,7 @@ fn spawn_one(s: &Scope<'_>, shared: &Arc<SharedState>, key: String) {
             let mut cc = shared.completed_count.lock().unwrap();
             *cc += 1;
         }
-        emit_batch_progress(&shared);
+        emit_batch_progress(&shared, "", &node_key);
 
         let new_ready: Vec<String> = {
             let mut dr = shared.deps_remaining.lock().unwrap();
@@ -380,7 +380,7 @@ fn propagate_failure(
             let mut cc = shared.completed_count.lock().unwrap();
             *cc += 1;
         }
-        emit_batch_progress(shared);
+        emit_batch_progress(shared, "", &dep_key);
 
         let next_ready: Vec<String> = {
             let mut dr = shared.deps_remaining.lock().unwrap();
@@ -466,7 +466,7 @@ fn deliver_synthetic_completion(
     }
 }
 
-fn emit_batch_progress(shared: &Arc<SharedState>) {
+fn emit_batch_progress(shared: &Arc<SharedState>, key: &str, detail: &str) {
     let cb = match &shared.on_batch {
         Some(cb) => cb,
         None => return,
@@ -479,7 +479,13 @@ fn emit_batch_progress(shared: &Arc<SharedState>) {
     } else {
         0.0
     };
-    cb(frac, String::new());
+    let payload = match (key.is_empty(), detail.is_empty()) {
+        (false, false) => format!("{key}\t{detail}"),
+        (false, true) => key.to_string(),
+        (true, false) => format!("\t{detail}"),
+        (true, true) => String::new(),
+    };
+    cb(frac, payload);
 }
 
 struct ProgressWrapper<'a> {
@@ -499,7 +505,7 @@ impl<'a> Callbacks for ProgressWrapper<'a> {
             .lock()
             .unwrap()
             .insert(self.key.clone(), frac);
-        emit_batch_progress(self.shared);
+        emit_batch_progress(self.shared, &self.key, msg);
     }
 
     fn is_cancelled(&self) -> bool {

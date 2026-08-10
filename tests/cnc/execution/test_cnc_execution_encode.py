@@ -31,9 +31,11 @@ from raygeo.cnc.execution.specs import (
 from raygeo.ops.assembly import Assembler
 from raygeo.ops.assembly.contour import ContourSpec
 from raygeo.ops.convert import (
+    EncodeOutput,
     Encoder,
     GcodeDialectSpec,
     GcodeSpec,
+    PythonEncoder,
     SceneSpec,
     TextureSpec,
     VertexSpec,
@@ -332,6 +334,43 @@ def test_scene_encode_repr_contains_groups():
     assert out.repr is not None
     assert "groups=" in out.repr
     assert "layers=" in out.repr
+
+
+# ── Python-callable encoder ───────────────────────────────────────
+
+
+def _python_encode(ops) -> EncodeOutput:
+    return EncodeOutput.MachineCode("G1 X0", [], [])
+
+
+def test_python_encoder_encode_succeeds():
+    src = _compute_src()
+    enc = _encode_node(
+        "enc",
+        "src",
+        Encoder(PythonEncoder(_python_encode, "pyenc")),
+    )
+    completed, _ = collect_completions([src, enc])
+    c = _by_key(completed)["enc"]
+    assert c.error is None
+    out = encode_result(c)
+    assert out.variant == "MachineCode"
+    assert out.text == "G1 X0"
+
+
+def test_python_encoder_reports_progress():
+    """The driver-backed encoder path emits start/done batch events."""
+    src = _compute_src()
+    enc = _encode_node(
+        "enc",
+        "src",
+        Encoder(PythonEncoder(_python_encode, "pyenc")),
+    )
+    completed, batch = collect_completions([src, enc], on_batch=True)
+    assert _by_key(completed)["enc"].error is None
+    messages = [msg for _, msg in batch]
+    assert any(msg.endswith("pyenc: encode") for msg in messages)
+    assert any(msg.endswith("pyenc: done") for msg in messages)
 
 
 # ── Caching ───────────────────────────────────────────────────────

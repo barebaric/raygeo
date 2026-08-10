@@ -41,6 +41,7 @@ from raygeo.ops.assembly import Assembler
 from raygeo.ops.assembly.contour import ContourSpec
 from raygeo.ops.convert import Encoder, GcodeDialectSpec, GcodeSpec
 from raygeo.ops.part import Part
+from raygeo.ops.transform.overscan import OverscanSpec
 from raygeo.pipeline.completed import CompletedNode
 from raygeo.pipeline.execute import Pipeline, execute_stages
 from raygeo.pipeline.request import NodeRequest
@@ -86,6 +87,36 @@ def test_batch_status_message_is_str():
     _, batch = collect_completions([make_contour_compute("k1")], on_batch=True)
     for _, msg in batch:
         assert isinstance(msg, str)
+
+
+def test_batch_status_message_carries_key_then_completion_marker():
+    _, batch = collect_completions([make_contour_compute("k1")], on_batch=True)
+    messages = [m for _, m in batch]
+    assert any(m.startswith("k1") for m in messages), (
+        f"expected node key in messages: {messages}"
+    )
+    assert "\tk1" in messages, f"expected completion marker: {messages}"
+
+
+def test_batch_status_message_carries_transformer_detail():
+    nodes = [
+        NodeRequest(
+            key="k1",
+            generation_id=1,
+            stage=StageSpec.Compute(
+                part=make_square_part(),
+                params=ComputePayload(
+                    assembler=Assembler(ContourSpec()),
+                    transformers=[OverscanSpec(distance_mm=0.1)],
+                ),
+            ),
+        )
+    ]
+    _, batch = collect_completions(nodes, on_batch=True)
+    messages = [m for _, m in batch]
+    assert "k1\toverscan" in messages, (
+        f"expected transformer detail in messages: {messages}"
+    )
 
 
 # ── Cancellation ──────────────────────────────────────────────────

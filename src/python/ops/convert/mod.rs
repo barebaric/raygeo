@@ -848,10 +848,13 @@ impl PythonEncoder {
 
 impl Encoder for PythonEncoder {
     fn encode(&self, ctx: &mut EncodeCtx<'_>) -> Result<EncodeOutput, String> {
+        let name = self.name.clone();
         Python::attach(|py| {
             if ctx.callbacks.is_cancelled() {
                 return Err("cancelled".to_string());
             }
+            ctx.callbacks
+                .report_progress(0.0, &format!("{name}: encode"));
             let py_ops = crate::python::ops::container::PyOps {
                 inner: ctx.ops.clone(),
             };
@@ -867,7 +870,9 @@ impl Encoder for PythonEncoder {
                     .to_string()
             })?;
             let py_output = py_output.borrow();
-            Ok(py_output.enc().clone())
+            let output = py_output.enc().clone();
+            ctx.callbacks.report_progress(1.0, &format!("{name}: done"));
+            Ok(output)
         })
     }
 
