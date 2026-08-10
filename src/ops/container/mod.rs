@@ -580,8 +580,8 @@ impl Ops {
                     c.category,
                     OpCategory::Moving {
                         cmd: MoveCmd::LineTo
-                            | MoveCmd::ArcTo { .. }
-                            | MoveCmd::BezierTo { .. }
+                            | MoveCmd::ArcTo(_)
+                            | MoveCmd::BezierTo(_)
                             | MoveCmd::QuadraticBezierTo { .. }
                             | MoveCmd::ScanLine { .. },
                         ..
@@ -692,15 +692,16 @@ impl Ops {
                 );
                 has_content = true;
 
-                if let MoveCmd::ArcTo { center, cw } = cmd {
-                    let radius =
-                        (center.x * center.x + center.y * center.y).sqrt();
+                if let MoveCmd::ArcTo(data) = cmd {
+                    let radius = (data.center.x * data.center.x
+                        + data.center.y * data.center.y)
+                        .sqrt();
                     if (curr_x - end_x).abs() < EPSILON_COLLINEAR
                         && (curr_y - end_y).abs() < EPSILON_COLLINEAR
                         && radius > EPSILON_COLLINEAR
                     {
-                        let cx = curr_x + center.x;
-                        let cy = curr_y + center.y;
+                        let cx = curr_x + data.center.x;
+                        let cy = curr_y + data.center.y;
                         Self::update_bounds(
                             &mut min_x,
                             &mut min_y,
@@ -721,8 +722,8 @@ impl Ops {
                         let abox = crate::geo::shape::arc::get_arc_bounds(
                             Point::new(curr_x, curr_y),
                             Point::new(end_x, end_y),
-                            Point::new(center.x, center.y),
-                            *cw,
+                            Point::new(data.center.x, data.center.y),
+                            data.cw,
                         );
                         Self::update_bounds(
                             &mut min_x, &mut min_y, &mut max_x, &mut max_y,
@@ -735,14 +736,22 @@ impl Ops {
                     }
                 }
 
-                if let MoveCmd::BezierTo { control1, control2 } = cmd {
+                if let MoveCmd::BezierTo(data) = cmd {
                     Self::update_bounds(
-                        &mut min_x, &mut min_y, &mut max_x, &mut max_y,
-                        control1.x, control1.y,
+                        &mut min_x,
+                        &mut min_y,
+                        &mut max_x,
+                        &mut max_y,
+                        data.control1.x,
+                        data.control1.y,
                     );
                     Self::update_bounds(
-                        &mut min_x, &mut min_y, &mut max_x, &mut max_y,
-                        control2.x, control2.y,
+                        &mut min_x,
+                        &mut min_y,
+                        &mut max_x,
+                        &mut max_y,
+                        data.control2.x,
+                        data.control2.y,
                     );
                 }
                 if let MoveCmd::QuadraticBezierTo { control } = cmd {

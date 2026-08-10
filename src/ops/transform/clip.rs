@@ -596,12 +596,12 @@ impl Ops {
                         );
                         last_point = *end;
                     }
-                    MoveCmd::ArcTo { center, cw } => {
+                    MoveCmd::ArcTo(data) => {
                         if is_arc_inside_polygons(
                             Point::new(last_point.x, last_point.y),
                             Point::new(end.x, end.y),
-                            *center,
-                            *cw,
+                            data.center,
+                            data.cw,
                             &valid_regions,
                         ) {
                             if needs_move_to(pen_pos, last_point) {
@@ -627,11 +627,11 @@ impl Ops {
                             last_point = *end;
                         }
                     }
-                    MoveCmd::BezierTo { control1, control2 } => {
+                    MoveCmd::BezierTo(data) => {
                         if is_bezier_inside_polygons(
                             Point::new(last_point.x, last_point.y),
-                            Point::new(control1.x, control1.y),
-                            Point::new(control2.x, control2.y),
+                            Point::new(data.control1.x, data.control1.y),
+                            Point::new(data.control2.x, data.control2.y),
                             Point::new(end.x, end.y),
                             &valid_regions,
                         ) {

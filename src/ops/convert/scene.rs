@@ -608,10 +608,10 @@ impl Ops {
                 CommandType::ArcTo => {
                     let (end, center, cw) = if let OpCategory::Moving {
                         end,
-                        cmd: MoveCmd::ArcTo { center, cw },
+                        cmd: MoveCmd::ArcTo(data),
                     } = &node.category
                     {
-                        (*end, *center, *cw)
+                        (*end, data.center, data.cw)
                     } else {
                         continue;
                     };
@@ -705,10 +705,10 @@ impl Ops {
                 CommandType::BezierTo => {
                     let (end, c1, c2) = if let OpCategory::Moving {
                         end,
-                        cmd: MoveCmd::BezierTo { control1, control2 },
+                        cmd: MoveCmd::BezierTo(data),
                     } = &node.category
                     {
-                        (*end, *control1, *control2)
+                        (*end, data.control1, data.control2)
                     } else {
                         continue;
                     };

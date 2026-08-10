@@ -96,15 +96,15 @@ impl MachineTransformCompute {
                     }
 
                     match cmd {
-                        MoveCmd::BezierTo { control1, control2 } => {
-                            control1.y = mu_to_degrees(
-                                control1.y,
+                        MoveCmd::BezierTo(data) => {
+                            data.control1.y = mu_to_degrees(
+                                data.control1.y,
                                 rm.diameter,
                                 rm.gear_ratio,
                                 rm.reverse,
                             );
-                            control2.y = mu_to_degrees(
-                                control2.y,
+                            data.control2.y = mu_to_degrees(
+                                data.control2.y,
                                 rm.diameter,
                                 rm.gear_ratio,
                                 rm.reverse,
@@ -118,9 +118,9 @@ impl MachineTransformCompute {
                                 rm.reverse,
                             );
                         }
-                        MoveCmd::ArcTo { center, .. } => {
-                            center.y = mu_to_degrees(
-                                center.y,
+                        MoveCmd::ArcTo(data) => {
+                            data.center.y = mu_to_degrees(
+                                data.center.y,
                                 rm.diameter,
                                 rm.gear_ratio,
                                 rm.reverse,
@@ -222,26 +222,34 @@ impl MachineTransformCompute {
                     ea_vec.retain(|(a, _)| *a != rotary_axis);
 
                     match cmd {
-                        MoveCmd::BezierTo { control1, control2 } => {
+                        MoveCmd::BezierTo(data) => {
                             if let Some(ref replaced) = rm.replaced_axis {
                                 let v1 = degrees_to_mm(
-                                    control1.y,
+                                    data.control1.y,
                                     rm.mm_per_rotation,
                                     rm.reverse,
                                 );
                                 let v2 = degrees_to_mm(
-                                    control2.y,
+                                    data.control2.y,
                                     rm.mm_per_rotation,
                                     rm.reverse,
                                 );
                                 if replaced == "Y" {
-                                    control1.y = v1;
-                                    control2.y = v2;
+                                    data.control1.y = v1;
+                                    data.control2.y = v2;
                                 } else {
-                                    set_axis_value(control1, replaced, v1);
-                                    set_axis_value(control2, replaced, v2);
-                                    control1.y = 0.0;
-                                    control2.y = 0.0;
+                                    set_axis_value(
+                                        &mut data.control1,
+                                        replaced,
+                                        v1,
+                                    );
+                                    set_axis_value(
+                                        &mut data.control2,
+                                        replaced,
+                                        v2,
+                                    );
+                                    data.control1.y = 0.0;
+                                    data.control2.y = 0.0;
                                 }
                             }
                         }
@@ -260,10 +268,10 @@ impl MachineTransformCompute {
                                 }
                             }
                         }
-                        MoveCmd::ArcTo { center, .. } => {
+                        MoveCmd::ArcTo(data) => {
                             if let Some(ref _replaced) = rm.replaced_axis {
-                                center.y = degrees_to_mm(
-                                    center.y,
+                                data.center.y = degrees_to_mm(
+                                    data.center.y,
                                     rm.mm_per_rotation,
                                     rm.reverse,
                                 );

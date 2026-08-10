@@ -93,14 +93,18 @@ pub fn ops_to_numpy_arrays(
                 .call_method1("__setitem__", (i, vec![end.x, end.y, end.z]))?;
 
             match cmd {
-                MoveCmd::BezierTo { control1, control2 } => {
+                MoveCmd::BezierTo(data) => {
                     bezier_data.call_method1(
                         "__setitem__",
                         (
                             bezier_idx,
                             vec![
-                                control1.x, control1.y, control1.z, control2.x,
-                                control2.y, control2.z,
+                                data.control1.x,
+                                data.control1.y,
+                                data.control1.z,
+                                data.control2.x,
+                                data.control2.y,
+                                data.control2.z,
                             ],
                         ),
                     )?;
@@ -122,15 +126,15 @@ pub fn ops_to_numpy_arrays(
                         .call_method1("__setitem__", (i, bezier_idx as i32))?;
                     bezier_idx += 1;
                 }
-                MoveCmd::ArcTo { center, cw } => {
+                MoveCmd::ArcTo(data) => {
                     arc_data.call_method1(
                         "__setitem__",
                         (
                             arc_idx,
                             vec![
-                                center.x,
-                                center.y,
-                                if *cw { 1.0 } else { 0.0 },
+                                data.center.x,
+                                data.center.y,
+                                if data.cw { 1.0 } else { 0.0 },
                             ],
                         ),
                     )?;

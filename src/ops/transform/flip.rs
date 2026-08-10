@@ -43,20 +43,23 @@ pub fn flip_ops(ops: &Ops) -> Ops {
                         new_end.x, new_end.y, new_end.z, reversed, extra,
                     )
                 }
-                MoveCmd::BezierTo { control1, control2 } => {
-                    OpNode::bezier_to(*control2, *control1, new_end, extra)
-                }
-                MoveCmd::ArcTo { center, cw } => {
+                MoveCmd::BezierTo(data) => OpNode::bezier_to(
+                    data.control2,
+                    data.control1,
+                    new_end,
+                    extra,
+                ),
+                MoveCmd::ArcTo(data) => {
                     let original_start =
                         ops.commands[orig_prev_idx].end_point();
                     let original_end = ops.commands[orig_k_idx].end_point();
-                    let center_x = original_start.x + center.x;
-                    let center_y = original_start.y + center.y;
+                    let center_x = original_start.x + data.center.x;
+                    let center_y = original_start.y + data.center.y;
                     let new_i = center_x - original_end.x;
                     let new_j = center_y - original_end.y;
                     OpNode::arc_to(
-                        new_end.x, new_end.y, new_i, new_j, !cw, new_end.z,
-                        extra,
+                        new_end.x, new_end.y, new_i, new_j, !data.cw,
+                        new_end.z, extra,
                     )
                 }
                 MoveCmd::MoveTo => {

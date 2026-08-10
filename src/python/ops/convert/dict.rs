@@ -71,15 +71,19 @@ pub(crate) fn cmd_to_dict<'a>(
 
     match &node.category {
         OpCategory::Moving { cmd, .. } => match cmd {
-            MoveCmd::ArcTo { center, cw, .. } => {
-                d.set_item("center_offset", (center.x, center.y))?;
-                d.set_item("clockwise", *cw)?;
+            MoveCmd::ArcTo(data) => {
+                d.set_item("center_offset", (data.center.x, data.center.y))?;
+                d.set_item("clockwise", data.cw)?;
             }
-            MoveCmd::BezierTo {
-                control1, control2, ..
-            } => {
-                d.set_item("control1", (control1.x, control1.y, control1.z))?;
-                d.set_item("control2", (control2.x, control2.y, control2.z))?;
+            MoveCmd::BezierTo(data) => {
+                d.set_item(
+                    "control1",
+                    (data.control1.x, data.control1.y, data.control1.z),
+                )?;
+                d.set_item(
+                    "control2",
+                    (data.control2.x, data.control2.y, data.control2.z),
+                )?;
             }
             MoveCmd::QuadraticBezierTo { control, .. } => {
                 d.set_item("control", (control.x, control.y, control.z))?;

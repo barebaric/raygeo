@@ -836,8 +836,8 @@ impl PyOps {
             self.inner.commands[idx].category,
             OpCategory::Moving {
                 cmd: MoveCmd::LineTo
-                    | MoveCmd::ArcTo { .. }
-                    | MoveCmd::BezierTo { .. }
+                    | MoveCmd::ArcTo(_)
+                    | MoveCmd::BezierTo(_)
                     | MoveCmd::QuadraticBezierTo { .. }
                     | MoveCmd::ScanLine { .. },
                 ..
@@ -989,11 +989,11 @@ impl PyOps {
             ));
         }
         if let OpCategory::Moving {
-            cmd: MoveCmd::ArcTo { center, cw },
+            cmd: MoveCmd::ArcTo(data),
             ..
         } = &self.inner.commands[idx].category
         {
-            Ok((center.x, center.y, *cw))
+            Ok((data.center.x, data.center.y, data.cw))
         } else {
             Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
                 "Not an ArcToCommand",
@@ -1018,11 +1018,14 @@ impl PyOps {
             ));
         }
         if let OpCategory::Moving {
-            cmd: MoveCmd::BezierTo { control1, control2 },
+            cmd: MoveCmd::BezierTo(data),
             ..
         } = &self.inner.commands[idx].category
         {
-            Ok((point3d_to_tuple(*control1), point3d_to_tuple(*control2)))
+            Ok((
+                point3d_to_tuple(data.control1),
+                point3d_to_tuple(data.control2),
+            ))
         } else {
             Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
                 "Not a BezierToCommand",
@@ -2146,13 +2149,13 @@ impl PyOps {
 
         match &inner.commands[idx].category {
             OpCategory::Moving { cmd, .. } => match cmd {
-                MoveCmd::ArcTo { center, cw } => {
-                    info.center_offset = Some((center.x, center.y));
-                    info.clockwise = Some(*cw);
+                MoveCmd::ArcTo(data) => {
+                    info.center_offset = Some((data.center.x, data.center.y));
+                    info.clockwise = Some(data.cw);
                 }
-                MoveCmd::BezierTo { control1, control2 } => {
-                    info.control1 = Some(point3d_to_tuple(*control1));
-                    info.control2 = Some(point3d_to_tuple(*control2));
+                MoveCmd::BezierTo(data) => {
+                    info.control1 = Some(point3d_to_tuple(data.control1));
+                    info.control2 = Some(point3d_to_tuple(data.control2));
                 }
                 MoveCmd::QuadraticBezierTo { control } => {
                     info.control = Some(point3d_to_tuple(*control));
@@ -2484,17 +2487,17 @@ impl PyOps {
                     &mut self.inner.cmds_mut()[i].category
                 {
                     match cmd {
-                        MoveCmd::ArcTo { center, .. } => {
-                            let off_list = vec![center.x, center.y];
+                        MoveCmd::ArcTo(data) => {
+                            let off_list = vec![data.center.x, data.center.y];
                             let off_py_list = PyList::new(py, &off_list)?;
                             aux_cb.call1(py, (&off_py_list,))?;
                             let new_off: Vec<f64> = off_py_list.extract()?;
-                            *center = Point::new(new_off[0], new_off[1]);
+                            data.center = Point::new(new_off[0], new_off[1]);
                         }
-                        MoveCmd::BezierTo {
-                            control1, control2, ..
-                        } => {
-                            for cp in [control1, control2].iter_mut() {
+                        MoveCmd::BezierTo(data) => {
+                            for cp in [&mut data.control1, &mut data.control2]
+                                .iter_mut()
+                            {
                                 let cp_list = vec![cp.x, cp.y, cp.z];
                                 let cp_py_list = PyList::new(py, &cp_list)?;
                                 aux_cb.call1(py, (&cp_py_list,))?;

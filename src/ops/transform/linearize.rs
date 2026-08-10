@@ -139,17 +139,17 @@ pub fn linearize_node(node: &OpNode, start_point: Point3D) -> Ops {
             MoveCmd::ScanLine { power_values } => {
                 linearize_scanline(end, start_point, power_values, extra)
             }
-            MoveCmd::ArcTo { center, cw } => linearize_arc_to(
+            MoveCmd::ArcTo(data) => linearize_arc_to(
                 end,
                 start_point,
-                Point3D::new(center.x, center.y, 0.0),
-                *cw,
+                Point3D::new(data.center.x, data.center.y, 0.0),
+                data.cw,
                 extra,
             ),
-            MoveCmd::BezierTo { control1, control2 } => linearize_bezier_to(
+            MoveCmd::BezierTo(data) => linearize_bezier_to(
                 start_point,
-                *control1,
-                *control2,
+                data.control1,
+                data.control2,
                 end,
                 extra,
             ),
@@ -215,7 +215,7 @@ impl Ops {
                     last_point = *end;
                 }
                 match cmd {
-                    MoveCmd::BezierTo { .. }
+                    MoveCmd::BezierTo(_)
                     | MoveCmd::QuadraticBezierTo { .. } => {
                         let linearized = linearize_node(node, last_point);
                         for cmd in linearized.commands.iter() {
@@ -249,7 +249,7 @@ impl Ops {
                     last_point = *end;
                 }
                 match cmd {
-                    MoveCmd::ArcTo { .. } => {
+                    MoveCmd::ArcTo(_) => {
                         let linearized = linearize_node(node, last_point);
                         for cmd in linearized.commands.iter() {
                             new_cmds.push(cmd.clone());

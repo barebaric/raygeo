@@ -139,7 +139,7 @@ pub fn apply_tab_gaps(ops: &mut Ops, clips: &[ClipPoint]) {
                     matches!(
                         n.category,
                         OpCategory::Moving {
-                            cmd: MoveCmd::BezierTo { .. },
+                            cmd: MoveCmd::BezierTo(_),
                             ..
                         } | OpCategory::Moving {
                             cmd: MoveCmd::QuadraticBezierTo { .. },
@@ -449,7 +449,7 @@ fn insert_power_commands(
         matches!(
             n.category,
             OpCategory::Moving {
-                cmd: MoveCmd::BezierTo { .. },
+                cmd: MoveCmd::BezierTo(_),
                 ..
             } | OpCategory::Moving {
                 cmd: MoveCmd::QuadraticBezierTo { .. },
@@ -1156,11 +1156,11 @@ fn distance_xy(a: Point3D, b: Point3D) -> f64 {
 
 fn bezier_params(ops: &Ops, idx: usize) -> (Point3D, Point3D) {
     if let OpCategory::Moving {
-        cmd: MoveCmd::BezierTo { control1, control2 },
+        cmd: MoveCmd::BezierTo(data),
         ..
     } = &ops.commands[idx].category
     {
-        (*control1, *control2)
+        (data.control1, data.control2)
     } else {
         (Point3D::new(0.0, 0.0, 0.0), Point3D::new(0.0, 0.0, 0.0))
     }

@@ -5,7 +5,7 @@ use crate::geo::shape::point::transform_point_3d;
 
 use crate::geo::types::{Point, Point3D};
 use crate::ops::container::Ops;
-use crate::ops::types::{MoveCmd, OpCategory, OpNode};
+use crate::ops::types::{ArcToData, BezierToData, MoveCmd, OpCategory, OpNode};
 
 use std::sync::Arc;
 
@@ -33,13 +33,13 @@ impl Ops {
                     let new_end = transform_point_3d(matrix, *end);
 
                     let new_cmd = match cmd {
-                        MoveCmd::ArcTo { center, cw } if is_non_uniform => {
+                        MoveCmd::ArcTo(data) if is_non_uniform => {
                             let start_point = last_point_untransformed
                                 .unwrap_or(Point3D::new(0.0, 0.0, 0.0));
                             let mut arc_buf = Vec::new();
                             let center_3d =
-                                Point3D::new(center.x, center.y, 0.0);
-                            let normal = if *cw {
+                                Point3D::new(data.center.x, data.center.y, 0.0);
+                            let normal = if data.cw {
                                 Point3D::new(0.0, 0.0, -1.0)
                             } else {
                                 Point3D::new(0.0, 0.0, 1.0)
@@ -53,7 +53,7 @@ impl Ops {
                                 &mut arc_buf,
                             );
                             let extra =
-                                node.extra_axes.as_deref().map(|e| e.to_vec());
+                                node.extra_axes.as_ref().map(|e| e.to_vec());
                             for (_, p2) in &arc_buf {
                                 let tv = transform_point_3d(matrix, *p2);
                                 let mut lcmd = OpNode::line_to(
@@ -70,20 +70,28 @@ impl Ops {
                             last_point_untransformed = original_cmd_end;
                             continue; // We broke this into multiple lines, skip the single node push
                         }
-                        MoveCmd::ArcTo { center, cw } => {
+                        MoveCmd::ArcTo(data) => {
                             let new_vec = matrix.transform_vector3(DVec3::new(
-                                center.x, center.y, 0.0,
+                                data.center.x,
+                                data.center.y,
+                                0.0,
                             ));
-                            MoveCmd::ArcTo {
+                            MoveCmd::ArcTo(Box::new(ArcToData {
                                 center: Point::new(new_vec.x, new_vec.y),
-                                cw: if flip_cw { !cw } else { *cw },
-                            }
+                                cw: if flip_cw { !data.cw } else { data.cw },
+                            }))
                         }
-                        MoveCmd::BezierTo { control1, control2 } => {
-                            MoveCmd::BezierTo {
-                                control1: transform_point_3d(matrix, *control1),
-                                control2: transform_point_3d(matrix, *control2),
-                            }
+                        MoveCmd::BezierTo(data) => {
+                            MoveCmd::BezierTo(Box::new(BezierToData {
+                                control1: transform_point_3d(
+                                    matrix,
+                                    data.control1,
+                                ),
+                                control2: transform_point_3d(
+                                    matrix,
+                                    data.control2,
+                                ),
+                            }))
                         }
                         MoveCmd::QuadraticBezierTo { control } => {
                             MoveCmd::QuadraticBezierTo {

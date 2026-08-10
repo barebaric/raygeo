@@ -51,10 +51,16 @@ fn power_to_grayscale(power: f64) -> (f32, f32, f32) {
 fn linearize_bezier_for_vertex(node: &OpNode, start: Point3D) -> Vec<Point3D> {
     if let OpCategory::Moving {
         end,
-        cmd: MoveCmd::BezierTo { control1, control2 },
+        cmd: MoveCmd::BezierTo(data),
     } = &node.category
     {
-        linearize_bezier_segment(start, *control1, *control2, *end, None)
+        linearize_bezier_segment(
+            start,
+            data.control1,
+            data.control2,
+            *end,
+            None,
+        )
     } else {
         Vec::new()
     }
@@ -123,11 +129,11 @@ impl Ops {
 
                 CommandType::ArcTo => {
                     let (center, cw) = if let OpCategory::Moving {
-                        cmd: MoveCmd::ArcTo { center, cw },
+                        cmd: MoveCmd::ArcTo(data),
                         ..
                     } = &node.category
                     {
-                        (*center, *cw)
+                        (data.center, data.cw)
                     } else {
                         continue;
                     };

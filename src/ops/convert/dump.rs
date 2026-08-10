@@ -19,19 +19,20 @@ impl Ops {
                 write!(out, " end=({:.3},{:.3},{:.3})", end.x, end.y, end.z)
                     .unwrap();
                 match cmd {
-                    MoveCmd::ArcTo { center, cw } => {
+                    MoveCmd::ArcTo(data) => {
                         write!(
                             out,
                             " arc=(i={:.3},j={:.3},cw={})",
-                            center.x, center.y, cw
+                            data.center.x, data.center.y, data.cw
                         )
                         .unwrap();
                     }
-                    MoveCmd::BezierTo { control1, control2 } => {
+                    MoveCmd::BezierTo(data) => {
                         write!(
                             out,
                             " bezier=(control1=({:.3},{:.3}),control2=({:.3},{:.3}))",
-                            control1.x, control1.y, control2.x, control2.y
+                            data.control1.x, data.control1.y, data.control2.x,
+                            data.control2.y
                         )
                         .unwrap();
                     }

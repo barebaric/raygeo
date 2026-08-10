@@ -999,11 +999,11 @@ fn ops_workpiece_uid(ops: &Ops, idx: usize) -> Option<String> {
 
 fn ops_arc_params(ops: &Ops, idx: usize) -> (f64, f64, bool) {
     if let crate::ops::types::OpCategory::Moving {
-        cmd: MoveCmd::ArcTo { center, cw },
+        cmd: MoveCmd::ArcTo(data),
         ..
     } = &ops.commands[idx].category
     {
-        (center.x, center.y, *cw)
+        (data.center.x, data.center.y, data.cw)
     } else {
         (0.0, 0.0, true)
     }
@@ -1011,11 +1011,11 @@ fn ops_arc_params(ops: &Ops, idx: usize) -> (f64, f64, bool) {
 
 fn ops_bezier_params(ops: &Ops, idx: usize) -> (Point3D, Point3D) {
     if let crate::ops::types::OpCategory::Moving {
-        cmd: MoveCmd::BezierTo { control1, control2 },
+        cmd: MoveCmd::BezierTo(data),
         ..
     } = &ops.commands[idx].category
     {
-        (*control1, *control2)
+        (data.control1, data.control2)
     } else {
         (Point3D::ZERO, Point3D::ZERO)
     }

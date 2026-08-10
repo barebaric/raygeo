@@ -208,16 +208,16 @@ fn command_duration(
 
 fn move_distance(cmd: &MoveCmd, last_point: Point3D, end: Point3D) -> f64 {
     match cmd {
-        MoveCmd::ArcTo { center, cw } => get_arc_length(
+        MoveCmd::ArcTo(data) => get_arc_length(
             Point::new(last_point.x, last_point.y),
             Point::new(end.x, end.y),
-            *center,
-            *cw,
+            data.center,
+            data.cw,
         ),
-        MoveCmd::BezierTo { control1, control2 } => get_bezier_length(
+        MoveCmd::BezierTo(data) => get_bezier_length(
             Point::new(last_point.x, last_point.y),
-            Point::new(control1.x, control1.y),
-            Point::new(control2.x, control2.y),
+            Point::new(data.control1.x, data.control1.y),
+            Point::new(data.control2.x, data.control2.y),
             Point::new(end.x, end.y),
         ),
         MoveCmd::QuadraticBezierTo { control } => {

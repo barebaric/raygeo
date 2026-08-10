@@ -62,13 +62,18 @@ impl Ops {
                     MoveCmd::LineTo => {
                         geo.line_to(end.x, end.y, end.z);
                     }
-                    MoveCmd::ArcTo { center, cw } => {
+                    MoveCmd::ArcTo(data) => {
                         geo.arc_to(
-                            end.x, end.y, center.x, center.y, *cw, end.z,
+                            end.x,
+                            end.y,
+                            data.center.x,
+                            data.center.y,
+                            data.cw,
+                            end.z,
                         );
                     }
-                    MoveCmd::BezierTo { control1, control2 } => {
-                        geo.bezier_to(*control1, *control2, *end);
+                    MoveCmd::BezierTo(data) => {
+                        geo.bezier_to(data.control1, data.control2, *end);
                     }
                     _ => {}
                 }

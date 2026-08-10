@@ -57,23 +57,25 @@ impl CutDirection {
 }
 
 #[derive(Clone, Debug)]
+pub struct ArcToData {
+    pub center: Point,
+    pub cw: bool,
+}
+
+#[derive(Clone, Debug)]
+pub struct BezierToData {
+    pub control1: Point3D,
+    pub control2: Point3D,
+}
+
+#[derive(Clone, Debug)]
 pub enum MoveCmd {
     MoveTo,
     LineTo,
-    ArcTo {
-        center: Point,
-        cw: bool,
-    },
-    BezierTo {
-        control1: Point3D,
-        control2: Point3D,
-    },
-    QuadraticBezierTo {
-        control: Point3D,
-    },
-    ScanLine {
-        power_values: Arc<[u8]>,
-    },
+    ArcTo(Box<ArcToData>),
+    BezierTo(Box<BezierToData>),
+    QuadraticBezierTo { control: Point3D },
+    ScanLine { power_values: Arc<Vec<u8>> },
 }
 
 #[derive(Clone, Debug)]
@@ -126,7 +128,7 @@ pub enum OpCategory {
 pub struct OpNode {
     pub category: OpCategory,
     pub state: Option<Box<State>>,
-    pub extra_axes: Option<Arc<[(Axis, f64)]>>,
+    pub extra_axes: Option<Arc<Vec<(Axis, f64)>>>,
 }
 
 impl OpNode {
@@ -185,10 +187,10 @@ impl OpNode {
         OpNode {
             category: OpCategory::Moving {
                 end: Point3D::new(x, y, z),
-                cmd: MoveCmd::ArcTo {
+                cmd: MoveCmd::ArcTo(Box::new(ArcToData {
                     center: Point::new(i, j),
                     cw: clockwise,
-                },
+                })),
             },
             state: None,
             extra_axes: extra.map(Arc::from),
@@ -204,7 +206,10 @@ impl OpNode {
         OpNode {
             category: OpCategory::Moving {
                 end,
-                cmd: MoveCmd::BezierTo { control1, control2 },
+                cmd: MoveCmd::BezierTo(Box::new(BezierToData {
+                    control1,
+                    control2,
+                })),
             },
             state: None,
             extra_axes: extra.map(Arc::from),
@@ -470,8 +475,8 @@ impl OpNode {
             OpCategory::Moving { cmd, .. } => match cmd {
                 MoveCmd::MoveTo => CommandType::MoveTo,
                 MoveCmd::LineTo => CommandType::LineTo,
-                MoveCmd::ArcTo { .. } => CommandType::ArcTo,
-                MoveCmd::BezierTo { .. } => CommandType::BezierTo,
+                MoveCmd::ArcTo(_) => CommandType::ArcTo,
+                MoveCmd::BezierTo(_) => CommandType::BezierTo,
                 MoveCmd::QuadraticBezierTo { .. } => {
                     CommandType::QuadraticBezierTo
                 }
@@ -572,10 +577,10 @@ impl OpNode {
     }
 
     pub fn extra_axes(&self) -> Option<&[(Axis, f64)]> {
-        self.extra_axes.as_deref()
+        self.extra_axes.as_ref().map(|v| v.as_slice())
     }
 
-    pub fn set_extra_axes(&mut self, ea: Arc<[(Axis, f64)]>) {
+    pub fn set_extra_axes(&mut self, ea: Arc<Vec<(Axis, f64)>>) {
         self.extra_axes = Some(ea);
     }
 

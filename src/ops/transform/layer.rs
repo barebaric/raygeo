@@ -45,16 +45,16 @@ impl Ops {
                         *e = Point3D::new(e.x - ox, e.y - oy, e.z - oz);
                         // Also update control points. Arc centers are relative, so they don't change.
                         match cmd {
-                            MoveCmd::BezierTo { control1, control2 } => {
-                                *control1 = Point3D::new(
-                                    control1.x - ox,
-                                    control1.y - oy,
-                                    control1.z - oz,
+                            MoveCmd::BezierTo(data) => {
+                                data.control1 = Point3D::new(
+                                    data.control1.x - ox,
+                                    data.control1.y - oy,
+                                    data.control1.z - oz,
                                 );
-                                *control2 = Point3D::new(
-                                    control2.x - ox,
-                                    control2.y - oy,
-                                    control2.z - oz,
+                                data.control2 = Point3D::new(
+                                    data.control2.x - ox,
+                                    data.control2.y - oy,
+                                    data.control2.z - oz,
                                 );
                             }
                             MoveCmd::QuadraticBezierTo { control } => {
