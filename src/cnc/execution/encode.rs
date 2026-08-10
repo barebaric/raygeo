@@ -3,7 +3,7 @@ use std::any::Any;
 use crate::cnc::execution::callbacks::OpsCallbacksAdapter;
 use crate::cnc::execution::specs::AggregateOutput;
 use crate::ops::assembly::AssemblyOutput;
-use crate::ops::convert::{EncodeCtx, EncodeOutput, Encoder};
+use crate::ops::convert::{EncodeCtx, Encoder};
 use crate::pipeline::cache::CacheKey;
 use crate::pipeline::completed::PipelineError;
 use crate::pipeline::compute::{Compute, ComputeCtx};
@@ -51,30 +51,12 @@ impl Compute for EncoderCompute {
         vec![self.source_key.clone()]
     }
 
-    fn cache_key(&self, tag: &str) -> Option<CacheKey> {
-        Some(CacheKey::new(tag))
-    }
-
-    fn restore_from_cache(
-        &mut self,
-        cached: &(dyn Any + Send + Sync),
-    ) -> Result<Box<dyn Any + Send + Sync>, PipelineError> {
-        let output =
-            cached.downcast_ref::<EncodeOutput>().ok_or_else(|| {
-                PipelineError::Other(
-                    "cache type mismatch: expected EncodeOutput".into(),
-                )
-            })?;
-        Ok(Box::new(output.clone()))
-    }
-
-    fn prepare_cache_entry(
-        &self,
-        output: &(dyn Any + Send + Sync),
-    ) -> Option<(Box<dyn Any + Send + Sync>, usize)> {
-        let output = output.downcast_ref::<EncodeOutput>()?;
-        let total = std::mem::size_of::<EncodeOutput>() + output.heap_size();
-        Some((Box::new(output.clone()), total))
+    fn cache_key(&self, _tag: &str) -> Option<CacheKey> {
+        // Encode is the final pipeline stage: its output is consumed
+        // immediately by the caller and likely needs recomputation
+        // anyway, since otherwise the caller would likely not have
+        // re-started the pipeline in the first place.
+        None
     }
 
     fn name(&self) -> &str {

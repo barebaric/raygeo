@@ -38,7 +38,7 @@ from raygeo.ops.convert import (
     TextureSpec,
     VertexSpec,
 )
-from raygeo.pipeline.execute import execute_stages
+from raygeo.pipeline.execute import Pipeline, execute_stages
 from raygeo.pipeline.request import NodeRequest
 from raygeo.pipeline.stage import StageSpec
 
@@ -332,6 +332,41 @@ def test_scene_encode_repr_contains_groups():
     assert out.repr is not None
     assert "groups=" in out.repr
     assert "layers=" in out.repr
+
+
+# ── Caching ───────────────────────────────────────────────────────
+
+
+def test_encode_adds_no_cache_footprint():
+    """The encode stage never stores its output in the cache.
+
+    EncodeOutput is the final pipeline stage: its (potentially large)
+    machine-code text and op maps are consumed immediately, so caching
+    it would only hold a duplicate copy in memory.
+    """
+    p = Pipeline()
+    src = _compute_src()
+    enc = _encode_node(
+        "enc",
+        "src",
+        Encoder(
+            GcodeSpec(
+                dialect=GcodeDialectSpec(),
+                context_json="{}",
+            )
+        ),
+    )
+
+    completed: list = []
+    p.execute([src, enc], completed.append, None)
+    assert completed[-1].output is not None
+    assert p.cache_used_bytes > 0
+
+    with_src_and_encode = p.cache_used_bytes
+    p.clear_cache_prefix("enc")
+    assert p.cache_used_bytes == with_src_and_encode, (
+        "the encode stage must not add a cache entry"
+    )
 
 
 # ── Error cases ───────────────────────────────────────────────────
