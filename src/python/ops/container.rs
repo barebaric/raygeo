@@ -2779,7 +2779,7 @@ impl PyOps {
     /// :param default_rapid_rate: Default rapid rate (default 3000.0).
     /// :param acceleration: Acceleration value (default 1000.0).
     /// :returns: List of cumulative times in seconds, one per command.
-    /// :complexity: O(n) time, O(1) space
+    /// :complexity: O(n) time, O(n) space
     #[pyo3(signature = (default_feed_rate = 1000.0, default_rapid_rate = 3000.0, acceleration = 1000.0))]
     fn build_cumulative_time_index(
         &mut self,
@@ -2807,7 +2807,7 @@ impl PyOps {
     /// :param default_rapid_rate: Default rapid rate (default 3000.0).
     /// :param acceleration: Acceleration value (default 1000.0).
     /// :returns: The command index in effect at time *t*.
-    /// :complexity: O(n) time, O(1) space
+    /// :complexity: O(n) time, O(n) space
     #[pyo3(signature = (t, default_feed_rate = 1000.0, default_rapid_rate = 3000.0, acceleration = 1000.0))]
     fn find_index_at_time(
         &mut self,
@@ -2834,7 +2834,7 @@ impl PyOps {
     /// :param default_rapid_rate: Default rapid rate (default 3000.0).
     /// :param acceleration: Acceleration value (default 1000.0).
     /// :returns: Cumulative simulated time in seconds.
-    /// :complexity: O(n) time, O(1) space
+    /// :complexity: O(n) time, O(n) space
     #[pyo3(signature = (idx, default_feed_rate = 1000.0, default_rapid_rate = 3000.0, acceleration = 1000.0))]
     fn get_cumulative_time_at(
         &mut self,

@@ -1264,7 +1264,7 @@ class Ops:
         :param default_rapid_rate: Default rapid rate (default 3000.0).
         :param acceleration: Acceleration value (default 1000.0).
         :returns: List of cumulative times in seconds, one per command.
-        :complexity: O(n) time, O(1) space
+        :complexity: O(n) time, O(n) space
         """
     def find_index_at_time(self, t: builtins.float, default_feed_rate: builtins.float = 1000.0, default_rapid_rate: builtins.float = 3000.0, acceleration: builtins.float = 1000.0) -> builtins.int:
         r"""
@@ -1279,7 +1279,7 @@ class Ops:
         :param default_rapid_rate: Default rapid rate (default 3000.0).
         :param acceleration: Acceleration value (default 1000.0).
         :returns: The command index in effect at time *t*.
-        :complexity: O(n) time, O(1) space
+        :complexity: O(n) time, O(n) space
         """
     def get_cumulative_time_at(self, idx: builtins.int, default_feed_rate: builtins.float = 1000.0, default_rapid_rate: builtins.float = 3000.0, acceleration: builtins.float = 1000.0) -> builtins.float:
         r"""
@@ -1293,7 +1293,7 @@ class Ops:
         :param default_rapid_rate: Default rapid rate (default 3000.0).
         :param acceleration: Acceleration value (default 1000.0).
         :returns: Cumulative simulated time in seconds.
-        :complexity: O(n) time, O(1) space
+        :complexity: O(n) time, O(n) space
         """
     def to_dict(self) -> dict:
         r"""

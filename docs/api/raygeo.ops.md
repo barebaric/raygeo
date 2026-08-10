@@ -629,7 +629,7 @@ is cached per parameter set and invalidated when the ops are mutated.
 | `default_rapid_rate` | `float = 3000.0` | Default rapid rate (default 3000.0).                  |
 | `acceleration`       | `float = 1000.0` | Acceleration value (default 1000.0).                  |
 | _Returns_            | `list[float]`    | List of cumulative times in seconds, one per command. |
-| _Complexity_         |                  | O(n) time, O(1) space                                 |
+| _Complexity_         |                  | O(n) time, O(n) space                                 |
 
 ### `category()`
 
@@ -1051,7 +1051,7 @@ Returns 0 for an empty ops or for times before the first command's completion.
 | `default_rapid_rate` | `float = 3000.0` | Default rapid rate (default 3000.0).     |
 | `acceleration`       | `float = 1000.0` | Acceleration value (default 1000.0).     |
 | _Returns_            | `int`            | The command index in effect at time *t*. |
-| _Complexity_         |                  | O(n) time, O(1) space                    |
+| _Complexity_         |                  | O(n) time, O(n) space                    |
 
 ### `flip_ops()`
 
@@ -1327,7 +1327,7 @@ Out-of-range indices clamp to the nearest valid command; empty ops yield 0.0.
 | `default_rapid_rate` | `float = 3000.0` | Default rapid rate (default 3000.0).  |
 | `acceleration`       | `float = 1000.0` | Acceleration value (default 1000.0).  |
 | _Returns_            | `float`          | Cumulative simulated time in seconds. |
-| _Complexity_         |                  | O(n) time, O(1) space                 |
+| _Complexity_         |                  | O(n) time, O(n) space                 |
 
 ### `get_frame()`
 

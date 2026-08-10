@@ -213,8 +213,7 @@ impl Aggregate for OpsAggregate {
         let time_estimate = {
             let mp = &self.spec.machine;
             if mp.default_feed_rate > 0.0 || mp.default_rapid_rate > 0.0 {
-                let mut ops_for_time = ops.copy();
-                Some(ops_for_time.estimate_time(
+                Some(ops.estimate_time(
                     mp.default_feed_rate,
                     mp.default_rapid_rate,
                     mp.acceleration,

@@ -11,8 +11,15 @@ impl Ops {
         self.time_dirty = true;
     }
 
+    /// Total simulated execution time (seconds).
+    ///
+    /// Computed in a single streaming pass over the commands without
+    /// building or caching a cumulative index, so it is suitable for
+    /// one-off estimates where the index would only be discarded.
+    /// Identical to the last entry of
+    /// :meth:`build_cumulative_time_index`.
     pub fn estimate_time(
-        &mut self,
+        &self,
         default_feed_rate: f64,
         default_rapid_rate: f64,
         acceleration: f64,
@@ -20,14 +27,28 @@ impl Ops {
         if self.commands.is_empty() {
             return 0.0;
         }
-        let index = self.build_cumulative_time_index(
-            default_feed_rate,
-            default_rapid_rate,
-            acceleration,
-        );
-        index.last().copied().unwrap_or(0.0)
+        let mut total = 0.0;
+        let mut last_point = Point3D::new(0.0, 0.0, 0.0);
+        let mut feed_rate = default_feed_rate;
+        let mut rapid_rate = default_rapid_rate;
+        for node in self.commands.iter() {
+            total += command_duration(
+                node,
+                &mut last_point,
+                &mut feed_rate,
+                &mut rapid_rate,
+                acceleration,
+            );
+        }
+        total
     }
 
+    /// Estimated execution time (seconds) of each individual command.
+    ///
+    /// Returns one entry per command. Moving commands (MoveTo, LineTo,
+    /// ArcTo, etc.) yield their estimated execution time in seconds.
+    /// Dwell commands yield their dwell duration in seconds. Other
+    /// non-moving commands (state changes, markers) yield 0.0.
     pub fn estimate_command_times(
         &self,
         default_feed_rate: f64,
