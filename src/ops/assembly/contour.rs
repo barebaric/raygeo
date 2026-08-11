@@ -20,7 +20,7 @@ use crate::geo::algo::topology::{
 use crate::geo::geometry::Geometry;
 use crate::geo::types::Point3D;
 use crate::ops::assembly::result::AssemblyMeta;
-use crate::ops::assembly::{AssembleCtx, Assembler};
+use crate::ops::assembly::{wrap_vector_outline, AssembleCtx, Assembler};
 use crate::ops::container::Ops;
 use crate::ops::part::FaceState;
 use crate::ops::types::ToolPose;
@@ -203,8 +203,10 @@ pub fn assemble_contour(
             }
             geo = result;
         }
-        let ops =
-            ops_from_geo(&geo, arc_tolerance, allow_arcs, supports_curves)?;
+        let ops = wrap_vector_outline(
+            ops_from_geo(&geo, arc_tolerance, allow_arcs, supports_curves)?,
+            "contour",
+        );
         return Ok((ops, zero_meta()));
     }
 
@@ -248,8 +250,10 @@ pub fn assemble_contour(
         ordered.extend(c);
     }
 
-    let ops =
-        ops_from_geo(&ordered, arc_tolerance, allow_arcs, supports_curves)?;
+    let ops = wrap_vector_outline(
+        ops_from_geo(&ordered, arc_tolerance, allow_arcs, supports_curves)?,
+        "contour",
+    );
     Ok((ops, zero_meta()))
 }
 

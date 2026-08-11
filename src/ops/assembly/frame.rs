@@ -16,7 +16,7 @@ use crate::geo::geometry::Geometry;
 use crate::geo::types::Point3D;
 use crate::ops::assembly::contour::compute_total_offset;
 use crate::ops::assembly::result::AssemblyMeta;
-use crate::ops::assembly::{AssembleCtx, Assembler};
+use crate::ops::assembly::{wrap_vector_outline, AssembleCtx, Assembler};
 use crate::ops::container::Ops;
 use crate::ops::types::ToolPose;
 
@@ -94,7 +94,7 @@ pub fn assemble_frame(
         geo = grow_geometry(&geo, total_offset);
     }
 
-    let ops = Ops::from_geometry(&geo)?;
+    let ops = wrap_vector_outline(Ops::from_geometry(&geo)?, "frame");
     let meta = AssemblyMeta {
         start: ToolPose {
             pos: Point3D::new(0.0, 0.0, 0.0),

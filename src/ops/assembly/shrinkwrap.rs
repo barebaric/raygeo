@@ -18,7 +18,7 @@ use crate::geo::geometry::Geometry;
 use crate::geo::types::{Point, Point3D};
 use crate::ops::assembly::contour::compute_total_offset;
 use crate::ops::assembly::result::AssemblyMeta;
-use crate::ops::assembly::{AssembleCtx, Assembler};
+use crate::ops::assembly::{wrap_vector_outline, AssembleCtx, Assembler};
 use crate::ops::container::Ops;
 use crate::ops::part::ImageSource;
 use crate::ops::types::ToolPose;
@@ -177,25 +177,28 @@ pub fn assemble_shrinkwrap(
         geo = grow_geometry(&geo, total_offset);
     }
 
-    let ops = if arc_tolerance > 0.0 {
-        let apply_curves = allow_arcs || supports_curves;
-        let new_data = if apply_curves {
-            fit_curves(
-                &geo.data,
-                arc_tolerance,
-                supports_curves,
-                allow_arcs,
-                None,
-            )
+    let ops = wrap_vector_outline(
+        if arc_tolerance > 0.0 {
+            let apply_curves = allow_arcs || supports_curves;
+            let new_data = if apply_curves {
+                fit_curves(
+                    &geo.data,
+                    arc_tolerance,
+                    supports_curves,
+                    allow_arcs,
+                    None,
+                )
+            } else {
+                linearize_geometry(&geo.data, arc_tolerance)
+            };
+            let mut fitted = geo.copy();
+            fitted.data = new_data;
+            Ops::from_geometry(&fitted)?
         } else {
-            linearize_geometry(&geo.data, arc_tolerance)
-        };
-        let mut fitted = geo.copy();
-        fitted.data = new_data;
-        Ops::from_geometry(&fitted)?
-    } else {
-        Ops::from_geometry(&geo)?
-    };
+            Ops::from_geometry(&geo)?
+        },
+        "shrinkwrap",
+    );
 
     let meta = AssemblyMeta {
         start: ToolPose {

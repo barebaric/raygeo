@@ -40,9 +40,29 @@ use std::any::Any;
 use crate::geo::types::Polygon;
 use crate::ops::callbacks::Callbacks;
 use crate::ops::container::Ops;
+use crate::ops::enums::SectionType;
 use crate::ops::part::FaceState;
 use crate::ops::part::ImageSource;
 use crate::ops::state::State;
+
+/// Wrap *ops* in a ``VectorOutline`` section so vector transformers
+/// (e.g. lead-in/out, tabs) can identify the cutting stream. Assemblers
+/// that produce vector outline output from geometry must call this
+/// before returning their result; empty ops are returned unchanged.
+pub(crate) fn wrap_vector_outline(ops: Ops, uid: &str) -> Ops {
+    if ops.is_empty() {
+        return ops;
+    }
+    let mut wrapped = Ops::new();
+    wrapped
+        .ops_section_start(SectionType::VectorOutline, uid, None)
+        .expect("VectorOutline section requires no raster mode");
+    wrapped.extend(&ops);
+    wrapped
+        .ops_section_end(SectionType::VectorOutline, None)
+        .expect("VectorOutline section requires no raster mode");
+    wrapped
+}
 
 /// Context passed to [`Assembler::assemble`].
 ///
