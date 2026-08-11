@@ -96,7 +96,8 @@ def test_link_mode_none_concatenates_without_travel():
     )
     completed, _ = collect_completions([a, b, agg])
     out = aggregate_result(_by_key(completed)["agg"])
-    assert len(out.ops) == 12
+    # 2 inputs x 8 commands (6 contour + section markers)
+    assert len(out.ops) == 16
 
 
 # ── LinkMode.sequential — basic ──────────────────────────────────
@@ -129,11 +130,11 @@ def test_link_mode_sequential_adds_travel_between_inputs():
     out = aggregate_result(_by_key(completed)["agg"])
     cmds = out.ops.to_dict()["commands"]
 
-    # 6 (contour a) + 2 travel (retract+plunge) + 6 (contour b) + 1 final lift
-    assert len(cmds) == 15
+    # 8 (contour a) + 2 travel (retract+plunge) + 8 (contour b) + 1 final lift
+    assert len(cmds) == 19
 
     # Both contours start/end at (0, 0, 0), so XY travel is no-op
-    idx = 6
+    idx = 8
     assert cmds[idx]["type"] == "MOVE_TO", f"expected retract, got {cmds[idx]}"
     assert cmds[idx]["end"] == (0.0, 0.0, 2.0), (
         f"retract to safe_z: {cmds[idx]}"
@@ -170,10 +171,10 @@ def test_link_mode_sequential_lifts_after_single_input():
     completed, _ = collect_completions([a, agg])
     out = aggregate_result(_by_key(completed)["agg"])
     cmds = out.ops.to_dict()["commands"]
-    # 6 (contour) + 1 final lift = 7
-    assert len(cmds) == 7
-    assert cmds[6]["type"] == "MOVE_TO"
-    assert cmds[6]["end"] == (0.0, 0.0, 2.0)
+    # 8 (contour) + 1 final lift = 9
+    assert len(cmds) == 9
+    assert cmds[8]["type"] == "MOVE_TO"
+    assert cmds[8]["end"] == (0.0, 0.0, 2.0)
 
 
 # ── LinkMode.sequential — XY travel when positions differ ────────
@@ -216,16 +217,16 @@ def test_link_mode_sequential_xy_travel_when_positions_differ():
     out = aggregate_result(_by_key(completed)["agg"])
     cmds = out.ops.to_dict()["commands"]
 
-    # We expect 6 (a) + 2-3 travel + 6 (b) + 1 final lift = 15-16
+    # We expect 8 (a) + 2-3 travel + 8 (b) + 1 final lift = 19-20
     # Regardless of exact positions, verify:
     # 1. There are travel moves between the two contour blocks
     # 2. The first travel move goes to safe_z (retract)
     # 3. The last command is the final lift to safe_z
 
-    assert 15 <= len(cmds) <= 16
+    assert 19 <= len(cmds) <= 20
 
-    # After contour a (6 cmds), find the move to safe_z (retract)
-    retract = cmds[6]
+    # After contour a (8 cmds), find the move to safe_z (retract)
+    retract = cmds[8]
     assert retract["type"] == "MOVE_TO"
     assert retract["end"][2] == 2.0  # safe_z
 
@@ -292,11 +293,11 @@ def test_link_mode_sequential_per_group():
     completed, _ = collect_completions([a, b, c, agg])
     out = aggregate_result(_by_key(completed)["agg"])
     cmds = out.ops.to_dict()["commands"]
-    # Group 1: 6 + 1 (final lift) = 7
-    # Group 2: 6 + 2 (travel) + 6 + 1 (final lift) = 15
+    # Group 1: 8 + 1 (final lift) = 9
+    # Group 2: 8 + 2 (travel) + 8 + 1 (final lift) = 19
     # Wrap: job_start + job_end = 2
-    # Total: 2 + 7 + 15 = 24
-    assert len(cmds) == 24, f"expected 24 cmds, got {len(cmds)}"
+    # Total: 2 + 9 + 19 = 30
+    assert len(cmds) == 30, f"expected 30 cmds, got {len(cmds)}"
 
 
 # ── Final lift skipped when already at safe_z ────────────────────
@@ -323,8 +324,8 @@ def test_link_mode_sequential_no_final_lift_when_at_safe_z():
     cmds = out.ops.to_dict()["commands"]
     # Contour ends at (0,0,0) which is not below safe_z (0.0)
     # (0.0 < 0.0 - 1e-12) is false, so no lift
-    assert len(cmds) == 6, (
-        f"expected 6 cmds (no lift), got {len(cmds)}: {cmds}"
+    assert len(cmds) == 8, (
+        f"expected 8 cmds (no lift), got {len(cmds)}: {cmds}"
     )
 
 

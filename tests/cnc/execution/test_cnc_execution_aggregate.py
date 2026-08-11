@@ -151,7 +151,8 @@ def test_aggregate_two_inputs_concatenates_ops():
     ]
     completed, _ = collect_completions(nodes)
     out = aggregate_result(_by_key(completed)["agg"])
-    assert len(out.ops) == 12
+    # 2 inputs x 8 commands (6 contour + VectorOutline section markers)
+    assert len(out.ops) == 16
 
 
 # ── Markers are emitted in order ──────────────────────────────────
@@ -174,7 +175,8 @@ def test_job_markers_emitted_at_wrap_start_end():
     )
     completed, _ = collect_completions([src, agg])
     out = aggregate_result(_by_key(completed)["agg"])
-    assert len(out.ops) == 8
+    # 8 contour commands + JobStart/JobEnd markers
+    assert len(out.ops) == 10
     cmd_types = [c["type"] for c in out.ops.to_dict()["commands"]]
     assert cmd_types[0] == "JOB_START"
     assert cmd_types[-1] == "JOB_END"
@@ -222,8 +224,9 @@ def test_placement_matrix_translates_input():
     completed, _ = collect_completions([src, agg])
     src_ops = result_ops(_by_key(completed)["src"]).to_dict()
     agg_ops = result_ops(_by_key(completed)["agg"]).to_dict()
-    src_line_to = src_ops["commands"][2]["end"]
-    agg_line_to = agg_ops["commands"][2]["end"]
+    # Layout: SET_POWER, OPS_SECTION_START, MOVE_TO, LINE_TO, ...
+    src_line_to = src_ops["commands"][3]["end"]
+    agg_line_to = agg_ops["commands"][3]["end"]
     assert src_line_to == (10.0, 0.0, 0.0)
     assert agg_line_to == (110.0, 50.0, 0.0)
 
@@ -244,8 +247,9 @@ def test_target_dimensions_triggers_uniform_scaling():
     completed, _ = collect_completions([src, agg])
     src_ops = result_ops(_by_key(completed)["src"]).to_dict()
     agg_ops = result_ops(_by_key(completed)["agg"]).to_dict()
-    assert src_ops["commands"][2]["end"] == (10.0, 0.0, 0.0)
-    assert agg_ops["commands"][2]["end"] == (20.0, 0.0, 0.0)
+    # Layout: SET_POWER, OPS_SECTION_START, MOVE_TO, LINE_TO, ...
+    assert src_ops["commands"][3]["end"] == (10.0, 0.0, 0.0)
+    assert agg_ops["commands"][3]["end"] == (20.0, 0.0, 0.0)
 
 
 def test_no_scaling_when_target_dimensions_zero():
@@ -262,10 +266,11 @@ def test_no_scaling_when_target_dimensions_zero():
         ],
     )
     completed, _ = collect_completions([src, agg])
-    src_first = result_ops(_by_key(completed)["src"]).to_dict()["commands"][1][
+    # Layout: SET_POWER, OPS_SECTION_START, MOVE_TO, LINE_TO, ...
+    src_first = result_ops(_by_key(completed)["src"]).to_dict()["commands"][2][
         "end"
     ]
-    agg_first = result_ops(_by_key(completed)["agg"]).to_dict()["commands"][1][
+    agg_first = result_ops(_by_key(completed)["agg"]).to_dict()["commands"][2][
         "end"
     ]
     assert src_first == agg_first
@@ -354,4 +359,5 @@ def test_aggregate_chains_through_other_aggregate():
     completed, _ = collect_completions([src, inner, outer])
     outer_out = aggregate_result(_by_key(completed)["outer"])
     assert outer_out is not None
-    assert len(outer_out.ops) == 6
+    # 8 commands (6 contour + VectorOutline section markers)
+    assert len(outer_out.ops) == 8

@@ -285,7 +285,8 @@ def test_single_source_aggregate_consumes_compute_ops():
     agg = _agg("agg", ["src"])
     completed, _ = collect_completions([src, agg])
     out = aggregate_result(_by_key(completed)["agg"])
-    assert len(out.ops) == 6
+    # 8 commands (6 contour + VectorOutline section markers)
+    assert len(out.ops) == 8
 
 
 # ── Multi-source ──────────────────────────────────────────────────
@@ -317,7 +318,8 @@ def test_aggregate_over_three_sources():
     agg = _agg("agg", ["s0", "s1", "s2"])
     completed, _ = collect_completions(srcs + [agg])
     out = aggregate_result(_by_key(completed)["agg"])
-    assert len(out.ops) == 18
+    # 3 inputs x 8 commands (6 contour + section markers)
+    assert len(out.ops) == 24
 
 
 # ── Chain ─────────────────────────────────────────────────────────
@@ -333,7 +335,8 @@ def test_chain_topology_compute_agg_agg():
         out = by_key[k].output
         assert out is not None
         assert by_key[k].error is None
-        assert len(result_ops(by_key[k])) == 6
+        # 8 commands (6 contour + VectorOutline section markers)
+        assert len(result_ops(by_key[k])) == 8
 
 
 # ── Encode on top of aggregate ────────────────────────────────────
@@ -413,7 +416,8 @@ def test_diamond_topology():
     assert keys == {"a", "left", "right", "agg"}
     assert all(c.error is None for c in completed)
     out = aggregate_result(_by_key(completed)["agg"])
-    assert len(out.ops) == 12
+    # 2 inputs x 8 commands (6 contour + section markers)
+    assert len(out.ops) == 16
 
 
 # ── Single-source identity properties ─────────────────────────────
