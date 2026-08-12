@@ -335,13 +335,29 @@ impl Compute for MachineTransformCompute {
         self.apply_rotary_mapping(&mut ops);
 
         // 3. World→machine + WCS + Z-flip.
-        let mut combined = DMat4::IDENTITY;
         let w2m = array_to_dmat4(&self.spec.world_to_machine);
-        if !is_identity(&w2m) {
-            combined = w2m * combined;
+
+        // Apply the world→machine transform first, so that WCS
+        // offsets (which are in machine coordinates) are subtracted
+        // in the correct space.
+        let mut pre_transform = w2m;
+
+        // Z-flip composes on top of w2m.
+        if self.spec.reverse_z {
+            let z_flip = DMat4::from_cols(
+                DVec4::new(1.0, 0.0, 0.0, 0.0),
+                DVec4::new(0.0, 1.0, 0.0, 0.0),
+                DVec4::new(0.0, 0.0, -1.0, 0.0),
+                DVec4::new(0.0, 0.0, 0.0, 1.0),
+            );
+            pre_transform = z_flip * w2m;
         }
 
-        // Per-layer WCS via translate_layers (subtracts offsets).
+        if !is_identity(&pre_transform) {
+            ops.transform(pre_transform);
+        }
+
+        // WCS offset subtraction — now in machine space, after w2m.
         if !self.spec.layer_wcs_offsets.is_empty() {
             let default = self.spec.default_wcs_offset;
             let offsets: Vec<(String, (f64, f64, f64))> = self
@@ -367,23 +383,8 @@ impl Compute for MachineTransformCompute {
                     DVec4::new(0.0, 0.0, 1.0, 0.0),
                     DVec4::new(-ox, -oy, -oz, 1.0),
                 );
-                combined = offset_matrix * combined;
+                ops.transform(offset_matrix);
             }
-        }
-
-        // Z-flip.
-        if self.spec.reverse_z {
-            let z_flip = DMat4::from_cols(
-                DVec4::new(1.0, 0.0, 0.0, 0.0),
-                DVec4::new(0.0, 1.0, 0.0, 0.0),
-                DVec4::new(0.0, 0.0, -1.0, 0.0),
-                DVec4::new(0.0, 0.0, 0.0, 1.0),
-            );
-            combined = z_flip * combined;
-        }
-
-        if !is_identity(&combined) {
-            ops.transform(combined);
         }
 
         // 4. AXIS_REPLACEMENT degrees→mm (per-layer, machine-space).
