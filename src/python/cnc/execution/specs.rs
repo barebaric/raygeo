@@ -9,8 +9,10 @@ use pyo3_stub_gen::derive::{
 };
 
 use crate::cnc::execution::specs::AggregateOutput as CoreAggregateOutput;
+use crate::ops::state::AirAssistMode;
 use crate::python::ops::container::PyOps;
 use crate::python::ops::convert::PyEncoder;
+use crate::python::ops::state::PyAirAssistMode;
 
 // ═══════════════════════════════════════════════════════════════════
 // AggregateOutput  (result of the Aggregate stage)
@@ -261,6 +263,8 @@ pub struct PyComputePayload {
     /// Active head/laser UID injected as ``SetHead``.
     #[pyo3(get, set)]
     pub head_uid: Option<String>,
+    /// Air assist mode injected as ``SetAirAssist`` (default ``None``).
+    pub air_assist: Option<AirAssistMode>,
     /// Print a profiling report to stdout after this node's faces have
     /// been assembled (default False).
     #[pyo3(get, set)]
@@ -271,7 +275,8 @@ pub struct PyComputePayload {
 #[pyo3::pymethods]
 impl PyComputePayload {
     #[new]
-    #[pyo3(signature = (assembler, transformers=vec![], state_source_keys=vec![], power=0.0, cut_speed=0, head_uid=None, profile=false))]
+    #[allow(clippy::too_many_arguments)]
+    #[pyo3(signature = (assembler, transformers=vec![], state_source_keys=vec![], power=0.0, cut_speed=0, head_uid=None, air_assist=None, profile=false))]
     fn new(
         assembler: Py<PyAny>,
         transformers: Vec<Py<PyAny>>,
@@ -279,6 +284,7 @@ impl PyComputePayload {
         power: f64,
         cut_speed: i32,
         head_uid: Option<String>,
+        air_assist: Option<Bound<'_, PyAirAssistMode>>,
         profile: bool,
     ) -> Self {
         PyComputePayload {
@@ -288,8 +294,20 @@ impl PyComputePayload {
             power,
             cut_speed,
             head_uid,
+            air_assist: air_assist.map(|a| a.borrow().0),
             profile,
         }
+    }
+
+    /// Air assist mode injected as ``SetAirAssist``.
+    #[getter]
+    fn air_assist(&self) -> Option<PyAirAssistMode> {
+        self.air_assist.map(PyAirAssistMode)
+    }
+
+    #[setter]
+    fn set_air_assist(&mut self, value: Option<Bound<'_, PyAirAssistMode>>) {
+        self.air_assist = value.map(|a| a.borrow().0);
     }
 }
 

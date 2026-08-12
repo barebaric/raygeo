@@ -169,6 +169,14 @@ Opaque parameter bundle for a `Compute` stage node.
 The pipeline's `StageSpec.Compute` stores this as an opaque `Any` — the CNC converter unpacks it
 during traversal.
 
+### `air_assist`
+
+```python
+air_assist: Optional[state.AirAssistMode]
+```
+
+Air assist mode injected as `SetAirAssist`.
+
 ### `assembler`
 
 ```python

@@ -7,6 +7,7 @@ CNC execution spec types.
 import builtins
 from raygeo import ops
 from raygeo.ops import convert
+from raygeo.ops import state
 import typing
 __all__ = [
     "AggregateGroup",
@@ -236,7 +237,14 @@ class ComputePayload:
         Print a profiling report to stdout after this node's faces have
         been assembled (default False).
         """
-    def __new__(cls, assembler: typing.Any, transformers: typing.Sequence[typing.Any] = [], state_source_keys: typing.Sequence[builtins.str] = [], power: builtins.float = 0.0, cut_speed: builtins.int = 0, head_uid: typing.Optional[builtins.str] = None, profile: builtins.bool = False) -> ComputePayload: ...
+    @property
+    def air_assist(self) -> typing.Optional[state.AirAssistMode]:
+        r"""
+        Air assist mode injected as ``SetAirAssist``.
+        """
+    @air_assist.setter
+    def air_assist(self, value: typing.Optional[state.AirAssistMode]) -> None: ...
+    def __new__(cls, assembler: typing.Any, transformers: typing.Sequence[typing.Any] = [], state_source_keys: typing.Sequence[builtins.str] = [], power: builtins.float = 0.0, cut_speed: builtins.int = 0, head_uid: typing.Optional[builtins.str] = None, air_assist: typing.Optional[state.AirAssistMode] = None, profile: builtins.bool = False) -> ComputePayload: ...
 
 @typing.final
 class EncodeSpec:
