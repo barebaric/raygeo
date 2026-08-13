@@ -7,6 +7,7 @@ Provides convex and concave (shrink-wrap) hull generation from boolean images, \
 using contour tracing and a vacuum-like pull of the hull toward the content. \
 Coordinates are returned in image pixel space (y increases downward).";
 
+use numpy::PyArrayMethods;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
@@ -121,6 +122,13 @@ fn get_hulls_from_image_py(
         pulled along the inward normal of the convex hull toward the
         content, tension keeps the band smooth, and pinch points stop
         it where it would fold through itself or through the content.
+        The pull is integrated in small increments, so the result
+        changes continuously with gravity; at 1.0 the band is pulled
+        several times the length of a free section into the content.
+        The effective pull is the squared parameter: low values shrink
+        almost nothing and the upper half of the range carries most of
+        the visible tightening, matching how the shrink saturates as
+        the band settles onto the content.
 
         :param boolean_image: 2D boolean array.
         :param gravity: Shrink-wrap factor 0.0-1.0. 0 gives convex hull.
@@ -161,12 +169,13 @@ fn extract_bool_image(
     let numpy = py.import("numpy")?;
     let arr = numpy.call_method1("asarray", (obj,))?;
     let shape: (usize, usize) = arr.getattr("shape")?.extract()?;
-    let flat: Vec<u8> = arr
-        .call_method("astype", ("uint8",), None)?
-        .call_method0("flatten")?
-        .call_method0("tolist")?
-        .extract()?;
-    let nonzero: Vec<u8> =
-        flat.iter().map(|&v| if v != 0 { 1 } else { 0 }).collect();
-    Ok((nonzero, shape.0, shape.1))
+    // Convert to a C-contiguous uint8 buffer and read it directly
+    // instead of materializing a Python list via tolist().
+    let contiguous = numpy.call_method1("ascontiguousarray", (arr, "uint8"))?;
+    let array: Bound<'_, numpy::PyArray2<u8>> = contiguous.extract()?;
+    let view = array.readonly();
+    let data = view.as_array();
+    let flat: Vec<u8> =
+        data.iter().map(|&v| if v != 0 { 1 } else { 0 }).collect();
+    Ok((flat, shape.0, shape.1))
 }

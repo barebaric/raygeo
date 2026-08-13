@@ -32,4 +32,5 @@ pub mod smooth;
 pub mod spatial_grid2d;
 pub mod spiral;
 pub mod topology;
+pub mod trace;
 pub mod trochoid;

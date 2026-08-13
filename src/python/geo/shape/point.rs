@@ -4,8 +4,10 @@ pub(crate) const MODULE_DOC_POINT: &str = "\
 Individual point operations.
 
 Provides equality testing within a configurable tolerance, midpoint
-computation between two points, 2D/3D get_circumcenter of three points, and
-applying a 4x4 affine transformation matrix to a single point.
+computation between two points, 2D/3D get_circumcenter of three points,
+applying a 4x4 affine transformation matrix to a single point, point
+interpolation along a sequence, and moving-average smoothing of point
+sequences.
 ";
 
 use glam::{DMat4, DVec4};
@@ -17,6 +19,8 @@ use crate::geo::shape::point::are_points_equal_3d;
 use crate::geo::shape::point::get_circumcenter;
 use crate::geo::shape::point::get_circumcenter_3d;
 use crate::geo::shape::point::get_midpoint_3d;
+use crate::geo::shape::point::get_point_at_fraction;
+use crate::geo::shape::point::get_points_moving_average;
 use crate::geo::shape::point::rotate_point;
 use crate::geo::shape::point::transform_point_3d;
 use crate::geo::types::{Point, Point3D};
@@ -36,6 +40,8 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         circumcenter_py,
         circumcenter_3d_py,
         rotate_point_py,
+        point_at_fraction_py,
+        points_moving_average_py,
     );
 
     shape_mod.add_submodule(&m)?;
@@ -234,4 +240,65 @@ fn midpoint_py(p1: PyPoint3D, p2: PyPoint3D) -> (f64, f64, f64) {
     let p1_3d = Point3D::new(p1.0, p1.1, p1.2);
     let p2_3d = Point3D::new(p2.0, p2.1, p2.2);
     point3d_to_tuple(get_midpoint_3d(p1_3d, p2_3d))
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import raygeo.geo.types
+
+    def get_point_at_fraction(
+        points: list[types.Point],
+        fraction: float,
+    ) -> types.Point:
+        """Get the point at a normalized fraction along a point sequence.
+
+        Linear interpolation along the polyline formed by ``points``:
+        fraction 0.0 is the first point, 1.0 is the last point.
+
+        :param points: Sequence of points (x, y).
+        :param fraction: Normalized position along the sequence [0, 1].
+        :returns: Interpolated point (x, y).
+        :complexity: O(1) time, O(1) space
+        """
+"#,
+    module = "raygeo.geo.shape.point"
+)]
+#[pyfunction(name = "get_point_at_fraction")]
+fn point_at_fraction_py(points: Vec<PyPoint2D>, fraction: f64) -> (f64, f64) {
+    let pts: Vec<Point> = points.iter().map(|p| Point::new(p.0, p.1)).collect();
+    point_to_tuple(get_point_at_fraction(&pts, fraction))
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import raygeo.geo.types
+
+    def get_points_moving_average(
+        points: list[types.Point],
+        radius: int,
+    ) -> list[types.Point]:
+        """Apply a moving average to a point sequence.
+
+        Each output point is the mean of the input points within ``radius``
+        positions on either side; the window shrinks and renormalizes near
+        the sequence ends.
+
+        :param points: Sequence of points (x, y).
+        :param radius: Window radius in points.
+        :returns: Smoothed sequence of points (x, y).
+        :complexity: O(n * r) time, O(n) space where n is the point count and r the radius
+        """
+"#,
+    module = "raygeo.geo.shape.point"
+)]
+#[pyfunction(name = "get_points_moving_average")]
+fn points_moving_average_py(
+    points: Vec<PyPoint2D>,
+    radius: usize,
+) -> Vec<(f64, f64)> {
+    let pts: Vec<Point> = points.iter().map(|p| Point::new(p.0, p.1)).collect();
+    get_points_moving_average(&pts, radius)
+        .into_iter()
+        .map(point_to_tuple)
+        .collect()
 }

@@ -43,6 +43,12 @@ impl Assembler for ShrinkwrapSpec {
         if ctx.callbacks.is_cancelled() {
             return Err("cancelled".to_string());
         }
+        if std::env::var("RAYGEO_HULL_TRACE").is_ok() {
+            eprintln!(
+                "[hull] shrinkwrap face={} size_mm={:?} gravity={}",
+                ctx.face_id, ctx.size_mm, self.gravity
+            );
+        }
         let image_src = ctx.image_source.ok_or_else(|| {
             "Part has no image — set part.image before calling shrinkwrap"
                 .to_string()

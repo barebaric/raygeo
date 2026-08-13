@@ -79,3 +79,46 @@ pub fn get_circumcenter(a: Point, b: Point, c: Point) -> (Point, f64) {
     let r = ((center.x - a.x).powi(2) + (center.y - a.y).powi(2)).sqrt();
     (center, r)
 }
+
+/// Linear interpolation along a point sequence at a normalized fraction.
+///
+/// Returns the point at `fraction` (0.0 = first point, 1.0 = last point)
+/// along the polyline formed by `points`, interpolating linearly between
+/// the two bracketing samples. `fraction` is expected to be within
+/// `[0.0, 1.0]`; values outside are clamped by `floor`/`ceil` indexing.
+pub fn get_point_at_fraction(points: &[Point], fraction: f64) -> Point {
+    let scaled = fraction * (points.len() - 1) as f64;
+    let lower = scaled.floor() as usize;
+    let upper = scaled.ceil() as usize;
+    if lower == upper {
+        return points[lower];
+    }
+    let t = scaled - lower as f64;
+    points[lower] + (points[upper] - points[lower]) * t
+}
+
+/// Moving average of a point sequence, clamped at the ends.
+///
+/// Each output point is the mean of the input points within `radius`
+/// positions on either side; near the sequence ends the window shrinks
+/// and is renormalized over the in-bounds points only.
+pub fn get_points_moving_average(
+    points: &[Point],
+    radius: usize,
+) -> Vec<Point> {
+    let n = points.len();
+    let mut smoothed = points.to_vec();
+    for (i, entry) in smoothed.iter_mut().enumerate() {
+        let mut sum = Point::ZERO;
+        let mut count = 0.0;
+        for o in -(radius as i64)..=(radius as i64) {
+            let j = i as i64 + o;
+            if j >= 0 && j < n as i64 {
+                sum += points[j as usize];
+                count += 1.0;
+            }
+        }
+        *entry = sum / count;
+    }
+    smoothed
+}

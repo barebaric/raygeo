@@ -4,8 +4,10 @@ r"""
 Individual point operations.
 
 Provides equality testing within a configurable tolerance, midpoint
-computation between two points, 2D/3D get_circumcenter of three points, and
-applying a 4x4 affine transformation matrix to a single point.
+computation between two points, 2D/3D get_circumcenter of three points,
+applying a 4x4 affine transformation matrix to a single point, point
+interpolation along a sequence, and moving-average smoothing of point
+sequences.
 """
 
 import collections.abc
@@ -16,6 +18,8 @@ __all__ = [
     "get_circumcenter",
     "get_circumcenter_3d",
     "get_midpoint_3d",
+    "get_point_at_fraction",
+    "get_points_moving_average",
     "rotate_point",
     "transform_point_3d",
 ]
@@ -68,6 +72,33 @@ def get_midpoint_3d(p1: types.Point3D, p2: types.Point3D) -> types.Point3D:
     :param p2: Second point (x, y, z).
     :returns: Midpoint (x, y, z).
     :complexity: O(1) time, O(1) space
+    """
+
+def get_point_at_fraction(points: list[types.Point], fraction: float) -> types.Point:
+    r"""
+    Get the point at a normalized fraction along a point sequence.
+    
+    Linear interpolation along the polyline formed by ``points``:
+    fraction 0.0 is the first point, 1.0 is the last point.
+    
+    :param points: Sequence of points (x, y).
+    :param fraction: Normalized position along the sequence [0, 1].
+    :returns: Interpolated point (x, y).
+    :complexity: O(1) time, O(1) space
+    """
+
+def get_points_moving_average(points: list[types.Point], radius: int) -> list[types.Point]:
+    r"""
+    Apply a moving average to a point sequence.
+    
+    Each output point is the mean of the input points within ``radius``
+    positions on either side; the window shrinks and renormalizes near
+    the sequence ends.
+    
+    :param points: Sequence of points (x, y).
+    :param radius: Window radius in points.
+    :returns: Smoothed sequence of points (x, y).
+    :complexity: O(n * r) time, O(n) space where n is the point count and r the radius
     """
 
 def rotate_point(point: types.Point, angle: float) -> types.Point:

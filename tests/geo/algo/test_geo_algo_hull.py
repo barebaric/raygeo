@@ -1,3 +1,5 @@
+import time
+
 import numpy as np
 
 from raygeo.geo import Geometry
@@ -155,6 +157,58 @@ def test_get_concave_hull_no_content():
     assert geo is None
 
 
+def test_concave_hull_gravity_pull_strength():
+    """Higher gravity must pull the band deeper into concavities.
+
+    The band's penetration into a deep pocket must grow with the
+    gravity parameter and reach well into the pocket at gravity 1.0.
+    """
+    height, width = 300, 300
+    mouth, depth, top = 40, 120, 40
+    uint8_image = np.zeros((height, width), dtype=np.uint8)
+    uint8_image[top : top + 210, 40:260] = 255
+    uint8_image[top : top + depth, 120 : 120 + mouth] = 0
+    boolean_image = uint8_image.astype(bool)
+
+    penetrations = {}
+    for gravity in (0.25, 0.5, 0.75, 1.0):
+        geo = hull.get_concave_hull(boolean_image, gravity=gravity)
+        assert geo is not None
+        assert not geo.has_self_intersections(False)
+        in_pocket = [
+            cmd.end[1]
+            for cmd in geo.data
+            if 122 <= cmd.end[0] <= 158
+            and top + 2 < cmd.end[1] < top + depth - 1
+        ]
+        penetrations[gravity] = max(in_pocket) - top
+
+    assert penetrations[0.25] < penetrations[0.5]
+    assert penetrations[0.5] < penetrations[0.75]
+    assert penetrations[0.75] < penetrations[1.0]
+    assert penetrations[1.0] >= 40, (
+        f"band only reached {penetrations[1.0]:.1f}px into a {depth}px pocket"
+    )
+
+
+def test_concave_hull_three_blobs_stay_simple():
+    """A deep pull on a multi-corridor shape must stay a simple loop.
+
+    Three blobs form three pinch corridors that meet in a fork; the
+    corridor smoothing must not fold the band over itself even at
+    maximum gravity.
+    """
+    boolean_image = np.zeros((200, 200), dtype=bool)
+    for cy, cx in [(50, 50), (50, 150), (150, 100)]:
+        yy, xx = np.ogrid[:200, :200]
+        boolean_image |= (xx - cx) ** 2 + (yy - cy) ** 2 <= 400
+
+    for gravity in (0.5, 1.0):
+        geo = hull.get_concave_hull(boolean_image, gravity=gravity)
+        assert geo is not None
+        assert not geo.has_self_intersections(False)
+
+
 def test_enclosing_hull_y_not_flipped():
     boolean_image = np.zeros((100, 100), dtype=bool)
     boolean_image[10:20, 10:20] = True
@@ -165,6 +219,36 @@ def test_enclosing_hull_y_not_flipped():
     data = geo.data
     for row in data:
         assert 10 <= row.end[1] <= 19
+
+
+def test_concave_hull_large_image_performance():
+    """The shrink-wrap hull must stay fast on large images.
+
+    The band cell bookkeeping used to allocate dense ``width * height``
+    scratch buffers once per shrink pass, which made multi-megapixel
+    images take many seconds (or worse). The comb shape below has many
+    teeth, so the band repeatedly pinches and exercises the full shrink
+    loop (touch detection, self-intersection guards, pinch snapping).
+
+    The gravity budget runs six times the number of passes of the
+    original algorithm (PULL_WEIGHT), so the bound is scaled
+    accordingly; it only guards against quadratic-in-pixels blow-ups,
+    not ordinary noise.
+    """
+    size = 8192
+    boolean_image = np.ones((size, size), dtype=bool)
+    # Cut teeth into the right side so the band has to fold into the
+    # gaps between them while shrinking.
+    for k in range(0, size, 256):
+        boolean_image[k : k + 128, int(size * 0.7) :] = False
+
+    start = time.perf_counter()
+    geo = hull.get_concave_hull(boolean_image, gravity=1.0)
+    elapsed = time.perf_counter() - start
+
+    assert geo is not None
+    assert len(geo) > 10
+    assert elapsed < 10.0, f"shrink-wrap hull took {elapsed:.1f}s"
 
 
 def _fill_rounded_rect(img, pt1, pt2, r):

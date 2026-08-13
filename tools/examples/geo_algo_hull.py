@@ -10,19 +10,18 @@ from tools.plot import fill_rounded_rect, plot_geometry
 def generate_concave():
     height = 200
     width = 200
-    gravity = 0.5
 
     presets = [
-        ("Two squares", _make_two_squares(height, width)),
-        ("Hourglass", _make_hourglass(height, width)),
-        ("L-shape", _make_lshape(height, width)),
-        ("Three dots", _make_three_dots(height, width)),
+        ("Two squares", _make_two_squares(height, width), 0.1),
+        ("Hourglass", _make_hourglass(height, width), 0.5),
+        ("L-shape", _make_lshape(height, width), 0.5),
+        ("Three dots", _make_three_dots(height, width), 0.2),
     ]
 
     fig, axes = plt.subplots(2, 2, figsize=(12, 12))
     axes_flat = axes.flatten()
 
-    for ax, (title, img) in zip(axes_flat, presets):
+    for ax, (title, img, gravity) in zip(axes_flat, presets):
         convex_geo = hull.get_enclosing_hull(img)
         concave_geo = hull.get_concave_hull(img, gravity=gravity)
 

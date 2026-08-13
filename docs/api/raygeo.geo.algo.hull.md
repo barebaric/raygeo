@@ -25,7 +25,11 @@ Compute a concave (shrink-wrap) hull around the content.
 
 The band behaves like a membrane under vacuum: each point is pulled along the inward normal of the
 convex hull toward the content, tension keeps the band smooth, and pinch points stop it where it
-would fold through itself or through the content.
+would fold through itself or through the content. The pull is integrated in small increments, so the
+result changes continuously with gravity; at 1.0 the band is pulled several times the length of a
+free section into the content. The effective pull is the squared parameter: low values shrink almost
+nothing and the upper half of the range carries most of the visible tightening, matching how the
+shrink saturates as the band settles onto the content.
 
 | Parameter                  | Type                       | Description                                                                                                                     |
 | -------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
