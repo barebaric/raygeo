@@ -37,7 +37,7 @@ def _make_two_squares(h, w):
 def _plot_concave_hull(ax):
     height, width = 200, 200
     img = _make_two_squares(height, width)
-    gravity = 0.5
+    gravity = 0.3
 
     convex_geo = hull.get_enclosing_hull(img)
     concave_geo = hull.get_concave_hull(img, gravity=gravity)

@@ -112,12 +112,12 @@ fn hull_to_mm(
 /// Generate a shrink-wrapped (concave hull) contour around image
 /// content.
 ///
-/// Reads pixels from `image_src`, computes a concave hull using
-/// Bézier gravity attraction, transforms pixel coordinates to
-/// millimetre space via `part_size_mm` and the image dimensions,
-/// computes the total offset from offset / cut-side, applies it,
-/// optionally fits arcs/curves when `arc_tolerance` > 0, and returns
-/// the result as an `(Ops, AssemblyMeta)` pair.
+/// Reads pixels from `image_src`, computes a concave hull by relaxing
+/// a band around the content under gravity, transforms pixel
+/// coordinates to millimetre space via `part_size_mm` and the image
+/// dimensions, computes the total offset from offset / cut-side,
+/// applies it, optionally fits arcs/curves when `arc_tolerance` > 0,
+/// and returns the result as an `(Ops, AssemblyMeta)` pair.
 #[allow(clippy::too_many_arguments)]
 pub fn assemble_shrinkwrap(
     image_src: &dyn ImageSource,
@@ -163,8 +163,8 @@ pub fn assemble_shrinkwrap(
         ));
     }
 
-    let hull_pts =
-        get_concave_hull(&flat, w_px, h_px, gravity).ok_or_else(|| {
+    let hull_pts = get_concave_hull(&flat, w_px, h_px, gravity, false)
+        .ok_or_else(|| {
             RaygeoError::ContourError(
                 "Could not compute concave hull from image".to_string(),
             )

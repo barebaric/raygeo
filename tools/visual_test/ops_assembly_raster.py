@@ -2,13 +2,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import streamlit as st
 
-from raygeo.ops.raster import (
-    ScanMode,
-    rasterize_mask_lines,
-    rasterize_mask_scan,
-    rasterize_multi_pass,
-    rasterize_power_modulation,
-)
+from raygeo.image.scan import ScanMode
+from raygeo.ops import Ops
 from raygeo.ops.types import CommandType
 from tools.plot import make_pattern
 
@@ -88,7 +83,7 @@ def page_rasterization():
 
     if mode == "Power Modulation":
         alpha = np.full((img_size, img_size), 255, dtype=np.uint8)
-        ops = rasterize_power_modulation(
+        ops = Ops.from_power_modulated_image(
             gray,
             alpha,
             (ppm_val, ppm_val),
@@ -103,7 +98,7 @@ def page_rasterization():
         )
     elif mode == "Mask Scan":
         mask = (gray > 128).astype(np.uint8)
-        ops = rasterize_mask_scan(
+        ops = Ops.from_mask_scan(
             mask,
             (ppm_val, ppm_val),
             0.0,
@@ -114,7 +109,7 @@ def page_rasterization():
         )
     elif mode == "Mask Lines":
         mask = (gray > 128).astype(np.uint8)
-        ops = rasterize_mask_lines(
+        ops = Ops.from_mask_lines(
             mask,
             (ppm_val, ppm_val),
             0.0,
@@ -124,7 +119,7 @@ def page_rasterization():
             scan_mode=sm,
         )
     else:
-        ops = rasterize_multi_pass(
+        ops = Ops.from_multi_pass_image(
             gray,
             (ppm_val, ppm_val),
             0.0,

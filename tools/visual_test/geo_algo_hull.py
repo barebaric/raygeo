@@ -42,8 +42,22 @@ def page_concave_hull():
 
     gravity = st.slider("Gravity", 0.0, 1.0, 0.1, 0.05, key="ch_grav")
 
+    allow_self_intersections = st.checkbox(
+        "Allow self-intersections",
+        False,
+        key="ch_allow_selfx",
+        help=(
+            "When disabled, the band stops at pinch points instead of "
+            "crossing itself."
+        ),
+    )
+
     img = np.zeros((height, width), dtype=bool)
     svg_geoms = []
+
+    # Preset shapes are defined in pixels for the default resolution; scale
+    # them so the object keeps its relative size when the slider moves.
+    s = height / 500.0
 
     if preset == "Upload SVG":
         svg_source = st.radio(
@@ -76,28 +90,59 @@ def page_concave_hull():
             except Exception as e:
                 st.error(f"Failed to parse SVG: {e}")
     elif preset == "Two squares":
-        img[30:70, 30:70] = True
-        img[130:170, 130:170] = True
+        img[round(30 * s) : round(70 * s), round(30 * s) : round(70 * s)] = (
+            True
+        )
+        img[
+            round(130 * s) : round(170 * s), round(130 * s) : round(170 * s)
+        ] = True
     elif preset == "Hourglass":
-        r = 8
-        fill_rounded_rect(img, (60, 30), (140, 70), r)
-        fill_rounded_rect(img, (80, 110), (120, 150), r)
-        fill_rounded_rect(img, (60, 110), (140, 170), r)
+        r = round(8 * s)
+        fill_rounded_rect(
+            img,
+            (round(60 * s), round(30 * s)),
+            (round(140 * s), round(70 * s)),
+            r,
+        )
+        fill_rounded_rect(
+            img,
+            (round(80 * s), round(110 * s)),
+            (round(120 * s), round(150 * s)),
+            r,
+        )
+        fill_rounded_rect(
+            img,
+            (round(60 * s), round(110 * s)),
+            (round(140 * s), round(170 * s)),
+            r,
+        )
     elif preset == "L-shape":
-        img[30:170, 30:70] = True
-        img[30:100, 70:170] = True
+        img[round(30 * s) : round(170 * s), round(30 * s) : round(70 * s)] = (
+            True
+        )
+        img[round(30 * s) : round(100 * s), round(70 * s) : round(170 * s)] = (
+            True
+        )
     elif preset == "Circle":
         yy, xx = np.ogrid[:height, :width]
-        mask = (xx - 100) ** 2 + (yy - 100) ** 2 <= 2500
+        mask = (xx - 100 * s) ** 2 + (yy - 100 * s) ** 2 <= (50 * s) ** 2
         img[mask] = True
     elif preset == "Three dots":
-        for cy, cx in [(50, 50), (50, 150), (150, 100)]:
+        for cy, cx in [
+            (50 * s, 50 * s),
+            (50 * s, 150 * s),
+            (150 * s, 100 * s),
+        ]:
             yy, xx = np.ogrid[:height, :width]
-            mask = (xx - cx) ** 2 + (yy - cy) ** 2 <= 400
+            mask = (xx - cx) ** 2 + (yy - cy) ** 2 <= (20 * s) ** 2
             img[mask] = True
 
     convex_geo = hull.get_enclosing_hull(img)
-    concave_geo = hull.get_concave_hull(img, gravity=gravity)
+    concave_geo = hull.get_concave_hull(
+        img,
+        gravity=gravity,
+        allow_self_intersections=allow_self_intersections,
+    )
     per_component = hull.get_hulls_from_image(img)
 
     fig, ax = plt.subplots(figsize=(8, 8))
@@ -140,7 +185,9 @@ def page_concave_hull():
 
     ax.set_aspect("equal")
     ax.grid(True, alpha=0.3)
-    ax.legend(fontsize=10)
+    handles, labels = ax.get_legend_handles_labels()
+    if labels:
+        ax.legend(handles, labels, fontsize=10)
     fig.tight_layout()
     st.pyplot(fig)
 

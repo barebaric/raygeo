@@ -4,7 +4,7 @@ pub(crate) const MODULE_DOC_HULL: &str = "\
 Hull computation from binary images.
 
 Provides convex and concave (shrink-wrap) hull generation from boolean images, \
-using contour tracing and Bézier gravity attraction. \
+using contour tracing and a vacuum-like pull of the hull toward the content. \
 Coordinates are returned in image pixel space (y increases downward).";
 
 use pyo3::prelude::*;
@@ -113,26 +113,42 @@ fn get_hulls_from_image_py(
     def get_concave_hull(
         boolean_image: numpy.ndarray,
         gravity: float = 0.1,
+        allow_self_intersections: bool = False,
     ) -> raygeo.geo.Geometry | None:
-        """Compute a concave (shrink-wrap) hull with Bézier gravity.
+        """Compute a concave (shrink-wrap) hull around the content.
+
+        The band behaves like a membrane under vacuum: each point is
+        pulled along the inward normal of the convex hull toward the
+        content, tension keeps the band smooth, and pinch points stop
+        it where it would fold through itself or through the content.
 
         :param boolean_image: 2D boolean array.
         :param gravity: Shrink-wrap factor 0.0-1.0. 0 gives convex hull.
+        :param allow_self_intersections: When False, the band stops at
+            pinch points instead of crossing itself. Set to True when a
+            self-intersecting outline is desired.
         :returns: Concave hull as Geometry in pixel coords, or None.
-        :complexity: O(w*h + n log n + n * g) time, O(n) space where w*h is the image size, n the number of contour points, and g the number of gravity iterations
+        :complexity: O(w*h + n log n) time, O(w*h) space where w*h is the image size and n the number of contour points
         """
 "#,
     module = "raygeo.geo.algo.hull"
 )]
 #[pyfunction(name = "get_concave_hull")]
-#[pyo3(signature = (boolean_image, gravity=0.1))]
+#[pyo3(signature = (boolean_image, gravity=0.1, allow_self_intersections=false))]
 fn get_concave_hull_py(
     py: Python<'_>,
     boolean_image: &Bound<'_, PyAny>,
     gravity: f64,
+    allow_self_intersections: bool,
 ) -> PyResult<Option<super::super::Geometry>> {
     let (flat, h, w) = extract_bool_image(py, boolean_image)?;
-    let pts = crate::geo::algo::hull::get_concave_hull(&flat, w, h, gravity);
+    let pts = crate::geo::algo::hull::get_concave_hull(
+        &flat,
+        w,
+        h,
+        gravity,
+        allow_self_intersections,
+    );
     Ok(pts
         .and_then(|p| points_to_geometry(&p))
         .map(|g| super::super::Geometry { inner: g }))

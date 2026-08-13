@@ -118,6 +118,21 @@ def test_concave_hull_creates_valid_indentation():
     assert concave_geo.area() < convex_geo.area()
     assert not concave_geo.has_self_intersections()
 
+    # Shrinking the hull must not create intersections with the grown
+    # convex hull.
+    convex_geo.grow(1)
+    assert not concave_geo.intersects_with(convex_geo)
+
+    # The hull must enclose the original shape. The shape consists of
+    # convex rounded rectangles, so each per-component hull describes
+    # the component itself. Shrink each by a margin so that the hull
+    # cannot merely touch them.
+    shape_geometries = hull.get_hulls_from_image(boolean_image)
+    assert len(shape_geometries) == 2
+    for shape in shape_geometries:
+        shape.grow(-2)
+        assert concave_geo.encloses(shape)
+
 
 def test_get_concave_hull_zero_gravity():
     boolean_image = np.zeros((100, 100), dtype=bool)

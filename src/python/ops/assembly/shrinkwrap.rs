@@ -114,12 +114,12 @@ impl PyShrinkwrapSpec {
         """Generate a shrink-wrapped (concave hull) contour around image content.
 
         Reads the pixel image from ``part.image`` (a 2-D uint8 numpy
-        array), computes a concave hull using Bézier gravity attraction,
-        transforms pixel coordinates to millimetre space via the part's
-        *size_mm* and image dimensions, computes the total offset from
-        offset / cut-side, applies it, optionally fits
-        arcs/curves when *arc_tolerance* > 0, and returns the result
-        as an :class:`AssemblyResult`.
+        array), computes a concave hull by relaxing a band around the
+        content under gravity, transforms pixel coordinates to
+        millimetre space via the part's *size_mm* and image dimensions,
+        computes the total offset from offset / cut-side, applies it,
+        optionally fits arcs/curves when *arc_tolerance* > 0, and
+        returns the result as an :class:`AssemblyResult`.
 
         :param part: Part providing physical size metadata and the
             image buffer (``part.image``).
