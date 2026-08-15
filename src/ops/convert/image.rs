@@ -255,8 +255,14 @@ fn process_power_segmented(
         if power_values[si] == 0 {
             continue;
         }
+        // Endpoints stay in image (left-to-right) order here:
+        // emit_downsampled_scan's ``rev`` handling reverses both the
+        // traversal direction and the power profile consistently.
+        // Passing rev-aware endpoints here as well would flip the
+        // direction twice and mirror the per-sample power values
+        // around the segment center.
         let (seg_start, seg_end) =
-            segment_endpoints_mm(scan_line, si, ei, rev, pixels_per_mm);
+            segment_endpoints_mm(scan_line, si, ei, false, pixels_per_mm);
         let mut seg_values = power_values[si..ei].to_vec();
         apply_dot_width_trim(&mut seg_values, trim_px);
         emit_downsampled_scan(

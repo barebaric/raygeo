@@ -91,11 +91,19 @@ fn rasterize_horizontal(
 
     for &p in pwr {
         if p > 0 {
-            let mut x0 = cx.round() as i32 - radius_px;
-            let mut x1 = (cx + dx).round() as i32 + radius_px;
-            if x0 > x1 {
-                std::mem::swap(&mut x0, &mut x1);
-            }
+            // A pixel is covered when its center (k + 0.5 in this
+            // coordinate system, matching how the assembler aligns
+            // samples to pixel centers) lies inside the interval
+            // swept by this sample, dilated by the brush radius.
+            // Testing against pixel centers keeps the decision
+            // boundary half a pixel away from the interval endpoints,
+            // so floating point noise in dx cannot flip coverage a
+            // whole pixel (segmented scans re-grid their samples and
+            // previously aliased differently from full-sweep rows).
+            let lo = cx.min(cx + dx) - radius_px as f64;
+            let hi = cx.max(cx + dx) + radius_px as f64;
+            let mut x0 = (lo - 0.5).ceil() as i32;
+            let mut x1 = (hi - 0.5).floor() as i32;
             if x0 < 0 {
                 x0 = 0;
             }
