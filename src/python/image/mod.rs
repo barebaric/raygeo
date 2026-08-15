@@ -4,6 +4,7 @@ mod composite;
 mod convert;
 mod dither;
 mod grayscale;
+mod pbr;
 mod preprocess;
 mod rasterize_scanlines;
 mod render;
@@ -34,6 +35,7 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
             "convert",
             "dither",
             "grayscale",
+            "pbr",
             "preprocess",
             "rasterize_scanlines",
             "render",
@@ -48,6 +50,7 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     srgb::register(&image_mod)?;
     grayscale::register(&image_mod)?;
     dither::register(&image_mod)?;
+    pbr::register(&image_mod)?;
     preprocess::register(&image_mod)?;
     render::register(&image_mod)?;
     rasterize_scanlines::register(&image_mod)?;

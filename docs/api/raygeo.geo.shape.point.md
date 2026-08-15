@@ -6,8 +6,8 @@ sidebar_label: raygeo.geo.shape.point
 Individual point operations.
 
 Provides equality testing within a configurable tolerance, midpoint computation between two points,
-2D/3D get_circumcenter of three points, and applying a 4x4 affine transformation matrix to a single
-point.
+2D/3D get_circumcenter of three points, applying a 4x4 affine transformation matrix to a single
+point, point interpolation along a sequence, and moving-average smoothing of point sequences.
 
 ## Functions
 
@@ -99,6 +99,48 @@ Get the midpoint between two 3D points.
 ![Midpoint of a 3D segment](images/geo-shape-point-midpoint-3d.png)
 
 *Midpoint of a 3D segment*
+
+### `get_point_at_fraction()`
+
+```python
+get_point_at_fraction(
+    points: list[types.Point],
+    fraction: float,
+) -> types.Point
+```
+
+Get the point at a normalized fraction along a point sequence.
+
+Linear interpolation along the polyline formed by `points`: fraction 0.0 is the first point, 1.0 is
+the last point.
+
+| Parameter    | Type                | Description                                    |
+| ------------ | ------------------- | ---------------------------------------------- |
+| `points`     | `list[types.Point]` | Sequence of points (x, y).                     |
+| `fraction`   | `float`             | Normalized position along the sequence [0, 1]. |
+| _Returns_    | `types.Point`       | Interpolated point (x, y).                     |
+| _Complexity_ |                     | O(1) time, O(1) space                          |
+
+### `get_points_moving_average()`
+
+```python
+get_points_moving_average(
+    points: list[types.Point],
+    radius: int,
+) -> list[types.Point]
+```
+
+Apply a moving average to a point sequence.
+
+Each output point is the mean of the input points within `radius` positions on either side; the
+window shrinks and renormalizes near the sequence ends.
+
+| Parameter    | Type                | Description                                                           |
+| ------------ | ------------------- | --------------------------------------------------------------------- |
+| `points`     | `list[types.Point]` | Sequence of points (x, y).                                            |
+| `radius`     | `int`               | Window radius in points.                                              |
+| _Returns_    | `list[types.Point]` | Smoothed sequence of points (x, y).                                   |
+| _Complexity_ |                     | O(n * r) time, O(n) space where n is the point count and r the radius |
 
 ### `rotate_point()`
 

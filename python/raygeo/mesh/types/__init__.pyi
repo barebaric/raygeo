@@ -4,8 +4,40 @@
 import builtins
 import typing
 __all__ = [
+    "PrismMesh",
     "TriangleMesh",
 ]
+
+@typing.final
+class PrismMesh:
+    r"""
+    GPU-ready prism mesh returned by ``build_prism_mesh``.
+    
+    Buffers are per-face-vertex (not shared).  All getters return
+    fresh numpy arrays: float32 positions (N, 3), float32 normals
+    (N, 3), float32 UVs (N, 2) and flat uint32 triangle indices (3T,).
+    """
+    @property
+    def positions(self) -> typing.Any:
+        r"""
+        Flat XYZ vertex positions as a float32 array of shape (N, 3).
+        """
+    @property
+    def normals(self) -> typing.Any:
+        r"""
+        Flat XYZ vertex normals as a float32 array of shape (N, 3).
+        """
+    @property
+    def uvs(self) -> typing.Any:
+        r"""
+        Flat XY UV coordinates as a float32 array of shape (N, 2).
+        """
+    @property
+    def indices(self) -> typing.Any:
+        r"""
+        Flat triangle vertex indices as a uint32 array of shape (3T,).
+        """
+    def __repr__(self) -> builtins.str: ...
 
 @typing.final
 class TriangleMesh:

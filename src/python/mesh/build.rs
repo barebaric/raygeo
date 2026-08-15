@@ -4,7 +4,7 @@ use pyo3_stub_gen::derive::gen_stub_pyfunction;
 use crate::geo::types::Point;
 use crate::mesh::build;
 
-use super::types::TriangleMesh;
+use super::types::{PrismMesh, TriangleMesh};
 
 #[gen_stub_pyfunction(
     python = r#"
@@ -102,11 +102,68 @@ fn build_uniform_mesh_py(
     Ok(TriangleMesh { inner: mesh })
 }
 
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+    import raygeo.mesh.types
+
+    def build_prism_mesh(
+        outer: collections.abc.Sequence[tuple[float, float]],
+        holes: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = (),
+        thickness: float = 18.0,
+        uv_scale: float = 300.0,
+        z_top: float = 0.0,
+    ) -> types.PrismMesh:
+        """Build a closed prism mesh by extruding a polygon downward.
+
+        The top face is triangulated with ear clipping (holes carved
+        out) and placed at *z_top*; the bottom cap sits at
+        ``z_top - thickness``; every boundary ring gets outward-facing
+        side walls.  UVs are planar: ``uv = xy / uv_scale``.
+
+        :param outer: Outer boundary polygon vertices as (x, y) tuples.
+        :param holes: Sequence of hole/island polygons.
+        :param thickness: Extrusion depth below *z_top*.
+        :param uv_scale: World units per UV tile.
+        :param z_top: Z of the top face.
+        :returns: PrismMesh with positions, normals, uvs and indices.
+        :complexity: O(n^2) worst case where n = total ring vertices
+        """
+    "#,
+    module = "raygeo.mesh.build"
+)]
+#[pyfunction(name = "build_prism_mesh")]
+#[pyo3(signature = (outer, holes = vec![], thickness = 18.0, uv_scale = 300.0, z_top = 0.0))]
+fn build_prism_mesh_py(
+    outer: Vec<(f64, f64)>,
+    holes: Vec<Vec<(f64, f64)>>,
+    thickness: f64,
+    uv_scale: f64,
+    z_top: f64,
+) -> PyResult<PrismMesh> {
+    let outer_pts: Vec<Point> =
+        outer.iter().map(|p| Point::new(p.0, p.1)).collect();
+    let hole_polys: Vec<Vec<Point>> = holes
+        .iter()
+        .map(|h| h.iter().map(|p| Point::new(p.0, p.1)).collect())
+        .collect();
+    let mesh = build::build_prism_mesh(
+        &outer_pts,
+        &hole_polys,
+        thickness,
+        uv_scale,
+        z_top,
+    )
+    .map_err(pyo3::exceptions::PyValueError::new_err)?;
+    Ok(PrismMesh { inner: mesh })
+}
+
 pub fn register(parent: &Bound<'_, PyModule>) -> PyResult<()> {
     let m = PyModule::new(parent.py(), "build")?;
     m.setattr("__doc__", "Constrained Delaunay triangulation.")?;
     m.add_function(pyo3::wrap_pyfunction!(build_triangle_mesh_py, m.clone())?)?;
     m.add_function(pyo3::wrap_pyfunction!(build_uniform_mesh_py, m.clone())?)?;
+    m.add_function(pyo3::wrap_pyfunction!(build_prism_mesh_py, m.clone())?)?;
     parent.add_submodule(&m)?;
     let sys_modules = parent.py().import("sys")?.getattr("modules")?;
     sys_modules.set_item("raygeo.mesh.build", &m)?;

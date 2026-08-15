@@ -9,6 +9,38 @@ sidebar_label: raygeo.mesh.build
 
 ## Functions
 
+### `build_prism_mesh()`
+
+```python
+build_prism_mesh(
+    outer: Sequence[tuple[float, float]],
+    holes: Sequence[Sequence[tuple[float, float]]] = (),
+    thickness: float = 18,
+    uv_scale: float = 300,
+    z_top: float = 0,
+) -> types.PrismMesh
+```
+
+Build a closed prism mesh by extruding a polygon downward.
+
+The top face is triangulated with ear clipping (holes carved out) and placed at *z_top*; the bottom
+cap sits at `z_top - thickness`; every boundary ring gets outward-facing side walls. UVs are planar:
+`uv = xy / uv_scale`.
+
+| Parameter    | Type                                           | Description                                         |
+| ------------ | ---------------------------------------------- | --------------------------------------------------- |
+| `outer`      | `Sequence[tuple[float, float]]`                | Outer boundary polygon vertices as (x, y) tuples.   |
+| `holes`      | `Sequence[Sequence[tuple[float, float]]] = ()` | Sequence of hole/island polygons.                   |
+| `thickness`  | `float = 18`                                   | Extrusion depth below *z_top*.                      |
+| `uv_scale`   | `float = 300`                                  | World units per UV tile.                            |
+| `z_top`      | `float = 0`                                    | Z of the top face.                                  |
+| _Returns_    | `types.PrismMesh`                              | PrismMesh with positions, normals, uvs and indices. |
+| _Complexity_ |                                                | O(n^2) worst case where n = total ring vertices     |
+
+![Earcut triangulation of the prism top face with hole](images/mesh-build-prism.png)
+
+*Earcut triangulation of the prism top face with hole*
+
 ### `build_triangle_mesh()`
 
 ```python

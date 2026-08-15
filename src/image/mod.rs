@@ -2,6 +2,7 @@ pub mod composite;
 pub mod convert;
 pub mod dither;
 pub mod grayscale;
+pub mod pbr;
 pub mod preprocess;
 pub mod render;
 pub mod scan;

@@ -4,9 +4,28 @@
 import collections.abc
 from raygeo.mesh import types
 __all__ = [
+    "build_prism_mesh",
     "build_triangle_mesh",
     "build_uniform_mesh",
 ]
+
+def build_prism_mesh(outer: collections.abc.Sequence[tuple[float, float]], holes: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = (), thickness: float = 18, uv_scale: float = 300, z_top: float = 0) -> types.PrismMesh:
+    r"""
+    Build a closed prism mesh by extruding a polygon downward.
+    
+    The top face is triangulated with ear clipping (holes carved
+    out) and placed at *z_top*; the bottom cap sits at
+    ``z_top - thickness``; every boundary ring gets outward-facing
+    side walls.  UVs are planar: ``uv = xy / uv_scale``.
+    
+    :param outer: Outer boundary polygon vertices as (x, y) tuples.
+    :param holes: Sequence of hole/island polygons.
+    :param thickness: Extrusion depth below *z_top*.
+    :param uv_scale: World units per UV tile.
+    :param z_top: Z of the top face.
+    :returns: PrismMesh with positions, normals, uvs and indices.
+    :complexity: O(n^2) worst case where n = total ring vertices
+    """
 
 def build_triangle_mesh(outer: collections.abc.Sequence[tuple[float, float]], holes: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] = (), tool_radius: float = 0, min_angle: float = 20) -> types.TriangleMesh:
     r"""

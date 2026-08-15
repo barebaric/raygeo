@@ -11,6 +11,7 @@ from . import composite
 from . import convert
 from . import dither
 from . import grayscale
+from . import pbr
 from . import preprocess
 from . import render
 from . import scan
@@ -21,6 +22,7 @@ __all__ = [
     "convert",
     "dither",
     "grayscale",
+    "pbr",
     "preprocess",
     "rasterize_scanlines",
     "render",

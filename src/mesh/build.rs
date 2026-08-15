@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use earcut::Earcut;
 use spade::handles::FixedVertexHandle;
 use spade::{ConstrainedDelaunayTriangulation, Point2, Triangulation};
 
@@ -8,7 +9,7 @@ use crate::geo::shape::polygon::{
 };
 use crate::geo::types::Point;
 
-use super::types::{BoundaryTag, Triangle, TriangleMesh};
+use super::types::{BoundaryTag, PrismMesh, Triangle, TriangleMesh};
 
 type Cdt = ConstrainedDelaunayTriangulation<Point2<f64>>;
 
@@ -246,4 +247,191 @@ pub fn build_uniform_mesh(
     let dim = (max_x - min_x).min(max_y - min_y);
     let min_angle = (target_edge_len * 200.0 / dim).clamp(0.5, 20.0);
     build_triangle_mesh(outer, holes, tool_radius, min_angle)
+}
+
+// ── Prism extrusion ────────────────────────────────────────────────
+
+/// Signed shoelace area of a ring (positive = counter-clockwise).
+fn ring_signed_area(ring: &[Point]) -> f64 {
+    let mut area = 0.0;
+    let n = ring.len();
+    for i in 0..n {
+        let j = (i + 1) % n;
+        area += ring[i].x * ring[j].y - ring[j].x * ring[i].y;
+    }
+    0.5 * area
+}
+
+/// Return the ring in counter-clockwise winding order.
+fn to_ccw(ring: &[Point]) -> Vec<Point> {
+    if ring_signed_area(ring) < 0.0 {
+        ring.iter().rev().cloned().collect()
+    } else {
+        ring.to_vec()
+    }
+}
+
+/// Append one quad side wall between ring points (x0, y0) and
+/// (x1, y1).  Outer walls face away from the solid, hole walls face
+/// into the hole.  Degenerate (near-zero-length) edges are skipped.
+#[allow(clippy::too_many_arguments)]
+fn push_wall(
+    mesh: &mut PrismMesh,
+    x0: f64,
+    y0: f64,
+    x1: f64,
+    y1: f64,
+    is_hole: bool,
+    z_top: f64,
+    z_bottom: f64,
+    uv_scale: f64,
+    base: u32,
+) {
+    let dx = x1 - x0;
+    let dy = y1 - y0;
+    let (nx, ny) = if is_hole { (-dy, dx) } else { (dy, -dx) };
+    let len = (nx * nx + ny * ny).sqrt();
+    if len < 1e-12 {
+        return;
+    }
+    let (nx, ny) = (nx / len, ny / len);
+
+    let corners = [
+        (x0, y0, z_bottom),
+        (x1, y1, z_bottom),
+        (x1, y1, z_top),
+        (x0, y0, z_top),
+    ];
+    for (x, y, z) in corners {
+        mesh.positions
+            .extend_from_slice(&[x as f32, y as f32, z as f32]);
+        mesh.normals.extend_from_slice(&[nx as f32, ny as f32, 0.0]);
+        mesh.uvs
+            .extend_from_slice(&[(x / uv_scale) as f32, (y / uv_scale) as f32]);
+    }
+    let (i0, i1, i2, i3) = (base, base + 1, base + 2, base + 3);
+    if is_hole {
+        mesh.indices.extend_from_slice(&[i2, i1, i0, i2, i0, i3]);
+    } else {
+        mesh.indices.extend_from_slice(&[i0, i1, i2, i0, i2, i3]);
+    }
+}
+
+fn push_ring_walls(
+    mesh: &mut PrismMesh,
+    ring: &[Point],
+    is_hole: bool,
+    z_top: f64,
+    z_bottom: f64,
+    uv_scale: f64,
+    base: &mut u32,
+) {
+    let n = ring.len();
+    for i in 0..n {
+        let (p0, p1) = (&ring[i], &ring[(i + 1) % n]);
+        push_wall(
+            mesh, p0.x, p0.y, p1.x, p1.y, is_hole, z_top, z_bottom, uv_scale,
+            *base,
+        );
+        *base += 4;
+    }
+}
+
+/// Build a closed prism mesh by extruding a polygon downward.
+///
+/// The top face is triangulated with ear clipping (holes carved out)
+/// and placed at `z_top` with `+z` normals; the bottom cap sits at
+/// `z_top - thickness` with flipped winding and `-z` normals; every
+/// boundary ring gets outward-facing side walls.  UVs are planar:
+/// `uv = xy / uv_scale`, so one UV tile spans `uv_scale` world units.
+/// Input ring winding is normalized, so callers may pass either.
+///
+/// Vertices are per-face (not shared), ready for direct GPU upload.
+pub fn build_prism_mesh(
+    outer: &[Point],
+    holes: &[Vec<Point>],
+    thickness: f64,
+    uv_scale: f64,
+    z_top: f64,
+) -> Result<PrismMesh, String> {
+    if outer.len() < 3 {
+        return Err("outer boundary must have at least 3 vertices".into());
+    }
+    for (i, hole) in holes.iter().enumerate() {
+        if hole.len() < 3 {
+            return Err(format!("hole {} must have at least 3 vertices", i));
+        }
+    }
+    if thickness <= 0.0 {
+        return Err("thickness must be positive".into());
+    }
+    if uv_scale <= 0.0 {
+        return Err("uv_scale must be positive".into());
+    }
+
+    let outer_ccw = to_ccw(outer);
+    let holes_ccw: Vec<Vec<Point>> = holes.iter().map(|h| to_ccw(h)).collect();
+
+    // Flatten rings for triangulation: outer first, then holes.
+    let mut data: Vec<[f64; 2]> =
+        outer_ccw.iter().map(|p| [p.x, p.y]).collect();
+    let mut hole_indices: Vec<usize> = Vec::new();
+    for ring in &holes_ccw {
+        hole_indices.push(data.len());
+        data.extend(ring.iter().map(|p| [p.x, p.y]));
+    }
+    let mut tris: Vec<usize> = Vec::new();
+    Earcut::<f64>::new().earcut(data.iter().copied(), &hole_indices, &mut tris);
+
+    let z_bottom = z_top - thickness;
+    let mut mesh = PrismMesh::default();
+
+    // Top cap at z_top with +z normals.
+    for &[x, y] in &data {
+        mesh.positions
+            .extend_from_slice(&[x as f32, y as f32, z_top as f32]);
+        mesh.normals.extend_from_slice(&[0.0, 0.0, 1.0]);
+        mesh.uvs
+            .extend_from_slice(&[(x / uv_scale) as f32, (y / uv_scale) as f32]);
+    }
+    for t in tris.chunks_exact(3) {
+        mesh.indices.extend_from_slice(&[
+            t[0] as u32,
+            t[1] as u32,
+            t[2] as u32,
+        ]);
+    }
+
+    // Bottom cap at z_bottom with -z normals and flipped winding.
+    let n_verts = data.len() as u32;
+    for &[x, y] in &data {
+        mesh.positions.extend_from_slice(&[
+            x as f32,
+            y as f32,
+            z_bottom as f32,
+        ]);
+        mesh.normals.extend_from_slice(&[0.0, 0.0, -1.0]);
+        mesh.uvs
+            .extend_from_slice(&[(x / uv_scale) as f32, (y / uv_scale) as f32]);
+    }
+    for t in tris.chunks_exact(3) {
+        mesh.indices.extend_from_slice(&[
+            n_verts + t[0] as u32,
+            n_verts + t[2] as u32,
+            n_verts + t[1] as u32,
+        ]);
+    }
+
+    // Side walls per boundary ring.
+    let mut base = 2 * n_verts;
+    push_ring_walls(
+        &mut mesh, &outer_ccw, false, z_top, z_bottom, uv_scale, &mut base,
+    );
+    for ring in &holes_ccw {
+        push_ring_walls(
+            &mut mesh, ring, true, z_top, z_bottom, uv_scale, &mut base,
+        );
+    }
+
+    Ok(mesh)
 }

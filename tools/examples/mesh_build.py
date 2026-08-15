@@ -4,7 +4,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.collections import LineCollection
 
-from raygeo.mesh.build import build_triangle_mesh, build_uniform_mesh
+from raygeo.mesh.build import (
+    build_prism_mesh,
+    build_triangle_mesh,
+    build_uniform_mesh,
+)
 from raygeo.mesh.gradient import compute_gradient_field
 from raygeo.mesh.laplace import solve_laplace
 
@@ -229,6 +233,59 @@ def generate_multi_island():
     return fig8
 
 
+def generate_prism():
+    """Prism extrusion of a rectangular stock with a hole."""
+    outer = [(0, 0), (200, 0), (200, 100), (0, 100)]
+    hole = [(50, 25), (150, 25), (150, 75), (50, 75)]
+    mesh = build_prism_mesh(outer, [hole], thickness=18.0, uv_scale=50.0)
+
+    pos = np.asarray(mesh.positions)
+    tris = np.asarray(mesh.indices).reshape(-1, 3)
+    top_z = pos[:, 2].max()
+    top_tris = tris[
+        (pos[tris[:, 0], 2] == top_z)
+        & (pos[tris[:, 1], 2] == top_z)
+        & (pos[tris[:, 2], 2] == top_z)
+    ]
+
+    fig, ax = plt.subplots(figsize=(7, 7))
+    ax.set_aspect("equal")
+    ax.set_xlim(-10, 210)
+    ax.set_ylim(-10, 110)
+
+    for a, b, c in top_tris:
+        poly = np.vstack([pos[a, :2], pos[b, :2], pos[c, :2], pos[a, :2]])
+        ax.plot(poly[:, 0], poly[:, 1], "k-", linewidth=0.3, alpha=0.5)
+
+    xs_o, ys_o = zip(*outer)
+    ax.plot(
+        list(xs_o) + [xs_o[0]],
+        list(ys_o) + [ys_o[0]],
+        color="crimson",
+        linewidth=2.5,
+        label="Outer boundary",
+    )
+    xs_h, ys_h = zip(*hole)
+    ax.fill(xs_h, ys_h, alpha=0.08, color="royalblue")
+    ax.plot(
+        list(xs_h) + [xs_h[0]],
+        list(ys_h) + [ys_h[0]],
+        color="royalblue",
+        linewidth=2.5,
+        label="Hole boundary",
+    )
+    ax.set_title(
+        f"Prism top face (earcut triangulation)\n"
+        f"({len(pos)} vertices, {len(tris)} triangles total,"
+        f" {len(top_tris)} on the top face)",
+        fontsize=12,
+    )
+    ax.legend(fontsize=10, loc="upper right")
+    ax.grid(True, alpha=0.2)
+    fig.tight_layout()
+    return fig
+
+
 __docs_target__ = ["raygeo.mesh.build.md"]
 __images__ = [
     {
@@ -254,5 +311,10 @@ __images__ = [
         "caption": "CDT triangulation of a square pocket with multiple"
         " islands",
         "function": generate_multi_island,
+    },
+    {
+        "heading": "build_prism_mesh",
+        "caption": "Earcut triangulation of the prism top face with hole",
+        "function": generate_prism,
     },
 ]
