@@ -113,7 +113,10 @@ def test_no_wraparound_at_left_edge():
     buf = _raster(ops, W, H, (PPM, PPM), radius_px=5)
     cols = _filled_cols(buf)
     assert cols.min() == 0
-    assert cols.max() == 10 + 5
+    # Pixel-center coverage: the swept interval [0, 10] px dilated by the
+    # radius reaches x = 15, and the last column whose center (k + 0.5)
+    # lies inside is k = 14.
+    assert cols.max() == 10 + 5 - 1
     # Right half must be entirely empty.
     assert not buf[:, W // 2 :].any()
 
