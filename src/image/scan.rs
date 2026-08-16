@@ -436,6 +436,31 @@ pub fn extract_overlay_segments(
             seg_start_y = sy + i as f64 * dy;
             seg_start_z = sz + i as f64 * dz;
             seg_power = power_byte as f32 / 255.0;
+        } else if power_on && power_byte as f32 / 255.0 != seg_power {
+            // Power changed inside the run: close the current segment
+            // and start a new one so the preview reflects the power
+            // gradient of the source image (a whole-run single colour
+            // cannot).  Consecutive equal-power samples are coalesced,
+            // keeping constant-power engraves at one segment per run.
+            let x = sx + i as f64 * dx;
+            let y = sy + i as f64 * dy;
+            let z = sz + i as f64 * dz;
+            out_pos.extend([
+                seg_start_x as f32,
+                seg_start_y as f32,
+                seg_start_z as f32,
+                x as f32,
+                y as f32,
+                z as f32,
+            ]);
+            let li = laser_index as f32;
+            out_attrib
+                .extend([seg_power, li, 0.0, 1.0, seg_power, li, 0.0, 1.0]);
+            vertex_count += 2;
+            seg_start_x = x;
+            seg_start_y = y;
+            seg_start_z = z;
+            seg_power = power_byte as f32 / 255.0;
         } else if !power_on && prev_power_on {
             let seg_end_x = sx + i as f64 * dx;
             let seg_end_y = sy + i as f64 * dy;

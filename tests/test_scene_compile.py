@@ -217,6 +217,29 @@ def test_scan_line_all_zero():
     assert g.overlay_positions.to_numpy().size == 0
 
 
+def test_scan_line_ramp_reflects_power():
+    """Overlay segments follow the power gradient of the source.
+
+    A run whose power ramps must be split into per-power segments so
+    the preview reflects the image instead of one flat colour.
+    """
+    ops = Ops()
+    ops.move_to(0.0, 0.0, 0.0)
+    power_values = bytes([0, 11, 21, 32, 255, 255, 255, 32, 21, 11, 0])
+    ops.scan_to(10.0, 0.0, 0.0, power_values=power_values)
+
+    data = _compile(ops)
+    g = _flat_group(data)
+
+    oa = g.overlay_attrib.to_numpy()
+    assert oa.shape[0] >= 8
+    powers = np.sort(np.unique(oa[0::4]))
+    expected = np.sort(np.array([v / 255.0 for v in (11, 21, 32, 255)]))
+    assert np.allclose(powers, expected)
+    # Ramp up (3) + plateau (1) + ramp down (3).
+    assert oa.size // 8 == 7
+
+
 # ── Per-command offsets ─────────────────────────────────────────
 
 
