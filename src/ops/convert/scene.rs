@@ -12,9 +12,7 @@
 use std::collections::HashMap;
 use std::f64::consts::PI;
 
-use crate::geo::algo::cylindrical::{
-    transform_to_cylinder, OVERLAY_RADIAL_OFFSET,
-};
+use crate::geo::algo::cylindrical::{transform_to_cylinder, MAX_SAGITTA};
 use crate::geo::shape::arc::linearize_arc;
 use crate::geo::shape::bezier::linearize_bezier_segment;
 use crate::geo::types::Point3D;
@@ -382,8 +380,15 @@ fn finalize_rotary_cylinder(acc: &Accumulator) -> Option<CylinderWrapped> {
         if seg.pv_end > seg.pv_start {
             let slice = &acc.pv[seg.pv_start * 3..seg.pv_end * 3];
             let colors = &acc.pva[seg.pv_start * 4..seg.pv_end * 4];
-            let (wv, wc, cum) =
-                transform_to_cylinder(slice, d, Some(colors), true, 0.0);
+            // Lift the polyline by the linearization sagitta so its
+            // chords never sink below the faceted surface.
+            let (wv, wc, cum) = transform_to_cylinder(
+                slice,
+                d,
+                Some(colors),
+                true,
+                MAX_SAGITTA,
+            );
             exp_pv.push(wv);
             exp_pva.push(wc.unwrap_or_default());
             pv_expansion.push((seg.pv_start, cum));
@@ -391,13 +396,15 @@ fn finalize_rotary_cylinder(acc: &Accumulator) -> Option<CylinderWrapped> {
 
         if seg.tv_end > seg.tv_start {
             let slice = &acc.tv[seg.tv_start * 3..seg.tv_end * 3];
-            let (wv, _, _) = transform_to_cylinder(slice, d, None, true, 0.0);
+            let (wv, _, _) =
+                transform_to_cylinder(slice, d, None, true, MAX_SAGITTA);
             exp_tv.push(wv);
         }
 
         if seg.zpv_end > seg.zpv_start {
             let slice = &acc.zpv[seg.zpv_start * 3..seg.zpv_end * 3];
-            let (wv, _, _) = transform_to_cylinder(slice, d, None, true, 0.0);
+            let (wv, _, _) =
+                transform_to_cylinder(slice, d, None, true, MAX_SAGITTA);
             exp_zpv.push(wv);
         }
 
@@ -409,7 +416,7 @@ fn finalize_rotary_cylinder(acc: &Accumulator) -> Option<CylinderWrapped> {
                 d,
                 Some(colors),
                 true,
-                OVERLAY_RADIAL_OFFSET,
+                MAX_SAGITTA,
             );
             exp_ov_pos.push(wv);
             exp_ov_attrib.push(wc.unwrap_or_default());

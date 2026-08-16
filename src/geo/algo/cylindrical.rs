@@ -1,7 +1,19 @@
 use std::f64::consts::PI;
 
-const MAX_SAGITTA: f64 = 0.05;
-pub const OVERLAY_RADIAL_OFFSET: f64 = 0.1;
+/// Maximum sagitta (mm) of a linearized chord relative to its home
+/// circle.  Cylinder-mapped line segments are subdivided so no chord
+/// deviates more than this from the circle, regardless of diameter.
+///
+/// The same value doubles as the outward radial lift applied to every
+/// cylinder-mapped polyline (toolpath lines and overlay rings): with
+/// the home circle at ``radius + MAX_SAGITTA``, each chord's deepest
+/// point sits at ``radius + MAX_SAGITTA - sagitta >= radius``, i.e.
+/// on or above the true cylinder surface.  The stock shell and the
+/// engrave quads are inscribed in that true circle, so without the
+/// lift the chord midpoints periodically sink below the surface
+/// facets; orthographic views resolve the sub-millimetre gap and hide
+/// those line stretches, while perspective views round it away.
+pub const MAX_SAGITTA: f64 = 0.05;
 
 fn mu_to_degrees(mu: f64, diameter: f64) -> f64 {
     if diameter <= 0.0 {
