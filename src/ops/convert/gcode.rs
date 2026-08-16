@@ -301,7 +301,11 @@ impl<'a> GcodeEncoder<'a> {
         let mut y_cmd = self.take_var();
         write!(y_cmd, " Y{y_val}").expect("writing into a String");
         let mut z_cmd = self.take_var();
-        write!(z_cmd, " Z{z_val}").expect("writing into a String");
+        // A no-Z machine never receives Z words: drop z_cmd entirely
+        // so the move templates' {z_cmd} placeholder expands to empty.
+        if self.ctx.has_z_axis {
+            write!(z_cmd, " Z{z_val}").expect("writing into a String");
+        }
 
         let mut extra_cmd = self.take_var();
         if let Some(ea) = extra_axes {

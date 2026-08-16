@@ -187,6 +187,12 @@ pub struct EncodeContext {
     /// Same semantics as `layer_path_vars`.
     #[serde(default)]
     pub workpiece_path_vars: HashMap<String, HashMap<String, String>>,
+    /// Whether the target machine has a Z axis. When `false`, the
+    /// encoder omits all Z coordinates from move commands (G0/G1/G2/G3)
+    /// so a 2-axis laser never receives `Z{...}` words. Defaults to
+    /// `true` so existing configs stay 3D.
+    #[serde(default = "default_true")]
+    pub has_z_axis: bool,
 }
 
 /// Result of encoding: the G-code text and the bidirectional map between
