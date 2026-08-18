@@ -23,6 +23,7 @@ pub(crate) mod container;
 pub(crate) mod convert;
 pub(crate) mod cut;
 pub(crate) mod feature;
+pub(crate) mod material;
 pub(crate) mod part;
 pub(crate) mod state;
 pub(crate) mod transform;
@@ -65,6 +66,9 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     // Child submodule: raygeo.ops.assembly
     assembly::register(&ops_mod)?;
+
+    // Child submodule: raygeo.ops.material
+    material::register(&ops_mod)?;
 
     // Child submodule: raygeo.ops.convert
     convert::register(&ops_mod)?;

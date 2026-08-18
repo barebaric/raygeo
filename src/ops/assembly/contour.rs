@@ -18,7 +18,7 @@ use crate::geo::algo::topology::{
     split_inner_and_outer_contours, split_into_contours,
 };
 use crate::geo::geometry::Geometry;
-use crate::geo::types::Point3D;
+use crate::geo::types::{Point3D, Polygon};
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::{wrap_vector_outline, AssembleCtx, Assembler};
 use crate::ops::container::Ops;
@@ -47,7 +47,7 @@ impl Assembler for ContourSpec {
         if ctx.callbacks.is_cancelled() {
             return Err("cancelled".to_string());
         }
-        let (ops, meta) = assemble_contour(
+        let (ops, meta, cut_polygons) = assemble_contour(
             ctx.face,
             self.offset_mm,
             &self.cut_side,
@@ -63,6 +63,7 @@ impl Assembler for ContourSpec {
             return Err("cancelled".to_string());
         }
         ctx.trace.append_ops(&ops);
+        ctx.emit_vector_effect(cut_polygons, None, None);
         ctx.callbacks.report_progress(1.0, "contour: done");
         Ok(meta)
     }
@@ -101,7 +102,9 @@ pub fn compute_total_offset(offset_mm: f64, cut_side: &str) -> f64 {
 /// from offset / cut-side, applies it with winding-order
 /// normalisation and offset fallback, orders inner/outer contours,
 /// applies overcut, optionally fits arcs and curves, and returns the
-/// result as an `(Ops, AssemblyMeta)` pair.
+/// result as an `(Ops, AssemblyMeta, Vec<Polygon>)` triple — the
+/// third element is the cut footprint polygons (empty when the part
+/// has no geometry).
 ///
 /// Returns empty `Ops` if the part has no geometry.
 #[allow(clippy::too_many_arguments)]
@@ -115,7 +118,7 @@ pub fn assemble_contour(
     arc_tolerance: f64,
     allow_arcs: bool,
     supports_curves: bool,
-) -> RaygeoResult<(Ops, AssemblyMeta)> {
+) -> RaygeoResult<(Ops, AssemblyMeta, Vec<Polygon>)> {
     let total_offset = compute_total_offset(offset_mm, cut_side);
 
     let source_geo = match face.geometry.clone() {
@@ -133,6 +136,7 @@ pub fn assemble_contour(
                         heading: 0.0,
                     },
                 },
+                Vec::new(),
             ))
         }
     };
@@ -203,15 +207,16 @@ pub fn assemble_contour(
             }
             geo = result;
         }
+        let cut_polygons = cut_polygons_of(&geo, arc_tolerance);
         let ops = wrap_vector_outline(
             ops_from_geo(&geo, arc_tolerance, allow_arcs, supports_curves)?,
             "contour",
         );
-        return Ok((ops, zero_meta()));
+        return Ok((ops, zero_meta(), cut_polygons));
     }
 
     if geo.is_empty() {
-        return Ok((Ops::new(), zero_meta()));
+        return Ok((Ops::new(), zero_meta(), Vec::new()));
     }
 
     // 7. Re-split after offset, then order inner/outer
@@ -250,11 +255,25 @@ pub fn assemble_contour(
         ordered.extend(c);
     }
 
+    let cut_polygons = cut_polygons_of(&ordered, arc_tolerance);
     let ops = wrap_vector_outline(
         ops_from_geo(&ordered, arc_tolerance, allow_arcs, supports_curves)?,
         "contour",
     );
-    Ok((ops, zero_meta()))
+    Ok((ops, zero_meta(), cut_polygons))
+}
+
+/// The cut footprint of the (offset) contour geometry as polygons.
+///
+/// MVP: the offset contour itself is the void boundary; kerf-aware
+/// widening can refine this later.
+fn cut_polygons_of(geo: &Geometry, arc_tolerance: f64) -> Vec<Polygon> {
+    let tolerance = if arc_tolerance > 0.0 {
+        arc_tolerance
+    } else {
+        0.01
+    };
+    geo.to_polygons(tolerance)
 }
 
 /// Convert geometry to Ops, optionally applying curve fitting.

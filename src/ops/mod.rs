@@ -11,6 +11,7 @@ pub mod convert;
 pub mod cut;
 pub mod enums;
 pub mod feature;
+pub mod material;
 pub mod part;
 pub mod state;
 pub mod transform;

@@ -18,6 +18,11 @@ pub struct PyCompressedArray {
 }
 
 impl PyCompressedArray {
+    /// Wrap an existing core array (crate-internal conversion).
+    pub(crate) fn from_inner(inner: CompressedArray) -> Self {
+        Self { inner }
+    }
+
     pub fn from_vec_f32(data: Vec<f32>) -> Self {
         Self {
             inner: CompressedArray::from_vec_f32(data),
