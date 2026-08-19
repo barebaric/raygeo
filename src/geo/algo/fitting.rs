@@ -562,6 +562,33 @@ pub fn get_polyline_line_deviation(
     (max_dist_sq.sqrt(), max_idx)
 }
 
+/// Total signed angular advance of a point chain around `center`, in radians.
+///
+/// The angle of every point around `center` is accumulated, normalizing each
+/// step to `(-PI, PI]`.  A polyline that wraps all the way around `center` —
+/// e.g. a closed contour extended past its start point by an overcut —
+/// yields a value close to or exceeding `2 * PI`.
+fn angular_traversal(points: &[Point3D], center: Point) -> f64 {
+    if points.len() < 2 {
+        return 0.0;
+    }
+    let mut total = 0.0;
+    let mut prev = (points[0].y - center.y).atan2(points[0].x - center.x);
+    for p in &points[1..] {
+        let angle = (p.y - center.y).atan2(p.x - center.x);
+        let mut delta = angle - prev;
+        // Normalize to (-PI, PI].
+        if delta > PI {
+            delta -= 2.0 * PI;
+        } else if delta <= -PI {
+            delta += 2.0 * PI;
+        }
+        total += delta;
+        prev = angle;
+    }
+    total.abs()
+}
+
 /// Recursively fits line and arc primitives to a range of points.
 pub fn fit_points_recursive(
     points: &[Point3D],
@@ -615,7 +642,9 @@ pub fn fit_points_recursive(
             let three = [p1, p2, p3];
             let arc_dev =
                 get_polyline_arc_deviation(three.as_slice(), center, radius);
-            if arc_dev < tolerance {
+            if arc_dev < tolerance
+                && angular_traversal(&three, center) < 2.0 * PI - 1e-3
+            {
                 let pts = [
                     Point::new(p1.x, p1.y),
                     Point::new(p2.x, p2.y),
@@ -650,7 +679,9 @@ pub fn fit_points_recursive(
             let radius =
                 Point::new(points[start].x, points[start].y).distance(center);
             let arc_dev = get_polyline_arc_deviation(&subset, center, radius);
-            if arc_dev < tolerance {
+            if arc_dev < tolerance
+                && angular_traversal(&subset, center) < 2.0 * PI - 1e-3
+            {
                 let is_cw = {
                     let pts2d: Vec<Point> =
                         subset.iter().map(|p| Point::new(p.x, p.y)).collect();

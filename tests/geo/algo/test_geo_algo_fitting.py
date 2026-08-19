@@ -645,6 +645,117 @@ def test_fit_points_recursive_open_arc_still_fits():
     assert isinstance(cmds.data[0], Arc)
 
 
+def test_fit_points_recursive_large_open_arc_still_single():
+    """
+    A large open arc (270 degrees, start != end) must still fit as a single
+    arc command; the wrap-around guard only splits contours that traverse
+    a full revolution around the fitted center.
+    """
+    center = (0.0, 0.0)
+    radius = 10.0
+    angles = np.linspace(0, 3 * np.pi / 2, 40)
+    points = [
+        (center[0] + radius * np.cos(t), center[1] + radius * np.sin(t), 0.0)
+        for t in angles
+    ]
+    cmds = fit_points_recursive(points, 0.1, 0, len(points) - 1)
+    assert len(cmds) == 1
+    assert isinstance(cmds.data[0], Arc)
+
+
+def test_fit_points_recursive_wrapped_arc_does_not_collapse():
+    """
+    Regression test for the overcut bug (rayforge#357): a closed circle
+    extended past its start point (start and end no longer coincident, but
+    the path still traverses a full revolution around the center) must NOT
+    be fitted as a single tiny arc between the nearby endpoints.
+
+    Such a path is produced by applying an overcut to a closed contour and
+    is what made the inner circle of a doughnut "disappear" from the
+    toolpath.
+    """
+    center = (0.0, 0.0)
+    radius = 27.5
+    n = 360
+    angles = np.linspace(0, 2 * np.pi, n, endpoint=False)
+    points = [
+        (center[0] + radius * np.cos(t), center[1] + radius * np.sin(t), 0.0)
+        for t in angles
+    ]
+    # Closing segment back to the start.
+    points.append(points[0])
+    # Overcut extension: retrace the first ~2mm of the circle (a few
+    # points near the start point), like apply_overcut() appends.
+    ext_angles = np.linspace(0, 0.073, 5)  # ~4.2 degrees on r=27.5
+    for t in ext_angles:
+        points.append(
+            (
+                center[0] + radius * np.cos(t),
+                center[1] + radius * np.sin(t),
+                0.0,
+            )
+        )
+
+    # Start and end are close but not coincident.
+    dist = math.hypot(
+        points[-1][0] - points[0][0], points[-1][1] - points[0][1]
+    )
+    assert dist > 1e-3
+
+    cmds = fit_points_recursive(points, 0.1, 0, len(points) - 1)
+    assert len(cmds) > 1, (
+        "A contour that wraps a full revolution must be split into "
+        "multiple arcs; a single arc would collapse to the short way "
+        "and drop the rest of the contour"
+    )
+    assert all(isinstance(c, Arc) for c in cmds.data)
+
+
+def test_fit_points_with_primitives_closed_wrap_splits():
+    """
+    fit_points_with_primitives on a full-circle polyline with a small
+    overlapping extension must not collapse to a single tiny arc.
+    """
+    center = (0.0, 0.0)
+    radius = 10.0
+    n = 360
+    angles = np.linspace(0, 2 * np.pi, n, endpoint=False)
+    points = [
+        (center[0] + radius * np.cos(t), center[1] + radius * np.sin(t), 0.0)
+        for t in angles
+    ]
+    points.append(points[0])
+    for t in np.linspace(0, 0.05, 3):
+        points.append(
+            (
+                center[0] + radius * np.cos(t),
+                center[1] + radius * np.sin(t),
+                0.0,
+            )
+        )
+
+    cmds = fit_points_with_primitives(points, 0.1)
+    assert len(cmds) > 1
+    # Total arc coverage must be a full circle (plus the small overlap),
+    # not a tiny slice of it.
+    total_sweep = 0.0
+    last = points[0]
+    for cmd in cmds.data:
+        assert isinstance(cmd, Arc)
+        cx = last[0] + cmd.center_offset[0]
+        cy = last[1] + cmd.center_offset[1]
+        start_angle = math.atan2(last[1] - cy, last[0] - cx)
+        end_angle = math.atan2(cmd.end[1] - cy, cmd.end[0] - cx)
+        sweep = (end_angle - start_angle) % (2 * math.pi)
+        if cmd.clockwise:
+            sweep = 2 * math.pi - sweep
+        total_sweep += sweep
+        last = cmd.end
+    assert total_sweep > 2 * math.pi - 0.1, (
+        f"Expected full-circle coverage, got {total_sweep:.3f} rad"
+    )
+
+
 def test_fit_curves_backwards_compat():
     """Tests Geometry.fit_curves() and Geometry.fit_arcs() agree."""
     geo = Geometry()

@@ -3,7 +3,7 @@ import math
 import pytest
 
 import raygeo.geo.algo.overcut as overcut_mod
-from raygeo.geo import Geometry
+from raygeo.geo import Arc, Geometry
 from raygeo.geo.algo.overcut import apply_overcut
 
 
@@ -225,3 +225,103 @@ class TestOvercutImport:
 
     def test_import_from_algo_module(self):
         assert hasattr(overcut_mod, "apply_overcut")
+
+
+class TestOvercutArcFitting:
+    """Regression tests for rayforge#357.
+
+    Applying an overcut to a closed contour extends it past its start
+    point, producing a path that wraps a full revolution around the
+    contour center with non-coincident endpoints.  Arc fitting used to
+    collapse such a path into a single tiny arc, dropping the rest of
+    the contour from the toolpath.
+    """
+
+    @staticmethod
+    def _closed_circle(radius=27.5, n=360):
+        geo = Geometry()
+        geo.move_to(radius, 0)
+        for i in range(1, n + 1):
+            angle = 2 * math.pi * i / n
+            geo.line_to(radius * math.cos(angle), radius * math.sin(angle))
+        geo.close_path()
+        return geo
+
+    @staticmethod
+    def _total_arc_sweep(geo, start):
+        """Total sweep (radians) of the arc commands in *geo*."""
+        total = 0.0
+        last = start
+        for cmd in geo.data:
+            if not isinstance(cmd, Arc):
+                continue
+            cx = last[0] + cmd.center_offset[0]
+            cy = last[1] + cmd.center_offset[1]
+            a0 = math.atan2(last[1] - cy, last[0] - cx)
+            a1 = math.atan2(cmd.end[1] - cy, cmd.end[0] - cx)
+            sweep = (a1 - a0) % (2 * math.pi)
+            if cmd.clockwise:
+                sweep = 2 * math.pi - sweep
+            total += sweep
+            last = cmd.end
+        return total
+
+    def test_overcut_circle_fit_curves_keeps_full_circle(self):
+        """Fitting an overcut circle must keep the full circle + overlap."""
+        geo = self._closed_circle()
+        start = (geo.data[0].end[0], geo.data[0].end[1])
+        oc = apply_overcut(geo, 2.0)
+
+        fitted = oc.copy()
+        fitted.fit_curves(0.1, beziers=False, arcs=True)
+
+        sweep = self._total_arc_sweep(fitted, start)
+        assert sweep > 2 * math.pi - 0.1, (
+            f"Expected full-circle coverage, got {sweep:.3f} rad"
+        )
+
+    def test_overcut_circle_fit_curves_no_tiny_arc(self):
+        """The fitted result must contain more than one arc command."""
+        geo = self._closed_circle()
+        oc = apply_overcut(geo, 2.0)
+
+        fitted = oc.copy()
+        fitted.fit_curves(0.1, beziers=False, arcs=True)
+
+        arcs = [c for c in fitted.data if isinstance(c, Arc)]
+        assert len(arcs) > 1, (
+            "A single arc would collapse to the short way between the "
+            "nearby endpoints and drop the rest of the circle"
+        )
+
+    def test_overcut_doughnut_inner_contour_survives(self):
+        """Both contours of a doughnut must survive arc fitting (rayforge#357).
+
+        The inner (hole) contour collapses to a tiny arc when an overcut is
+        applied; the outer contour used to survive while the inner one
+        disappeared from the toolpath.
+        """
+        inner = self._closed_circle(radius=27.5)
+        outer = self._closed_circle(radius=147.5)
+
+        for contour in (inner, outer):
+            oc = apply_overcut(contour, 2.0)
+            fitted = oc.copy()
+            fitted.fit_curves(0.1, beziers=False, arcs=True)
+            start = (contour.data[0].end[0], contour.data[0].end[1])
+            sweep = self._total_arc_sweep(fitted, start)
+            assert sweep > 2 * math.pi - 0.1, (
+                f"Contour collapsed to {sweep:.3f} rad"
+            )
+
+    def test_overcut_circle_no_overcut_still_single_arcs(self):
+        """Without an overcut, closed circles are split into two arcs and
+        the full coverage is preserved."""
+        geo = self._closed_circle()
+        start = (geo.data[0].end[0], geo.data[0].end[1])
+        fitted = geo.copy()
+        fitted.fit_curves(0.1, beziers=False, arcs=True)
+        sweep = self._total_arc_sweep(fitted, start)
+        assert sweep > 2 * math.pi - 0.1
+        arcs = [c for c in fitted.data if isinstance(c, Arc)]
+        assert len(arcs) == 2
