@@ -93,6 +93,8 @@ impl Assembler for ProfileSpec {
             }
         }
         .map_err(|e| e.to_string())?;
+        let fragments = ctx.face.cleared.fragments().to_vec();
+        ctx.emit_vector_effect(fragments, None, Some(self.target_z));
         ctx.callbacks
             .report_progress(1.0, &format!("{label}: done"));
         Ok(meta)

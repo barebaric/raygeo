@@ -41,6 +41,7 @@ use crate::geo::types::Polygon;
 use crate::ops::callbacks::Callbacks;
 use crate::ops::container::Ops;
 use crate::ops::enums::SectionType;
+use crate::ops::material::MaterialEffect;
 use crate::ops::part::FaceState;
 use crate::ops::part::ImageSource;
 use crate::ops::state::State;
@@ -116,6 +117,34 @@ pub struct AssembleCtx<'a> {
     /// [`AssemblyWarning`]s here instead of aborting; the Compute stage moves
     /// the vec into [`AssemblyOutput::warnings`] after `assemble` returns.
     pub warnings: &'a mut Vec<AssemblyWarning>,
+    /// Material effects accumulated during this assembly — the
+    /// assembler's description of the material it removes, in the
+    /// unified CNC/laser language. Assemblers push via
+    /// [`AssembleCtx::emit_vector_effect`]; the Compute stage moves
+    /// the vec into [`AssemblyOutput::material_effects`].
+    pub material_effects: &'a mut Vec<MaterialEffect>,
+}
+
+impl<'a> AssembleCtx<'a> {
+    /// Emit a vector material effect: `polygons` removed over the Z
+    /// interval `[z_from, z_to]` (toolpath convention: surface at
+    /// `z = 0`; `None` means open to the surface / through the
+    /// bottom). Empty polygon lists are ignored.
+    pub fn emit_vector_effect(
+        &mut self,
+        polygons: Vec<Polygon>,
+        z_from: Option<f64>,
+        z_to: Option<f64>,
+    ) {
+        if polygons.is_empty() {
+            return;
+        }
+        self.material_effects.push(MaterialEffect::Vector {
+            polygons,
+            z_from,
+            z_to,
+        });
+    }
 }
 
 /// The kind of a non-fatal [`AssemblyWarning`] produced during assembly.
@@ -173,6 +202,12 @@ pub struct AssemblyOutput {
     /// Compute stage fills this from [`AssembleCtx::warnings`]; cache
     /// store/restore preserve it.
     pub warnings: Vec<AssemblyWarning>,
+    /// Material effects emitted while assembling this output (the
+    /// unified description of removed material), or `None` for
+    /// assemblers that don't emit. The Compute stage fills this from
+    /// [`AssembleCtx::material_effects`]; cache store/restore
+    /// preserve it.
+    pub material_effects: Option<Vec<MaterialEffect>>,
 }
 
 impl AssemblyOutput {

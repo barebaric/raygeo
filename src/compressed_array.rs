@@ -10,7 +10,7 @@ use std::io::Read;
 const COMPRESS_THRESHOLD: usize = 4096;
 const ZSTD_LEVEL: i32 = 3;
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Dtype {
     Float32,
     Int32,
@@ -28,6 +28,7 @@ impl Dtype {
 
 /// Compressed (or raw, if below threshold) byte buffer with shape and
 /// dtype metadata.  Pure Rust — no PyO3 dependency.
+#[derive(Clone, Debug)]
 pub struct CompressedArray {
     pub data: Vec<u8>,
     pub shape: Vec<usize>,

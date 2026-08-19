@@ -44,6 +44,7 @@ struct FaceRunResult {
     combined_end: Option<ToolPose>,
     processed_face_ids: Vec<String>,
     warnings: Vec<AssemblyWarning>,
+    material_effects: Vec<crate::ops::material::MaterialEffect>,
 }
 
 impl AssemblerCompute {
@@ -98,6 +99,7 @@ impl AssemblerCompute {
     /// original region before returning.  This lets each step see a
     /// different pocket subset while sharing the same face's cleared
     /// area.
+    #[allow(clippy::too_many_arguments)]
     fn assemble_face(
         &mut self,
         trace: &mut Tracelet,
@@ -106,6 +108,7 @@ impl AssemblerCompute {
         pixels_per_mm: Option<(f64, f64)>,
         fid: &str,
         warnings: &mut Vec<AssemblyWarning>,
+        material_effects: &mut Vec<crate::ops::material::MaterialEffect>,
     ) -> Result<AssemblyMeta, String> {
         let image_source = self.part.image_source.as_deref();
         let face = self
@@ -131,6 +134,7 @@ impl AssemblerCompute {
             face_id: fid.to_string(),
             region_boundary: self.region_boundary.clone(),
             warnings,
+            material_effects,
         };
         let result = self.assembler.assemble(&mut assemble_ctx);
 
@@ -158,6 +162,8 @@ impl AssemblerCompute {
         let mut combined_end: Option<ToolPose> = None;
         let mut processed_face_ids: Vec<String> = Vec::new();
         let mut warnings: Vec<AssemblyWarning> = Vec::new();
+        let mut material_effects: Vec<crate::ops::material::MaterialEffect> =
+            Vec::new();
 
         for fid in face_ids {
             let result = self.assemble_face(
@@ -167,6 +173,7 @@ impl AssemblerCompute {
                 pixels_per_mm,
                 fid,
                 &mut warnings,
+                &mut material_effects,
             );
             match result {
                 Ok(meta) => {
@@ -203,6 +210,7 @@ impl AssemblerCompute {
             combined_end,
             processed_face_ids,
             warnings,
+            material_effects,
         })
     }
 
@@ -272,6 +280,7 @@ impl Compute for AssemblerCompute {
             combined_end,
             processed_face_ids,
             warnings,
+            material_effects,
         } = result;
 
         if ctx.callbacks.is_cancelled() {
@@ -329,6 +338,11 @@ impl Compute for AssemblerCompute {
             cleared_fragments,
             meta,
             warnings,
+            material_effects: if material_effects.is_empty() {
+                None
+            } else {
+                Some(material_effects)
+            },
         };
         if self.profile {
             prof_report();
@@ -383,7 +397,12 @@ impl Compute for AssemblerCompute {
                 * std::mem::size_of::<glam::DVec2>();
             buf + vertices
         });
-        let total = struct_size + ops_heap + fragments_heap;
+        let effects_heap = cached.material_effects.as_ref().map_or(0, |e| {
+            e.len()
+                * std::mem::size_of::<crate::ops::material::MaterialEffect>()
+                + e.iter().map(|fx| fx.heap_size()).sum::<usize>()
+        });
+        let total = struct_size + ops_heap + fragments_heap + effects_heap;
         Some((Box::new(cached), total))
     }
 

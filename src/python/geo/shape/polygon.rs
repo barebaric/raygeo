@@ -5,6 +5,7 @@ use super::super::flex_point::{
     poly_to_points, polygons_to_tuples, PyPoint2D,
 };
 use super::super::types::NormalizePolygonsResult;
+use crate::geo::matrix::Matrix as CoreMatrix;
 use crate::geo::shape::polygon::{
     apply_minimum_curvature, clean_polygon, compute_polygon_bounds,
     do_polygons_intersect, does_path_sweep_intersect_polygon,
@@ -23,10 +24,11 @@ use crate::geo::shape::polygon::{
     is_path_confined_to_boundary, is_point_inside_polygon,
     is_polygon_clockwise, is_polygon_convex, normalize_polygons,
     offset_polygon, resample_polygon, rotate_polygon, rotate_polygons,
-    scale_polygon, translate_bounds, translate_polygon, translate_polygons,
-    CornerType, JoinStyle,
+    scale_polygon, transform_polygons, translate_bounds, translate_polygon,
+    translate_polygons, CornerType, JoinStyle,
 };
 use crate::geo::types::{Point, Rect};
+use crate::python::geo::matrix::Matrix as PyMatrix;
 use numpy::{PyArray2, PyArrayMethods};
 use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyList};
@@ -228,6 +230,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         translate_polygon_py,
         translate_polygons_numpy_py,
         translate_polygons_py,
+        transform_polygons_py,
     );
 
     shape_mod.add_submodule(&m)?;
@@ -406,6 +409,70 @@ fn translate_polygons_py(
 ) -> PyResult<Vec<Vec<(f64, f64)>>> {
     let p = extract_polygons(polygons)?;
     Ok(polygons_to_tuples(translate_polygons(&p, dx, dy)))
+}
+
+/// Extract a core 3x3 affine matrix from a `Matrix` or a 3x3/4x4
+/// list-of-lists.
+fn extract_core_matrix(obj: &Bound<'_, PyAny>) -> PyResult<CoreMatrix> {
+    if let Ok(py_m) = obj.extract::<PyMatrix>() {
+        return Ok(py_m.inner);
+    }
+    let rows = obj.extract::<Vec<Vec<f64>>>().map_err(|_| {
+        pyo3::exceptions::PyTypeError::new_err(
+            "expected a Matrix or a 3x3/4x4 list of lists",
+        )
+    })?;
+    // 4x4 input: keep the 2D affine part (drop the Z row/col).
+    let rows = if rows.len() == 4 {
+        vec![
+            vec![rows[0][0], rows[0][1], rows[0][3]],
+            vec![rows[1][0], rows[1][1], rows[1][3]],
+            vec![0.0, 0.0, 1.0],
+        ]
+    } else {
+        rows
+    };
+    if rows.len() != 3 || rows.iter().any(|r| r.len() != 3) {
+        return Err(pyo3::exceptions::PyValueError::new_err(
+            "expected a 3x3 or 4x4 matrix",
+        ));
+    }
+    Ok(CoreMatrix::from_cols_arrays([
+        [rows[0][0], rows[0][1], rows[0][2]],
+        [rows[1][0], rows[1][1], rows[1][2]],
+        [rows[2][0], rows[2][1], rows[2][2]],
+    ]))
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+    import typing
+    import raygeo.geo.types
+
+    def transform_polygons(
+        polygons: collections.abc.Sequence[types.Polygon],
+        matrix: types.TransformMatrix,
+    ) -> list[types.Polygon]:
+        """Transform a list of polygons by an affine matrix.
+
+        :param polygons: List of polygons to transform.
+        :param matrix: A :class:`~raygeo.geo.Matrix` or a 3x3/4x4
+            matrix as a list of lists.
+        :returns: Transformed polygons.
+        :complexity: O(n * m)
+        """
+"#,
+    module = "raygeo.geo.shape.polygon"
+)]
+#[pyfunction(name = "transform_polygons")]
+fn transform_polygons_py(
+    polygons: &Bound<'_, PyAny>,
+    matrix: &Bound<'_, PyAny>,
+) -> PyResult<Vec<Vec<(f64, f64)>>> {
+    let p = extract_polygons(polygons)?;
+    let m = extract_core_matrix(matrix)?;
+    Ok(polygons_to_tuples(transform_polygons(&p, &m)))
 }
 
 #[gen_stub_pyfunction(

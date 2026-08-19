@@ -145,6 +145,8 @@ impl crate::ops::assembly::Assembler for AdaptiveClearingSpec {
         if ctx.region_boundary.is_some() {
             let meta = adaptive_clearing(ctx.face, ctx.trace, self, ctx.state)
                 .map_err(|e| e.to_string())?;
+            let fragments = ctx.face.cleared.fragments().to_vec();
+            ctx.emit_vector_effect(fragments, None, Some(self.target_z));
             ctx.callbacks
                 .report_progress(1.0, "adaptive_clearing: done");
             return Ok(meta);
@@ -159,11 +161,18 @@ impl crate::ops::assembly::Assembler for AdaptiveClearingSpec {
         let whole_meta =
             adaptive_clearing(ctx.face, ctx.trace, self, ctx.state);
         if let Ok(meta) = whole_meta {
+            let fragments = ctx.face.cleared.fragments().to_vec();
+            ctx.emit_vector_effect(fragments, None, Some(self.target_z));
             ctx.callbacks
                 .report_progress(1.0, "adaptive_clearing: done");
             return Ok(meta);
         }
-        clear_by_regions(ctx, self, whole_meta.unwrap_err())
+        let result = clear_by_regions(ctx, self, whole_meta.unwrap_err());
+        if result.is_ok() {
+            let fragments = ctx.face.cleared.fragments().to_vec();
+            ctx.emit_vector_effect(fragments, None, Some(self.target_z));
+        }
+        result
     }
 
     fn name(&self) -> &str {
@@ -188,6 +197,7 @@ impl crate::ops::assembly::Assembler for AdaptiveClearingSpec {
             cleared_fragments: output.cleared_fragments.clone(),
             meta: output.meta.clone(),
             warnings: output.warnings.clone(),
+            material_effects: output.material_effects.clone(),
         })
     }
 

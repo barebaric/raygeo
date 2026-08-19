@@ -57,6 +57,15 @@ is_scalable: bool
 
 Whether the Ops may be uniformly scaled during aggregation.
 
+### `material_effects`
+
+```python
+material_effects: Optional[list[Any]]
+```
+
+Material effects emitted during assembly (`list` of `VectorEffect` / `RasterEffect` /
+`VolumeEffect`), or `None` for assemblers that don't emit.
+
 ### `ops`
 
 ```python

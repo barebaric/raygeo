@@ -29,6 +29,7 @@ from . import axis
 from . import convert
 from . import cut
 from . import feature
+from . import material
 from . import part
 from . import state
 from . import transform
@@ -46,6 +47,7 @@ __all__ = [
     "convert",
     "cut",
     "feature",
+    "material",
     "part",
     "state",
     "transform",

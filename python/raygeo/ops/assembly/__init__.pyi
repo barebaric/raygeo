@@ -120,6 +120,13 @@ class AssemblyOutput:
         Non-fatal warnings emitted during assembly (``list[AssemblyWarning]``).
         Empty when assembly completed without per-face/region failures.
         """
+    @property
+    def material_effects(self) -> typing.Optional[builtins.list[typing.Any]]:
+        r"""
+        Material effects emitted during assembly (``list`` of
+        ``VectorEffect`` / ``RasterEffect`` / ``VolumeEffect``), or
+        ``None`` for assemblers that don't emit.
+        """
     def __new__(cls, ops: ops.Ops, is_scalable: builtins.bool = False, source_dimensions: typing.Optional[tuple[builtins.float, builtins.float]] = None, cleared_fragments: typing.Optional[typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]] = None) -> AssemblyOutput: ...
     def __repr__(self) -> builtins.str: ...
 

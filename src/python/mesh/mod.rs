@@ -5,6 +5,7 @@ pub(crate) mod gradient;
 pub(crate) mod laplace;
 pub(crate) mod pde;
 pub(crate) mod remesh;
+pub(crate) mod solid;
 pub(crate) mod types;
 
 pub fn register(py_mod: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -20,6 +21,7 @@ pub fn register(py_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     laplace::register(&m)?;
     pde::register(&m)?;
     remesh::register(&m)?;
+    solid::register(&m)?;
     types::register(&m)?;
 
     py_mod.add_submodule(&m)?;

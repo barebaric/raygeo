@@ -191,7 +191,7 @@ fn contour_py(
     let face = part.inner.face("").ok_or_else(|| {
         pyo3::exceptions::PyValueError::new_err("no default face")
     })?;
-    let (ops, meta) = assemble_contour(
+    let (ops, meta, _cut_polygons) = assemble_contour(
         face,
         offset_mm,
         cut_side,

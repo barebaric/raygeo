@@ -1117,6 +1117,24 @@ Convert a numpy polygon to Clipper integer coordinates.
 | _Returns_    | `list[tuple[int, int]]`   | List of (x, y) integer tuples. |
 | _Complexity_ |                           | O(n * m)                       |
 
+### `transform_polygons()`
+
+```python
+transform_polygons(
+    polygons: Sequence[types.Polygon],
+    matrix: types.TransformMatrix,
+) -> list[types.Polygon]
+```
+
+Transform a list of polygons by an affine matrix.
+
+| Parameter    | Type                      | Description                                                      |
+| ------------ | ------------------------- | ---------------------------------------------------------------- |
+| `polygons`   | `Sequence[types.Polygon]` | List of polygons to transform.                                   |
+| `matrix`     | `types.TransformMatrix`   | A **~raygeo.geo.Matrix** or a 3x3/4x4 matrix as a list of lists. |
+| _Returns_    | `list[types.Polygon]`     | Transformed polygons.                                            |
+| _Complexity_ |                           | O(n * m)                                                         |
+
 ### `translate_bounds()`
 
 ```python

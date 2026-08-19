@@ -22,6 +22,7 @@ use clipper2::{
     PointInPolygonResult, PointScaler,
 };
 
+use crate::geo::matrix::Matrix;
 use crate::geo::shape::arc::normalize_angle_signed;
 use crate::geo::shape::line::get_interior_angle;
 use crate::geo::shape::line::get_line_segment_closest_point;
@@ -803,6 +804,24 @@ pub fn translate_polygons(
     polygons
         .iter()
         .map(|p| translate_polygon(p, dx, dy))
+        .collect()
+}
+
+/// Transform a set of polygons by a 2D affine matrix.
+pub fn transform_polygons(
+    polygons: &[Polygon],
+    matrix: &Matrix,
+) -> Vec<Polygon> {
+    polygons
+        .iter()
+        .map(|poly| {
+            poly.iter()
+                .map(|p| {
+                    let (x, y) = matrix.transform_point(p.x, p.y);
+                    Point::new(x, y)
+                })
+                .collect()
+        })
         .collect()
 }
 

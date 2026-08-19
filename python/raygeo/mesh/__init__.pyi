@@ -6,6 +6,7 @@ from . import gradient
 from . import laplace
 from . import pde
 from . import remesh
+from . import solid
 from . import types
 __all__ = [
     "build",
@@ -13,6 +14,7 @@ __all__ = [
     "laplace",
     "pde",
     "remesh",
+    "solid",
     "types",
 ]
 

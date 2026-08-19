@@ -285,6 +285,7 @@ impl PyAssemblyOutput {
                     },
                 },
                 warnings: Vec::new(),
+                material_effects: None,
             },
         }
     }
@@ -328,6 +329,28 @@ impl PyAssemblyOutput {
             .iter()
             .map(|w| PyAssemblyWarning { inner: w.clone() })
             .collect()
+    }
+
+    /// Material effects emitted during assembly (``list`` of
+    /// ``VectorEffect`` / ``RasterEffect`` / ``VolumeEffect``), or
+    /// ``None`` for assemblers that don't emit.
+    #[getter]
+    fn material_effects(
+        &self,
+        py: Python<'_>,
+    ) -> PyResult<Option<Vec<Py<PyAny>>>> {
+        match &self.inner.material_effects {
+            None => Ok(None),
+            Some(effects) => {
+                let mut out = Vec::with_capacity(effects.len());
+                for effect in effects {
+                    out.push(crate::python::ops::material::effect_to_py(
+                        py, effect,
+                    )?);
+                }
+                Ok(Some(out))
+            }
+        }
     }
 
     fn __repr__(&self) -> String {

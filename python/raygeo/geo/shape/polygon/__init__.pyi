@@ -66,6 +66,7 @@ __all__ = [
     "rotate_polygons_numpy",
     "scale_polygon",
     "to_clipper_numpy",
+    "transform_polygons",
     "translate_bounds",
     "translate_polygon",
     "translate_polygon_numpy",
@@ -695,6 +696,17 @@ def to_clipper_numpy(polygon: collections.abc.Sequence[numpy.typing.NDArray]) ->
     
     :param polygon: Sequence of 2D numpy arrays.
     :returns: List of (x, y) integer tuples.
+    :complexity: O(n * m)
+    """
+
+def transform_polygons(polygons: collections.abc.Sequence[types.Polygon], matrix: types.TransformMatrix) -> list[types.Polygon]:
+    r"""
+    Transform a list of polygons by an affine matrix.
+    
+    :param polygons: List of polygons to transform.
+    :param matrix: A :class:`~raygeo.geo.Matrix` or a 3x3/4x4
+        matrix as a list of lists.
+    :returns: Transformed polygons.
     :complexity: O(n * m)
     """
 

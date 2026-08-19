@@ -8,6 +8,7 @@ from typing import cast
 import numpy as np
 import pytest
 
+from raygeo.geo import Matrix
 from raygeo.geo.shape.polygon import (
     CornerType,
     JoinStyle,
@@ -62,6 +63,7 @@ from raygeo.geo.shape.polygon import (
     rotate_polygons,
     rotate_polygons_numpy,
     scale_polygon,
+    transform_polygons,
     translate_bounds,
     translate_polygon,
     translate_polygon_numpy,
@@ -535,6 +537,57 @@ class TestTranslatePolygons:
     def test_empty_list(self):
         translated = translate_polygons([], 5, 10)
         assert translated == []
+
+
+class TestTransformPolygons:
+    def test_identity(self):
+        poly1 = P((0, 0), (10, 0), (5, 5))
+        poly2 = P((20, 20), (30, 20), (25, 25))
+        transformed = transform_polygons([poly1, poly2], Matrix.identity())
+        assert transformed == [poly1, poly2]
+
+    def test_translation_matrix(self):
+        poly = P((0, 0), (10, 0), (5, 5))
+        transformed = transform_polygons([poly], Matrix.translation(5, 10))
+        assert transformed[0][0] == (5.0, 10.0)
+        assert transformed[0][1] == (15.0, 10.0)
+        assert transformed[0][2] == (10.0, 15.0)
+
+    def test_rotation_matrix(self):
+        poly = P((0, 0), (1, 0), (0, 1))
+        transformed = transform_polygons([poly], Matrix.rotation(90))
+        assert is_almost_equal(transformed[0][1][0], 0.0)
+        assert is_almost_equal(transformed[0][1][1], 1.0)
+        assert is_almost_equal(transformed[0][2][0], -1.0)
+        assert is_almost_equal(transformed[0][2][1], 0.0)
+
+    def test_matrix_as_list_of_lists(self):
+        poly = P((1, 1))
+        # 3x3 affine: scale x2, translate (3, 4)
+        transformed = transform_polygons(
+            [poly], [[2, 0, 3], [0, 2, 4], [0, 0, 1]]
+        )
+        assert transformed[0][0] == (5.0, 6.0)
+
+    def test_matrix_as_4x4_list_uses_affine_part(self):
+        poly = P((1, 2))
+        # 4x4 affine: scale x2, translate (3, 4)
+        transformed = transform_polygons(
+            [poly], [[2, 0, 0, 3], [0, 2, 0, 4], [0, 0, 1, 0], [0, 0, 0, 1]]
+        )
+        assert transformed[0][0] == (5.0, 8.0)
+
+    def test_multiple_polygons_preserved(self):
+        poly1 = P((0, 0), (10, 0), (5, 5))
+        poly2 = P((20, 20), (30, 20), (25, 25))
+        transformed = transform_polygons(
+            [poly1, poly2], Matrix.translation(1, 1)
+        )
+        assert len(transformed) == 2
+        assert transformed[1][0] == (21.0, 21.0)
+
+    def test_empty_list(self):
+        assert transform_polygons([], Matrix.identity()) == []
 
 
 class TestTranslatePolygonsNumpy:
