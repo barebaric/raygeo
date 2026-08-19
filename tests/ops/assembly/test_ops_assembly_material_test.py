@@ -1,5 +1,7 @@
 """Tests for material test grid assembly module."""
 
+import pytest
+
 from raygeo.ops.assembly.material_test_grid import generate_material_test_grid
 
 
@@ -294,3 +296,55 @@ def test_generate_material_test_grid_fixed_speed_label():
         include_labels=True,
     )
     assert result.ops.len() > 0
+
+
+# ── Label layout ─────────────────────────────────────────────────
+
+
+def _label_geometry(ops):
+    """Extract the text-label geometry from the grid ops."""
+    for section in ops.sections():
+        blocks = section.state_blocks_by_name(ops, "labels")
+        if not blocks:
+            continue
+        label_ops = section.state_block_content(ops, blocks[0])
+        return label_ops.to_geometry()
+    raise AssertionError("material test grid produced no label block")
+
+
+@pytest.mark.parametrize(
+    "speed_range",
+    [
+        (100.0, 500.0),
+        (1000.0, 25000.0),
+    ],
+)
+def test_row_labels_do_not_overlap_axis_title(speed_range):
+    """Row labels must stay clear of the vertical axis title.
+
+    Regression test: the axis title used to sit at a fixed fraction of
+    the left margin, so wide speed labels (e.g. five-digit values such
+    as 25000) ran into it. The layout now accounts for the widest row
+    label, so all label components are pairwise disjoint and stay within
+    the workpiece bounds.
+    """
+    min_speed, max_speed = speed_range
+    result = generate_material_test_grid(
+        size_mm=(200.0, 200.0),
+        cols=5,
+        rows=5,
+        min_speed=min_speed,
+        max_speed=max_speed,
+        include_labels=True,
+    )
+    geo = _label_geometry(result.ops)
+    min_x, min_y, max_x, max_y = geo.rect()
+    assert min_x > 0.0, "axis title is glued to the left boundary"
+    components = geo.split_into_components()
+    assert len(components) > 1
+    for i, a in enumerate(components):
+        for b in components[i + 1 :]:
+            assert not a.intersects_with(b), (
+                "label components overlap - wide row labels collide with "
+                "the axis title"
+            )

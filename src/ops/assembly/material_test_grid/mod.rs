@@ -533,6 +533,49 @@ fn generate_labels(
         0.0
     };
 
+    // Build the row label texts up front so the widest one can be
+    // measured. Without this, wide row labels (e.g. five-digit speeds)
+    // extend left into the rotated axis title.
+    let mut row_label_texts: Vec<String> = Vec::with_capacity(rows as usize);
+    let mut max_row_label_w: f64 = 0.0;
+    for r in 0..rows {
+        let val = row_range.min() + r as f64 * row_step;
+        // Uses round-then-truncate (like Python int(round())) for row
+        // values, except Speed vs Offset which needs decimals - otherwise
+        // multiple distinct sub-mm offset rows would collapse to the same
+        // label.
+        let text = if params.grid_mode == "Speed vs Offset" {
+            format!("{val:+.2}")
+        } else {
+            format_row_label(val)
+        };
+        if let Some(geo) = text_to_geometry(&text, &label_font) {
+            let rect = geo.rect();
+            max_row_label_w = max_row_label_w.max(rect.max.x - rect.min.x);
+        }
+        row_label_texts.push(text);
+    }
+
+    // Reserve space between the rotated axis title and the grid for the
+    // widest row label, shrinking the label font if it cannot fit. The
+    // title is rotated -90°, so its horizontal extents are the glyph
+    // ascent (to the left) and |descent| (to the right).
+    let (title_left, title_right) = text_to_geometry(row_title, &title_font)
+        .map(|g| {
+            let r = g.rect();
+            (r.max.y, -r.min.y)
+        })
+        .unwrap_or((axis_font_mm * 0.6, axis_font_mm * 0.2));
+    let (label_scale, row_title_x) = fit_row_labels(
+        margin_left,
+        margin_min,
+        title_left,
+        title_right,
+        max_row_label_w,
+    );
+    let label_font =
+        FontConfig::new("sans-serif", grid_font_mm * label_scale / pt_to_mm);
+
     // Column headers: centered above each column (y = 75% of margin_top).
     // Uses truncation (like Python int()) for column values.
     for c in 0..cols {
@@ -544,19 +587,10 @@ fn generate_labels(
     }
 
     // Row labels: right-aligned at 90% of margin_left.
-    // Uses round-then-truncate (like Python int(round())) for row values,
-    // except Speed vs Offset which needs decimals - otherwise multiple
-    // distinct sub-mm offset rows would collapse to the same label.
-    for r in 0..rows {
-        let val = row_range.min() + r as f64 * row_step;
-        let text = if params.grid_mode == "Speed vs Offset" {
-            format!("{val:+.2}")
-        } else {
-            format_row_label(val)
-        };
+    for (r, text) in row_label_texts.iter().enumerate() {
         let rx = margin_left * 0.9;
         let ry = margin_top + r as f64 * (shape_h + spacing_y) + shape_h / 2.0;
-        add_text_label(ops, &text, &label_font, rx, ry, HAlign::Right, 0.0);
+        add_text_label(ops, text, &label_font, rx, ry, HAlign::Right, 0.0);
     }
 
     // Column axis title: centered above grid at 30% of margin_top
@@ -573,8 +607,7 @@ fn generate_labels(
         0.0,
     );
 
-    // Row axis title: rotated -90°, aligned at 30% of margin_left
-    let row_title_x = margin_left * 0.3;
+    // Row axis title: rotated -90°, kept clear of the widest row label.
     let row_title_y = margin_top + rows as f64 * (shape_h + spacing_y) / 2.0
         - spacing_y / 2.0;
     add_text_label(
@@ -589,8 +622,10 @@ fn generate_labels(
 
     // Fixed-parameter labels.
     let fixed_label_offset = margin_min * 0.15;
-    let fixed_font =
-        FontConfig::new("sans-serif", grid_font_mm * 0.8 / pt_to_mm);
+    let fixed_font = FontConfig::new(
+        "sans-serif",
+        grid_font_mm * 0.8 * label_scale / pt_to_mm,
+    );
     match params.grid_mode.as_str() {
         "Power vs Passes" => {
             let text = format!("Speed: {:.0} mm/min", params.fixed_speed);
@@ -618,6 +653,41 @@ fn generate_labels(
         }
         _ => {}
     }
+}
+
+/// Fit the widest row label between the grid and the rotated axis title.
+///
+/// The title is rotated -90°, so its horizontal extents are the glyph
+/// ascent (``title_left``) and |descent| (``title_right``). Returns
+/// ``(label_scale, row_title_x)``: the factor the label font is scaled
+/// by (``<= 1``) and the centred X position of the axis title. The
+/// title is nudged left of the widest label, falling back to its default
+/// spot when there is plenty of room.
+fn fit_row_labels(
+    margin_left: f64,
+    margin_min: f64,
+    title_left: f64,
+    title_right: f64,
+    max_row_label_w: f64,
+) -> (f64, f64) {
+    let label_right = margin_left * 0.9;
+    let title_gap = margin_min * 0.1;
+    let boundary_pad = margin_min * 0.15;
+    // Space available for the widest label once the title sits at its
+    // leftmost position (kept clear of the workpiece boundary).
+    let available =
+        (label_right - title_left - title_right - title_gap - boundary_pad)
+            .max(1e-9);
+    let label_scale = if max_row_label_w > 0.0 {
+        (available / max_row_label_w).min(1.0)
+    } else {
+        1.0
+    };
+    let scaled_w = max_row_label_w * label_scale;
+    let row_title_x = (label_right - scaled_w - title_gap - title_right)
+        .min(margin_left * 0.3)
+        .max(title_left + boundary_pad);
+    (label_scale, row_title_x)
 }
 
 fn cell_cut_meta(
