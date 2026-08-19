@@ -74,10 +74,26 @@ class MaterialTestGridSpec:
     def min_offset(self) -> builtins.float: ...
     @property
     def max_offset(self) -> builtins.float: ...
+    @property
+    def speed_unit_label(self) -> builtins.str:
+        r"""
+        Display-unit label engraved into speed labels (e.g. "mm/min").
+        """
+    @property
+    def speed_label_factor(self) -> builtins.float:
+        r"""
+        Number of mm/min per display unit for engraved speed labels
+        (1.0 = mm/min, 60.0 = mm/s, 25.4 = in/min, 1524.0 = in/s).
+        """
+    @property
+    def speed_label_precision(self) -> builtins.int:
+        r"""
+        Decimal places for engraved speed label values (0 = integer).
+        """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __new__(cls, size_mm: tuple[builtins.float, builtins.float], cols: builtins.int = 5, rows: builtins.int = 5, min_speed: builtins.float = 100.0, max_speed: builtins.float = 500.0, min_power: builtins.float = 10.0, max_power: builtins.float = 100.0, min_passes: builtins.int = 1, max_passes: builtins.int = 5, fixed_speed: builtins.float = 1000.0, fixed_power: builtins.float = 50.0, shape_size: builtins.float = 10.0, spacing: builtins.float = 2.0, line_interval_mm: builtins.float = 0.1, mode: builtins.str = 'engrave', grid_mode: builtins.str = 'Power vs Speed', include_labels: builtins.bool = True, label_power_percent: builtins.float = 10.0, label_speed: builtins.float = 1000.0, min_offset: builtins.float = -0.5, max_offset: builtins.float = 0.5) -> MaterialTestGridSpec: ...
+    def __new__(cls, size_mm: tuple[builtins.float, builtins.float], cols: builtins.int = 5, rows: builtins.int = 5, min_speed: builtins.float = 100.0, max_speed: builtins.float = 500.0, min_power: builtins.float = 10.0, max_power: builtins.float = 100.0, min_passes: builtins.int = 1, max_passes: builtins.int = 5, fixed_speed: builtins.float = 1000.0, fixed_power: builtins.float = 50.0, shape_size: builtins.float = 10.0, spacing: builtins.float = 2.0, line_interval_mm: builtins.float = 0.1, mode: builtins.str = 'engrave', grid_mode: builtins.str = 'Power vs Speed', include_labels: builtins.bool = True, label_power_percent: builtins.float = 10.0, label_speed: builtins.float = 1000.0, min_offset: builtins.float = -0.5, max_offset: builtins.float = 0.5, speed_unit_label: builtins.str = 'mm/min', speed_label_factor: builtins.float = 1.0, speed_label_precision: builtins.int = 0) -> MaterialTestGridSpec: ...
 
-def generate_material_test_grid(size_mm: tuple[float, float], cols: int = 5, rows: int = 5, min_speed: float = 100, max_speed: float = 500, min_power: float = 10, max_power: float = 100, min_passes: int = 1, max_passes: int = 5, fixed_speed: float = 1000, fixed_power: float = 50, shape_size: float = 10, spacing: float = 2, line_interval_mm: float = 0.1, mode: str = 'engrave', grid_mode: str = 'Power vs Speed', include_labels: bool = True, label_power_percent: float = 10, label_speed: float = 1000, min_offset: float = -0.5, max_offset: float = 0.5) -> raygeo.ops.assembly.AssemblyResult:
+def generate_material_test_grid(size_mm: tuple[float, float], cols: int = 5, rows: int = 5, min_speed: float = 100, max_speed: float = 500, min_power: float = 10, max_power: float = 100, min_passes: int = 1, max_passes: int = 5, fixed_speed: float = 1000, fixed_power: float = 50, shape_size: float = 10, spacing: float = 2, line_interval_mm: float = 0.1, mode: str = 'engrave', grid_mode: str = 'Power vs Speed', include_labels: bool = True, label_power_percent: float = 10, label_speed: float = 1000, min_offset: float = -0.5, max_offset: float = 0.5, speed_unit_label: str = 'mm/min', speed_label_factor: float = 1, speed_label_precision: int = 0) -> raygeo.ops.assembly.AssemblyResult:
     r"""
     Generate a material test grid with varying speed and power.
     
@@ -110,10 +126,16 @@ def generate_material_test_grid(size_mm: tuple[float, float], cols: int = 5, row
                      Speed vs Offset mode (default -0.5).
     :param max_offset: Maximum bidirectional scan offset in mm for
                      Speed vs Offset mode (default 0.5).
+    :param speed_unit_label: Display-unit label engraved into speed labels
+                     (default "mm/min").
+    :param speed_label_factor: Number of mm/min per display unit for
+                     engraved speed labels (default 1.0).
+    :param speed_label_precision: Decimal places for engraved speed label
+                     values (default 0).
     :returns: An :class:`AssemblyResult` with grid cell paths and labels.
     """
 
-def generate_material_test_grid_preview(size_mm: tuple[float, float], dpi: float = 96, cols: int = 5, rows: int = 5, min_speed: float = 100, max_speed: float = 500, min_power: float = 10, max_power: float = 100, min_passes: int = 1, max_passes: int = 5, fixed_speed: float = 1000, fixed_power: float = 50, shape_size: float = 10, spacing: float = 2, line_interval_mm: float = 0.1, mode: str = 'engrave', grid_mode: str = 'Power vs Speed', include_labels: bool = True, label_power_percent: float = 10, label_speed: float = 1000, min_offset: float = -0.5, max_offset: float = 0.5) -> numpy.ndarray:
+def generate_material_test_grid_preview(size_mm: tuple[float, float], dpi: float = 96, cols: int = 5, rows: int = 5, min_speed: float = 100, max_speed: float = 500, min_power: float = 10, max_power: float = 100, min_passes: int = 1, max_passes: int = 5, fixed_speed: float = 1000, fixed_power: float = 50, shape_size: float = 10, spacing: float = 2, line_interval_mm: float = 0.1, mode: str = 'engrave', grid_mode: str = 'Power vs Speed', include_labels: bool = True, label_power_percent: float = 10, label_speed: float = 1000, min_offset: float = -0.5, max_offset: float = 0.5, speed_unit_label: str = 'mm/min', speed_label_factor: float = 1, speed_label_precision: int = 0) -> numpy.ndarray:
     r"""
     Generate a raster preview of the material test grid.
     
@@ -145,6 +167,12 @@ def generate_material_test_grid_preview(size_mm: tuple[float, float], dpi: float
                      Speed vs Offset mode (default -0.5).
     :param max_offset: Maximum bidirectional scan offset in mm for
                      Speed vs Offset mode (default 0.5).
+    :param speed_unit_label: Display-unit label engraved into speed labels
+                     (default "mm/min").
+    :param speed_label_factor: Number of mm/min per display unit for
+                     engraved speed labels (default 1.0).
+    :param speed_label_precision: Decimal places for engraved speed label
+                     values (default 0).
     :returns: A (H, W, 4) RGBA uint8 numpy array.
     """
 

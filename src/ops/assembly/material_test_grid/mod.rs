@@ -46,6 +46,15 @@ pub struct MaterialTestGridSpec {
     pub label_power: f64,
     /// Feed rate for label engraving in mm/min. Default 1000.
     pub label_speed: i32,
+    /// Display-unit label engraved into speed labels (e.g. "mm/min").
+    /// Speed values are stored in mm/min; the label text uses this unit.
+    pub speed_unit_label: String,
+    /// Number of mm/min per display unit. Engraved speed labels show
+    /// ``value / speed_label_factor`` (1.0 = mm/min, 60.0 = mm/s,
+    /// 25.4 = in/min, 1524.0 = in/s).
+    pub speed_label_factor: f64,
+    /// Decimal places for engraved speed label values (0 = integer).
+    pub speed_label_precision: u32,
 }
 
 impl Assembler for MaterialTestGridSpec {
@@ -390,6 +399,19 @@ fn format_row_label(value: f64) -> String {
     format!("{}", (value + 0.5).floor() as i64)
 }
 
+/// Format a speed label in the display unit.
+///
+/// Converts the mm/min value via ``factor`` (mm/min per display unit)
+/// and rounds to ``precision`` decimals (integer when precision is 0).
+fn format_speed_label(value: f64, factor: f64, precision: u32) -> String {
+    let display = value / factor.max(1e-9);
+    if precision == 0 {
+        format!("{}", (display + 0.5).floor() as i64)
+    } else {
+        format!("{:.*}", precision as usize, display)
+    }
+}
+
 /// Position a text label at `(cx, cy)` with the given alignment and add it to `ops`.
 ///
 /// The label coordinate system matches the grid (Y‑up before the final flip).
@@ -489,11 +511,19 @@ fn generate_labels(
     ops.apply_state(&label_state);
 
     // Determine column/row range descriptors.
-    let (col_title, row_title) = match params.grid_mode.as_str() {
-        "Power vs Passes" => ("Power (%)", "Passes"),
-        "Speed vs Passes" => ("Speed (mm/min)", "Passes"),
-        "Speed vs Offset" => ("Speed (mm/min)", "Offset (mm)"),
-        _ => ("Power (%)", "Speed (mm/min)"),
+    let speed_unit = params.speed_unit_label.as_str();
+    let (col_title, row_title): (String, String) = match params
+        .grid_mode
+        .as_str()
+    {
+        "Power vs Passes" => ("Power (%)".to_string(), "Passes".to_string()),
+        "Speed vs Passes" => {
+            (format!("Speed ({speed_unit})"), "Passes".to_string())
+        }
+        "Speed vs Offset" => {
+            (format!("Speed ({speed_unit})"), "Offset (mm)".to_string())
+        }
+        _ => ("Power (%)".to_string(), format!("Speed ({speed_unit})")),
     };
 
     let (col_range, row_range): (ColRange, ColRange) =
@@ -536,6 +566,7 @@ fn generate_labels(
     // Build the row label texts up front so the widest one can be
     // measured. Without this, wide row labels (e.g. five-digit speeds)
     // extend left into the rotated axis title.
+    let row_is_speed = params.grid_mode == "Power vs Speed";
     let mut row_label_texts: Vec<String> = Vec::with_capacity(rows as usize);
     let mut max_row_label_w: f64 = 0.0;
     for r in 0..rows {
@@ -543,9 +574,15 @@ fn generate_labels(
         // Uses round-then-truncate (like Python int(round())) for row
         // values, except Speed vs Offset which needs decimals - otherwise
         // multiple distinct sub-mm offset rows would collapse to the same
-        // label.
+        // label. Speed rows are converted to the user's display unit.
         let text = if params.grid_mode == "Speed vs Offset" {
             format!("{val:+.2}")
+        } else if row_is_speed {
+            format_speed_label(
+                val,
+                params.speed_label_factor,
+                params.speed_label_precision,
+            )
         } else {
             format_row_label(val)
         };
@@ -560,7 +597,7 @@ fn generate_labels(
     // widest row label, shrinking the label font if it cannot fit. The
     // title is rotated -90°, so its horizontal extents are the glyph
     // ascent (to the left) and |descent| (to the right).
-    let (title_left, title_right) = text_to_geometry(row_title, &title_font)
+    let (title_left, title_right) = text_to_geometry(&row_title, &title_font)
         .map(|g| {
             let r = g.rect();
             (r.max.y, -r.min.y)
@@ -577,10 +614,21 @@ fn generate_labels(
         FontConfig::new("sans-serif", grid_font_mm * label_scale / pt_to_mm);
 
     // Column headers: centered above each column (y = 75% of margin_top).
-    // Uses truncation (like Python int()) for column values.
+    // Uses truncation (like Python int()) for column values, except
+    // speed columns which are converted to the user's display unit.
+    let col_is_speed = params.grid_mode == "Speed vs Passes"
+        || params.grid_mode == "Speed vs Offset";
     for c in 0..cols {
         let val = col_range.min() + c as f64 * col_step;
-        let text = format_col_label(val);
+        let text = if col_is_speed {
+            format_speed_label(
+                val,
+                params.speed_label_factor,
+                params.speed_label_precision,
+            )
+        } else {
+            format_col_label(val)
+        };
         let cx = margin_left + c as f64 * (shape_w + spacing_x) + shape_w / 2.0;
         let cy = margin_top * 0.75;
         add_text_label(ops, &text, &label_font, cx, cy, HAlign::Center, 0.0);
@@ -599,7 +647,7 @@ fn generate_labels(
     let col_title_cy = margin_top * 0.3;
     add_text_label(
         ops,
-        col_title,
+        &col_title,
         &title_font,
         col_title_cx,
         col_title_cy,
@@ -612,7 +660,7 @@ fn generate_labels(
         - spacing_y / 2.0;
     add_text_label(
         ops,
-        row_title,
+        &row_title,
         &title_font,
         row_title_x,
         row_title_y,
@@ -628,7 +676,12 @@ fn generate_labels(
     );
     match params.grid_mode.as_str() {
         "Power vs Passes" => {
-            let text = format!("Speed: {:.0} mm/min", params.fixed_speed);
+            let text = format!(
+                "Speed: {:.*} {}",
+                params.speed_label_precision as usize,
+                params.fixed_speed / params.speed_label_factor.max(1e-9),
+                params.speed_unit_label
+            );
             add_text_label(
                 ops,
                 &text,

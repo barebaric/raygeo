@@ -143,6 +143,31 @@ size_mm: tuple[float, float]
 spacing: float
 ```
 
+### `speed_label_factor`
+
+```python
+speed_label_factor: float
+```
+
+Number of mm/min per display unit for engraved speed labels (1.0 = mm/min, 60.0 = mm/s, 25.4 =
+in/min, 1524.0 = in/s).
+
+### `speed_label_precision`
+
+```python
+speed_label_precision: int
+```
+
+Decimal places for engraved speed label values (0 = integer).
+
+### `speed_unit_label`
+
+```python
+speed_unit_label: str
+```
+
+Display-unit label engraved into speed labels (e.g. "mm/min").
+
 ## Functions
 
 ### `generate_material_test_grid()`
@@ -170,6 +195,9 @@ generate_material_test_grid(
     label_speed: float = 1000,
     min_offset: float = -0.5,
     max_offset: float = 0.5,
+    speed_unit_label: str = 'mm/min',
+    speed_label_factor: float = 1,
+    speed_label_precision: int = 0,
 ) -> ops.assembly.AssemblyResult
 ```
 
@@ -179,30 +207,33 @@ Creates grid cells in rows x cols arrangement, each with baked-in power, speed, 
 *include_labels* is True (default), column headers, row labels, and axis titles are generated using
 raygeo's built-in text-to-geometry (swash/fontdb).
 
-| Parameter             | Type                          | Description                                                                                              |
-| --------------------- | ----------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `size_mm`             | `tuple[float, float]`         | The (width, height) of the workpiece in mm.                                                              |
-| `cols`                | `int = 5`                     | Number of columns (default 5).                                                                           |
-| `rows`                | `int = 5`                     | Number of rows (default 5).                                                                              |
-| `min_speed`           | `float = 100`                 | Minimum speed in mm/min (default 100.0).                                                                 |
-| `max_speed`           | `float = 500`                 | Maximum speed in mm/min (default 500.0).                                                                 |
-| `min_power`           | `float = 10`                  | Minimum power in percent (default 10.0).                                                                 |
-| `max_power`           | `float = 100`                 | Maximum power in percent (default 100.0).                                                                |
-| `min_passes`          | `int = 1`                     | Minimum number of passes (default 1).                                                                    |
-| `max_passes`          | `int = 5`                     | Maximum number of passes (default 5).                                                                    |
-| `fixed_speed`         | `float = 1000`                | Fixed speed for Power vs Passes mode (default 1000.0).                                                   |
-| `fixed_power`         | `float = 50`                  | Fixed power for Speed vs Passes mode (default 50.0).                                                     |
-| `shape_size`          | `float = 10`                  | Size of each grid cell in mm (default 10.0).                                                             |
-| `spacing`             | `float = 2`                   | Spacing between cells in mm (default 2.0).                                                               |
-| `line_interval_mm`    | `float = 0.1`                 | Line spacing for engrave mode (default 0.1).                                                             |
-| `mode`                | `str = 'engrave'`             | "engrave" or "cut" (default "engrave").                                                                  |
-| `grid_mode`           | `str = 'Power vs Speed'`      | "Power vs Speed", "Power vs Passes", "Speed vs Passes", or "Speed vs Offset" (default "Power vs Speed"). |
-| `include_labels`      | `bool = True`                 | Generate text labels (default True).                                                                     |
-| `label_power_percent` | `float = 10`                  | Power for label engraving in percent (default 10.0).                                                     |
-| `label_speed`         | `float = 1000`                | Feed rate for label engraving in mm/min (default 1000.0).                                                |
-| `min_offset`          | `float = -0.5`                | Minimum bidirectional scan offset in mm for Speed vs Offset mode (default -0.5).                         |
-| `max_offset`          | `float = 0.5`                 | Maximum bidirectional scan offset in mm for Speed vs Offset mode (default 0.5).                          |
-| _Returns_             | `ops.assembly.AssemblyResult` | An **AssemblyResult** with grid cell paths and labels.                                                   |
+| Parameter               | Type                          | Description                                                                                              |
+| ----------------------- | ----------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `size_mm`               | `tuple[float, float]`         | The (width, height) of the workpiece in mm.                                                              |
+| `cols`                  | `int = 5`                     | Number of columns (default 5).                                                                           |
+| `rows`                  | `int = 5`                     | Number of rows (default 5).                                                                              |
+| `min_speed`             | `float = 100`                 | Minimum speed in mm/min (default 100.0).                                                                 |
+| `max_speed`             | `float = 500`                 | Maximum speed in mm/min (default 500.0).                                                                 |
+| `min_power`             | `float = 10`                  | Minimum power in percent (default 10.0).                                                                 |
+| `max_power`             | `float = 100`                 | Maximum power in percent (default 100.0).                                                                |
+| `min_passes`            | `int = 1`                     | Minimum number of passes (default 1).                                                                    |
+| `max_passes`            | `int = 5`                     | Maximum number of passes (default 5).                                                                    |
+| `fixed_speed`           | `float = 1000`                | Fixed speed for Power vs Passes mode (default 1000.0).                                                   |
+| `fixed_power`           | `float = 50`                  | Fixed power for Speed vs Passes mode (default 50.0).                                                     |
+| `shape_size`            | `float = 10`                  | Size of each grid cell in mm (default 10.0).                                                             |
+| `spacing`               | `float = 2`                   | Spacing between cells in mm (default 2.0).                                                               |
+| `line_interval_mm`      | `float = 0.1`                 | Line spacing for engrave mode (default 0.1).                                                             |
+| `mode`                  | `str = 'engrave'`             | "engrave" or "cut" (default "engrave").                                                                  |
+| `grid_mode`             | `str = 'Power vs Speed'`      | "Power vs Speed", "Power vs Passes", "Speed vs Passes", or "Speed vs Offset" (default "Power vs Speed"). |
+| `include_labels`        | `bool = True`                 | Generate text labels (default True).                                                                     |
+| `label_power_percent`   | `float = 10`                  | Power for label engraving in percent (default 10.0).                                                     |
+| `label_speed`           | `float = 1000`                | Feed rate for label engraving in mm/min (default 1000.0).                                                |
+| `min_offset`            | `float = -0.5`                | Minimum bidirectional scan offset in mm for Speed vs Offset mode (default -0.5).                         |
+| `max_offset`            | `float = 0.5`                 | Maximum bidirectional scan offset in mm for Speed vs Offset mode (default 0.5).                          |
+| `speed_unit_label`      | `str = 'mm/min'`              | Display-unit label engraved into speed labels (default "mm/min").                                        |
+| `speed_label_factor`    | `float = 1`                   | Number of mm/min per display unit for engraved speed labels (default 1.0).                               |
+| `speed_label_precision` | `int = 0`                     | Decimal places for engraved speed label values (default 0).                                              |
+| _Returns_               | `ops.assembly.AssemblyResult` | An **AssemblyResult** with grid cell paths and labels.                                                   |
 
 ### `generate_material_test_grid_preview()`
 
@@ -230,6 +261,9 @@ generate_material_test_grid_preview(
     label_speed: float = 1000,
     min_offset: float = -0.5,
     max_offset: float = 0.5,
+    speed_unit_label: str = 'mm/min',
+    speed_label_factor: float = 1,
+    speed_label_precision: int = 0,
 ) -> numpy.ndarray
 ```
 
@@ -238,28 +272,31 @@ Generate a raster preview of the material test grid.
 Creates the same grid as **generate_material_test_grid** but renders it to an RGBA numpy array
 instead of returning Ops.
 
-| Parameter             | Type                     | Description                                                                                              |
-| --------------------- | ------------------------ | -------------------------------------------------------------------------------------------------------- |
-| `size_mm`             | `tuple[float, float]`    | The (width, height) of the workpiece in mm.                                                              |
-| `dpi`                 | `float = 96`             | Output resolution in dots per inch (default 96.0).                                                       |
-| `cols`                | `int = 5`                | Number of columns (default 5).                                                                           |
-| `rows`                | `int = 5`                | Number of rows (default 5).                                                                              |
-| `min_speed`           | `float = 100`            | Minimum speed in mm/min (default 100.0).                                                                 |
-| `max_speed`           | `float = 500`            | Maximum speed in mm/min (default 500.0).                                                                 |
-| `min_power`           | `float = 10`             | Minimum power in percent (default 10.0).                                                                 |
-| `max_power`           | `float = 100`            | Maximum power in percent (default 100.0).                                                                |
-| `min_passes`          | `int = 1`                | Minimum number of passes (default 1).                                                                    |
-| `max_passes`          | `int = 5`                | Maximum number of passes (default 5).                                                                    |
-| `fixed_speed`         | `float = 1000`           | Fixed speed for Power vs Passes mode (default 1000.0).                                                   |
-| `fixed_power`         | `float = 50`             | Fixed power for Speed vs Passes mode (default 50.0).                                                     |
-| `shape_size`          | `float = 10`             | Size of each grid cell in mm (default 10.0).                                                             |
-| `spacing`             | `float = 2`              | Spacing between cells in mm (default 2.0).                                                               |
-| `line_interval_mm`    | `float = 0.1`            | Line spacing for engrave mode (default 0.1).                                                             |
-| `mode`                | `str = 'engrave'`        | "engrave" or "cut" (default "engrave").                                                                  |
-| `grid_mode`           | `str = 'Power vs Speed'` | "Power vs Speed", "Power vs Passes", "Speed vs Passes", or "Speed vs Offset" (default "Power vs Speed"). |
-| `include_labels`      | `bool = True`            | Generate text labels (default True).                                                                     |
-| `label_power_percent` | `float = 10`             | Power for label engraving in percent (default 10.0).                                                     |
-| `label_speed`         | `float = 1000`           | Feed rate for label engraving in mm/min (default 1000.0).                                                |
-| `min_offset`          | `float = -0.5`           | Minimum bidirectional scan offset in mm for Speed vs Offset mode (default -0.5).                         |
-| `max_offset`          | `float = 0.5`            | Maximum bidirectional scan offset in mm for Speed vs Offset mode (default 0.5).                          |
-| _Returns_             | `numpy.ndarray`          | A (H, W, 4) RGBA uint8 numpy array.                                                                      |
+| Parameter               | Type                     | Description                                                                                              |
+| ----------------------- | ------------------------ | -------------------------------------------------------------------------------------------------------- |
+| `size_mm`               | `tuple[float, float]`    | The (width, height) of the workpiece in mm.                                                              |
+| `dpi`                   | `float = 96`             | Output resolution in dots per inch (default 96.0).                                                       |
+| `cols`                  | `int = 5`                | Number of columns (default 5).                                                                           |
+| `rows`                  | `int = 5`                | Number of rows (default 5).                                                                              |
+| `min_speed`             | `float = 100`            | Minimum speed in mm/min (default 100.0).                                                                 |
+| `max_speed`             | `float = 500`            | Maximum speed in mm/min (default 500.0).                                                                 |
+| `min_power`             | `float = 10`             | Minimum power in percent (default 10.0).                                                                 |
+| `max_power`             | `float = 100`            | Maximum power in percent (default 100.0).                                                                |
+| `min_passes`            | `int = 1`                | Minimum number of passes (default 1).                                                                    |
+| `max_passes`            | `int = 5`                | Maximum number of passes (default 5).                                                                    |
+| `fixed_speed`           | `float = 1000`           | Fixed speed for Power vs Passes mode (default 1000.0).                                                   |
+| `fixed_power`           | `float = 50`             | Fixed power for Speed vs Passes mode (default 50.0).                                                     |
+| `shape_size`            | `float = 10`             | Size of each grid cell in mm (default 10.0).                                                             |
+| `spacing`               | `float = 2`              | Spacing between cells in mm (default 2.0).                                                               |
+| `line_interval_mm`      | `float = 0.1`            | Line spacing for engrave mode (default 0.1).                                                             |
+| `mode`                  | `str = 'engrave'`        | "engrave" or "cut" (default "engrave").                                                                  |
+| `grid_mode`             | `str = 'Power vs Speed'` | "Power vs Speed", "Power vs Passes", "Speed vs Passes", or "Speed vs Offset" (default "Power vs Speed"). |
+| `include_labels`        | `bool = True`            | Generate text labels (default True).                                                                     |
+| `label_power_percent`   | `float = 10`             | Power for label engraving in percent (default 10.0).                                                     |
+| `label_speed`           | `float = 1000`           | Feed rate for label engraving in mm/min (default 1000.0).                                                |
+| `min_offset`            | `float = -0.5`           | Minimum bidirectional scan offset in mm for Speed vs Offset mode (default -0.5).                         |
+| `max_offset`            | `float = 0.5`            | Maximum bidirectional scan offset in mm for Speed vs Offset mode (default 0.5).                          |
+| `speed_unit_label`      | `str = 'mm/min'`         | Display-unit label engraved into speed labels (default "mm/min").                                        |
+| `speed_label_factor`    | `float = 1`              | Number of mm/min per display unit for engraved speed labels (default 1.0).                               |
+| `speed_label_precision` | `int = 0`                | Decimal places for engraved speed label values (default 0).                                              |
+| _Returns_               | `numpy.ndarray`          | A (H, W, 4) RGBA uint8 numpy array.                                                                      |

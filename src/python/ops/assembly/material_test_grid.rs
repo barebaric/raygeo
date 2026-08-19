@@ -92,6 +92,16 @@ pub struct PyMaterialTestGridSpec {
     pub min_offset: f64,
     #[pyo3(get)]
     pub max_offset: f64,
+    /// Display-unit label engraved into speed labels (e.g. "mm/min").
+    #[pyo3(get)]
+    pub speed_unit_label: String,
+    /// Number of mm/min per display unit for engraved speed labels
+    /// (1.0 = mm/min, 60.0 = mm/s, 25.4 = in/min, 1524.0 = in/s).
+    #[pyo3(get)]
+    pub speed_label_factor: f64,
+    /// Decimal places for engraved speed label values (0 = integer).
+    #[pyo3(get)]
+    pub speed_label_precision: u32,
 }
 
 impl PyMaterialTestGridSpec {
@@ -118,6 +128,9 @@ impl PyMaterialTestGridSpec {
             label_speed: self.label_speed as i32,
             min_offset: self.min_offset,
             max_offset: self.max_offset,
+            speed_unit_label: self.speed_unit_label,
+            speed_label_factor: self.speed_label_factor,
+            speed_label_precision: self.speed_label_precision,
         }
     }
 }
@@ -148,6 +161,9 @@ impl PyMaterialTestGridSpec {
         label_speed = 1000.0,
         min_offset = -0.5,
         max_offset = 0.5,
+        speed_unit_label = "mm/min",
+        speed_label_factor = 1.0,
+        speed_label_precision = 0,
     ))]
     #[allow(clippy::too_many_arguments)]
     fn new(
@@ -172,6 +188,9 @@ impl PyMaterialTestGridSpec {
         label_speed: f64,
         min_offset: f64,
         max_offset: f64,
+        speed_unit_label: &str,
+        speed_label_factor: f64,
+        speed_label_precision: u32,
     ) -> Self {
         PyMaterialTestGridSpec {
             size_mm,
@@ -195,6 +214,9 @@ impl PyMaterialTestGridSpec {
             label_speed,
             min_offset,
             max_offset,
+            speed_unit_label: speed_unit_label.to_string(),
+            speed_label_factor,
+            speed_label_precision,
         }
     }
 }
@@ -225,6 +247,9 @@ impl PyMaterialTestGridSpec {
         label_speed: float = 1000.0,
         min_offset: float = -0.5,
         max_offset: float = 0.5,
+        speed_unit_label: str = "mm/min",
+        speed_label_factor: float = 1.0,
+        speed_label_precision: int = 0,
     ) -> raygeo.ops.assembly.AssemblyResult:
         """Generate a material test grid with varying speed and power.
 
@@ -257,6 +282,12 @@ impl PyMaterialTestGridSpec {
                          Speed vs Offset mode (default -0.5).
         :param max_offset: Maximum bidirectional scan offset in mm for
                          Speed vs Offset mode (default 0.5).
+        :param speed_unit_label: Display-unit label engraved into speed labels
+                         (default "mm/min").
+        :param speed_label_factor: Number of mm/min per display unit for
+                         engraved speed labels (default 1.0).
+        :param speed_label_precision: Decimal places for engraved speed label
+                         values (default 0).
         :returns: An :class:`AssemblyResult` with grid cell paths and labels.
         """
     "#,
@@ -286,6 +317,9 @@ impl PyMaterialTestGridSpec {
     label_speed = 1000.0,
     min_offset = -0.5,
     max_offset = 0.5,
+    speed_unit_label = "mm/min",
+    speed_label_factor = 1.0,
+    speed_label_precision = 0,
 ))]
 fn generate_material_test_grid_py(
     size_mm: (f64, f64),
@@ -309,6 +343,9 @@ fn generate_material_test_grid_py(
     label_speed: f64,
     min_offset: f64,
     max_offset: f64,
+    speed_unit_label: &str,
+    speed_label_factor: f64,
+    speed_label_precision: u32,
 ) -> PyResult<PyAssemblyResult> {
     let params = MaterialTestGridSpec {
         size_mm,
@@ -332,6 +369,9 @@ fn generate_material_test_grid_py(
         label_speed: label_speed as i32,
         min_offset,
         max_offset,
+        speed_unit_label: speed_unit_label.to_string(),
+        speed_label_factor,
+        speed_label_precision,
     };
 
     let mut trace = Tracelet::new();
@@ -376,6 +416,9 @@ fn generate_material_test_grid_py(
         label_speed: float = 1000.0,
         min_offset: float = -0.5,
         max_offset: float = 0.5,
+        speed_unit_label: str = "mm/min",
+        speed_label_factor: float = 1.0,
+        speed_label_precision: int = 0,
     ) -> numpy.ndarray:
         """Generate a raster preview of the material test grid.
 
@@ -407,6 +450,12 @@ fn generate_material_test_grid_py(
                          Speed vs Offset mode (default -0.5).
         :param max_offset: Maximum bidirectional scan offset in mm for
                          Speed vs Offset mode (default 0.5).
+        :param speed_unit_label: Display-unit label engraved into speed labels
+                         (default "mm/min").
+        :param speed_label_factor: Number of mm/min per display unit for
+                         engraved speed labels (default 1.0).
+        :param speed_label_precision: Decimal places for engraved speed label
+                         values (default 0).
         :returns: A (H, W, 4) RGBA uint8 numpy array.
         """
     "#,
@@ -437,6 +486,9 @@ fn generate_material_test_grid_py(
     label_speed = 1000.0,
     min_offset = -0.5,
     max_offset = 0.5,
+    speed_unit_label = "mm/min",
+    speed_label_factor = 1.0,
+    speed_label_precision = 0,
 ))]
 fn generate_material_test_grid_preview_py(
     py: Python<'_>,
@@ -462,6 +514,9 @@ fn generate_material_test_grid_preview_py(
     label_speed: f64,
     min_offset: f64,
     max_offset: f64,
+    speed_unit_label: &str,
+    speed_label_factor: f64,
+    speed_label_precision: u32,
 ) -> PyResult<Py<PyAny>> {
     let params = MaterialTestGridSpec {
         size_mm,
@@ -485,6 +540,9 @@ fn generate_material_test_grid_preview_py(
         label_speed: label_speed as i32,
         min_offset,
         max_offset,
+        speed_unit_label: speed_unit_label.to_string(),
+        speed_label_factor,
+        speed_label_precision,
     };
 
     // Use the SAME code path as the Ops: generate the full grid + labels,

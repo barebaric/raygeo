@@ -2,7 +2,11 @@
 
 import pytest
 
-from raygeo.ops.assembly.material_test_grid import generate_material_test_grid
+from raygeo.ops.assembly.material_test_grid import (
+    MaterialTestGridSpec,
+    generate_material_test_grid,
+    generate_material_test_grid_preview,
+)
 
 
 def test_generate_material_test_grid_basic():
@@ -348,3 +352,73 @@ def test_row_labels_do_not_overlap_axis_title(speed_range):
                 "label components overlap - wide row labels collide with "
                 "the axis title"
             )
+
+
+def test_spec_defaults_to_mm_min_labels():
+    """The default display unit for engraved speed labels is mm/min."""
+    spec = MaterialTestGridSpec(size_mm=(200.0, 200.0))
+    assert spec.speed_unit_label == "mm/min"
+    assert spec.speed_label_factor == 1.0
+    assert spec.speed_label_precision == 0
+
+
+def test_spec_accepts_custom_speed_label_unit():
+    """A custom display unit is stored on the spec."""
+    spec = MaterialTestGridSpec(
+        size_mm=(200.0, 200.0),
+        speed_unit_label="in/min",
+        speed_label_factor=25.4,
+        speed_label_precision=1,
+    )
+    assert spec.speed_unit_label == "in/min"
+    assert spec.speed_label_factor == 25.4
+    assert spec.speed_label_precision == 1
+
+
+def test_generate_accepts_speed_label_unit_params():
+    """The generator accepts display-unit params and still produces ops."""
+    result = generate_material_test_grid(
+        size_mm=(200.0, 200.0),
+        cols=3,
+        rows=3,
+        speed_unit_label="in/min",
+        speed_label_factor=25.4,
+        speed_label_precision=1,
+    )
+    assert result.ops.len() > 0
+
+
+def test_speed_label_unit_changes_label_geometry():
+    """Different display units produce different label geometry."""
+    mm_min = generate_material_test_grid(
+        size_mm=(200.0, 200.0),
+        cols=4,
+        rows=4,
+        min_speed=100.0,
+        max_speed=500.0,
+    )
+    in_min = generate_material_test_grid(
+        size_mm=(200.0, 200.0),
+        cols=4,
+        rows=4,
+        min_speed=100.0,
+        max_speed=500.0,
+        speed_unit_label="in/min",
+        speed_label_factor=25.4,
+        speed_label_precision=1,
+    )
+    assert mm_min.ops.len() > 0
+    assert in_min.ops.len() > 0
+    assert mm_min.ops.len() != in_min.ops.len()
+
+
+def test_preview_accepts_speed_label_unit_params():
+    """The preview generator accepts display-unit params."""
+    img = generate_material_test_grid_preview(
+        size_mm=(200.0, 200.0),
+        speed_unit_label="in/min",
+        speed_label_factor=25.4,
+        speed_label_precision=1,
+    )
+    assert img.ndim == 3
+    assert img.shape[2] == 4
