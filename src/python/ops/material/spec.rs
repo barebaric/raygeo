@@ -58,6 +58,44 @@ impl PyPrismaticStock {
     }
 }
 
+/// A cylindrical (rotary) stock, folded in unrolled space.
+///
+/// The axial coordinate maps to world x in ``[0, length]``; the
+/// circumference (arc length) maps to world y in
+/// ``[-pi * diameter / 2, pi * diameter / 2]``.
+#[gen_stub_pyclass]
+#[pyclass(
+    module = "raygeo.ops.material.spec",
+    name = "CylinderStock",
+    from_py_object
+)]
+#[derive(Clone)]
+pub struct PyCylinderStock {
+    pub(crate) diameter: f64,
+    pub(crate) length: f64,
+}
+
+#[gen_stub_pymethods]
+#[pymethods]
+impl PyCylinderStock {
+    #[new]
+    fn new(diameter: f64, length: f64) -> Self {
+        PyCylinderStock { diameter, length }
+    }
+
+    /// Workpiece diameter in mm.
+    #[getter]
+    fn diameter(&self) -> f64 {
+        self.diameter
+    }
+
+    /// Axial length in mm.
+    #[getter]
+    fn length(&self) -> f64 {
+        self.length
+    }
+}
+
 /// Resolution budget for stock-grid outputs.
 #[gen_stub_pyclass]
 #[pyclass(
@@ -163,9 +201,27 @@ impl PyFoldEntry {
 #[gen_stub_pyclass]
 #[pyclass(module = "raygeo.ops.material.spec", name = "MaterialFoldSpec")]
 pub struct PyMaterialFoldSpec {
-    pub(crate) stock: PyPrismaticStock,
+    pub(crate) stock: PyStockShape,
     pub(crate) entries: Vec<PyFoldEntry>,
     pub(crate) grid: PyGridBudget,
+}
+
+/// The stock variants a fold spec accepts.
+pub(crate) enum PyStockShape {
+    Prismatic(PyPrismaticStock),
+    Cylinder(PyCylinderStock),
+}
+
+fn extract_stock(obj: &Bound<'_, PyAny>) -> PyResult<PyStockShape> {
+    if let Ok(stock) = obj.extract::<PyPrismaticStock>() {
+        return Ok(PyStockShape::Prismatic(stock));
+    }
+    if let Ok(stock) = obj.extract::<PyCylinderStock>() {
+        return Ok(PyStockShape::Cylinder(stock));
+    }
+    Err(pyo3::exceptions::PyTypeError::new_err(
+        "stock must be a PrismaticStock or CylinderStock",
+    ))
 }
 
 #[gen_stub_pymethods]
@@ -174,26 +230,32 @@ impl PyMaterialFoldSpec {
     #[new]
     #[pyo3(signature = (stock, entries, grid = None))]
     fn new(
-        stock: PyPrismaticStock,
+        stock: &Bound<'_, PyAny>,
         entries: Vec<PyFoldEntry>,
         grid: Option<PyGridBudget>,
-    ) -> Self {
-        PyMaterialFoldSpec {
-            stock,
+    ) -> PyResult<Self> {
+        Ok(PyMaterialFoldSpec {
+            stock: extract_stock(stock)?,
             entries,
             grid: grid.unwrap_or(PyGridBudget {
                 px_per_mm: 50.0,
                 max_px: 8192,
             }),
-        }
+        })
     }
 
     /// The stock to fold against.
     #[getter]
-    fn stock(&self) -> PyPrismaticStock {
-        PyPrismaticStock {
-            polygons: self.stock.polygons.clone(),
-            thickness: self.stock.thickness,
+    fn stock<'py>(&self, py: Python<'py>) -> PyResult<Py<PyAny>> {
+        match &self.stock {
+            PyStockShape::Prismatic(s) => {
+                let obj = s.clone().into_pyobject(py)?;
+                Ok(obj.unbind().into_any())
+            }
+            PyStockShape::Cylinder(s) => {
+                let obj = s.clone().into_pyobject(py)?;
+                Ok(obj.unbind().into_any())
+            }
         }
     }
 
@@ -226,11 +288,18 @@ impl PyMaterialFoldSpec {
         for entry in &self.entries {
             entries.push(entry.to_core(py)?);
         }
-        Ok(MaterialFoldSpec {
-            stock: StockShape::Prismatic {
-                polygons: self.stock.polygons.clone(),
-                thickness: self.stock.thickness,
+        let stock = match &self.stock {
+            PyStockShape::Prismatic(s) => StockShape::Prismatic {
+                polygons: s.polygons.clone(),
+                thickness: s.thickness,
             },
+            PyStockShape::Cylinder(s) => StockShape::Cylinder {
+                diameter: s.diameter,
+                length: s.length,
+            },
+        };
+        Ok(MaterialFoldSpec {
+            stock,
             entries,
             grid: GridBudget {
                 px_per_mm: self.grid.px_per_mm,
@@ -276,6 +345,7 @@ pub(crate) fn register(mat_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let m = PyModule::new(py, "spec")?;
     m.setattr("__doc__", MODULE_DOC)?;
     m.add_class::<PyPrismaticStock>()?;
+    m.add_class::<PyCylinderStock>()?;
     m.add_class::<PyGridBudget>()?;
     m.add_class::<PyFoldEntry>()?;
     m.add_class::<PyMaterialFoldSpec>()?;

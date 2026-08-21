@@ -61,6 +61,20 @@ pub enum StockShape {
         /// Stock thickness in mm (positive).
         thickness: f64,
     },
+    /// A cylinder: rotary stock, unrolled to a flat burn domain.
+    ///
+    /// Domain semantics: the axial coordinate maps to world x in
+    /// `[0, length]`, the circumference (arc length) maps to world y
+    /// in `[-pi * diameter / 2, pi * diameter / 2]`, centered on the
+    /// machine origin. Laser ops are expressed in this unrolled
+    /// space, so folding is 2D — the wrap onto the shell happens at
+    /// render time via per-vertex power UVs.
+    Cylinder {
+        /// Workpiece diameter in mm (positive).
+        diameter: f64,
+        /// Axial length in mm (positive).
+        length: f64,
+    },
 }
 
 /// One compute node's contribution to a fold.

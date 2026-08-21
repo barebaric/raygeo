@@ -5,6 +5,29 @@ sidebar_label: raygeo.ops.material.spec
 
 Fold input types: the stock, the entries, and the grid budget.
 
+## CylinderStock
+
+A cylindrical (rotary) stock, folded in unrolled space.
+
+The axial coordinate maps to world x in `[0, length]`; the circumference (arc length) maps to world
+y in `[-pi * diameter / 2, pi * diameter / 2]`.
+
+### `diameter`
+
+```python
+diameter: float
+```
+
+Workpiece diameter in mm.
+
+### `length`
+
+```python
+length: float
+```
+
+Axial length in mm.
+
 ## FoldEntry
 
 One compute node's contribution to a fold.
@@ -104,7 +127,7 @@ Grid budget for raster outputs.
 ### `stock`
 
 ```python
-stock: PrismaticStock
+stock: Any
 ```
 
 The stock to fold against.

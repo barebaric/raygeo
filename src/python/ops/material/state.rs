@@ -26,11 +26,13 @@ pub struct PyMaterialState {
 #[gen_stub_pymethods]
 #[pymethods]
 impl PyMaterialState {
-    /// Which profile produced this state (``"prismatic"``).
+    /// Which profile produced this state (``"prismatic"`` or
+    /// ``"cylindrical"``).
     #[getter]
     fn profile(&self) -> &'static str {
         match self.inner.profile {
             FoldProfile::Prismatic => "prismatic",
+            FoldProfile::Cylindrical => "cylindrical",
             FoldProfile::Solid => "solid",
         }
     }

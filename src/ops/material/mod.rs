@@ -101,6 +101,9 @@ pub enum FoldProfile {
     /// Valid while cuts are vertical, top-open, and the stock is a
     /// prism.
     Prismatic,
+    /// Rotary stock folded in unrolled (axial × circumference)
+    /// space; burn surface effects only, no voids or depth field.
+    Cylindrical,
     /// General path: closed-solid CSG. Arrives with the solid
     /// profile work; `Prismatic` folds never produce it.
     Solid,

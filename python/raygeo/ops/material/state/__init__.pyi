@@ -20,7 +20,8 @@ class MaterialState:
     @property
     def profile(self) -> builtins.str:
         r"""
-        Which profile produced this state (``"prismatic"``).
+        Which profile produced this state (``"prismatic"`` or
+        ``"cylindrical"``).
         """
     @property
     def void_polygons(self) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:

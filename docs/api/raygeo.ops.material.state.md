@@ -40,7 +40,7 @@ Grid shared by the raster outputs.
 profile: str
 ```
 
-Which profile produced this state (`"prismatic"`).
+Which profile produced this state (`"prismatic"` or `"cylindrical"`).
 
 ### `provenance`
 

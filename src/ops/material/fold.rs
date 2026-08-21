@@ -13,7 +13,7 @@ use crate::geo::shape::polygon::{
     get_polygon_group_bounds, get_polygons_group_intersection,
     get_polygons_union, transform_polygons,
 };
-use crate::geo::types::Polygon;
+use crate::geo::types::{Polygon, Rect};
 use crate::ops::material::spec::{FoldEntry, MaterialFoldSpec, StockShape};
 use crate::ops::material::state::MaterialState;
 use crate::ops::material::{Escalation, FoldProfile, MaterialEffect};
@@ -59,14 +59,27 @@ struct FoldParts<'a> {
 pub fn fold_effects(
     spec: &MaterialFoldSpec,
 ) -> Result<MaterialState, FoldError> {
+    match &spec.stock {
+        StockShape::Prismatic { .. } => fold_prismatic(spec),
+        StockShape::Cylinder { .. } => fold_cylindrical(spec),
+    }
+}
+
+/// Fold against a prismatic stock: through-cut classification, void
+/// union clipped to the stock, the burn surface map, provenance, and
+/// escalation signals. `Volume` effects and top-open violations
+/// escalate instead of failing; the fold still returns the best
+/// prismatic approximation.
+fn fold_prismatic(spec: &MaterialFoldSpec) -> Result<MaterialState, FoldError> {
     let (stock_polygons, thickness) = validate_and_extract_stock(spec)?;
     let parts = classify_entries(&spec.entries, -thickness);
 
     let void_polygons = resolve_voids(&parts.void_candidates, stock_polygons);
+    let bounds = get_polygon_group_bounds(stock_polygons);
     let (surface_map, grid) = build_surface_map(
         &parts.rasters,
         &parts.raster_placements,
-        stock_polygons,
+        &bounds,
         &spec.grid,
     );
 
@@ -81,20 +94,55 @@ pub fn fold_effects(
     })
 }
 
+/// Fold against a cylindrical (rotary) stock: burn surface map over
+/// the unrolled axial × circumference domain only. Laser ops
+/// contribute to the burn; vector and volume effects are not modeled
+/// for rotary stock yet and are ignored.
+fn fold_cylindrical(
+    spec: &MaterialFoldSpec,
+) -> Result<MaterialState, FoldError> {
+    let (diameter, length) = validate_and_extract_cylinder(spec)?;
+    // Domain matches the rotary work area: axial x in [0, length],
+    // arc-length y centered on the machine origin (the beam sits at
+    // y = 0), spanning one full circumference.
+    let half_circumference = std::f64::consts::PI * diameter / 2.0;
+    let parts = classify_raster_entries(&spec.entries);
+
+    let bounds =
+        Rect::new(0.0, -half_circumference, length, half_circumference);
+    let (surface_map, grid) = build_surface_map(
+        &parts.rasters,
+        &parts.raster_placements,
+        &bounds,
+        &spec.grid,
+    );
+
+    Ok(MaterialState {
+        profile: FoldProfile::Cylindrical,
+        void_polygons: Vec::new(),
+        depth_field: None,
+        surface_map,
+        grid,
+        provenance: parts.provenance,
+        escalation: parts.escalation,
+    })
+}
+
 /// Validate the spec and return the stock's outline and thickness.
 fn validate_and_extract_stock(
     spec: &MaterialFoldSpec,
 ) -> Result<(&[Polygon], f64), FoldError> {
-    let (stock_polygons, thickness) = match &spec.stock {
-        StockShape::Prismatic {
-            polygons,
-            thickness,
-        } => (polygons, *thickness),
+    let StockShape::Prismatic {
+        polygons,
+        thickness,
+    } = &spec.stock
+    else {
+        return Err(FoldError::Invalid("expected a prismatic stock".into()));
     };
-    if stock_polygons.is_empty() {
+    if polygons.is_empty() {
         return Err(FoldError::Invalid("stock has no polygons".into()));
     }
-    if thickness <= 0.0 || !thickness.is_finite() {
+    if *thickness <= 0.0 || !thickness.is_finite() {
         return Err(FoldError::Invalid(
             "stock thickness must be a positive finite number".into(),
         ));
@@ -104,7 +152,32 @@ fn validate_and_extract_stock(
             "grid px_per_mm must be a positive finite number".into(),
         ));
     }
-    Ok((stock_polygons, thickness))
+    Ok((polygons, *thickness))
+}
+
+/// Validate a cylindrical stock spec and return `(diameter, length)`.
+fn validate_and_extract_cylinder(
+    spec: &MaterialFoldSpec,
+) -> Result<(f64, f64), FoldError> {
+    let StockShape::Cylinder { diameter, length } = &spec.stock else {
+        return Err(FoldError::Invalid("expected a cylinder stock".into()));
+    };
+    if *diameter <= 0.0 || !diameter.is_finite() {
+        return Err(FoldError::Invalid(
+            "stock diameter must be a positive finite number".into(),
+        ));
+    }
+    if *length <= 0.0 || !length.is_finite() {
+        return Err(FoldError::Invalid(
+            "stock length must be a positive finite number".into(),
+        ));
+    }
+    if spec.grid.px_per_mm <= 0.0 || !spec.grid.px_per_mm.is_finite() {
+        return Err(FoldError::Invalid(
+            "grid px_per_mm must be a positive finite number".into(),
+        ));
+    }
+    Ok((*diameter, *length))
 }
 
 /// Classify every entry's effects in a single order-independent pass.
@@ -131,6 +204,41 @@ fn classify_entries<'a>(
         parts.provenance.push(entry.source_key.clone());
         for effect in &entry.effects {
             classify_effect(effect, entry, stock_bottom, &mut parts);
+        }
+    }
+    parts.provenance.sort();
+    parts.provenance.dedup();
+    parts
+}
+
+/// Classify every entry's raster effects for a cylindrical fold.
+///
+/// Only rasters matter on the unrolled burn domain; entries without
+/// raster effects are ignored entirely (no provenance).
+fn classify_raster_entries(entries: &[FoldEntry]) -> FoldParts<'_> {
+    let mut parts = FoldParts {
+        escalation: None,
+        provenance: Vec::new(),
+        void_candidates: Vec::new(),
+        rasters: Vec::new(),
+        raster_placements: Vec::new(),
+    };
+    for entry in entries {
+        let mut has_raster = false;
+        for effect in &entry.effects {
+            if let MaterialEffect::Raster { power, grid, .. } = effect {
+                if grid.size_px.0 == 0 || grid.size_px.1 == 0 {
+                    continue;
+                }
+                if let Some(view) = RasterView::new(power, grid) {
+                    parts.rasters.push(view);
+                    parts.raster_placements.push(entry.placement);
+                    has_raster = true;
+                }
+            }
+        }
+        if has_raster {
+            parts.provenance.push(entry.source_key.clone());
         }
     }
     parts.provenance.sort();
@@ -206,14 +314,13 @@ fn resolve_voids(
 fn build_surface_map<'a>(
     rasters: &[RasterView<'a>],
     raster_placements: &[crate::geo::matrix::Matrix],
-    stock_polygons: &[Polygon],
+    bounds: &crate::geo::types::Rect,
     budget: &super::spec::GridBudget,
 ) -> (Option<CompressedArray>, Option<super::spec::GridSpec>) {
     if rasters.is_empty() {
         return (None, None);
     }
-    let bounds = get_polygon_group_bounds(stock_polygons);
-    let grid = resolve_grid(&bounds, budget);
+    let grid = resolve_grid(bounds, budget);
     let inverse: Vec<crate::geo::matrix::Matrix> =
         raster_placements.iter().map(|m| m.invert()).collect();
     let (ppm_x, ppm_y) = grid.px_per_mm;

@@ -8,12 +8,34 @@ import builtins
 from raygeo import geo
 import typing
 __all__ = [
+    "CylinderStock",
     "FoldEntry",
     "GridBudget",
     "GridSpec",
     "MaterialFoldSpec",
     "PrismaticStock",
 ]
+
+@typing.final
+class CylinderStock:
+    r"""
+    A cylindrical (rotary) stock, folded in unrolled space.
+    
+    The axial coordinate maps to world x in ``[0, length]``; the
+    circumference (arc length) maps to world y in
+    ``[-pi * diameter / 2, pi * diameter / 2]``.
+    """
+    @property
+    def diameter(self) -> builtins.float:
+        r"""
+        Workpiece diameter in mm.
+        """
+    @property
+    def length(self) -> builtins.float:
+        r"""
+        Axial length in mm.
+        """
+    def __new__(cls, diameter: builtins.float, length: builtins.float) -> CylinderStock: ...
 
 @typing.final
 class FoldEntry:
@@ -81,7 +103,7 @@ class MaterialFoldSpec:
     Full input to :func:`fold_effects`.
     """
     @property
-    def stock(self) -> PrismaticStock:
+    def stock(self) -> typing.Any:
         r"""
         The stock to fold against.
         """
@@ -95,7 +117,7 @@ class MaterialFoldSpec:
         r"""
         Grid budget for raster outputs.
         """
-    def __new__(cls, stock: PrismaticStock, entries: typing.Sequence[FoldEntry], grid: typing.Optional[GridBudget] = None) -> MaterialFoldSpec: ...
+    def __new__(cls, stock: typing.Any, entries: typing.Sequence[FoldEntry], grid: typing.Optional[GridBudget] = None) -> MaterialFoldSpec: ...
 
 @typing.final
 class PrismaticStock:
