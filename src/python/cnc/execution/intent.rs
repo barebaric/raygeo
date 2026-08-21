@@ -299,7 +299,11 @@ fn run_intent(
                 },
                 on_batch,
             )
-            .map_err(|_| PyRuntimeError::new_err("pipeline was cancelled"))?;
+            .map_err(|_| {
+                crate::python::errors::PipelineCancelled::new_err(
+                    "pipeline was cancelled",
+                )
+            })?;
         Ok(())
     })?;
 

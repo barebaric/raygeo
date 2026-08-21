@@ -83,6 +83,10 @@ within the new limit.
 | `budget`  | `int`  |             |
 | _Returns_ | `None` |             |
 
+## PipelineCancelled
+
+Raised when pipeline execution was cancelled (normal during rapid rebuilds).
+
 ## Functions
 
 ### `clear_cache()`

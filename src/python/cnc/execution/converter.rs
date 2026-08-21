@@ -404,7 +404,7 @@ pub fn create_execute_hook() -> Box<ExecuteFn> {
                         on_batch,
                     )
                     .map_err(|_| {
-                        pyo3::exceptions::PyRuntimeError::new_err(
+                        crate::python::errors::PipelineCancelled::new_err(
                             "pipeline was cancelled",
                         )
                     })

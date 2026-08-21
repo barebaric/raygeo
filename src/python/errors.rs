@@ -13,6 +13,12 @@ pyo3::create_exception!(
     PyRuntimeError
 );
 
+pyo3::create_exception!(
+    "raygeo.pipeline.execute",
+    PipelineCancelled,
+    PyRuntimeError
+);
+
 // pyo3_stub_gen::create_exception! has a bug: it uses stringify!($module)
 // which embeds the surrounding quotes into the module string, causing the
 // stub generator to reject it.  Instead we manually implement PyStubType
@@ -60,6 +66,30 @@ inventory::submit! {
         setters: &[],
         module: Some("raygeo.ops.assembly.adaptive"),
         doc: "Raised when all resume strategies fail to find an engagement point.",
+        bases: &[|| <PyRuntimeError as PyStubType>::type_output()],
+        has_eq: false,
+        has_ord: false,
+        has_hash: false,
+        has_str: false,
+        subclass: true,
+    }
+}
+
+impl PyStubType for PipelineCancelled {
+    fn type_output() -> TypeInfo {
+        TypeInfo::builtin("PipelineCancelled")
+    }
+}
+impl_py_runtime_type!(PipelineCancelled);
+inventory::submit! {
+    PyClassInfo {
+        pyclass_name: "PipelineCancelled",
+        struct_id: std::any::TypeId::of::<PipelineCancelled>,
+        getters: &[],
+        setters: &[],
+        module: Some("raygeo.pipeline.execute"),
+        doc: "Raised when pipeline execution was cancelled (normal \
+              during rapid rebuilds).",
         bases: &[|| <PyRuntimeError as PyStubType>::type_output()],
         has_eq: false,
         has_ord: false,

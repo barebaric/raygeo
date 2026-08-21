@@ -12,6 +12,7 @@ use pyo3_stub_gen::derive::{
 
 use crate::pipeline::cache::Cache;
 use crate::pipeline::pipeline::Pipeline as CorePipeline;
+use crate::python::errors::PipelineCancelled;
 use crate::python::pipeline::request::PyNodeRequest;
 
 // ── Injected execution hook (set by cnc layer during module init) ──
@@ -192,6 +193,7 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = m.py();
     let execute_mod = PyModule::new(py, "execute")?;
     execute_mod.setattr("__doc__", "Pipeline execution entry point.")?;
+    execute_mod.add("PipelineCancelled", py.get_type::<PipelineCancelled>())?;
     execute_mod
         .add_function(wrap_pyfunction!(execute_stages, &execute_mod)?)?;
     execute_mod.add_function(wrap_pyfunction!(clear_cache, &execute_mod)?)?;

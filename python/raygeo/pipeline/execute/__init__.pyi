@@ -12,6 +12,7 @@ from raygeo.pipeline import request
 import typing
 __all__ = [
     "Pipeline",
+    "PipelineCancelled",
     "clear_cache",
     "execute_stages",
 ]
@@ -59,6 +60,12 @@ class Pipeline:
         If the new budget is smaller than current usage, entries are
         evicted (oldest first) until usage fits within the new limit.
         """
+
+class PipelineCancelled(builtins.RuntimeError):
+    r"""
+    Raised when pipeline execution was cancelled (normal during rapid rebuilds).
+    """
+    ...
 
 def clear_cache() -> None: ...
 
