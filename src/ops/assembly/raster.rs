@@ -95,6 +95,7 @@ impl Assembler for RasterSpec {
             return Err("cancelled".to_string());
         }
         ctx.trace.append_ops(&ops);
+        ctx.emit_scanline_burn(&ops);
         ctx.callbacks.report_progress(1.0, "raster: done");
         Ok(meta)
     }

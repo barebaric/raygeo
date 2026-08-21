@@ -9,10 +9,12 @@ use crate::cnc::execution::aggregate::OpsAggregate;
 use crate::cnc::execution::compute::AssemblerCompute;
 use crate::cnc::execution::encode::EncoderCompute;
 use crate::cnc::execution::machine_transform::MachineTransformCompute;
+use crate::cnc::execution::material_fold::MaterialFoldCompute;
 use crate::cnc::execution::specs::AggregateOutput;
 use crate::ops::assembly::Assembler;
 use crate::ops::assembly::AssemblyOutput;
 use crate::ops::convert::EncodeOutput;
+use crate::ops::material::state::MaterialState;
 use crate::ops::part::Part;
 use crate::pipeline::cache::Cache;
 use crate::pipeline::request::NodeRequest as CoreNodeRequest;
@@ -32,6 +34,7 @@ use crate::python::cnc::execution::specs::PyEncodeSpec;
 use crate::python::cnc::execution::specs::PyMachineTransformSpec;
 use crate::python::ops::assembly::PyAssemblyOutput;
 use crate::python::ops::convert::PyEncodeOutput;
+use crate::python::ops::material::state::PyMaterialState;
 use crate::python::pipeline::callbacks::PyTaskCallbacks;
 use crate::python::pipeline::completed::PyCompletedNode;
 use crate::python::pipeline::request::PyNodeRequest;
@@ -168,6 +171,27 @@ fn convert_machine_transform_spec(
     })
 }
 
+// ── MaterialFoldSpec conversion ──────────────────────────────────
+
+fn convert_material_fold_spec(
+    py: Python<'_>,
+    spec: &crate::python::ops::material::spec::PyMaterialFoldSpec,
+) -> PyResult<CoreStageSpec> {
+    let core_spec = spec.to_core(py)?;
+    let source_keys: Vec<String> = core_spec
+        .entries
+        .iter()
+        .map(|e| e.source_key.clone())
+        .collect();
+    let compute = MaterialFoldCompute {
+        spec: core_spec,
+        source_keys,
+    };
+    Ok(CoreStageSpec::Compute {
+        compute_fn: Box::new(compute),
+    })
+}
+
 // ── NodeRequest conversion ────────────────────────────────────────
 
 pub(crate) fn convert_node_request(
@@ -235,8 +259,35 @@ pub(crate) fn convert_node_request(
         ));
     }
 
+    // Try MaterialFoldSpec (wrapped as StageSpec.Compute). This is a
+    // cnc-execution compute node, not a pipeline StageSpec variant —
+    // `pipeline` is domain-free and must not know about material
+    // folding. The Python side passes a `MaterialFoldSpec` directly as
+    // the node's stage, exactly like `EncodeSpec`/`MachineTransformSpec`.
+    if let Ok(mf_bound) = stage_any
+        .cast::<crate::python::ops::material::spec::PyMaterialFoldSpec>(
+    ) {
+        let mf_spec = mf_bound.borrow();
+        let stage = convert_material_fold_spec(py, &mf_spec)?;
+        let callbacks = PyTaskCallbacks::new(
+            req.on_progress.clone(),
+            req.on_cancelled.clone(),
+            req.on_chunk.clone(),
+            Arc::clone(cancel_flag),
+        );
+        return Ok(CoreNodeRequest::new(
+            req.key.clone(),
+            req.generation_id,
+            req.version_token,
+            stage,
+            Box::new(callbacks),
+            req.cacheable,
+        ));
+    }
+
     Err(pyo3::exceptions::PyTypeError::new_err(
-        "stage is not a StageSpec, EncodeSpec, or MachineTransformSpec",
+        "stage is not a StageSpec, EncodeSpec, MachineTransformSpec, \
+         or MaterialFoldSpec",
     ))
 }
 
@@ -262,6 +313,12 @@ fn any_to_py(
     if output.downcast_ref::<EncodeOutput>().is_some() {
         let py_eo = PyEncodeOutput::from_arc(output);
         return Bound::new(py, py_eo).ok().map(|o| o.into_any().unbind());
+    }
+    if let Some(state) = output.downcast_ref::<MaterialState>() {
+        let py_state = PyMaterialState {
+            inner: state.clone(),
+        };
+        return Bound::new(py, py_state).ok().map(|o| o.into_any().unbind());
     }
     Some(py.None())
 }

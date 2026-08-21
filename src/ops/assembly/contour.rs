@@ -63,7 +63,8 @@ impl Assembler for ContourSpec {
             return Err("cancelled".to_string());
         }
         ctx.trace.append_ops(&ops);
-        ctx.emit_vector_effect(cut_polygons, None, None);
+        ctx.emit_vector_effect(cut_polygons.clone(), None, None);
+        ctx.emit_outline_burn(&cut_polygons);
         ctx.callbacks.report_progress(1.0, "contour: done");
         Ok(meta)
     }

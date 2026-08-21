@@ -12,6 +12,7 @@ use crate::ops::material::MaterialEffect;
 use crate::python::compressed_array::PyCompressedArray;
 
 pub(crate) mod fold;
+pub(crate) mod grid;
 pub(crate) mod spec;
 pub(crate) mod state;
 
@@ -344,6 +345,7 @@ pub(crate) fn register(ops_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     spec::register(&m)?;
     state::register(&m)?;
     fold::register(&m)?;
+    grid::register(&m)?;
 
     ops_mod.add_submodule(&m)?;
 

@@ -243,3 +243,34 @@ def test_raster_chunked_output_matches_non_chunked():
         )
     )
     assert result_ops(c_chunked).to_dict() == result_ops(c_whole).to_dict()
+
+
+def test_raster_emits_burn_effect():
+    """The raster assembler emits a RasterEffect (burn surface map)
+    covering the part at the part's own pixel density."""
+    node = _raster_node("raster_burn")
+    completed, _ = collect_completions([node])
+    output = compute_result(completed[0])
+    assert output.material_effects is not None
+    rasters = [
+        e
+        for e in output.material_effects
+        if type(e).__name__ == "RasterEffect"
+    ]
+    assert len(rasters) == 1
+    fx = rasters[0]
+    assert fx.origin_mm == (0.0, 0.0)
+    assert fx.px_per_mm == (10.0, 10.0)
+    power = fx.power.to_numpy()
+    assert power.shape == (100, 100)
+    assert (power > 0).any()
+
+
+def test_raster_no_burn_effect_for_empty_image():
+    """A blank (zero) image produces no scanline power, so no burn
+    effect is emitted."""
+    part = _filled_part(fill=0)
+    node = _raster_node("raster_blank", part=part)
+    completed, _ = collect_completions([node])
+    output = compute_result(completed[0])
+    assert output.material_effects is None

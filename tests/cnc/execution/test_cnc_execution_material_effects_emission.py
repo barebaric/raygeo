@@ -65,9 +65,12 @@ def test_contour_emits_full_through_effect():
     assert output.material_effects is not None
     effects = output.material_effects
     assert len(effects) >= 1
-    assert all(isinstance(e, VectorEffect) for e in effects)
-    assert all(e.z_from is None and e.z_to is None for e in effects)
-    assert all(len(e.polygons) > 0 for e in effects)
+    # The contour also emits a burn RasterEffect alongside its vector
+    # effect; filter down to the vector ones here.
+    vectors = [e for e in effects if isinstance(e, VectorEffect)]
+    assert len(vectors) >= 1
+    assert all(e.z_from is None and e.z_to is None for e in vectors)
+    assert all(len(e.polygons) > 0 for e in vectors)
 
 
 def test_profile_emits_vector_effect_with_target_z():
@@ -121,5 +124,33 @@ def test_multi_face_part_concatenates_effects():
     output = compute_result(_run_once([node])["contour"])
     assert output.material_effects is not None
     effects = output.material_effects
-    assert len(effects) >= 2
-    assert all(isinstance(e, VectorEffect) for e in effects)
+    # One vector effect per face (plus burn raster effects).
+    vectors = [e for e in effects if isinstance(e, VectorEffect)]
+    assert len(vectors) >= 2
+
+
+def test_contour_emits_burn_effect_along_outline():
+    """The contour assembler also emits a RasterEffect tracing the cut
+    outline as a thin full-power char line."""
+    node = _node("contour", ContourSpec(), make_square_part())
+    output = compute_result(_run_once([node])["contour"])
+    assert output.material_effects is not None
+    rasters = [
+        e
+        for e in output.material_effects
+        if type(e).__name__ == "RasterEffect"
+    ]
+    assert len(rasters) == 1
+    fx = rasters[0]
+    power = fx.power.to_numpy()
+    h, w = power.shape
+    assert (power > 0).any()
+    # The square part spans (0,0)-(10,10); the burn grid covers the
+    # same bounds, so the outline must appear near the grid edges:
+    # leftmost and rightmost columns contain burned pixels.
+    assert (power[:, 0] > 0).any()
+    assert (power[:, -1] > 0).any()
+    # ... while the interior (well away from the outline and its
+    # thickness brush) stays unburned.
+    mid = h // 2
+    assert power[mid, w // 2] == 0

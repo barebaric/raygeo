@@ -145,6 +145,50 @@ impl<'a> AssembleCtx<'a> {
             z_to,
         });
     }
+
+    /// Emit a raster (burn) material effect from assembled raster
+    /// `Ops`: the scanline power pattern as a surface-burn map over
+    /// the part area, at the part's own pixel density. No-ops when
+    /// the part has no pixel density or the scanlines carry no power.
+    pub fn emit_scanline_burn(&mut self, ops: &Ops) {
+        let (Some(px_per_mm), size_mm) = (self.pixels_per_mm, self.size_mm)
+        else {
+            return;
+        };
+        if let Some((power, grid)) =
+            super::material::burn::scanline_power_map(ops, size_mm, px_per_mm)
+        {
+            self.material_effects.push(MaterialEffect::Raster {
+                power,
+                grid,
+                response: super::material::spec::MaterialResponse {
+                    cut_power_threshold: None,
+                },
+            });
+        }
+    }
+
+    /// Emit a raster (burn) material effect tracing `polygons`'
+    /// outlines as thin full-power char lines — the burn footprint of
+    /// a vector cut. Empty polygon lists are ignored.
+    pub fn emit_outline_burn(&mut self, polygons: &[Polygon]) {
+        if polygons.is_empty() {
+            return;
+        }
+        if let Some((power, grid)) = super::material::burn::outline_power_map(
+            polygons,
+            super::material::burn::OUTLINE_PX_PER_MM,
+            super::material::burn::OUTLINE_THICKNESS_PX,
+        ) {
+            self.material_effects.push(MaterialEffect::Raster {
+                power,
+                grid,
+                response: super::material::spec::MaterialResponse {
+                    cut_power_threshold: None,
+                },
+            });
+        }
+    }
 }
 
 /// The kind of a non-fatal [`AssemblyWarning`] produced during assembly.

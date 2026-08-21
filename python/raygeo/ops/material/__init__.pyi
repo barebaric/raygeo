@@ -17,6 +17,7 @@ import numpy.typing
 from raygeo import compressed_array
 import typing
 from . import fold
+from . import grid
 from . import spec
 from . import state
 __all__ = [
@@ -24,6 +25,7 @@ __all__ = [
     "VectorEffect",
     "VolumeEffect",
     "fold",
+    "grid",
     "spec",
     "state",
 ]

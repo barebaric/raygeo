@@ -19,6 +19,7 @@
 //! absolute Z in that space; `None` means "open to the surface"
 //! (`z_from`) or "through the bottom" (`z_to`).
 
+pub mod burn;
 pub mod fold;
 pub mod grid;
 pub mod spec;
