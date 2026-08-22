@@ -2794,18 +2794,16 @@ impl PyOps {
     /// :complexity: O(n) time, O(n) space
     #[pyo3(signature = (default_feed_rate = 1000.0, default_rapid_rate = 3000.0, acceleration = 1000.0))]
     fn build_cumulative_time_index(
-        &mut self,
+        &self,
         default_feed_rate: f64,
         default_rapid_rate: f64,
         acceleration: f64,
     ) -> Vec<f64> {
-        self.inner
-            .build_cumulative_time_index(
-                default_feed_rate,
-                default_rapid_rate,
-                acceleration,
-            )
-            .to_vec()
+        self.inner.build_cumulative_time_index(
+            default_feed_rate,
+            default_rapid_rate,
+            acceleration,
+        )
     }
 
     /// Find the command index in effect at simulated time *t* (seconds).
@@ -2822,7 +2820,7 @@ impl PyOps {
     /// :complexity: O(n) time, O(n) space
     #[pyo3(signature = (t, default_feed_rate = 1000.0, default_rapid_rate = 3000.0, acceleration = 1000.0))]
     fn find_index_at_time(
-        &mut self,
+        &self,
         t: f64,
         default_feed_rate: f64,
         default_rapid_rate: f64,
@@ -2849,7 +2847,7 @@ impl PyOps {
     /// :complexity: O(n) time, O(n) space
     #[pyo3(signature = (idx, default_feed_rate = 1000.0, default_rapid_rate = 3000.0, acceleration = 1000.0))]
     fn get_cumulative_time_at(
-        &mut self,
+        &self,
         idx: usize,
         default_feed_rate: f64,
         default_rapid_rate: f64,
@@ -2929,21 +2927,21 @@ impl PyOps {
     #[getter]
     #[allow(non_snake_case)]
     fn get__time_dirty(&self) -> bool {
-        self.inner.time_dirty
+        self.inner.time_dirty()
     }
 
     #[gen_stub(skip)]
     #[getter]
     #[allow(non_snake_case)]
     fn get__cached_time(&self) -> f64 {
-        self.inner.cached_time
+        self.inner.cached_time()
     }
 
     #[gen_stub(skip)]
     #[getter]
     #[allow(non_snake_case)]
     fn get__time_params(&self) -> Option<(f64, f64, f64)> {
-        self.inner.time_params
+        self.inner.time_params()
     }
 
     /// Apply holding tabs as gaps in the toolpath.

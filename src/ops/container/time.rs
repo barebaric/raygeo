@@ -1,14 +1,45 @@
-use super::Ops;
+use super::{Ops, TimeCache};
 use crate::constants::EPSILON_COLLINEAR;
 use crate::geo::shape::arc::get_arc_length;
 use crate::geo::shape::bezier::get_bezier_length;
 use crate::geo::shape::line::get_line_segment_length;
 use crate::geo::types::{Point, Point3D};
 use crate::ops::types::{MoveCmd, OpCategory, OpNode, StateCmd};
+use std::sync::MutexGuard;
 
 impl Ops {
-    pub fn invalidate_time_cache(&mut self) {
-        self.time_dirty = true;
+    pub fn invalidate_time_cache(&self) {
+        self.lock_time_cache().dirty = true;
+    }
+
+    /// Locks and, if stale, rebuilds the cumulative-time index.
+    ///
+    /// Takes `&self` with interior mutability so the query methods can
+    /// be called concurrently from several Python threads (free-threaded
+    /// builds) without tripping PyO3's borrow checker.
+    fn ensure_time_index(
+        &self,
+        default_feed_rate: f64,
+        default_rapid_rate: f64,
+        acceleration: f64,
+    ) -> MutexGuard<'_, TimeCache> {
+        let params = (default_feed_rate, default_rapid_rate, acceleration);
+        let mut guard = self.lock_time_cache();
+        if guard.dirty
+            || guard.params != Some(params)
+            || guard.index.len() != self.commands.len()
+        {
+            guard.index = compute_cumulative_time_index(
+                self,
+                default_feed_rate,
+                default_rapid_rate,
+                acceleration,
+            );
+            guard.total = guard.index.last().copied().unwrap_or(0.0);
+            guard.dirty = false;
+            guard.params = Some(params);
+        }
+        guard
     }
 
     /// Total simulated execution time (seconds).
@@ -75,34 +106,24 @@ impl Ops {
 
     /// Cumulative execution time (seconds) of every command.
     ///
-    /// Returns a slice with one entry per command, where entry *i* is
+    /// Returns a vector with one entry per command, where entry *i* is
     /// the total simulated time elapsed once command *i* has executed.
     /// State changes (except dwells) and markers contribute zero time.
     /// The result is cached per parameter set and invalidated when the
     /// ops are mutated.
     pub fn build_cumulative_time_index(
-        &mut self,
+        &self,
         default_feed_rate: f64,
         default_rapid_rate: f64,
         acceleration: f64,
-    ) -> &[f64] {
-        let params = (default_feed_rate, default_rapid_rate, acceleration);
-        if self.time_dirty
-            || self.time_params != Some(params)
-            || self.cached_time_index.len() != self.commands.len()
-        {
-            self.cached_time_index = compute_cumulative_time_index(
-                self,
-                default_feed_rate,
-                default_rapid_rate,
-                acceleration,
-            );
-            self.cached_time =
-                self.cached_time_index.last().copied().unwrap_or(0.0);
-            self.time_dirty = false;
-            self.time_params = Some(params);
-        }
-        &self.cached_time_index
+    ) -> Vec<f64> {
+        self.ensure_time_index(
+            default_feed_rate,
+            default_rapid_rate,
+            acceleration,
+        )
+        .index
+        .clone()
     }
 
     /// Find the command index in effect at simulated time *t* (seconds).
@@ -111,22 +132,22 @@ impl Ops {
     /// <= *t*, clamped to ``[0, len-1]``. Returns 0 for an empty ops
     /// or for times before the first command's completion.
     pub fn find_index_at_time(
-        &mut self,
+        &self,
         t: f64,
         default_feed_rate: f64,
         default_rapid_rate: f64,
         acceleration: f64,
     ) -> usize {
-        let index = self.build_cumulative_time_index(
+        let guard = self.ensure_time_index(
             default_feed_rate,
             default_rapid_rate,
             acceleration,
         );
-        if index.is_empty() {
+        if guard.index.is_empty() {
             return 0;
         }
-        let pos = index.partition_point(|&c| c <= t);
-        pos.saturating_sub(1).min(index.len() - 1)
+        let pos = guard.index.partition_point(|&c| c <= t);
+        pos.saturating_sub(1).min(guard.index.len() - 1)
     }
 
     /// Cumulative simulated time (seconds) up to and including command *idx*.
@@ -134,20 +155,20 @@ impl Ops {
     /// Out-of-range indices clamp to the nearest valid command; empty
     /// ops yield 0.0.
     pub fn get_cumulative_time_at(
-        &mut self,
+        &self,
         idx: usize,
         default_feed_rate: f64,
         default_rapid_rate: f64,
         acceleration: f64,
     ) -> f64 {
-        let index = self.build_cumulative_time_index(
+        let guard = self.ensure_time_index(
             default_feed_rate,
             default_rapid_rate,
             acceleration,
         );
-        match index.get(idx) {
+        match guard.index.get(idx) {
             Some(&v) => v,
-            None => index.last().copied().unwrap_or(0.0),
+            None => guard.index.last().copied().unwrap_or(0.0),
         }
     }
 }

@@ -9,16 +9,43 @@ use super::enums::{CommandCategory, CommandType, RasterMode, SectionType};
 use super::state::{AirAssistMode, CoolantMode, HeadCoolantMode, State};
 use super::types::{MarkerCmd, MoveCmd, OpCategory, OpNode, StateCmd};
 use crate::geo::types::{Point, Point3D, Rect};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
+/// Cached cumulative-time index for the ops sequence.
+///
+/// Guarded by a `Mutex` inside [`Ops`] so the read-only query methods
+/// can take `&self`: on free-threaded Python builds several threads may
+/// call into the same `Ops` wrapper concurrently.
 #[derive(Clone, Debug)]
+pub(crate) struct TimeCache {
+    dirty: bool,
+    total: f64,
+    params: Option<(f64, f64, f64)>,
+    index: Vec<f64>,
+}
+
+#[derive(Debug)]
 pub struct Ops {
     pub commands: Arc<Vec<OpNode>>,
     pub last_move_to: Point3D,
-    pub time_dirty: bool,
-    pub cached_time: f64,
-    pub time_params: Option<(f64, f64, f64)>,
-    pub cached_time_index: Vec<f64>,
+    pub(crate) time_cache: Mutex<TimeCache>,
+}
+
+impl Clone for Ops {
+    fn clone(&self) -> Self {
+        Ops {
+            commands: Arc::clone(&self.commands),
+            last_move_to: self.last_move_to,
+            // The cache is an optimisation; start clones from a clean,
+            // dirty state instead of cloning the whole index.
+            time_cache: Mutex::new(TimeCache {
+                dirty: true,
+                total: 0.0,
+                params: None,
+                index: Vec::new(),
+            }),
+        }
+    }
 }
 
 impl Ops {
@@ -26,11 +53,36 @@ impl Ops {
         Ops {
             commands: Arc::new(Vec::new()),
             last_move_to: Point3D::new(0.0, 0.0, 0.0),
-            time_dirty: true,
-            cached_time: 0.0,
-            time_params: None,
-            cached_time_index: Vec::new(),
+            time_cache: Mutex::new(TimeCache {
+                dirty: true,
+                total: 0.0,
+                params: None,
+                index: Vec::new(),
+            }),
         }
+    }
+
+    /// Locks the time cache, recovering from poisoning so a panic
+    /// during one rebuild cannot permanently break the queries.
+    pub(crate) fn lock_time_cache(
+        &self,
+    ) -> std::sync::MutexGuard<'_, TimeCache> {
+        self.time_cache.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    /// Whether the cached cumulative-time index is stale.
+    pub fn time_dirty(&self) -> bool {
+        self.lock_time_cache().dirty
+    }
+
+    /// Total simulated time of the cached index (seconds).
+    pub fn cached_time(&self) -> f64 {
+        self.lock_time_cache().total
+    }
+
+    /// The parameter set the cached index was built with.
+    pub fn time_params(&self) -> Option<(f64, f64, f64)> {
+        self.lock_time_cache().params
     }
 
     pub(crate) fn cmds_mut(&mut self) -> &mut Vec<OpNode> {
@@ -453,13 +505,11 @@ impl Ops {
     // --- Copy / Transfer ---
 
     pub fn copy(&self) -> Self {
+        let cache = self.lock_time_cache().clone();
         Ops {
             commands: Arc::clone(&self.commands),
             last_move_to: self.last_move_to,
-            time_dirty: self.time_dirty,
-            cached_time: self.cached_time,
-            time_params: self.time_params,
-            cached_time_index: self.cached_time_index.clone(),
+            time_cache: Mutex::new(cache),
         }
     }
 
