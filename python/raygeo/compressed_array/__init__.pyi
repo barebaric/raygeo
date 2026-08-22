@@ -50,6 +50,11 @@ class CompressedArray:
         r"""
         Create a CompressedArray from a 2-D uint8 numpy array.
         """
+    @staticmethod
+    def from_float32_2d(data: numpy.typing.NDArray[numpy.float32]) -> CompressedArray:
+        r"""
+        Create a CompressedArray from a 2-D float32 numpy array.
+        """
     def to_numpy(self) -> typing.Any:
         r"""
         Decompress and return a numpy array with the original dtype

@@ -12,15 +12,23 @@ provenance, and escalation signals for geometry the current profiles cannot repr
 
 ## RasterEffect
 
-A raster material effect: an R8 power map plus its grid placement.
+A raster material effect: an F32 fluence map plus its grid placement.
 
-### `cut_power_threshold`
+### `cut_fluence_threshold`
 
 ```python
-cut_power_threshold: Optional[int]
+cut_fluence_threshold: Optional[float]
 ```
 
-Raster power at or above which the material is cut through.
+Raster fluence (J/cm²) at or above which the material is cut through.
+
+### `fluence`
+
+```python
+fluence: compressed_array.CompressedArray
+```
+
+The fluence map as a compressed F32 array.
 
 ### `origin_mm`
 
@@ -29,14 +37,6 @@ origin_mm: tuple[float, float]
 ```
 
 World-mm origin of the grid's (0, 0) pixel corner.
-
-### `power`
-
-```python
-power: compressed_array.CompressedArray
-```
-
-The power map as a compressed R8 array.
 
 ### `px_per_mm`
 

@@ -91,6 +91,8 @@ fn fold_prismatic(spec: &MaterialFoldSpec) -> Result<MaterialState, FoldError> {
         grid,
         provenance: parts.provenance,
         escalation: parts.escalation,
+        wavelength_nm: spec.wavelength_nm,
+        max_power_watts: spec.max_power_watts,
     })
 }
 
@@ -125,6 +127,8 @@ fn fold_cylindrical(
         grid,
         provenance: parts.provenance,
         escalation: parts.escalation,
+        wavelength_nm: spec.wavelength_nm,
+        max_power_watts: spec.max_power_watts,
     })
 }
 
@@ -226,11 +230,11 @@ fn classify_raster_entries(entries: &[FoldEntry]) -> FoldParts<'_> {
     for entry in entries {
         let mut has_raster = false;
         for effect in &entry.effects {
-            if let MaterialEffect::Raster { power, grid, .. } = effect {
+            if let MaterialEffect::Raster { fluence, grid, .. } = effect {
                 if grid.size_px.0 == 0 || grid.size_px.1 == 0 {
                     continue;
                 }
-                if let Some(view) = RasterView::new(power, grid) {
+                if let Some(view) = RasterView::new(fluence, grid) {
                     parts.rasters.push(view);
                     parts.raster_placements.push(entry.placement);
                     has_raster = true;
@@ -275,11 +279,11 @@ fn classify_effect<'a>(
                     .extend(transform_polygons(polygons, &entry.placement));
             }
         }
-        MaterialEffect::Raster { power, grid, .. } => {
+        MaterialEffect::Raster { fluence, grid, .. } => {
             if grid.size_px.0 == 0 || grid.size_px.1 == 0 {
                 return;
             }
-            if let Some(view) = RasterView::new(power, grid) {
+            if let Some(view) = RasterView::new(fluence, grid) {
                 parts.rasters.push(view);
                 parts.raster_placements.push(entry.placement);
             }
@@ -327,7 +331,7 @@ fn build_surface_map<'a>(
     let (origin_x, origin_y) = grid.origin_mm;
     let width = grid.size_px.0;
     let height_px = grid.size_px.1;
-    let data: Vec<u8> = (0..height_px)
+    let data: Vec<f32> = (0..height_px)
         .into_par_iter()
         .flat_map_iter(|row| {
             let world_y = origin_y + (row as f64 + 0.5) / ppm_y;
@@ -335,7 +339,7 @@ fn build_surface_map<'a>(
             let inverse = &inverse;
             (0..width).map(move |col| {
                 let world_x = origin_x + (col as f64 + 0.5) / ppm_x;
-                let mut max: u8 = 0;
+                let mut max: f32 = 0.0;
                 for (view, inv) in rasters.iter().zip(inverse.iter()) {
                     let (lx, ly) = inv.transform_point(world_x, world_y);
                     let v = view.sample((lx, ly));
@@ -347,6 +351,7 @@ fn build_surface_map<'a>(
             })
         })
         .collect();
-    let compressed = CompressedArray::from_vec_u8(data, vec![height_px, width]);
+    let compressed =
+        CompressedArray::from_vec_f32_with_shape(data, vec![height_px, width]);
     (Some(compressed), Some(grid))
 }

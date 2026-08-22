@@ -119,7 +119,7 @@ impl PyVectorEffect {
     }
 }
 
-/// A raster material effect: an R8 power map plus its grid placement.
+/// A raster material effect: an F32 fluence map plus its grid placement.
 #[gen_stub_pyclass]
 #[pyclass(module = "raygeo.ops.material", name = "RasterEffect")]
 pub struct PyRasterEffect {
@@ -130,22 +130,22 @@ pub struct PyRasterEffect {
 #[pymethods]
 impl PyRasterEffect {
     #[new]
-    #[pyo3(signature = (power, origin_mm, px_per_mm, cut_power_threshold = None))]
+    #[pyo3(signature = (fluence, origin_mm, px_per_mm, cut_fluence_threshold = None))]
     fn new(
-        power: PyReadonlyArray2<u8>,
+        fluence: PyReadonlyArray2<f32>,
         origin_mm: (f64, f64),
         px_per_mm: (f64, f64),
-        cut_power_threshold: Option<u8>,
+        cut_fluence_threshold: Option<f32>,
     ) -> PyResult<Self> {
-        let array = power.as_array();
+        let array = fluence.as_array();
         let (h, w) = (array.shape()[0], array.shape()[1]);
-        let data: Vec<u8> = match array.as_slice() {
+        let data: Vec<f32> = match array.as_slice() {
             Some(slice) => slice.to_vec(),
             None => array.iter().copied().collect(),
         };
         if w == 0 || h == 0 {
             return Err(pyo3::exceptions::PyValueError::new_err(
-                "power map must be non-empty",
+                "fluence map must be non-empty",
             ));
         }
         let grid = GridSpec {
@@ -154,23 +154,26 @@ impl PyRasterEffect {
             size_px: (w, h),
         };
         let response = MaterialResponse {
-            cut_power_threshold,
+            cut_fluence_threshold,
         };
         Ok(PyRasterEffect {
             inner: MaterialEffect::Raster {
-                power: CompressedArray::from_vec_u8(data, vec![h, w]),
+                fluence: CompressedArray::from_vec_f32_with_shape(
+                    data,
+                    vec![h, w],
+                ),
                 grid,
                 response,
             },
         })
     }
 
-    /// The power map as a compressed R8 array.
+    /// The fluence map as a compressed F32 array.
     #[getter]
-    fn power(&self) -> PyResult<PyCompressedArray> {
+    fn fluence(&self) -> PyResult<PyCompressedArray> {
         match &self.inner {
-            MaterialEffect::Raster { power, .. } => {
-                Ok(PyCompressedArray::from_inner(power.clone()))
+            MaterialEffect::Raster { fluence, .. } => {
+                Ok(PyCompressedArray::from_inner(fluence.clone()))
             }
             _ => Err(pyo3::exceptions::PyValueError::new_err(
                 "not a raster effect",
@@ -196,12 +199,13 @@ impl PyRasterEffect {
         }
     }
 
-    /// Raster power at or above which the material is cut through.
+    /// Raster fluence (J/cm²) at or above which the material is cut
+    /// through.
     #[getter]
-    fn cut_power_threshold(&self) -> Option<u8> {
+    fn cut_fluence_threshold(&self) -> Option<f32> {
         match &self.inner {
             MaterialEffect::Raster { response, .. } => {
-                response.cut_power_threshold
+                response.cut_fluence_threshold
             }
             _ => None,
         }

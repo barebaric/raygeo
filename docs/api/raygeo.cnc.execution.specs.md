@@ -201,6 +201,15 @@ head_uid: Optional[str]
 
 Active head/laser UID injected as `SetHead`.
 
+### `max_power_watts`
+
+```python
+max_power_watts: float
+```
+
+Optical output power in watts at full power for the burn fluence model (default 0 → neutral
+fallback).
+
 ### `power`
 
 ```python
@@ -217,6 +226,22 @@ profile: bool
 
 Print a profiling report to stdout after this node's faces have been assembled (default False).
 
+### `scan_speed_mm_per_s`
+
+```python
+scan_speed_mm_per_s: float
+```
+
+Scan speed in mm/s for the burn fluence model (default 100).
+
+### `spot_size_mm`
+
+```python
+spot_size_mm: tuple[float, float]
+```
+
+Beam spot size `(x, y)` in mm for the burn fluence model (default `(0.1, 0.1)`).
+
 ### `state_source_keys`
 
 ```python
@@ -232,6 +257,15 @@ transformers: list[Any]
 ```
 
 Optional list of transformer specs applied post-assembly.
+
+### `wavelength_nm`
+
+```python
+wavelength_nm: float
+```
+
+Laser emission wavelength in nm for the burn fluence model (default 0 → renderer falls back to full
+absorption).
 
 ## EncodeSpec
 

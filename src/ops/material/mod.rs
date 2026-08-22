@@ -49,13 +49,16 @@ pub enum MaterialEffect {
         /// stock bottom (`z = -thickness`).
         z_to: Option<f64>,
     },
-    /// An R8 power map plus the material response interpreting it.
+    /// An F32 fluence map (J/cm²) plus the material response
+    /// interpreting it.
     Raster {
-        /// Per-pixel maximum laser power (0–255).
-        power: CompressedArray,
-        /// Grid placement of `power` in world mm.
+        /// Per-pixel laser fluence in J/cm² (float32). The fold
+        /// max-reduces this into the surface map; the shader applies
+        /// the material's absorption coefficient and char curve.
+        fluence: CompressedArray,
+        /// Grid placement of `fluence` in world mm.
         grid: GridSpec,
-        /// Material response used to interpret the power values.
+        /// Material response used to interpret the fluence values.
         response: MaterialResponse,
     },
     /// Closed solids (placed into world space by the fold).
@@ -79,8 +82,8 @@ impl MaterialEffect {
                     p.len() * std::mem::size_of::<crate::geo::types::Point>()
                 })
                 .sum(),
-            MaterialEffect::Raster { power, .. } => {
-                power.data.len() + std::mem::size_of::<CompressedArray>()
+            MaterialEffect::Raster { fluence, .. } => {
+                fluence.data.len() + std::mem::size_of::<CompressedArray>()
             }
             MaterialEffect::Volume { solids } => solids
                 .iter()

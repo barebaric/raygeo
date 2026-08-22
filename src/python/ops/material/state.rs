@@ -53,8 +53,8 @@ impl PyMaterialState {
             .map(|d| PyCompressedArray::from_inner(d.clone()))
     }
 
-    /// Per-pixel maximum laser power (R8), or ``None`` when no
-    /// raster effects contributed.
+    /// Per-pixel maximum laser fluence (F32, J/cm²), or ``None``
+    /// when no raster effects contributed.
     #[getter]
     fn surface_map(&self) -> Option<PyCompressedArray> {
         self.inner
@@ -86,9 +86,25 @@ impl PyMaterialState {
         self.inner.escalation.as_ref().map(|e| e.kind().to_string())
     }
 
+    /// Emission wavelength in nm of the laser that produced the
+    /// surface-map fluence. 0 means unconfigured; the renderer falls
+    /// back to full absorption.
+    #[getter]
+    fn wavelength_nm(&self) -> f64 {
+        self.inner.wavelength_nm
+    }
+
+    /// Optical output power in watts at full power of the laser that
+    /// produced the surface-map fluence.
+    #[getter]
+    fn max_power_watts(&self) -> f64 {
+        self.inner.max_power_watts
+    }
+
     fn __repr__(&self) -> String {
         format!(
-            "MaterialState(profile={:?}, voids={}, provenance={}, escalation={:?})",
+            "MaterialState(profile={:?}, voids={}, provenance={}, \
+             escalation={:?})",
             self.profile(),
             self.inner.void_polygons.len(),
             self.inner.provenance.len(),

@@ -80,6 +80,20 @@ impl PyCompressedArray {
         PyCompressedArray::from_vec_u8(flat, vec![rows, cols])
     }
 
+    /// Create a CompressedArray from a 2-D float32 numpy array.
+    #[staticmethod]
+    fn from_float32_2d(data: PyReadonlyArray2<f32>) -> Self {
+        let array = data.as_array();
+        let (rows, cols) = (array.shape()[0], array.shape()[1]);
+        let flat: Vec<f32> = array.iter().copied().collect();
+        PyCompressedArray {
+            inner: CompressedArray::from_vec_f32_with_shape(
+                flat,
+                vec![rows, cols],
+            ),
+        }
+    }
+
     /// Decompress and return a numpy array with the original dtype
     /// and shape.
     fn to_numpy<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {

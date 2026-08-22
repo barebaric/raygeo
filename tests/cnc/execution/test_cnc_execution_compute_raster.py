@@ -261,9 +261,9 @@ def test_raster_emits_burn_effect():
     fx = rasters[0]
     assert fx.origin_mm == (0.0, 0.0)
     assert fx.px_per_mm == (10.0, 10.0)
-    power = fx.power.to_numpy()
-    assert power.shape == (100, 100)
-    assert (power > 0).any()
+    fluence = fx.fluence.to_numpy()
+    assert fluence.shape == (100, 100)
+    assert (fluence > 0).any()
 
 
 def test_raster_no_burn_effect_for_empty_image():

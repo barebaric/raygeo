@@ -71,6 +71,18 @@ impl CompressedArray {
         Self::from_bytes(bytes, shape, Dtype::Float32)
     }
 
+    /// Like [`from_vec_f32`](Self::from_vec_f32) but with an explicit
+    /// multi-dimensional shape (e.g. `[height, width]`).
+    pub fn from_vec_f32_with_shape(data: Vec<f32>, shape: Vec<usize>) -> Self {
+        let bytes = unsafe {
+            std::slice::from_raw_parts(
+                data.as_ptr() as *const u8,
+                data.len() * 4,
+            )
+        };
+        Self::from_bytes(bytes, shape, Dtype::Float32)
+    }
+
     pub fn from_vec_i32(data: Vec<i32>) -> Self {
         let shape = vec![data.len()];
         let bytes = unsafe {

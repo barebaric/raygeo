@@ -124,6 +124,14 @@ grid: GridBudget
 
 Grid budget for raster outputs.
 
+### `max_power_watts`
+
+```python
+max_power_watts: float
+```
+
+Optical output power in watts at full power (0 = unconfigured).
+
 ### `stock`
 
 ```python
@@ -131,6 +139,14 @@ stock: Any
 ```
 
 The stock to fold against.
+
+### `wavelength_nm`
+
+```python
+wavelength_nm: float
+```
+
+Emission wavelength in nm (0 = unconfigured).
 
 ## PrismaticStock
 

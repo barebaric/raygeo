@@ -34,6 +34,14 @@ grid: Optional[spec.GridSpec]
 
 Grid shared by the raster outputs.
 
+### `max_power_watts`
+
+```python
+max_power_watts: float
+```
+
+Optical output power in watts at full power of the laser that produced the surface-map fluence.
+
 ### `profile`
 
 ```python
@@ -56,7 +64,7 @@ Sorted unique source keys whose effects were applied.
 surface_map: Optional[compressed_array.CompressedArray]
 ```
 
-Per-pixel maximum laser power (R8), or `None` when no raster effects contributed.
+Per-pixel maximum laser fluence (F32, J/cm²), or `None` when no raster effects contributed.
 
 ### `void_polygons`
 
@@ -65,3 +73,12 @@ void_polygons: list[list[tuple[float, float]]]
 ```
 
 Regions removed through the full stock thickness (world mm).
+
+### `wavelength_nm`
+
+```python
+wavelength_nm: float
+```
+
+Emission wavelength in nm of the laser that produced the surface-map fluence. 0 means unconfigured;
+the renderer falls back to full absorption.

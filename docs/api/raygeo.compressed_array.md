@@ -49,6 +49,19 @@ Create a CompressedArray from a 1-D float32 numpy array.
 | `data`    | `numpy.NDArray[numpy.float32]` |             |
 | _Returns_ | `CompressedArray`              |             |
 
+### `from_float32_2d()`
+
+```python
+from_float32_2d(data: numpy.NDArray[numpy.float32]) -> CompressedArray
+```
+
+Create a CompressedArray from a 2-D float32 numpy array.
+
+| Parameter | Type                           | Description |
+| --------- | ------------------------------ | ----------- |
+| `data`    | `numpy.NDArray[numpy.float32]` |             |
+| _Returns_ | `CompressedArray`              |             |
+
 ### `from_int32()`
 
 ```python

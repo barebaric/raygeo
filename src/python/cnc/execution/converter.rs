@@ -97,6 +97,46 @@ fn convert_stage(
                     >>()?;
             let state_source_keys = params_ref.state_source_keys.clone();
             let profile = params_ref.profile;
+            // Resolve laser physics sentinels: 0 for wavelength/power
+            // means "unconfigured" — fall back to the neutral
+            // LaserPhysics defaults so unconfigured heads still produce
+            // a non-zero (if faint) fluence for the burn emitter.
+            let default_laser =
+                crate::ops::material::spec::LaserPhysics::default();
+            let wavelength_nm = if params_ref.wavelength_nm > 0.0 {
+                params_ref.wavelength_nm
+            } else {
+                default_laser.wavelength_nm
+            };
+            let max_power_watts = if params_ref.max_power_watts > 0.0 {
+                params_ref.max_power_watts
+            } else {
+                default_laser.max_power_watts
+            };
+            let (spot_x, spot_y) = params_ref.spot_size_mm;
+            let spot_size_mm = (
+                if spot_x > 0.0 {
+                    spot_x
+                } else {
+                    default_laser.spot_size_mm.0
+                },
+                if spot_y > 0.0 {
+                    spot_y
+                } else {
+                    default_laser.spot_size_mm.1
+                },
+            );
+            let scan_speed_mm_per_s = if params_ref.scan_speed_mm_per_s > 0.0 {
+                params_ref.scan_speed_mm_per_s
+            } else {
+                default_laser.scan_speed_mm_per_s
+            };
+            let laser = crate::ops::material::spec::LaserPhysics {
+                wavelength_nm,
+                max_power_watts,
+                spot_size_mm,
+                scan_speed_mm_per_s,
+            };
             let cut_state = crate::ops::state::State {
                 power: params_ref.power,
                 feed_rate: if params_ref.cut_speed > 0 {
@@ -116,6 +156,7 @@ fn convert_stage(
                 face_id: face_id.clone(),
                 transformers,
                 cut_state,
+                laser,
                 state_source_keys,
                 region_boundary: None,
                 profile,

@@ -204,6 +204,8 @@ pub struct PyMaterialFoldSpec {
     pub(crate) stock: PyStockShape,
     pub(crate) entries: Vec<PyFoldEntry>,
     pub(crate) grid: PyGridBudget,
+    pub(crate) wavelength_nm: f64,
+    pub(crate) max_power_watts: f64,
 }
 
 /// The stock variants a fold spec accepts.
@@ -228,11 +230,13 @@ fn extract_stock(obj: &Bound<'_, PyAny>) -> PyResult<PyStockShape> {
 #[pymethods]
 impl PyMaterialFoldSpec {
     #[new]
-    #[pyo3(signature = (stock, entries, grid = None))]
+    #[pyo3(signature = (stock, entries, grid = None, wavelength_nm = 0.0, max_power_watts = 0.0))]
     fn new(
         stock: &Bound<'_, PyAny>,
         entries: Vec<PyFoldEntry>,
         grid: Option<PyGridBudget>,
+        wavelength_nm: f64,
+        max_power_watts: f64,
     ) -> PyResult<Self> {
         Ok(PyMaterialFoldSpec {
             stock: extract_stock(stock)?,
@@ -241,6 +245,8 @@ impl PyMaterialFoldSpec {
                 px_per_mm: 50.0,
                 max_px: 8192,
             }),
+            wavelength_nm,
+            max_power_watts,
         })
     }
 
@@ -280,6 +286,28 @@ impl PyMaterialFoldSpec {
             max_px: self.grid.max_px,
         }
     }
+
+    /// Emission wavelength in nm (0 = unconfigured).
+    #[getter]
+    fn wavelength_nm(&self) -> f64 {
+        self.wavelength_nm
+    }
+
+    #[setter]
+    fn set_wavelength_nm(&mut self, value: f64) {
+        self.wavelength_nm = value;
+    }
+
+    /// Optical output power in watts at full power (0 = unconfigured).
+    #[getter]
+    fn max_power_watts(&self) -> f64 {
+        self.max_power_watts
+    }
+
+    #[setter]
+    fn set_max_power_watts(&mut self, value: f64) {
+        self.max_power_watts = value;
+    }
 }
 
 impl PyMaterialFoldSpec {
@@ -305,6 +333,8 @@ impl PyMaterialFoldSpec {
                 px_per_mm: self.grid.px_per_mm,
                 max_px: self.grid.max_px,
             },
+            wavelength_nm: self.wavelength_nm,
+            max_power_watts: self.max_power_watts,
         })
     }
 }

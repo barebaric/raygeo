@@ -27,7 +27,7 @@ def _fold(entries, grid=None):
 
 def _raster(values, origin_mm=(0.0, 0.0), px_per_mm=(1.0, 1.0)):
     return RasterEffect(
-        np.asarray(values, dtype=np.uint8),
+        np.asarray(values, dtype=np.float32),
         origin_mm=origin_mm,
         px_per_mm=px_per_mm,
     )

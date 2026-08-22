@@ -33,12 +33,12 @@ __all__ = [
 @typing.final
 class RasterEffect:
     r"""
-    A raster material effect: an R8 power map plus its grid placement.
+    A raster material effect: an F32 fluence map plus its grid placement.
     """
     @property
-    def power(self) -> compressed_array.CompressedArray:
+    def fluence(self) -> compressed_array.CompressedArray:
         r"""
-        The power map as a compressed R8 array.
+        The fluence map as a compressed F32 array.
         """
     @property
     def origin_mm(self) -> tuple[builtins.float, builtins.float]:
@@ -51,11 +51,12 @@ class RasterEffect:
         Grid density in pixels per millimetre ``(x, y)``.
         """
     @property
-    def cut_power_threshold(self) -> typing.Optional[builtins.int]:
+    def cut_fluence_threshold(self) -> typing.Optional[builtins.float]:
         r"""
-        Raster power at or above which the material is cut through.
+        Raster fluence (J/cm²) at or above which the material is cut
+        through.
         """
-    def __new__(cls, power: numpy.typing.NDArray[numpy.uint8], origin_mm: tuple[builtins.float, builtins.float], px_per_mm: tuple[builtins.float, builtins.float], cut_power_threshold: typing.Optional[builtins.int] = None) -> RasterEffect: ...
+    def __new__(cls, fluence: numpy.typing.NDArray[numpy.float32], origin_mm: tuple[builtins.float, builtins.float], px_per_mm: tuple[builtins.float, builtins.float], cut_fluence_threshold: typing.Optional[builtins.float] = None) -> RasterEffect: ...
     def __repr__(self) -> builtins.str: ...
 
 @typing.final

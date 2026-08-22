@@ -22,13 +22,13 @@ from raygeo.pipeline.request import NodeRequest
 from raygeo.pipeline.stage import StageSpec
 
 
-def _node(key, assembler, part, face_id=""):
+def _node(key, assembler, part, face_id="", power=0.0):
     return NodeRequest(
         key=key,
         generation_id=1,
         stage=StageSpec.Compute(
             part=part,
-            params=ComputePayload(assembler=Assembler(assembler)),
+            params=ComputePayload(assembler=Assembler(assembler), power=power),
             face_id=face_id,
         ),
     )
@@ -131,8 +131,13 @@ def test_multi_face_part_concatenates_effects():
 
 def test_contour_emits_burn_effect_along_outline():
     """The contour assembler also emits a RasterEffect tracing the cut
-    outline as a thin full-power char line."""
-    node = _node("contour", ContourSpec(), make_square_part())
+    outline as a thin char line at the step's power."""
+    node = _node(
+        "contour",
+        ContourSpec(),
+        make_square_part(),
+        power=1.0,
+    )
     output = compute_result(_run_once([node])["contour"])
     assert output.material_effects is not None
     rasters = [
@@ -142,15 +147,15 @@ def test_contour_emits_burn_effect_along_outline():
     ]
     assert len(rasters) == 1
     fx = rasters[0]
-    power = fx.power.to_numpy()
-    h, w = power.shape
-    assert (power > 0).any()
+    fluence = fx.fluence.to_numpy()
+    h, w = fluence.shape
+    assert (fluence > 0).any()
     # The square part spans (0,0)-(10,10); the burn grid covers the
     # same bounds, so the outline must appear near the grid edges:
     # leftmost and rightmost columns contain burned pixels.
-    assert (power[:, 0] > 0).any()
-    assert (power[:, -1] > 0).any()
+    assert (fluence[:, 0] > 0).any()
+    assert (fluence[:, -1] > 0).any()
     # ... while the interior (well away from the outline and its
     # thickness brush) stays unburned.
     mid = h // 2
-    assert power[mid, w // 2] == 0
+    assert fluence[mid, w // 2] == 0

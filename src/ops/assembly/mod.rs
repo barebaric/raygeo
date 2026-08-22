@@ -41,6 +41,7 @@ use crate::geo::types::Polygon;
 use crate::ops::callbacks::Callbacks;
 use crate::ops::container::Ops;
 use crate::ops::enums::SectionType;
+use crate::ops::material::spec::LaserPhysics;
 use crate::ops::material::MaterialEffect;
 use crate::ops::part::FaceState;
 use crate::ops::part::ImageSource;
@@ -123,6 +124,12 @@ pub struct AssembleCtx<'a> {
     /// [`AssembleCtx::emit_vector_effect`]; the Compute stage moves
     /// the vec into [`AssemblyOutput::material_effects`].
     pub material_effects: &'a mut Vec<MaterialEffect>,
+    /// Physical laser parameters for the burn fluence model. The
+    /// burn emitter converts the 0–255 PWM power map to fluence
+    /// (J/cm²) via [`LaserPhysics::fluence_at`]. Defaults to a
+    /// neutral 1 W / 0.1 mm / 100 mm/s fallback when the caller does
+    /// not configure it.
+    pub laser: LaserPhysics,
 }
 
 impl<'a> AssembleCtx<'a> {
@@ -147,44 +154,56 @@ impl<'a> AssembleCtx<'a> {
     }
 
     /// Emit a raster (burn) material effect from assembled raster
-    /// `Ops`: the scanline power pattern as a surface-burn map over
-    /// the part area, at the part's own pixel density. No-ops when
-    /// the part has no pixel density or the scanlines carry no power.
+    /// `Ops`: the scanline power pattern converted to a fluence
+    /// (J/cm²) surface-burn map over the part area, at the part's
+    /// own pixel density. No-ops when the part has no pixel density
+    /// or the scanlines carry no power.
     pub fn emit_scanline_burn(&mut self, ops: &Ops) {
         let (Some(px_per_mm), size_mm) = (self.pixels_per_mm, self.size_mm)
         else {
             return;
         };
-        if let Some((power, grid)) =
-            super::material::burn::scanline_power_map(ops, size_mm, px_per_mm)
+        if let Some((fluence, grid)) =
+            super::material::burn::scanline_fluence_map(
+                ops,
+                size_mm,
+                px_per_mm,
+                &self.laser,
+            )
         {
             self.material_effects.push(MaterialEffect::Raster {
-                power,
+                fluence,
                 grid,
                 response: super::material::spec::MaterialResponse {
-                    cut_power_threshold: None,
+                    cut_fluence_threshold: None,
                 },
             });
         }
     }
 
     /// Emit a raster (burn) material effect tracing `polygons`'
-    /// outlines as thin full-power char lines — the burn footprint of
-    /// a vector cut. Empty polygon lists are ignored.
+    /// outlines as thin char lines at the step's current power — the
+    /// burn footprint of a vector cut. Empty polygon lists are
+    /// ignored.
     pub fn emit_outline_burn(&mut self, polygons: &[Polygon]) {
         if polygons.is_empty() {
             return;
         }
-        if let Some((power, grid)) = super::material::burn::outline_power_map(
-            polygons,
-            super::material::burn::OUTLINE_PX_PER_MM,
-            super::material::burn::OUTLINE_THICKNESS_PX,
-        ) {
+        let power_fraction = self.state.power.clamp(0.0, 1.0);
+        if let Some((fluence, grid)) =
+            super::material::burn::outline_fluence_map(
+                polygons,
+                super::material::burn::OUTLINE_PX_PER_MM,
+                super::material::burn::OUTLINE_THICKNESS_PX,
+                &self.laser,
+                power_fraction,
+            )
+        {
             self.material_effects.push(MaterialEffect::Raster {
-                power,
+                fluence,
                 grid,
                 response: super::material::spec::MaterialResponse {
-                    cut_power_threshold: None,
+                    cut_fluence_threshold: None,
                 },
             });
         }

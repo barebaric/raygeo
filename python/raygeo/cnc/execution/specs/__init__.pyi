@@ -238,13 +238,59 @@ class ComputePayload:
         been assembled (default False).
         """
     @property
+    def wavelength_nm(self) -> builtins.float:
+        r"""
+        Laser emission wavelength in nm for the burn fluence model
+        (default 0 → renderer falls back to full absorption).
+        """
+    @wavelength_nm.setter
+    def wavelength_nm(self, value: builtins.float) -> None:
+        r"""
+        Laser emission wavelength in nm for the burn fluence model
+        (default 0 → renderer falls back to full absorption).
+        """
+    @property
+    def max_power_watts(self) -> builtins.float:
+        r"""
+        Optical output power in watts at full power for the burn
+        fluence model (default 0 → neutral fallback).
+        """
+    @max_power_watts.setter
+    def max_power_watts(self, value: builtins.float) -> None:
+        r"""
+        Optical output power in watts at full power for the burn
+        fluence model (default 0 → neutral fallback).
+        """
+    @property
+    def spot_size_mm(self) -> tuple[builtins.float, builtins.float]:
+        r"""
+        Beam spot size ``(x, y)`` in mm for the burn fluence model
+        (default `(0.1, 0.1)`).
+        """
+    @spot_size_mm.setter
+    def spot_size_mm(self, value: tuple[builtins.float, builtins.float]) -> None:
+        r"""
+        Beam spot size ``(x, y)`` in mm for the burn fluence model
+        (default `(0.1, 0.1)`).
+        """
+    @property
+    def scan_speed_mm_per_s(self) -> builtins.float:
+        r"""
+        Scan speed in mm/s for the burn fluence model (default 100).
+        """
+    @scan_speed_mm_per_s.setter
+    def scan_speed_mm_per_s(self, value: builtins.float) -> None:
+        r"""
+        Scan speed in mm/s for the burn fluence model (default 100).
+        """
+    @property
     def air_assist(self) -> typing.Optional[state.AirAssistMode]:
         r"""
         Air assist mode injected as ``SetAirAssist``.
         """
     @air_assist.setter
     def air_assist(self, value: typing.Optional[state.AirAssistMode]) -> None: ...
-    def __new__(cls, assembler: typing.Any, transformers: typing.Sequence[typing.Any] = [], state_source_keys: typing.Sequence[builtins.str] = [], power: builtins.float = 0.0, cut_speed: builtins.int = 0, head_uid: typing.Optional[builtins.str] = None, air_assist: typing.Optional[state.AirAssistMode] = None, profile: builtins.bool = False) -> ComputePayload: ...
+    def __new__(cls, assembler: typing.Any, transformers: typing.Sequence[typing.Any] = [], state_source_keys: typing.Sequence[builtins.str] = [], power: builtins.float = 0.0, cut_speed: builtins.int = 0, head_uid: typing.Optional[builtins.str] = None, air_assist: typing.Optional[state.AirAssistMode] = None, profile: builtins.bool = False, wavelength_nm: builtins.float = 0.0, max_power_watts: builtins.float = 0.0, spot_size_mm: tuple[builtins.float, builtins.float] = (0.1, 0.1), scan_speed_mm_per_s: builtins.float = 100.0) -> ComputePayload: ...
 
 @typing.final
 class EncodeSpec:

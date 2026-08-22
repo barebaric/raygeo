@@ -8,6 +8,7 @@ use crate::ops::assembly::{
     AssembleCtx, Assembler, AssemblyMeta, AssemblyOutput, AssemblyWarning,
     AssemblyWarningKind, Tracelet,
 };
+use crate::ops::material::spec::LaserPhysics;
 use crate::ops::part::{FaceState, Part, StockRegion};
 use crate::ops::state::State;
 use crate::ops::transform::{apply_transformers, Transformer};
@@ -23,6 +24,9 @@ pub struct AssemblerCompute {
     pub face_id: String,
     pub transformers: Vec<Box<dyn Transformer>>,
     pub cut_state: State,
+    /// Physical laser parameters for the burn fluence model. Defaults
+    /// to a neutral fallback when the caller does not configure it.
+    pub laser: LaserPhysics,
     /// Keys of upstream compute nodes whose `cleared_fragments`
     /// should be restored into this node's face before assembly.
     pub state_source_keys: Vec<String>,
@@ -135,6 +139,7 @@ impl AssemblerCompute {
             region_boundary: self.region_boundary.clone(),
             warnings,
             material_effects,
+            laser: self.laser,
         };
         let result = self.assembler.assemble(&mut assemble_ctx);
 

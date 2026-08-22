@@ -37,8 +37,8 @@ class MaterialState:
     @property
     def surface_map(self) -> typing.Optional[compressed_array.CompressedArray]:
         r"""
-        Per-pixel maximum laser power (R8), or ``None`` when no
-        raster effects contributed.
+        Per-pixel maximum laser fluence (F32, J/cm²), or ``None``
+        when no raster effects contributed.
         """
     @property
     def grid(self) -> typing.Optional[spec.GridSpec]:
@@ -55,6 +55,19 @@ class MaterialState:
         r"""
         First invariant violation encountered (``"top_open_violation"``
         or ``"solid_profile_required"``), or ``None``.
+        """
+    @property
+    def wavelength_nm(self) -> builtins.float:
+        r"""
+        Emission wavelength in nm of the laser that produced the
+        surface-map fluence. 0 means unconfigured; the renderer falls
+        back to full absorption.
+        """
+    @property
+    def max_power_watts(self) -> builtins.float:
+        r"""
+        Optical output power in watts at full power of the laser that
+        produced the surface-map fluence.
         """
     def __repr__(self) -> builtins.str: ...
 

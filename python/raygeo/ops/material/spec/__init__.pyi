@@ -117,7 +117,21 @@ class MaterialFoldSpec:
         r"""
         Grid budget for raster outputs.
         """
-    def __new__(cls, stock: typing.Any, entries: typing.Sequence[FoldEntry], grid: typing.Optional[GridBudget] = None) -> MaterialFoldSpec: ...
+    @property
+    def wavelength_nm(self) -> builtins.float:
+        r"""
+        Emission wavelength in nm (0 = unconfigured).
+        """
+    @wavelength_nm.setter
+    def wavelength_nm(self, value: builtins.float) -> None: ...
+    @property
+    def max_power_watts(self) -> builtins.float:
+        r"""
+        Optical output power in watts at full power (0 = unconfigured).
+        """
+    @max_power_watts.setter
+    def max_power_watts(self, value: builtins.float) -> None: ...
+    def __new__(cls, stock: typing.Any, entries: typing.Sequence[FoldEntry], grid: typing.Optional[GridBudget] = None, wavelength_nm: builtins.float = 0.0, max_power_watts: builtins.float = 0.0) -> MaterialFoldSpec: ...
 
 @typing.final
 class PrismaticStock:

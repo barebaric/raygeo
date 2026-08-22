@@ -15,6 +15,7 @@ use crate::cnc::execution::specs::{
     AggregateGroup, AggregateInput, AggregateSpec, LinkMode, MachineParams,
 };
 use crate::cnc::plan::plan::Plan;
+use crate::ops::material::spec::LaserPhysics;
 use crate::ops::part::Part;
 use crate::ops::state::State;
 use crate::pipeline::callbacks::NoCallbacks;
@@ -60,6 +61,7 @@ pub fn create_intent(
             face_id: step.face_id.clone(),
             transformers: Vec::new(),
             cut_state: State::default(),
+            laser: LaserPhysics::default(),
             state_source_keys,
             region_boundary: step.region_boundary.clone(),
             profile: false,

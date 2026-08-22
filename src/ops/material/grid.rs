@@ -56,32 +56,32 @@ pub(crate) fn resolve_grid(bounds: &Rect, budget: &GridBudget) -> GridSpec {
     }
 }
 
-/// A decompressed raster power map ready for sampling.
+/// A decompressed raster fluence map ready for sampling.
 pub(crate) struct RasterView<'a> {
-    data: Vec<u8>,
+    data: Vec<f32>,
     grid: &'a GridSpec,
 }
 
 impl<'a> RasterView<'a> {
-    /// Decompress a raster effect's power map once for repeated
+    /// Decompress a raster effect's fluence map once for repeated
     /// sampling. Returns `None` if decompression fails.
     pub(crate) fn new(
-        power: &'a CompressedArray,
+        fluence: &'a CompressedArray,
         grid: &'a GridSpec,
     ) -> Option<Self> {
-        let data = power.decompress_to_vec_u8().ok()?;
+        let data = fluence.decompress_to_vec_f32().ok()?;
         Some(Self { data, grid })
     }
 
     /// Nearest-neighbour sample at a world point; 0 outside the grid.
-    pub(crate) fn sample(&self, world: (f64, f64)) -> u8 {
+    pub(crate) fn sample(&self, world: (f64, f64)) -> f32 {
         let (w, h) = self.grid.size_px;
         let px = ((world.0 - self.grid.origin_mm.0) * self.grid.px_per_mm.0)
             .floor() as isize;
         let py = ((world.1 - self.grid.origin_mm.1) * self.grid.px_per_mm.1)
             .floor() as isize;
         if px < 0 || py < 0 || px >= w as isize || py >= h as isize {
-            return 0;
+            return 0.0;
         }
         self.data[py as usize * w + px as usize]
     }

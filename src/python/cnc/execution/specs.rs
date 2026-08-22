@@ -269,6 +269,21 @@ pub struct PyComputePayload {
     /// been assembled (default False).
     #[pyo3(get, set)]
     pub profile: bool,
+    /// Laser emission wavelength in nm for the burn fluence model
+    /// (default 0 → renderer falls back to full absorption).
+    #[pyo3(get, set)]
+    pub wavelength_nm: f64,
+    /// Optical output power in watts at full power for the burn
+    /// fluence model (default 0 → neutral fallback).
+    #[pyo3(get, set)]
+    pub max_power_watts: f64,
+    /// Beam spot size ``(x, y)`` in mm for the burn fluence model
+    /// (default `(0.1, 0.1)`).
+    #[pyo3(get, set)]
+    pub spot_size_mm: (f64, f64),
+    /// Scan speed in mm/s for the burn fluence model (default 100).
+    #[pyo3(get, set)]
+    pub scan_speed_mm_per_s: f64,
 }
 
 #[gen_stub_pymethods]
@@ -276,7 +291,7 @@ pub struct PyComputePayload {
 impl PyComputePayload {
     #[new]
     #[allow(clippy::too_many_arguments)]
-    #[pyo3(signature = (assembler, transformers=vec![], state_source_keys=vec![], power=0.0, cut_speed=0, head_uid=None, air_assist=None, profile=false))]
+    #[pyo3(signature = (assembler, transformers=vec![], state_source_keys=vec![], power=0.0, cut_speed=0, head_uid=None, air_assist=None, profile=false, wavelength_nm=0.0, max_power_watts=0.0, spot_size_mm=(0.1, 0.1), scan_speed_mm_per_s=100.0))]
     fn new(
         assembler: Py<PyAny>,
         transformers: Vec<Py<PyAny>>,
@@ -286,6 +301,10 @@ impl PyComputePayload {
         head_uid: Option<String>,
         air_assist: Option<Bound<'_, PyAirAssistMode>>,
         profile: bool,
+        wavelength_nm: f64,
+        max_power_watts: f64,
+        spot_size_mm: (f64, f64),
+        scan_speed_mm_per_s: f64,
     ) -> Self {
         PyComputePayload {
             assembler,
@@ -296,6 +315,10 @@ impl PyComputePayload {
             head_uid,
             air_assist: air_assist.map(|a| a.borrow().0),
             profile,
+            wavelength_nm,
+            max_power_watts,
+            spot_size_mm,
+            scan_speed_mm_per_s,
         }
     }
 
