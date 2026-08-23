@@ -820,6 +820,23 @@ Remove inner edges (shared between contours).
 | _Returns_    | `Geometry` | The geometry (for method chaining). |
 | _Complexity_ |            | O(n) time, O(n) space               |
 
+### `remove_self_intersections()`
+
+```python
+remove_self_intersections(tolerance: float = 0.01) -> Geometry
+```
+
+Rebuild self-intersecting or overlapping closed contours.
+
+Affected contours are replaced by the union of their linearised outlines; clean contours (and their
+curves) are kept as-is.
+
+| Parameter    | Type           | Description                                          |
+| ------------ | -------------- | ---------------------------------------------------- |
+| `tolerance`  | `float = 0.01` | Linearisation tolerance in mm for affected contours. |
+| _Returns_    | `Geometry`     | The geometry (for method chaining).                  |
+| _Complexity_ |                | O(n log n) average time, O(n) space                  |
+
 ### `reverse_contour()`
 
 ```python
