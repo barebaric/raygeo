@@ -144,6 +144,7 @@ pub enum RasterMode {
     VariablePower = 1,
     ConstantPower = 2,
     DepthMap = 3,
+    Dither = 4,
 }
 
 impl RasterMode {
@@ -152,6 +153,7 @@ impl RasterMode {
             RasterMode::VariablePower => "VARIABLE_POWER",
             RasterMode::ConstantPower => "CONSTANT_POWER",
             RasterMode::DepthMap => "DEPTH_MAP",
+            RasterMode::Dither => "DITHER",
         }
     }
 

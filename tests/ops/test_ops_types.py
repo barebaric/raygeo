@@ -157,15 +157,18 @@ def test_raster_mode_values():
     assert RasterMode.VARIABLE_POWER.value == 1
     assert RasterMode.CONSTANT_POWER.value == 2
     assert RasterMode.DEPTH_MAP.value == 3
+    assert RasterMode.DITHER.value == 4
 
 
 def test_raster_mode_names():
     assert RasterMode.VARIABLE_POWER.name == "VARIABLE_POWER"
     assert RasterMode.CONSTANT_POWER.name == "CONSTANT_POWER"
     assert RasterMode.DEPTH_MAP.name == "DEPTH_MAP"
+    assert RasterMode.DITHER.name == "DITHER"
 
 
 def test_raster_mode_repr():
     assert repr(RasterMode.VARIABLE_POWER) == "RasterMode.VARIABLE_POWER"
     assert repr(RasterMode.CONSTANT_POWER) == "RasterMode.CONSTANT_POWER"
     assert repr(RasterMode.DEPTH_MAP) == "RasterMode.DEPTH_MAP"
+    assert repr(RasterMode.DITHER) == "RasterMode.DITHER"

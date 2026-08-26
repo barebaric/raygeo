@@ -15,7 +15,8 @@ SectionType — distinguishes between VECTOR_OUTLINE and RASTER_FILL sections wh
 split into logical portions.
 
 RasterMode — identifies the power-application strategy for raster sections: VARIABLE_POWER
-(per-pixel 8-bit), CONSTANT_POWER (uniform / dither), or DEPTH_MAP (stepped Z levels).
+(per-pixel 8-bit), CONSTANT_POWER (uniform), DEPTH_MAP (stepped Z levels), or DITHER (binary
+dithered mask).
 
 ## CommandCategory
 
@@ -69,8 +70,9 @@ The raw integer value of this command type.
 Raster engrave mode: how power is applied during raster scanning.
 
 - `VARIABLE_POWER`: per-pixel 8-bit power (from power-modulated image)
-- `CONSTANT_POWER`: uniform power (from mask scans / dither lines)
+- `CONSTANT_POWER`: uniform power (from mask scans)
 - `DEPTH_MAP`: stepped Z levels (from multi-pass image)
+- `DITHER`: binary dithered mask scan at constant power
 
 ### `name`
 
@@ -78,7 +80,7 @@ Raster engrave mode: how power is applied during raster scanning.
 name: str
 ```
 
-The uppercase name (`"VARIABLE_POWER"`, `"CONSTANT_POWER"`, or `"DEPTH_MAP"`).
+The uppercase name (e.g. `"VARIABLE_POWER"`, `"DITHER"`).
 
 ### `value`
 

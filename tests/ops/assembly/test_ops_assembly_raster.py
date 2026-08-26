@@ -5,7 +5,7 @@ import pytest
 
 from raygeo.ops.assembly.raster import raster
 from raygeo.ops.part import Part
-from raygeo.ops.types import CommandType, SectionType
+from raygeo.ops.types import CommandType, RasterMode, SectionType
 
 # step_power is quantized to a u8 mask byte (0-255) and back, so
 # comparisons need slack for the resulting rounding error.
@@ -49,6 +49,30 @@ def test_dither_uses_step_power_not_max_power():
     )
     (power,) = _linearized_powers(result.ops)
     assert power == pytest.approx(0.35, abs=_BYTE_TOL)
+
+
+def test_dither_sections_marked_with_dither_mode():
+    """Dither rasters must be tagged RasterMode.DITHER, distinct from
+    mask_scan's CONSTANT_POWER."""
+    dither_result = raster(_part(), mode="dither", line_interval_mm=1.0)
+    dither_sections = [
+        s
+        for s in dither_result.ops.sections()
+        if s.section_type == SectionType.RASTER_FILL
+    ]
+    assert dither_sections
+    assert all(s.raster_mode == RasterMode.DITHER for s in dither_sections)
+
+    mask_result = raster(_part(), mode="mask_scan", line_interval_mm=1.0)
+    mask_sections = [
+        s
+        for s in mask_result.ops.sections()
+        if s.section_type == SectionType.RASTER_FILL
+    ]
+    assert mask_sections
+    assert all(
+        s.raster_mode == RasterMode.CONSTANT_POWER for s in mask_sections
+    )
 
 
 def test_mask_scan_default_step_power_matches_raster_default():

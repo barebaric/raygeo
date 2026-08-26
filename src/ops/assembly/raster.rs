@@ -182,7 +182,8 @@ pub fn assemble_raster(
 
     let raster_mode = match mode {
         "power_modulated" => Some(RasterMode::VariablePower),
-        "mask_scan" | "dither" => Some(RasterMode::ConstantPower),
+        "mask_scan" => Some(RasterMode::ConstantPower),
+        "dither" => Some(RasterMode::Dither),
         "multi_pass" => Some(RasterMode::DepthMap),
         _ => None,
     };
