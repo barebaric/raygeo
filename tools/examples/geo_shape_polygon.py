@@ -7,6 +7,7 @@ import numpy as np
 from matplotlib.patches import Circle as CirclePatch
 
 from raygeo.geo.algo.narrow import find_narrow_passages
+from raygeo.geo.shape.bezier import linearize_bezier_adaptive
 from raygeo.geo.shape.polygon import (
     CornerType,
     EndStyle,
@@ -320,6 +321,52 @@ def generate_offset_polyline():
         ax.grid(True, alpha=0.3)
         ax.legend(fontsize=9)
         ax.set_title(f"{style_label} caps", fontsize=11, fontweight="bold")
+    fig.tight_layout()
+    return fig
+
+
+def generate_offset_polyline_shapes():
+    """Open polyline offset on a bezier and a mixed multi-segment path."""
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
+
+    # Smooth cubic bezier, sampled to a polyline before offsetting.
+    p0, p1, p2, p3 = (0.0, 10.0), (15.0, 35.0), (45.0, 30.0), (60.0, 5.0)
+    curve = linearize_bezier_adaptive(p0, p1, p2, p3, 0.01)
+    ax1.plot(*zip(*curve), color="steelblue", linewidth=2, label="Original")
+    for poly in offset_polyline(curve, 4.0, JoinStyle.ROUND, EndStyle.ROUND):
+        plot_polygon(ax1, poly, "tomato", "Round caps", linewidth=2.5)
+    ax1.plot(
+        *zip(*[p0, p1, p2, p3]),
+        "--",
+        color="gray",
+        alpha=0.6,
+        linewidth=1,
+        label="Control polygon",
+    )
+    ax1.set_title("Cubic bezier input", fontsize=12, fontweight="bold")
+    ax1.set_aspect("equal")
+    ax1.legend(fontsize=9)
+    ax1.grid(True, alpha=0.3)
+    ax1.set_xlabel("X (mm)")
+    ax1.set_ylabel("Y (mm)")
+
+    # Multi-segment path: straight lead-in, bezier, straight lead-out.
+    lead = [(0.0, 0.0), (25.0, 0.0)]
+    curve2 = linearize_bezier_adaptive(
+        (25.0, 0.0), (45.0, 0.0), (40.0, 20.0), (60.0, 20.0), 0.01
+    )
+    tail = [(60.0, 20.0), (80.0, 20.0)]
+    path = list(lead) + list(curve2[1:]) + list(tail[1:])
+    ax2.plot(*zip(*path), color="steelblue", linewidth=2, label="Original")
+    for poly in offset_polyline(path, 3.0, JoinStyle.ROUND, EndStyle.ROUND):
+        plot_polygon(ax2, poly, "tomato", "Round caps", linewidth=2.5)
+    ax2.set_title("Line–bezier–line path", fontsize=12, fontweight="bold")
+    ax2.set_aspect("equal")
+    ax2.legend(fontsize=9)
+    ax2.grid(True, alpha=0.3)
+    ax2.set_xlabel("X (mm)")
+    ax2.set_ylabel("Y (mm)")
+
     fig.tight_layout()
     return fig
 
@@ -993,6 +1040,14 @@ __images__ = [
             "outline — butt, square, round caps"
         ),
         "function": generate_offset_polyline,
+    },
+    {
+        "heading": "offset_polyline",
+        "caption": (
+            "``offset_polyline`` hugs a sampled cubic bezier and a "
+            "mixed line–bezier–line path"
+        ),
+        "function": generate_offset_polyline_shapes,
     },
     {
         "heading": "apply_minimum_curvature",

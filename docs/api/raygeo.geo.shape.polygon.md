@@ -948,6 +948,10 @@ stadium (slot) shape.
 
 *`offset_polyline` offsets an open polyline into a closed outline — butt, square, round caps*
 
+![ hugs a sampled cubic bezier and a mixed line–bezier–line path](images/geo-shape-polygon-offset-polyline-shapes.png)
+
+*`offset_polyline` hugs a sampled cubic bezier and a mixed line–bezier–line path*
+
 ### `point_in_polygon_numpy()`
 
 ```python
