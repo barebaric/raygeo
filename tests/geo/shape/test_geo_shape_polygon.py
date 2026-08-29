@@ -11,6 +11,7 @@ import pytest
 from raygeo.geo import Matrix
 from raygeo.geo.shape.polygon import (
     CornerType,
+    EndStyle,
     JoinStyle,
     apply_minimum_curvature,
     clean_polygon,
@@ -51,6 +52,7 @@ from raygeo.geo.shape.polygon import (
     normalize_polygons,
     normalize_polygons_numpy,
     offset_polygon,
+    offset_polyline,
     point_in_polygon_numpy,
     polygon_area_numpy,
     polygon_bounds_numpy,
@@ -866,6 +868,97 @@ class TestPolygonOffset:
         assert abs(max(ys) - min(ys) - 66) < 0.05
         assert abs((max(xs) + min(xs)) / 2) < 0.05
         assert abs((max(ys) + min(ys)) / 2) < 0.05
+
+
+class TestPolylineOffset:
+    def test_round_caps_stadium(self):
+        """Offsetting a segment with Round caps yields a stadium."""
+        length, d = 40.0, 5.0
+        polys = offset_polyline(
+            P((0, 0), (length, 0)), d, JoinStyle.MITER, EndStyle.ROUND
+        )
+        assert len(polys) == 1
+        area = abs(get_polygon_area(polys[0]))
+        expected = length * 2 * d + math.pi * d**2
+        assert area == pytest.approx(expected, rel=0.01)
+        xs = [p[0] for p in polys[0]]
+        ys = [p[1] for p in polys[0]]
+        assert max(xs) == pytest.approx(length + d, abs=0.05)
+        assert min(xs) == pytest.approx(-d, abs=0.05)
+        assert max(ys) == pytest.approx(d, abs=0.05)
+        assert min(ys) == pytest.approx(-d, abs=0.05)
+
+    def test_butt_caps_rectangle(self):
+        """Butt caps yield a plain rectangle of width 2d."""
+        length, d = 40.0, 5.0
+        polys = offset_polyline(
+            P((0, 0), (length, 0)), d, JoinStyle.MITER, EndStyle.BUTT
+        )
+        assert len(polys) == 1
+        area = abs(get_polygon_area(polys[0]))
+        assert area == pytest.approx(length * 2 * d, rel=0.01)
+        xs = [p[0] for p in polys[0]]
+        assert max(xs) == pytest.approx(length, abs=0.05)
+        assert min(xs) == pytest.approx(0.0, abs=0.05)
+
+    def test_square_caps_extended(self):
+        """Square caps extend the outline by d on both ends."""
+        length, d = 40.0, 5.0
+        polys = offset_polyline(
+            P((0, 0), (length, 0)), d, JoinStyle.MITER, EndStyle.SQUARE
+        )
+        assert len(polys) == 1
+        area = abs(get_polygon_area(polys[0]))
+        assert area == pytest.approx((length + 2 * d) * 2 * d, rel=0.01)
+        xs = [p[0] for p in polys[0]]
+        assert max(xs) == pytest.approx(length + d, abs=0.05)
+        assert min(xs) == pytest.approx(-d, abs=0.05)
+
+    def test_bent_path_round_joins(self):
+        """Round joins give the Minkowski sum area of the path."""
+        d = 4.0
+        path = P((0, 0), (40, 0), (40, 30))
+        polys = offset_polyline(path, d, JoinStyle.ROUND, EndStyle.ROUND)
+        assert len(polys) == 1
+        area = abs(get_polygon_area(polys[0]))
+        expected = 2 * d * 70 + math.pi * d**2
+        assert area == pytest.approx(expected, rel=0.01)
+
+    def test_negative_offset_same_area(self):
+        """Sign of the offset does not change the swept outline."""
+        path = P((0, 0), (40, 0))
+        positive = offset_polyline(path, 5.0, JoinStyle.MITER, EndStyle.BUTT)
+        negative = offset_polyline(path, -5.0, JoinStyle.MITER, EndStyle.BUTT)
+        assert len(positive) == len(negative) == 1
+        area_pos = abs(get_polygon_area(positive[0]))
+        area_neg = abs(get_polygon_area(negative[0]))
+        assert area_pos == pytest.approx(area_neg)
+
+    def test_zero_offset_returns_input(self):
+        path = P((0, 0), (40, 0), (40, 30))
+        result = offset_polyline(path, 0, JoinStyle.MITER, EndStyle.ROUND)
+        assert len(result) == 1
+        assert result[0] == path
+
+    def test_end_style_default_round(self):
+        """offset_polyline defaults to Round caps and Miter joins."""
+        path = P((0, 0), (40, 0))
+        default = offset_polyline(path, 5.0)
+        explicit = offset_polyline(
+            path, 5.0, join_style=JoinStyle.MITER, end_style=EndStyle.ROUND
+        )
+        assert default == explicit
+
+    def test_degenerate(self):
+        assert offset_polyline(cast(Polygon, []), 1.0) == []
+        assert offset_polyline(P((0, 0)), 1.0) == []
+
+    def test_self_intersecting_path_returns_valid_polygons(self):
+        """A figure-crossing path still yields a non-empty outline."""
+        path = P((0, 0), (60, 60), (60, -60), (-60, -60))
+        polys = offset_polyline(path, 5.0, JoinStyle.MITER, EndStyle.ROUND)
+        assert len(polys) >= 1
+        assert all(len(poly) >= 3 for poly in polys)
 
 
 class TestApplyMinimumCurvature:

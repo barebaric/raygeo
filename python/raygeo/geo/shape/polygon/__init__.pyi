@@ -8,6 +8,7 @@ from raygeo.geo import types
 import typing
 __all__ = [
     "CornerType",
+    "EndStyle",
     "JoinStyle",
     "apply_minimum_curvature",
     "clean_polygon",
@@ -53,6 +54,7 @@ __all__ = [
     "normalize_polygons",
     "normalize_polygons_numpy",
     "offset_polygon",
+    "offset_polyline",
     "point_in_polygon_numpy",
     "polygon_area_numpy",
     "polygon_bounds_numpy",
@@ -86,6 +88,19 @@ class CornerType(enum.Enum):
     """
     CONVEX = ...
     CONCAVE = ...
+
+@typing.final
+class EndStyle(enum.Enum):
+    r"""
+    End-cap style for open-path (polyline) offset operations.
+    
+    - ``EndStyle.BUTT``: Ends squared off without extension.
+    - ``EndStyle.SQUARE``: Ends extended by the offset distance.
+    - ``EndStyle.ROUND``: Ends capped with a semicircular arc (default).
+    """
+    BUTT = ...
+    SQUARE = ...
+    ROUND = ...
 
 @typing.final
 class JoinStyle(enum.Enum):
@@ -565,6 +580,25 @@ def offset_polygon(polygon: collections.abc.Sequence[types.Point], offset: float
     :param offset: Offset distance (positive to inflate, negative to deflate).
     :param join_style: Corner join style (default: ``JoinStyle.MITER``).
     :returns: Offset polygon(s).
+    :complexity: O(n log n)
+    """
+
+def offset_polyline(polyline: collections.abc.Sequence[types.Point], offset: float, join_style: JoinStyle = JoinStyle.MITER, end_style: EndStyle = EndStyle.ROUND) -> list[types.Polygon]:
+    r"""
+    Offset an open polyline, producing a closed outline.
+    
+    Treats the input as an open path: the result is the swept area
+    of the polyline thickened by ``offset`` on both sides, capped
+    per ``end_style``. Offsetting a straight segment with
+    ``EndStyle.ROUND`` yields a stadium (slot) shape.
+    
+    :param polyline: Polyline as (x, y) points.
+    :param offset: Offset distance; the swept outline is symmetric,
+        so its sign does not change the result.
+    :param join_style: Corner join style (default:
+        ``JoinStyle.MITER``).
+    :param end_style: End-cap style (default: ``EndStyle.ROUND``).
+    :returns: Offset outline(s) as closed polygons.
     :complexity: O(n log n)
     """
 

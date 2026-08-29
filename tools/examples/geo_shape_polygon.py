@@ -9,6 +9,7 @@ from matplotlib.patches import Circle as CirclePatch
 from raygeo.geo.algo.narrow import find_narrow_passages
 from raygeo.geo.shape.polygon import (
     CornerType,
+    EndStyle,
     JoinStyle,
     apply_minimum_curvature,
     clean_polygon,
@@ -29,6 +30,7 @@ from raygeo.geo.shape.polygon import (
     get_segment_swept_polygon,
     get_signed_boundary_distance,
     offset_polygon,
+    offset_polyline,
     walk_polygon_from_point,
 )
 from raygeo.geo.types import Polygon
@@ -288,6 +290,38 @@ def generate_offset():
         ax.set_title(f"{style_label} join", fontsize=11, fontweight="bold")
     fig6.tight_layout()
     return fig6
+
+
+def generate_offset_polyline():
+    """Open polyline offset with the different end-cap styles."""
+    segment = [(0.0, 0.0), (30.0, 0.0)]
+    end_styles = [
+        (EndStyle.BUTT, "BUTT"),
+        (EndStyle.SQUARE, "SQUARE"),
+        (EndStyle.ROUND, "ROUND"),
+    ]
+    cap_colors = ["limegreen", "dodgerblue", "tomato"]
+
+    fig, axes = plt.subplots(1, 3, figsize=(14, 4.5))
+    for ax, (style_key, style_label), color in zip(
+        axes, end_styles, cap_colors
+    ):
+        ax.plot(
+            [p[0] for p in segment],
+            [p[1] for p in segment],
+            color="steelblue",
+            linewidth=2,
+            label="Original",
+        )
+        result = offset_polyline(segment, 4.0, end_style=style_key)
+        for poly in result:
+            plot_polygon(ax, poly, color, style_label, linewidth=2.5)
+        ax.set_aspect("equal")
+        ax.grid(True, alpha=0.3)
+        ax.legend(fontsize=9)
+        ax.set_title(f"{style_label} caps", fontsize=11, fontweight="bold")
+    fig.tight_layout()
+    return fig
 
 
 def generate_min_curvature():
@@ -951,6 +985,14 @@ __images__ = [
         "heading": "offset_polygon",
         "caption": "Polygon offset — miter vs round vs square join styles",
         "function": generate_offset,
+    },
+    {
+        "heading": "offset_polyline",
+        "caption": (
+            "``offset_polyline`` offsets an open polyline into a closed "
+            "outline — butt, square, round caps"
+        ),
+        "function": generate_offset_polyline,
     },
     {
         "heading": "apply_minimum_curvature",

@@ -23,9 +23,9 @@ use crate::geo::shape::polygon::{
     get_signed_boundary_distance, is_almost_equal,
     is_path_confined_to_boundary, is_point_inside_polygon,
     is_polygon_clockwise, is_polygon_convex, normalize_polygons,
-    offset_polygon, resample_polygon, rotate_polygon, rotate_polygons,
-    scale_polygon, transform_polygons, translate_bounds, translate_polygon,
-    translate_polygons, CornerType, JoinStyle,
+    offset_polygon, offset_polyline, resample_polygon, rotate_polygon,
+    rotate_polygons, scale_polygon, transform_polygons, translate_bounds,
+    translate_polygon, translate_polygons, CornerType, EndStyle, JoinStyle,
 };
 use crate::geo::types::{Point, Rect};
 use crate::python::geo::matrix::Matrix as PyMatrix;
@@ -118,6 +118,53 @@ impl PyJoinStyle {
 #[gen_stub_pyclass_enum]
 #[pyclass(
     module = "raygeo.geo.shape.polygon",
+    name = "EndStyle",
+    from_py_object
+)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+/// End-cap style for open-path (polyline) offset operations.
+///
+/// - ``EndStyle.BUTT``: Ends squared off without extension.
+/// - ``EndStyle.SQUARE``: Ends extended by the offset distance.
+/// - ``EndStyle.ROUND``: Ends capped with a semicircular arc (default).
+pub enum PyEndStyle {
+    #[pyo3(name = "BUTT")]
+    Butt,
+    #[pyo3(name = "SQUARE")]
+    Square,
+    #[pyo3(name = "ROUND")]
+    #[default]
+    Round,
+}
+
+impl From<PyEndStyle> for EndStyle {
+    fn from(s: PyEndStyle) -> Self {
+        match s {
+            PyEndStyle::Butt => EndStyle::Butt,
+            PyEndStyle::Square => EndStyle::Square,
+            PyEndStyle::Round => EndStyle::Round,
+        }
+    }
+}
+
+#[pymethods]
+impl PyEndStyle {
+    fn __repr__(&self) -> String {
+        match self {
+            PyEndStyle::Butt => "EndStyle.BUTT".to_string(),
+            PyEndStyle::Square => "EndStyle.SQUARE".to_string(),
+            PyEndStyle::Round => "EndStyle.ROUND".to_string(),
+        }
+    }
+
+    fn __str__(&self) -> String {
+        self.__repr__()
+    }
+}
+
+#[gen_stub_pyclass_enum]
+#[pyclass(
+    module = "raygeo.geo.shape.polygon",
     name = "CornerType",
     from_py_object
 )]
@@ -162,6 +209,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let m = PyModule::new(py, "polygon")?;
 
     m.add_class::<PyJoinStyle>()?;
+    m.add_class::<PyEndStyle>()?;
     m.add_class::<PyCornerType>()?;
 
     register_functions!(
@@ -207,6 +255,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         normalize_polygons_numpy_py,
         normalize_polygons_py,
         offset_polygon_py,
+        offset_polyline_py,
         point_in_polygon_numpy_py,
         point_line_distance_py,
         polygon_area_numpy_py,
@@ -1172,6 +1221,57 @@ fn offset_polygon_py(
         &poly_to_points(polygon),
         offset,
         join_style.into(),
+    ))
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+    import raygeo.geo.types
+
+    def offset_polyline(
+        polyline: collections.abc.Sequence[types.Point],
+        offset: float,
+        join_style: JoinStyle = JoinStyle.MITER,
+        end_style: EndStyle = EndStyle.ROUND,
+    ) -> list[types.Polygon]:
+        """Offset an open polyline, producing a closed outline.
+
+        Treats the input as an open path: the result is the swept area
+        of the polyline thickened by ``offset`` on both sides, capped
+        per ``end_style``. Offsetting a straight segment with
+        ``EndStyle.ROUND`` yields a stadium (slot) shape.
+
+        :param polyline: Polyline as (x, y) points.
+        :param offset: Offset distance; the swept outline is symmetric,
+            so its sign does not change the result.
+        :param join_style: Corner join style (default:
+            ``JoinStyle.MITER``).
+        :param end_style: End-cap style (default: ``EndStyle.ROUND``).
+        :returns: Offset outline(s) as closed polygons.
+        :complexity: O(n log n)
+        """
+"#,
+    module = "raygeo.geo.shape.polygon"
+)]
+#[pyfunction(name = "offset_polyline")]
+#[pyo3(signature = (
+    polyline,
+    offset,
+    join_style = PyJoinStyle::Miter,
+    end_style = PyEndStyle::Round,
+))]
+fn offset_polyline_py(
+    polyline: Vec<PyPoint2D>,
+    offset: f64,
+    join_style: PyJoinStyle,
+    end_style: PyEndStyle,
+) -> Vec<Vec<(f64, f64)>> {
+    polygons_to_tuples(offset_polyline(
+        &poly_to_points(polyline),
+        offset,
+        join_style.into(),
+        end_style.into(),
     ))
 }
 

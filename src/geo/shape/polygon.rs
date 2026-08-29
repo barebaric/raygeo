@@ -39,6 +39,19 @@ pub enum JoinStyle {
     Square,
 }
 
+/// End style for open-path (polyline) offsetting, matching clipper2
+/// semantics for open contour caps.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum EndStyle {
+    /// Ends are squared off without extending beyond the endpoints.
+    Butt,
+    /// Ends are extended by the offset amount, squared off.
+    Square,
+    /// Ends are capped with a semicircular arc of the offset radius.
+    #[default]
+    Round,
+}
+
 /// Custom point scaler matching Python's CLIPPER_SCALE = 10^7.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Hash)]
 pub struct GeoScale;
@@ -1046,6 +1059,48 @@ pub fn offset_polygon(
     };
     let path = polygon_to_path(polygon);
     let result = path.inflate(offset, clipper_join, EndType::Polygon, 2.0);
+    let mut output = Vec::new();
+    for p in result.iter() {
+        let poly = path_to_polygon(p);
+        if poly.len() >= 3 {
+            output.push(poly);
+        }
+    }
+    output
+}
+
+/// Offset an open polyline, producing a closed outline around it.
+///
+/// Unlike [`offset_polygon`] this treats the input as an *open* path:
+/// the result is the swept area of the polyline thickened by `offset`
+/// on both sides, capped per `end_style`. Offsetting a straight segment
+/// with [`EndStyle::Round`] yields a stadium (slot) shape.
+///
+/// **Planar (XY-plane only).** Z is not modeled.
+pub fn offset_polyline(
+    polyline: &Polygon,
+    offset: f64,
+    join_style: JoinStyle,
+    end_style: EndStyle,
+) -> Vec<Polygon> {
+    if polyline.len() < 2 {
+        return vec![];
+    }
+    if offset.abs() < 1e-9 {
+        return vec![polyline.clone()];
+    }
+    let clipper_join = match join_style {
+        JoinStyle::Miter => JoinType::Miter,
+        JoinStyle::Round => JoinType::Round,
+        JoinStyle::Square => JoinType::Square,
+    };
+    let clipper_end = match end_style {
+        EndStyle::Butt => EndType::Butt,
+        EndStyle::Square => EndType::Square,
+        EndStyle::Round => EndType::Round,
+    };
+    let path = polygon_to_path(polyline);
+    let result = path.inflate(offset, clipper_join, clipper_end, 2.0);
     let mut output = Vec::new();
     for p in result.iter() {
         let poly = path_to_polygon(p);

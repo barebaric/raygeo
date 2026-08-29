@@ -15,6 +15,20 @@ Which corner type to find in \[`find_polygon_corners`\].
 - `CONCAVE`
 - `CONVEX`
 
+## EndStyle
+
+End-cap style for open-path (polyline) offset operations.
+
+- `EndStyle.BUTT`: Ends squared off without extension.
+- `EndStyle.SQUARE`: Ends extended by the offset distance.
+- `EndStyle.ROUND`: Ends capped with a semicircular arc (default).
+
+**Values:**
+
+- `BUTT`
+- `ROUND`
+- `SQUARE`
+
 ## JoinStyle
 
 Corner join style for polygon offset operations.
@@ -903,6 +917,36 @@ Offset (inflate/deflate) a polygon.
 ![Polygon offset — miter vs round vs square join styles](images/geo-shape-polygon-offset.png)
 
 *Polygon offset — miter vs round vs square join styles*
+
+### `offset_polyline()`
+
+```python
+offset_polyline(
+    polyline: Sequence[types.Point],
+    offset: float,
+    join_style: JoinStyle = JoinStyle.MITER,
+    end_style: EndStyle = EndStyle.ROUND,
+) -> list[types.Polygon]
+```
+
+Offset an open polyline, producing a closed outline.
+
+Treats the input as an open path: the result is the swept area of the polyline thickened by `offset`
+on both sides, capped per `end_style`. Offsetting a straight segment with `EndStyle.ROUND` yields a
+stadium (slot) shape.
+
+| Parameter    | Type                          | Description                                                                              |
+| ------------ | ----------------------------- | ---------------------------------------------------------------------------------------- |
+| `polyline`   | `Sequence[types.Point]`       | Polyline as (x, y) points.                                                               |
+| `offset`     | `float`                       | Offset distance; the swept outline is symmetric, so its sign does not change the result. |
+| `join_style` | `JoinStyle = JoinStyle.MITER` | Corner join style (default: `JoinStyle.MITER`).                                          |
+| `end_style`  | `EndStyle = EndStyle.ROUND`   | End-cap style (default: `EndStyle.ROUND`).                                               |
+| _Returns_    | `list[types.Polygon]`         | Offset outline(s) as closed polygons.                                                    |
+| _Complexity_ |                               | O(n log n)                                                                               |
+
+![ offsets an open polyline into a closed outline — butt, square, round caps](images/geo-shape-polygon-offset-polyline.png)
+
+*`offset_polyline` offsets an open polyline into a closed outline — butt, square, round caps*
 
 ### `point_in_polygon_numpy()`
 
