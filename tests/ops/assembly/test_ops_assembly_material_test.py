@@ -7,6 +7,7 @@ from raygeo.ops.assembly.material_test_grid import (
     generate_material_test_grid,
     generate_material_test_grid_preview,
 )
+from raygeo.ops.types import RasterMode, SectionType
 
 
 def test_generate_material_test_grid_basic():
@@ -422,3 +423,95 @@ def test_preview_accepts_speed_label_unit_params():
     )
     assert img.ndim == 3
     assert img.shape[2] == 4
+
+
+# ── Section layout ────────────────────────────────────────────────
+
+
+def test_engrave_grid_labels_get_own_vector_section():
+    """Engrave mode: labels live in a VectorOutline section of their
+    own, never inside a raster section."""
+    result = generate_material_test_grid(
+        size_mm=(200.0, 200.0),
+        cols=2,
+        rows=2,
+        include_labels=True,
+    )
+    sections = result.ops.sections()
+    labels_sections = [
+        s for s in sections if s.section_type == SectionType.VECTOR_OUTLINE
+    ]
+    assert len(labels_sections) == 1
+    blocks = labels_sections[0].state_blocks_by_name(result.ops, "labels")
+    assert blocks, "labels state block must sit in the labels section"
+
+
+def test_engrave_grid_each_cell_is_own_raster_section():
+    """Engrave mode: every cell is its own RasterFill section with
+    constant-power raster mode, named cell-r{row}-c{col}."""
+    result = generate_material_test_grid(
+        size_mm=(200.0, 200.0),
+        cols=2,
+        rows=2,
+        include_labels=True,
+    )
+    ops = result.ops
+    raster = [
+        s for s in ops.sections() if s.section_type == SectionType.RASTER_FILL
+    ]
+    assert len(raster) == 4
+    cmds = ops.to_dict()["commands"]
+    names = {cmds[s.marker_indices[0]]["workpiece_uid"] for s in raster}
+    assert names == {
+        "cell-r0-c0",
+        "cell-r0-c1",
+        "cell-r1-c0",
+        "cell-r1-c1",
+    }
+    for section in raster:
+        assert section.raster_mode == RasterMode.CONSTANT_POWER
+        content = section.content(ops)
+        assert any(
+            content.command_type(i).name == "LINE_TO"
+            for i in range(content.len())
+        )
+
+
+def test_engrave_grid_labels_section_precedes_cell_sections():
+    result = generate_material_test_grid(
+        size_mm=(200.0, 200.0),
+        cols=1,
+        rows=2,
+        include_labels=True,
+    )
+    sections = result.ops.sections()
+    assert sections[0].section_type == SectionType.VECTOR_OUTLINE
+    assert [s.section_type for s in sections[1:]] == [
+        SectionType.RASTER_FILL
+    ] * 2
+
+
+def test_engrave_grid_without_labels_has_only_cell_sections():
+    result = generate_material_test_grid(
+        size_mm=(200.0, 200.0),
+        cols=2,
+        rows=1,
+        include_labels=False,
+    )
+    sections = result.ops.sections()
+    assert len(sections) == 2
+    assert all(s.section_type == SectionType.RASTER_FILL for s in sections)
+
+
+def test_cut_grid_is_single_vector_section():
+    """Cut mode: one VectorOutline section holds labels and cells."""
+    result = generate_material_test_grid(
+        size_mm=(200.0, 200.0),
+        mode="cut",
+        cols=2,
+        rows=2,
+        include_labels=True,
+    )
+    sections = result.ops.sections()
+    assert len(sections) == 1
+    assert sections[0].section_type == SectionType.VECTOR_OUTLINE

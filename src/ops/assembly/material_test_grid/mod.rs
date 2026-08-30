@@ -89,6 +89,13 @@ impl Assembler for MaterialTestGridSpec {
 /// Creates grid cells arranged in rows × cols, each with baked-in power,
 /// speed, and pass count.  All motion is written through the provided
 /// [`Tracelet`] so that `drain()` produces the full toolpath.
+///
+/// In engrave mode the section layout is load-bearing for drivers:
+/// labels form their own [`crate::ops::enums::SectionType::VectorOutline`]
+/// section and each cell forms its own
+/// [`crate::ops::enums::SectionType::RasterFill`] section (named
+/// ``cell-r{row}-c{col}``, [`crate::ops::enums::RasterMode::ConstantPower`])
+/// so raster-aware drivers can treat each cell as one overscan group.
 pub fn generate_material_test_grid(
     params: &MaterialTestGridSpec,
     trace: &mut Tracelet,
@@ -169,22 +176,27 @@ pub fn generate_material_test_grid(
     trace.set_attrs(trace_helpers::build_attrs(params));
 
     let is_engrave = params.mode.eq_ignore_ascii_case("engrave");
-    let section_type = if is_engrave {
-        crate::ops::enums::SectionType::RasterFill
-    } else {
-        crate::ops::enums::SectionType::VectorOutline
-    };
-    let raster_mode = if is_engrave {
-        Some(crate::ops::enums::RasterMode::ConstantPower)
-    } else {
-        None
-    };
-    trace
-        .ops_section_start(section_type, "material_test_grid", raster_mode)
-        .expect("valid section params");
+    if !is_engrave {
+        trace
+            .ops_section_start(
+                crate::ops::enums::SectionType::VectorOutline,
+                "material_test_grid",
+                None,
+            )
+            .expect("valid section params");
+    }
 
     // Wrap labels in a state block
     if params.include_labels {
+        if is_engrave {
+            trace
+                .ops_section_start(
+                    crate::ops::enums::SectionType::VectorOutline,
+                    "material_test_grid_labels",
+                    None,
+                )
+                .expect("valid section params");
+        }
         trace.state_block_start(Some("labels"));
         let mut label_ops = Ops::new();
         generate_labels(
@@ -225,6 +237,14 @@ pub fn generate_material_test_grid(
             }
         }
         trace.state_block_end();
+        if is_engrave {
+            trace
+                .ops_section_end(
+                    crate::ops::enums::SectionType::VectorOutline,
+                    None,
+                )
+                .expect("valid section params");
+        }
     }
 
     // Build grid cells sorted by risk: highest speed first, then lowest power
@@ -307,6 +327,15 @@ pub fn generate_material_test_grid(
 
     for (cell_idx, cell) in (0_u32..).zip(cells.iter()) {
         let cell_name = format!("cell-r{}-c{}", cell.row, cell.col);
+        if is_engrave {
+            trace
+                .ops_section_start(
+                    crate::ops::enums::SectionType::RasterFill,
+                    &cell_name,
+                    Some(crate::ops::enums::RasterMode::ConstantPower),
+                )
+                .expect("valid section params");
+        }
         trace.state_block_start(Some(&cell_name));
         let cell_state = State {
             power: cell.power / 100.0,
@@ -353,6 +382,14 @@ pub fn generate_material_test_grid(
         }
 
         trace.state_block_end();
+        if is_engrave {
+            trace
+                .ops_section_end(
+                    crate::ops::enums::SectionType::RasterFill,
+                    Some(crate::ops::enums::RasterMode::ConstantPower),
+                )
+                .expect("valid section params");
+        }
 
         if first_point.is_none() {
             first_point = Some(Point::new(cell.x, fy));
@@ -360,9 +397,14 @@ pub fn generate_material_test_grid(
         last_point = Some(Point::new(cell.x + cell.width, fy + cell.height));
     }
 
-    trace
-        .ops_section_end(section_type, raster_mode)
-        .expect("valid section params");
+    if !is_engrave {
+        trace
+            .ops_section_end(
+                crate::ops::enums::SectionType::VectorOutline,
+                None,
+            )
+            .expect("valid section params");
+    }
 
     let start_pos = first_point.unwrap_or(Point::ZERO);
     let end_pos = last_point.unwrap_or(Point::ZERO);
