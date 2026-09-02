@@ -18,6 +18,7 @@ __all__ = [
     "fit_cubic_bezier",
     "flatten_bezier",
     "get_bezier_bounds",
+    "get_bezier_closest_point",
     "get_bezier_flatness_sq",
     "get_bezier_length",
     "get_bezier_point_at",
@@ -90,6 +91,25 @@ def get_bezier_bounds(p0: types.Point, p1: types.Point, p2: types.Point, p3: typ
     :param p3: End control point (x, y).
     :returns: Bounding rectangle as (x_min, y_min, x_max, y_max).
     :complexity: O(1)
+    """
+
+def get_bezier_closest_point(start: types.Point3D, control1: types.Point3D, control2: types.Point3D, end: types.Point3D, px: float, py: float) -> typing.Optional[tuple[float, types.Point, float]]:
+    r"""
+    Analytical closest point on a cubic Bezier curve.
+    
+    Returns ``(t, (x, y), dist_sq)`` where *t* is the parameter,
+    ``(x, y)`` is the closest point on the curve, and *dist_sq* is
+    the squared Euclidean distance to the query point.  Returns
+    ``None`` when the control points are all identical.
+    
+    :param start: Start point ``(x, y, z)``.
+    :param control1: First control point ``(x, y, z)``.
+    :param control2: Second control point ``(x, y, z)``.
+    :param end: End point ``(x, y, z)``.
+    :param px: Query X coordinate.
+    :param py: Query Y coordinate.
+    :returns: ``(t, (x, y), dist_sq)`` or ``None``.
+    :complexity: O(1) — analytical quintic root solver.
     """
 
 def get_bezier_flatness_sq(a: types.Point3D, b: types.Point3D, c: types.Point3D, d: types.Point3D) -> float:

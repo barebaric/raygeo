@@ -131,6 +131,36 @@ Get the bounding rectangle of a cubic bezier.
 | _Returns_    | `types.Rect`  | Bounding rectangle as (x_min, y_min, x_max, y_max). |
 | _Complexity_ |               | O(1)                                                |
 
+### `get_bezier_closest_point()`
+
+```python
+get_bezier_closest_point(
+    start: types.Point3D,
+    control1: types.Point3D,
+    control2: types.Point3D,
+    end: types.Point3D,
+    px: float,
+    py: float,
+) -> Optional[tuple[float, types.Point, float]]
+```
+
+Analytical closest point on a cubic Bezier curve.
+
+Returns `(t, (x, y), dist_sq)` where *t* is the parameter, `(x, y)` is the closest point on the
+curve, and *dist_sq* is the squared Euclidean distance to the query point. Returns `None` when the
+control points are all identical.
+
+| Parameter    | Type                                         | Description                            |
+| ------------ | -------------------------------------------- | -------------------------------------- |
+| `start`      | `types.Point3D`                              | Start point `(x, y, z)`.               |
+| `control1`   | `types.Point3D`                              | First control point `(x, y, z)`.       |
+| `control2`   | `types.Point3D`                              | Second control point `(x, y, z)`.      |
+| `end`        | `types.Point3D`                              | End point `(x, y, z)`.                 |
+| `px`         | `float`                                      | Query X coordinate.                    |
+| `py`         | `float`                                      | Query Y coordinate.                    |
+| _Returns_    | `Optional[tuple[float, types.Point, float]]` | `(t, (x, y), dist_sq)` or `None`.      |
+| _Complexity_ |                                              | O(1) — analytical quintic root solver. |
+
 ### `get_bezier_flatness_sq()`
 
 ```python

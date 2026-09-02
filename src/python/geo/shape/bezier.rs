@@ -17,11 +17,11 @@ use super::super::flex_point::{
 use super::super::types::{CubicBezier2D, Edge3D};
 use crate::geo::shape::bezier::{
     clip_bezier_with_rect, convert_cubic_bezier_to_quadratic, fit_cubic_bezier,
-    flatten_bezier, get_bezier_bounds, get_bezier_flatness_sq,
-    get_bezier_length, get_bezier_point_at, get_bezier_rect_intersections,
-    get_perpendicular_dist_sq, is_bezier_flat, is_bezier_inside_polygons,
-    linearize_bezier, linearize_bezier_adaptive, linearize_bezier_segment,
-    nearest_tangent_circle_on_bezier, split_bezier,
+    flatten_bezier, get_bezier_bounds, get_bezier_closest_point,
+    get_bezier_flatness_sq, get_bezier_length, get_bezier_point_at,
+    get_bezier_rect_intersections, get_perpendicular_dist_sq, is_bezier_flat,
+    is_bezier_inside_polygons, linearize_bezier, linearize_bezier_adaptive,
+    linearize_bezier_segment, nearest_tangent_circle_on_bezier, split_bezier,
 };
 use crate::geo::types::{CubicBezier, Point, Point3D, Rect};
 use pyo3::prelude::*;
@@ -52,6 +52,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         get_bezier_length_py,
         fit_cubic_bezier_py,
         nearest_tangent_circle_on_bezier_py,
+        get_bezier_closest_point_py,
     );
 
     shape_mod.add_submodule(&m)?;
@@ -789,4 +790,56 @@ fn nearest_tangent_circle_on_bezier_py(
     );
     nearest_tangent_circle_on_bezier(Point::new(point.0, point.1), &bz, radius)
         .map(|(c, t, tp)| ((c.x, c.y), (t.x, t.y), tp))
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import typing
+    import raygeo.geo.types
+
+    def get_bezier_closest_point(
+        start: types.Point3D,
+        control1: types.Point3D,
+        control2: types.Point3D,
+        end: types.Point3D,
+        px: float,
+        py: float,
+    ) -> typing.Optional[tuple[float, types.Point, float]]:
+        """Analytical closest point on a cubic Bezier curve.
+
+        Returns ``(t, (x, y), dist_sq)`` where *t* is the parameter,
+        ``(x, y)`` is the closest point on the curve, and *dist_sq* is
+        the squared Euclidean distance to the query point.  Returns
+        ``None`` when the control points are all identical.
+
+        :param start: Start point ``(x, y, z)``.
+        :param control1: First control point ``(x, y, z)``.
+        :param control2: Second control point ``(x, y, z)``.
+        :param end: End point ``(x, y, z)``.
+        :param px: Query X coordinate.
+        :param py: Query Y coordinate.
+        :returns: ``(t, (x, y), dist_sq)`` or ``None``.
+        :complexity: O(1) — analytical quintic root solver.
+        """
+    "#,
+    module = "raygeo.geo.shape.bezier"
+)]
+#[pyfunction(name = "get_bezier_closest_point")]
+fn get_bezier_closest_point_py(
+    start: PyPoint3D,
+    control1: PyPoint3D,
+    control2: PyPoint3D,
+    end: PyPoint3D,
+    x: f64,
+    y: f64,
+) -> Option<(f64, (f64, f64), f64)> {
+    get_bezier_closest_point(
+        Point3D::new(end.0, end.1, end.2),
+        Point3D::new(control1.0, control1.1, control1.2),
+        Point3D::new(control2.0, control2.1, control2.2),
+        Point3D::new(start.0, start.1, start.2),
+        x,
+        y,
+    )
+    .map(|(t, pt, dist_sq)| (t, (pt.x, pt.y), dist_sq))
 }

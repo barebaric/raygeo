@@ -15,7 +15,6 @@ use glam::{DVec2, DVec3};
 
 use crate::constants::EPSILON_INTERSECT;
 use crate::geo::algo::interp::solve_quadratic;
-use crate::geo::shape::line::get_line_segment_closest_point;
 use crate::geo::shape::point::get_midpoint_3d;
 use crate::geo::shape::polygon::is_point_inside_polygon;
 use crate::geo::types::{
@@ -254,34 +253,181 @@ pub fn get_bezier_closest_point(
     x: f64,
     y: f64,
 ) -> Option<(f64, Point, f64)> {
-    // Linearize and search for closest point on segments
-    let bezier_segments =
-        linearize_bezier_from_params(end, control1, control2, start_pos, 0.005);
-    if bezier_segments.is_empty() {
-        return None;
-    }
+    let p0 = (start_pos.x, start_pos.y);
+    let c1 = (control1.x, control1.y);
+    let c2 = (control2.x, control2.y);
+    let p1 = (end.x, end.y);
+    let target = (x, y);
 
-    let mut min_dist_sq = f64::INFINITY;
-    let mut best_result: Option<(usize, f64, Point, f64)> = None;
+    // The distance from target to B(t) is minimized where
+    // d/dt ||B(t) - target||² = 2(B(t) - target) · B'(t) = 0
+    // For a cubic Bezier, this is a quintic polynomial in t.
+    // We find all real roots in [0,1], evaluate the distance at each
+    // root and at the endpoints, and return the closest.
+    let coeffs = critical_coeffs(p0, c1, c2, p1, target);
+    let roots = solve_quintic_real_roots(&coeffs);
 
-    for (seg_idx, (seg_start, seg_end)) in bezier_segments.iter().enumerate() {
-        let t_sub = get_line_segment_closest_point(
-            Point::new(seg_start.x, seg_start.y),
-            Point::new(seg_end.x, seg_end.y),
-            x,
-            y,
-        );
-        if t_sub.2 < min_dist_sq {
-            min_dist_sq = t_sub.2;
-            best_result = Some((seg_idx, t_sub.0, t_sub.1, t_sub.2));
+    let mut best_t: f64 = 0.0;
+    let mut best_dist_sq = point_bezier_dist_sq(p0, c1, c2, p1, target, 0.0);
+
+    for &t in roots.iter() {
+        let t_clamped = t.clamp(0.0, 1.0);
+        let d = point_bezier_dist_sq(p0, c1, c2, p1, target, t_clamped);
+        if d < best_dist_sq {
+            best_dist_sq = d;
+            best_t = t_clamped;
         }
     }
 
-    best_result.map(|(best_seg_idx, best_t_sub, best_pt, best_dist_sq)| {
-        let t_bezier =
-            (best_seg_idx as f64 + best_t_sub) / bezier_segments.len() as f64;
-        (t_bezier, best_pt, best_dist_sq)
-    })
+    // Check endpoint t=1
+    let d1 = point_bezier_dist_sq(p0, c1, c2, p1, target, 1.0);
+    if d1 < best_dist_sq {
+        best_dist_sq = d1;
+        best_t = 1.0;
+    }
+
+    let pt = bezier_at(p0, c1, c2, p1, best_t);
+    Some((best_t, pt, best_dist_sq))
+}
+
+/// Evaluate B(t) using Bernstein polynomials.
+fn bezier_at(
+    p0: (f64, f64),
+    c1: (f64, f64),
+    c2: (f64, f64),
+    p1: (f64, f64),
+    t: f64,
+) -> Point {
+    let mt = 1.0 - t;
+    let x = mt * mt * mt * p0.0
+        + 3.0 * mt * mt * t * c1.0
+        + 3.0 * mt * t * t * c2.0
+        + t * t * t * p1.0;
+    let y = mt * mt * mt * p0.1
+        + 3.0 * mt * mt * t * c1.1
+        + 3.0 * mt * t * t * c2.1
+        + t * t * t * p1.1;
+    Point::new(x, y)
+}
+
+/// Evaluate distance-squared from (x,y) to B(t).
+fn point_bezier_dist_sq(
+    p0: (f64, f64),
+    c1: (f64, f64),
+    c2: (f64, f64),
+    p1: (f64, f64),
+    target: (f64, f64),
+    t: f64,
+) -> f64 {
+    let px = bezier_at(p0, c1, c2, p1, t).x - target.0;
+    let py = bezier_at(p0, c1, c2, p1, t).y - target.1;
+    px * px + py * py
+}
+
+/// Compute the quintic polynomial coefficients of
+/// (B(t) - P) · B'(t), where B is a cubic Bezier.
+fn critical_coeffs(
+    p0: (f64, f64),
+    c1: (f64, f64),
+    c2: (f64, f64),
+    p1: (f64, f64),
+    target: (f64, f64),
+) -> [f64; 6] {
+    let a0 = p0.0 - target.0;
+    let a1 = 3.0 * (c1.0 - p0.0);
+    let a2 = 3.0 * (p0.0 - 2.0 * c1.0 + c2.0);
+    let a3 = -p0.0 + 3.0 * c1.0 - 3.0 * c2.0 + p1.0;
+
+    let b0 = p0.1 - target.1;
+    let b1 = 3.0 * (c1.1 - p0.1);
+    let b2 = 3.0 * (p0.1 - 2.0 * c1.1 + c2.1);
+    let b3 = -p0.1 + 3.0 * c1.1 - 3.0 * c2.1 + p1.1;
+
+    let da1 = a1;
+    let da2 = 2.0 * a2;
+    let da3 = 3.0 * a3;
+    let db1 = b1;
+    let db2 = 2.0 * b2;
+    let db3 = 3.0 * b3;
+
+    let mut r = [0.0f64; 6];
+
+    r[0] += a0 * da1;
+    r[1] += a0 * da2 + a1 * da1;
+    r[2] += a0 * da3 + a1 * da2 + a2 * da1;
+    r[3] += a1 * da3 + a2 * da2 + a3 * da1;
+    r[4] += a2 * da3 + a3 * da2;
+    r[5] += a3 * da3;
+
+    r[0] += b0 * db1;
+    r[1] += b0 * db2 + b1 * db1;
+    r[2] += b0 * db3 + b1 * db2 + b2 * db1;
+    r[3] += b1 * db3 + b2 * db2 + b3 * db1;
+    r[4] += b2 * db3 + b3 * db2;
+    r[5] += b3 * db3;
+
+    r
+}
+
+/// Evaluate a polynomial with coefficients coeff (coeff[i] * t^i) at t.
+fn poly_eval(coeff: &[f64; 6], t: f64) -> f64 {
+    let mut result = 0.0;
+    for i in (0..6).rev() {
+        result = result * t + coeff[i];
+    }
+    result
+}
+
+/// Find all real roots of a degree-5 polynomial in [0, 1] by sampling
+/// for sign changes and bisecting each bracketed interval.
+fn solve_quintic_real_roots(coeff: &[f64; 6]) -> Vec<f64> {
+    let mut roots: Vec<f64> = Vec::new();
+    if find_degree(coeff) == 0 {
+        return roots;
+    }
+
+    let steps = 64;
+    let mut prev_t = 0.0f64;
+    let mut prev_v = poly_eval(coeff, prev_t);
+
+    for i in 1..=steps {
+        let t = i as f64 / steps as f64;
+        let v = poly_eval(coeff, t);
+        if (prev_v < 0.0) != (v < 0.0) {
+            let mut lo = prev_t;
+            let mut hi = t;
+            let mut flo = prev_v;
+            for _ in 0..60 {
+                let mid = 0.5 * (lo + hi);
+                let fm = poly_eval(coeff, mid);
+                if (flo < 0.0) != (fm < 0.0) {
+                    hi = mid;
+                } else {
+                    lo = mid;
+                    flo = fm;
+                }
+            }
+            let root = 0.5 * (lo + hi);
+            let dominated = roots.iter().any(|r| (r - root).abs() < 1e-9);
+            if !dominated {
+                roots.push(root);
+            }
+        }
+        prev_t = t;
+        prev_v = v;
+    }
+
+    roots
+}
+
+/// Find the actual degree of the polynomial (highest non-zero coeff index).
+fn find_degree(coeff: &[f64; 6]) -> usize {
+    for i in (0..6).rev() {
+        if coeff[i].abs() > 1e-14 {
+            return i;
+        }
+    }
+    0
 }
 
 /// Converts a Bezier curve from parameters into line segments.
