@@ -22,10 +22,11 @@ use crate::geo::shape::polygon::{
     get_polygons_union, get_polyline_swept_polygon, get_segment_swept_polygon,
     get_signed_boundary_distance, is_almost_equal,
     is_path_confined_to_boundary, is_point_inside_polygon,
-    is_polygon_clockwise, is_polygon_convex, normalize_polygons,
-    offset_polygon, offset_polyline, resample_polygon, rotate_polygon,
-    rotate_polygons, scale_polygon, transform_polygons, translate_bounds,
-    translate_polygon, translate_polygons, CornerType, EndStyle, JoinStyle,
+    is_point_strictly_inside_polygon, is_polygon_clockwise, is_polygon_convex,
+    normalize_polygons, offset_polygon, offset_polyline, resample_polygon,
+    rotate_polygon, rotate_polygons, scale_polygon, transform_polygons,
+    translate_bounds, translate_polygon, translate_polygons, CornerType,
+    EndStyle, JoinStyle,
 };
 use crate::geo::types::{Point, Rect};
 use crate::python::geo::matrix::Matrix as PyMatrix;
@@ -249,6 +250,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         is_almost_equal_py,
         is_path_confined_to_boundary_py,
         is_point_inside_polygon_py,
+        is_point_strictly_inside_polygon_py,
         is_polygon_clockwise_py,
         is_polygon_convex_py,
         miter_offset_intersection_py,
@@ -1111,6 +1113,41 @@ fn is_point_inside_polygon_py(
     polygon: Vec<PyPoint2D>,
 ) -> bool {
     is_point_inside_polygon(
+        Point::new(point.0, point.1),
+        &poly_to_points(polygon),
+    )
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import collections.abc
+    import raygeo.geo.types
+
+    def is_point_strictly_inside_polygon(
+        point: types.Point,
+        polygon: collections.abc.Sequence[types.Point],
+    ) -> bool:
+        """Check if a point is strictly inside a polygon (boundary excluded).
+
+        Like :func:`is_point_inside_polygon`, but returns ``False`` when
+        the point lies exactly on a polygon edge.  Useful for containment
+        hierarchies where two contours share a vertex — the shared point
+        must not be treated as inside either contour.
+
+        :param point: Point (x, y) to test.
+        :param polygon: Polygon as (x, y) points.
+        :returns: True if point is strictly inside the polygon.
+        :complexity: O(n)
+        """
+"#,
+    module = "raygeo.geo.shape.polygon"
+)]
+#[pyfunction(name = "is_point_strictly_inside_polygon")]
+fn is_point_strictly_inside_polygon_py(
+    point: (f64, f64),
+    polygon: Vec<PyPoint2D>,
+) -> bool {
+    is_point_strictly_inside_polygon(
         Point::new(point.0, point.1),
         &poly_to_points(polygon),
     )

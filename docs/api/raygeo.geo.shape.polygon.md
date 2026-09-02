@@ -834,6 +834,28 @@ Check if a point is inside a polygon.
 | _Returns_    | `bool`                  | True if point is inside the polygon. |
 | _Complexity_ |                         | O(n)                                 |
 
+### `is_point_strictly_inside_polygon()`
+
+```python
+is_point_strictly_inside_polygon(
+    point: types.Point,
+    polygon: Sequence[types.Point],
+) -> bool
+```
+
+Check if a point is strictly inside a polygon (boundary excluded).
+
+Like **is_point_inside_polygon**, but returns `False` when the point lies exactly on a polygon edge.
+Useful for containment hierarchies where two contours share a vertex — the shared point must not be
+treated as inside either contour.
+
+| Parameter    | Type                    | Description                                   |
+| ------------ | ----------------------- | --------------------------------------------- |
+| `point`      | `types.Point`           | Point (x, y) to test.                         |
+| `polygon`    | `Sequence[types.Point]` | Polygon as (x, y) points.                     |
+| _Returns_    | `bool`                  | True if point is strictly inside the polygon. |
+| _Complexity_ |                         | O(n)                                          |
+
 ### `is_polygon_clockwise()`
 
 ```python

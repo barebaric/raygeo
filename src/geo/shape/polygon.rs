@@ -1336,6 +1336,79 @@ pub fn is_point_inside_polygon(point: Point, polygon: &Polygon) -> bool {
     is_point_in_polygon(point, polygon)
 }
 
+/// Like [`is_point_in_polygon`], but returns `false` when the point lies
+/// exactly on a polygon edge.  Useful for containment hierarchies where
+/// two contours share a vertex — the shared point must not be treated as
+/// "inside" either contour.
+pub fn is_point_strictly_inside_polygon(
+    point: Point,
+    polygon: &Polygon,
+) -> bool {
+    let x = point.x;
+    let y = point.y;
+    let n = polygon.len();
+    if n < 3 {
+        return false;
+    }
+
+    let mut min_x = polygon[0].x;
+    let mut max_x = polygon[0].x;
+    let mut min_y = polygon[0].y;
+    let mut max_y = polygon[0].y;
+
+    for p in polygon {
+        let px = p.x;
+        let py = p.y;
+        if px < min_x {
+            min_x = px;
+        } else if px > max_x {
+            max_x = px;
+        }
+        if py < min_y {
+            min_y = py;
+        } else if py > max_y {
+            max_y = py;
+        }
+    }
+
+    if x < min_x || x > max_x || y < min_y || y > max_y {
+        return false;
+    }
+
+    // Reject boundary points (unlike is_point_in_polygon).
+    for i in 0..n {
+        let p1 = polygon[i];
+        let p2 = polygon[(i + 1) % n];
+        let cross_product = (Point::new(x, y) - p1).perp_dot(p2 - p1);
+        if cross_product.abs() < 1e-9
+            && p1.x.min(p2.x) <= x
+            && x <= p1.x.max(p2.x)
+            && p1.y.min(p2.y) <= y
+            && y <= p1.y.max(p2.y)
+        {
+            return false;
+        }
+    }
+
+    let mut inside = false;
+    let mut p1x = polygon[0].x;
+    let mut p1y = polygon[0].y;
+    for i in 0..=n {
+        let p2x = polygon[i % n].x;
+        let p2y = polygon[i % n].y;
+        if (p1y > y) != (p2y > y) {
+            let x_intersect = (y - p1y) * (p2x - p1x) / (p2y - p1y) + p1x;
+            if x_intersect > x {
+                inside = !inside;
+            }
+        }
+        p1x = p2x;
+        p1y = p2y;
+    }
+
+    inside
+}
+
 /// True when every vertex of `path` lies inside `boundary` AND no
 /// path segment approaches within `clearance` of any boundary edge
 /// (i.e. the tool disc does not protrude past the wall).

@@ -10,7 +10,9 @@ use rstar::{RTree, RTreeObject, AABB};
 
 use crate::geo::algo::analysis::{get_subpath_area_from_array, is_closed};
 use crate::geo::geometry::Geometry;
-use crate::geo::shape::polygon::is_point_inside_polygon;
+use crate::geo::shape::polygon::{
+    is_point_inside_polygon, is_point_strictly_inside_polygon,
+};
 use crate::geo::types::{Command, Point, Point3D, Rect};
 
 /// Preprocessed contour data for hierarchy analysis.
@@ -215,7 +217,10 @@ pub fn build_hierarchy(contours: &[&Geometry]) -> ContourHierarchy {
                 None => continue,
             };
 
-            if is_point_inside_polygon(current.test_point, &other.vertices) {
+            if is_point_strictly_inside_polygon(
+                current.test_point,
+                &other.vertices,
+            ) {
                 depth += 1;
                 let other_bbox_area = (other.rect.max.x - other.rect.min.x)
                     * (other.rect.max.y - other.rect.min.y);

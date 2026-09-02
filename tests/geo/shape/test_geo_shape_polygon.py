@@ -48,6 +48,7 @@ from raygeo.geo.shape.polygon import (
     is_almost_equal,
     is_path_confined_to_boundary,
     is_point_inside_polygon,
+    is_point_strictly_inside_polygon,
     is_polygon_convex,
     normalize_polygons,
     normalize_polygons_numpy,
@@ -1182,6 +1183,67 @@ class TestPointInPolygon:
         assert is_point_inside_polygon((10, 5), polygon) is True
         assert is_point_inside_polygon((5, 10), polygon) is True
         assert is_point_inside_polygon((0, 5), polygon) is True
+
+
+class TestPointStrictlyInsidePolygon:
+    """Tests for is_point_strictly_inside_polygon (boundary excluded)."""
+
+    def test_inside(self):
+        polygon = P((0, 0), (10, 0), (10, 10), (0, 10))
+        assert is_point_strictly_inside_polygon((5, 5), polygon) is True
+
+    def test_outside(self):
+        polygon = P((0, 0), (10, 0), (10, 10), (0, 10))
+        assert is_point_strictly_inside_polygon((15, 15), polygon) is False
+
+    def test_on_edge_returns_false(self):
+        """The key difference from is_point_inside_polygon: boundary
+        points are NOT considered inside."""
+        polygon = P((0, 0), (10, 0), (10, 10), (0, 10))
+        assert is_point_strictly_inside_polygon((5, 0), polygon) is False
+        assert is_point_strictly_inside_polygon((10, 5), polygon) is False
+        assert is_point_strictly_inside_polygon((5, 10), polygon) is False
+        assert is_point_strictly_inside_polygon((0, 5), polygon) is False
+
+    def test_on_vertex_returns_false(self):
+        polygon = P((0, 0), (10, 0), (10, 10), (0, 10))
+        assert is_point_strictly_inside_polygon((0, 0), polygon) is False
+        assert is_point_strictly_inside_polygon((10, 10), polygon) is False
+
+    def test_empty_polygon(self):
+        assert (
+            is_point_strictly_inside_polygon((5, 5), cast(Polygon, []))
+            is False
+        )
+
+    def test_too_few_points(self):
+        polygon = P((0, 0), (10, 0))
+        assert is_point_strictly_inside_polygon((5, 5), polygon) is False
+
+    def test_touching_rectangles_not_contained(self):
+        """Two rectangles sharing a corner: the shared vertex must NOT
+        be treated as inside the other rectangle."""
+        rect_a = P((0, 0), (10, 0), (10, 10), (0, 10))
+        rect_b = P((10, 10), (14, 10), (14, 14), (10, 14))
+        # The shared corner (10,10) is on the boundary of rect_a
+        assert is_point_strictly_inside_polygon((10, 10), rect_a) is False
+        # A point clearly inside rect_b
+        assert is_point_strictly_inside_polygon((12, 12), rect_b) is True
+        # A point clearly inside rect_a
+        assert is_point_strictly_inside_polygon((5, 5), rect_a) is True
+
+    def test_near_edge_inside(self):
+        polygon = P((0, 0), (10, 0), (10, 10), (0, 10))
+        assert (
+            is_point_strictly_inside_polygon((0.001, 0.001), polygon) is True
+        )
+
+    def test_outside_directions(self):
+        polygon = P((0, 0), (10, 0), (10, 10), (0, 10))
+        assert is_point_strictly_inside_polygon((15, 5), polygon) is False
+        assert is_point_strictly_inside_polygon((-5, 5), polygon) is False
+        assert is_point_strictly_inside_polygon((5, 15), polygon) is False
+        assert is_point_strictly_inside_polygon((5, -5), polygon) is False
 
 
 class TestPointInPolygonNumpy:

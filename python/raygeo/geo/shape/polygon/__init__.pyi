@@ -49,6 +49,7 @@ __all__ = [
     "is_almost_equal",
     "is_path_confined_to_boundary",
     "is_point_inside_polygon",
+    "is_point_strictly_inside_polygon",
     "is_polygon_clockwise",
     "is_polygon_convex",
     "normalize_polygons",
@@ -533,6 +534,21 @@ def is_point_inside_polygon(point: types.Point, polygon: collections.abc.Sequenc
     :param point: Point (x, y) to test.
     :param polygon: Polygon as (x, y) points.
     :returns: True if point is inside the polygon.
+    :complexity: O(n)
+    """
+
+def is_point_strictly_inside_polygon(point: types.Point, polygon: collections.abc.Sequence[types.Point]) -> bool:
+    r"""
+    Check if a point is strictly inside a polygon (boundary excluded).
+    
+    Like :func:`is_point_inside_polygon`, but returns ``False`` when
+    the point lies exactly on a polygon edge.  Useful for containment
+    hierarchies where two contours share a vertex — the shared point
+    must not be treated as inside either contour.
+    
+    :param point: Point (x, y) to test.
+    :param polygon: Polygon as (x, y) points.
+    :returns: True if point is strictly inside the polygon.
     :complexity: O(n)
     """
 
