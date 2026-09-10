@@ -32,7 +32,12 @@ use swash::zeno;
 use swash::zeno::PathData as _;
 use swash::FontRef;
 
+use crate::geo::algo::self_intersect::resolve_self_intersections;
 use crate::geo::geometry::Geometry;
+
+/// Linearisation tolerance (mm chord error) used when rebuilding
+/// self-intersecting or overlapping glyph contours.
+const GLYPH_RESOLVE_TOLERANCE_MM: f64 = 0.01;
 
 /// Font configuration for text-to-geometry conversion.
 ///
@@ -222,8 +227,15 @@ fn find_face_id(config: &FontConfig) -> Option<fontdb::ID> {
 /// 3. For each character, map via the font's charmapping table, skip
 ///    unmapped glyphs (still advancing their width), and scale the
 ///    outline through [`GeoPathBuilder`].
-/// 4. Scale the whole geometry back by `1 / internal_scale`, then
+/// 4. Scale the whole geometry back by `1 / internal_scale`, then
 ///    convert from points to millimetres.
+///
+/// Some fonts contain glyphs whose outlines self-intersect or consist
+/// of overlapping contours (e.g. a plus sign drawn as two crossing
+/// rectangles).  Such geometry renders fine with fill rules but breaks
+/// winding analysis and offsetting downstream, so each glyph outline
+/// is rebuilt via [`resolve_self_intersections`] before being
+/// returned.
 ///
 /// Returns `None` when the font face cannot be found.
 pub fn text_to_geometry(text: &str, config: &FontConfig) -> Option<Geometry> {
@@ -235,7 +247,7 @@ pub fn text_to_geometry(text: &str, config: &FontConfig) -> Option<Geometry> {
     let internal_scale = 4.0;
     let ppem = (config.size * internal_scale) as f32;
 
-    let mut geo = Geometry::new();
+    let mut glyphs: Vec<Geometry> = Vec::new();
     let mut scale_ctx = ScaleContext::new();
     let mut scaler = scale_ctx.builder(font).size(ppem).hint(false).build();
 
@@ -260,8 +272,11 @@ pub fn text_to_geometry(text: &str, config: &FontConfig) -> Option<Geometry> {
             let verbs = outline.verbs();
             let pts = outline.points();
             if !verbs.is_empty() && !pts.is_empty() {
-                let mut builder = GeoPathBuilder::new(&mut geo, cursor_px, 0.0);
+                let mut glyph_geo = Geometry::new();
+                let mut builder =
+                    GeoPathBuilder::new(&mut glyph_geo, cursor_px, 0.0);
                 (pts, verbs).copy_to(&mut builder);
+                glyphs.push(glyph_geo);
             }
         }
 
@@ -271,11 +286,19 @@ pub fn text_to_geometry(text: &str, config: &FontConfig) -> Option<Geometry> {
 
     // Scale from the internal resolution back to points.
     let inv = 1.0 / internal_scale;
-    geo.transform_2d(inv, 0.0, 0.0, inv, 0.0, 0.0);
-
     // Convert from points to mm.
     let pt_to_mm = 25.4 / 72.0;
-    geo.transform_2d(pt_to_mm, 0.0, 0.0, pt_to_mm, 0.0, 0.0);
+
+    // Resolve self-intersecting / overlapping contours per glyph, so
+    // adjacent glyphs are never merged with each other.
+    let mut geo = Geometry::new();
+    for mut glyph in glyphs {
+        glyph.transform_2d(inv, 0.0, 0.0, inv, 0.0, 0.0);
+        glyph.transform_2d(pt_to_mm, 0.0, 0.0, pt_to_mm, 0.0, 0.0);
+        let resolved =
+            resolve_self_intersections(&glyph, GLYPH_RESOLVE_TOLERANCE_MM);
+        geo.extend(&resolved);
+    }
 
     Some(geo)
 }

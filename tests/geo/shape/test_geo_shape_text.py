@@ -59,3 +59,19 @@ def test_text_to_geometry_default_font():
     geo = text_to_geometry("A")
     # Default may or may not find a font — just check it doesn't crash.
     assert geo is None or len(geo.data) > 0
+
+
+def test_text_to_geometry_has_no_self_intersections():
+    """Glyph outlines must be free of self-intersections and overlaps.
+
+    Some system fonts contain such glyphs; they render fine but break
+    winding analysis and offsetting downstream.
+    """
+    for family in ["sans-serif", "serif", "monospace"]:
+        fc = FontConfig(family=family, size=12.0)
+        geo = text_to_geometry("ABC abc 123 +=", font_config=fc)
+        if geo is None:
+            continue
+        assert not geo.has_self_intersections(), (
+            f"text in {family!r} has self-intersections"
+        )
