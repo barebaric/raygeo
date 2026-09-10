@@ -1,0 +1,176 @@
+{
+  "commands": [
+    {
+      "type": "SET_POWER",
+      "power": 1.0
+    },
+    {
+      "type": "OPS_SECTION_START",
+      "section_type": "VECTOR_OUTLINE",
+      "workpiece_uid": "wp1"
+    },
+    {
+      "type": "MOVE_TO",
+      "end": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "extra_axes": {
+        "A": 0.0
+      }
+    },
+    {
+      "type": "LINE_TO",
+      "end": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "extra_axes": {
+        "A": 0.0
+      }
+    },
+    {
+      "type": "LINE_TO",
+      "end": [
+        10.0,
+        0.0,
+        2.0
+      ],
+      "extra_axes": {
+        "A": 0.0
+      }
+    },
+    {
+      "type": "LINE_TO",
+      "end": [
+        10.0,
+        0.0,
+        2.0
+      ],
+      "extra_axes": {
+        "A": 90.0
+      }
+    },
+    {
+      "type": "LINE_TO",
+      "end": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "extra_axes": {
+        "A": 90.0
+      }
+    },
+    {
+      "type": "LINE_TO",
+      "end": [
+        10.0,
+        10.0,
+        0.0
+      ],
+      "extra_axes": {
+        "A": 90.0
+      }
+    },
+    {
+      "type": "LINE_TO",
+      "end": [
+        10.0,
+        10.0,
+        2.0
+      ],
+      "extra_axes": {
+        "A": 90.0
+      }
+    },
+    {
+      "type": "LINE_TO",
+      "end": [
+        10.0,
+        10.0,
+        2.0
+      ],
+      "extra_axes": {
+        "A": 180.0
+      }
+    },
+    {
+      "type": "LINE_TO",
+      "end": [
+        10.0,
+        10.0,
+        0.0
+      ],
+      "extra_axes": {
+        "A": 180.0
+      }
+    },
+    {
+      "type": "LINE_TO",
+      "end": [
+        0.0,
+        10.0,
+        0.0
+      ],
+      "extra_axes": {
+        "A": 180.0
+      }
+    },
+    {
+      "type": "LINE_TO",
+      "end": [
+        0.0,
+        10.0,
+        2.0
+      ],
+      "extra_axes": {
+        "A": 180.0
+      }
+    },
+    {
+      "type": "LINE_TO",
+      "end": [
+        0.0,
+        10.0,
+        2.0
+      ],
+      "extra_axes": {
+        "A": 270.0
+      }
+    },
+    {
+      "type": "LINE_TO",
+      "end": [
+        0.0,
+        10.0,
+        0.0
+      ],
+      "extra_axes": {
+        "A": 270.0
+      }
+    },
+    {
+      "type": "LINE_TO",
+      "end": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "extra_axes": {
+        "A": 270.0
+      }
+    },
+    {
+      "type": "OPS_SECTION_END",
+      "section_type": "VECTOR_OUTLINE"
+    }
+  ],
+  "last_move_to": [
+    0.0,
+    0.0,
+    0.0
+  ]
+}

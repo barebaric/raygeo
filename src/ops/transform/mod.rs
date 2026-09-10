@@ -30,6 +30,7 @@ use crate::ops::Ops;
 pub mod affine;
 pub mod bidir_scan_offset;
 pub mod clip;
+pub mod drag_knife;
 pub mod flip;
 pub mod frame;
 pub mod group;
@@ -44,6 +45,7 @@ pub mod overscan;
 pub mod smooth;
 pub mod split;
 pub mod tabs;
+pub mod tangential_knife;
 
 pub use link::LinkStrategy;
 pub use tabs::ClipPoint;

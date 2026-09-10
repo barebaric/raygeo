@@ -1,0 +1,135 @@
+{
+  "commands": [
+    {
+      "type": "SET_POWER",
+      "power": 1.0
+    },
+    {
+      "type": "OPS_SECTION_START",
+      "section_type": "VECTOR_OUTLINE",
+      "workpiece_uid": "wp1"
+    },
+    {
+      "type": "MOVE_TO",
+      "end": [
+        -1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "type": "SET_POWER",
+      "power": 1.0
+    },
+    {
+      "type": "ARC_TO",
+      "end": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "center_offset": [
+        1.0,
+        0.0
+      ],
+      "clockwise": false
+    },
+    {
+      "type": "LINE_TO",
+      "end": [
+        11.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "type": "ARC_TO",
+      "end": [
+        10.0,
+        1.0,
+        0.0
+      ],
+      "center_offset": [
+        -1.0,
+        -0.0
+      ],
+      "clockwise": false
+    },
+    {
+      "type": "LINE_TO",
+      "end": [
+        10.0,
+        11.0,
+        0.0
+      ]
+    },
+    {
+      "type": "ARC_TO",
+      "end": [
+        9.0,
+        10.0,
+        0.0
+      ],
+      "center_offset": [
+        -0.0,
+        -1.0
+      ],
+      "clockwise": false
+    },
+    {
+      "type": "LINE_TO",
+      "end": [
+        -1.0,
+        10.0,
+        0.0
+      ]
+    },
+    {
+      "type": "ARC_TO",
+      "end": [
+        0.0,
+        9.0,
+        0.0
+      ],
+      "center_offset": [
+        1.0,
+        -0.0
+      ],
+      "clockwise": false
+    },
+    {
+      "type": "LINE_TO",
+      "end": [
+        0.0,
+        -1.0,
+        0.0
+      ]
+    },
+    {
+      "type": "ARC_TO",
+      "end": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "center_offset": [
+        -0.0,
+        1.0
+      ],
+      "clockwise": true
+    },
+    {
+      "type": "SET_POWER",
+      "power": 0.0
+    },
+    {
+      "type": "OPS_SECTION_END",
+      "section_type": "VECTOR_OUTLINE"
+    }
+  ],
+  "last_move_to": [
+    -1.0,
+    0.0,
+    0.0
+  ]
+}

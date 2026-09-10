@@ -3090,6 +3090,56 @@ impl PyOps {
         );
     }
 
+    /// Apply drag-knife compensation to vector contour paths.
+    ///
+    /// Rewrites each contour into the pivot path a trailing-blade
+    /// drag knife must follow: half-circle arc-in at the start,
+    /// trailing offset along the cut path, swivel arcs at corners
+    /// (within the swivel tolerance) and lift-pivot-plunge at
+    /// sharper corners, plus a half-circle arc-out at the end.
+    ///
+    /// :param offset_mm: Distance between blade tip and pivot.
+    /// :param swivel_angle_deg: Maximum direction change (degrees)
+    ///     swiveled with the blade down.
+    /// :complexity: O(n) time, O(n) space
+    fn apply_drag_knife(&mut self, offset_mm: f64, swivel_angle_deg: f64) {
+        crate::ops::transform::drag_knife::apply_drag_knife(
+            &mut self.inner,
+            offset_mm,
+            swivel_angle_deg,
+        );
+    }
+
+    /// Add tangential-knife A-axis rotation to vector contour paths.
+    ///
+    /// Attaches the path heading in degrees as an ``A`` extra axis to
+    /// every moving command of each contour. Heading changes beyond
+    /// ``angle_tolerance_deg`` (or arcs tighter than
+    /// ``radius_tolerance_mm``) lift the knife to ``safe_z``, rotate
+    /// in the air, and plunge back in; smaller changes rotate the
+    /// blade in place with the knife down.
+    ///
+    /// :param angle_tolerance_deg: Maximum heading change (degrees)
+    ///     rotated with the knife down.
+    /// :param radius_tolerance_mm: Arcs tighter than this radius
+    ///     force a lift.
+    /// :param safe_z: Z height used for lifting the knife.
+    /// :complexity: O(n) time, O(n) space
+    #[pyo3(signature = (angle_tolerance_deg, radius_tolerance_mm, safe_z))]
+    fn apply_tangential_knife(
+        &mut self,
+        angle_tolerance_deg: f64,
+        radius_tolerance_mm: f64,
+        safe_z: f64,
+    ) {
+        crate::ops::transform::tangential_knife::apply_tangential_knife(
+            &mut self.inner,
+            angle_tolerance_deg,
+            radius_tolerance_mm,
+            safe_z,
+        );
+    }
+
     /// Optimize travel distance by reordering segments.
     ///
     /// Performs two-level optimization: workpiece-level reordering

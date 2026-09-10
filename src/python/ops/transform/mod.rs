@@ -24,6 +24,7 @@ use crate::ops::callbacks::Callbacks;
 use crate::ops::transform as core_transform;
 use crate::python::ops::transform::bidir_scan_offset::BidirScanOffsetSpec;
 use crate::python::ops::transform::clip::CropSpec;
+use crate::python::ops::transform::drag_knife::DragKnifeSpec;
 use crate::python::ops::transform::lead_in_out::LeadInOutSpec;
 use crate::python::ops::transform::merge_lines::MergeLinesSpec;
 use crate::python::ops::transform::multipass::MultiPassSpec;
@@ -31,9 +32,11 @@ use crate::python::ops::transform::optimize::OptimizeSpec;
 use crate::python::ops::transform::overscan::OverscanSpec;
 use crate::python::ops::transform::smooth::SmoothSpec;
 use crate::python::ops::transform::tabs::TabsSpec;
+use crate::python::ops::transform::tangential_knife::TangentialKnifeSpec;
 
 pub(crate) mod bidir_scan_offset;
 pub(crate) mod clip;
+pub(crate) mod drag_knife;
 pub(crate) mod lead_in_out;
 pub(crate) mod link;
 pub(crate) mod merge_lines;
@@ -42,6 +45,7 @@ pub(crate) mod optimize;
 pub(crate) mod overscan;
 pub(crate) mod smooth;
 pub(crate) mod tabs;
+pub(crate) mod tangential_knife;
 
 pub(crate) fn register(ops_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let transform_mod = PyModule::new(ops_mod.py(), "transform")?;
@@ -53,6 +57,7 @@ pub(crate) fn register(ops_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     )?)?;
     bidir_scan_offset::register(&transform_mod)?;
     clip::register(&transform_mod)?;
+    drag_knife::register(&transform_mod)?;
     lead_in_out::register(&transform_mod)?;
     link::register(&transform_mod)?;
     merge_lines::register(&transform_mod)?;
@@ -61,6 +66,7 @@ pub(crate) fn register(ops_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     overscan::register(&transform_mod)?;
     smooth::register(&transform_mod)?;
     tabs::register(&transform_mod)?;
+    tangential_knife::register(&transform_mod)?;
 
     ops_mod.add_submodule(&transform_mod)?;
 
@@ -142,6 +148,12 @@ pub fn extract_transformer(
         return Ok(Box::new(s.into_core()));
     }
     if let Ok(s) = ob.extract::<BidirScanOffsetSpec>() {
+        return Ok(Box::new(s.into_core()));
+    }
+    if let Ok(s) = ob.extract::<DragKnifeSpec>() {
+        return Ok(Box::new(s.into_core()));
+    }
+    if let Ok(s) = ob.extract::<TangentialKnifeSpec>() {
         return Ok(Box::new(s.into_core()));
     }
     let type_name = ob

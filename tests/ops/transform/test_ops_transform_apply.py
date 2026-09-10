@@ -8,6 +8,7 @@ from raygeo.ops import Ops
 from raygeo.ops.transform import ExecutionPhase
 from raygeo.ops.transform.bidir_scan_offset import BidirScanOffsetSpec
 from raygeo.ops.transform.clip import CropSpec
+from raygeo.ops.transform.drag_knife import DragKnifeSpec
 from raygeo.ops.transform.lead_in_out import LeadInOutSpec
 from raygeo.ops.transform.merge_lines import MergeLinesSpec
 from raygeo.ops.transform.multipass import MultiPassSpec
@@ -15,6 +16,7 @@ from raygeo.ops.transform.optimize import OptimizeSpec
 from raygeo.ops.transform.overscan import OverscanSpec
 from raygeo.ops.transform.smooth import SmoothSpec
 from raygeo.ops.transform.tabs import TabsSpec
+from raygeo.ops.transform.tangential_knife import TangentialKnifeSpec
 from raygeo.ops.types import CommandType, RasterMode, SectionType
 
 
@@ -397,6 +399,8 @@ SPEC_CLASSES = {
     "CropSpec": CropSpec,
     "TabsSpec": TabsSpec,
     "BidirScanOffsetSpec": BidirScanOffsetSpec,
+    "DragKnifeSpec": DragKnifeSpec,
+    "TangentialKnifeSpec": TangentialKnifeSpec,
 }
 
 
@@ -436,6 +440,10 @@ def _spec_type_for(name: str) -> str:
         return "TabsSpec"
     if name.startswith("bidir"):
         return "BidirScanOffsetSpec"
+    if name.startswith("drag_knife"):
+        return "DragKnifeSpec"
+    if name.startswith("tangential_knife"):
+        return "TangentialKnifeSpec"
     raise ValueError(f"Unknown fixture name: {name}")
 
 

@@ -358,6 +358,29 @@ passes are left untouched.
 
 *Bidirectional scan offset correction*
 
+### `apply_drag_knife()`
+
+```python
+apply_drag_knife(offset_mm: float, swivel_angle_deg: float) -> None
+```
+
+Apply drag-knife compensation to vector contour paths.
+
+Rewrites each contour into the pivot path a trailing-blade drag knife must follow: half-circle
+arc-in at the start, trailing offset along the cut path, swivel arcs at corners (within the swivel
+tolerance) and lift-pivot-plunge at sharper corners, plus a half-circle arc-out at the end.
+
+| Parameter          | Type    | Description                                                      |
+| ------------------ | ------- | ---------------------------------------------------------------- |
+| `offset_mm`        | `float` | Distance between blade tip and pivot.                            |
+| `swivel_angle_deg` | `float` | Maximum direction change (degrees) swiveled with the blade down. |
+| _Returns_          | `None`  |                                                                  |
+| _Complexity_       |         | O(n) time, O(n) space                                            |
+
+![Drag-knife pivot path around a square contour](images/ops-transform-drag-knife-drag-knife.png)
+
+*Drag-knife pivot path around a square contour*
+
 ### `apply_lead_in_out()`
 
 ```python
@@ -480,6 +503,35 @@ weaker. Only `VECTOR_OUTLINE` sections are modified.
 | `original_power` | `float`                                | Normal cutting power to restore after the tab.               |
 | _Returns_        | `None`                                 |                                                              |
 | _Complexity_     |                                        | O(n * k) time, O(1) space where k is the number of tab clips |
+
+### `apply_tangential_knife()`
+
+```python
+apply_tangential_knife(
+    angle_tolerance_deg: float,
+    radius_tolerance_mm: float,
+    safe_z: float,
+) -> None
+```
+
+Add tangential-knife A-axis rotation to vector contour paths.
+
+Attaches the path heading in degrees as an `A` extra axis to every moving command of each contour.
+Heading changes beyond `angle_tolerance_deg` (or arcs tighter than `radius_tolerance_mm`) lift the
+knife to `safe_z`, rotate in the air, and plunge back in; smaller changes rotate the blade in place
+with the knife down.
+
+| Parameter             | Type    | Description                                                   |
+| --------------------- | ------- | ------------------------------------------------------------- |
+| `angle_tolerance_deg` | `float` | Maximum heading change (degrees) rotated with the knife down. |
+| `radius_tolerance_mm` | `float` | Arcs tighter than this radius force a lift.                   |
+| `safe_z`              | `float` | Z height used for lifting the knife.                          |
+| _Returns_             | `None`  |                                                               |
+| _Complexity_          |         | O(n) time, O(n) space                                         |
+
+![Tangential knife path with A-axis rotation lifts](images/ops-transform-tangential-knife-tangential-knife.png)
+
+*Tangential knife path with A-axis rotation lifts*
 
 ### `apply_transformers()`
 
