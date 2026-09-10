@@ -6,6 +6,7 @@ import enum
 import typing
 from . import bidir_scan_offset
 from . import clip
+from . import drag_knife
 from . import lead_in_out
 from . import link
 from . import merge_lines
@@ -14,10 +15,12 @@ from . import optimize
 from . import overscan
 from . import smooth
 from . import tabs
+from . import tangential_knife
 __all__ = [
     "ExecutionPhase",
     "bidir_scan_offset",
     "clip",
+    "drag_knife",
     "is_position_sensitive",
     "lead_in_out",
     "link",
@@ -27,6 +30,7 @@ __all__ = [
     "overscan",
     "smooth",
     "tabs",
+    "tangential_knife",
 ]
 
 @typing.final

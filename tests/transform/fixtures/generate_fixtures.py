@@ -19,6 +19,7 @@ from raygeo.geo import Geometry
 from raygeo.ops import Ops
 from raygeo.ops.transform.bidir_scan_offset import BidirScanOffsetSpec
 from raygeo.ops.transform.clip import CropSpec
+from raygeo.ops.transform.drag_knife import DragKnifeSpec
 from raygeo.ops.transform.lead_in_out import LeadInOutSpec
 from raygeo.ops.transform.merge_lines import MergeLinesSpec
 from raygeo.ops.transform.multipass import MultiPassSpec
@@ -26,6 +27,7 @@ from raygeo.ops.transform.optimize import OptimizeSpec
 from raygeo.ops.transform.overscan import OverscanSpec
 from raygeo.ops.transform.smooth import SmoothSpec
 from raygeo.ops.transform.tabs import TabsSpec
+from raygeo.ops.transform.tangential_knife import TangentialKnifeSpec
 
 FIXTURE_DIR = Path(__file__).parent
 
@@ -63,6 +65,21 @@ def _square_ops() -> Ops:
     ops.line_to(10, 10, 0)
     ops.line_to(0, 10, 0)
     ops.line_to(0, 0, 0)
+    return ops
+
+
+def _outlined_square_ops() -> Ops:
+    from raygeo.ops.types import SectionType
+
+    ops = Ops()
+    ops.set_power(1.0)
+    ops.ops_section_start(SectionType.VECTOR_OUTLINE, "wp1")
+    ops.move_to(0, 0, 0)
+    ops.line_to(10, 0, 0)
+    ops.line_to(10, 10, 0)
+    ops.line_to(0, 10, 0)
+    ops.line_to(0, 0, 0)
+    ops.ops_section_end(SectionType.VECTOR_OUTLINE)
     return ops
 
 
@@ -136,6 +153,20 @@ def main() -> None:
         "tabs_power_basic",
         _square_ops(),
         TabsSpec(tab_power=0.5, original_power=1.0, clips=[(5.0, 0.0, 2.0)]),
+    )
+    _write(
+        "drag_knife_basic",
+        _outlined_square_ops(),
+        DragKnifeSpec(offset_mm=1.0, swivel_angle_deg=90.0),
+    )
+    _write(
+        "tangential_knife_basic",
+        _outlined_square_ops(),
+        TangentialKnifeSpec(
+            angle_tolerance_deg=45.0,
+            radius_tolerance_mm=1.0,
+            safe_z=2.0,
+        ),
     )
 
 

@@ -1,0 +1,5 @@
+{
+  "angle_tolerance_deg": 45.0,
+  "radius_tolerance_mm": 1.0,
+  "safe_z": 2.0
+}

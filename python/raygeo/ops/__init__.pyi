@@ -1429,6 +1429,39 @@ class Ops:
         :param lead_out_mm: Lead-out distance in millimeters.
         :complexity: O(n) time, O(n) space
         """
+    def apply_drag_knife(self, offset_mm: builtins.float, swivel_angle_deg: builtins.float) -> None:
+        r"""
+        Apply drag-knife compensation to vector contour paths.
+        
+        Rewrites each contour into the pivot path a trailing-blade
+        drag knife must follow: half-circle arc-in at the start,
+        trailing offset along the cut path, swivel arcs at corners
+        (within the swivel tolerance) and lift-pivot-plunge at
+        sharper corners, plus a half-circle arc-out at the end.
+        
+        :param offset_mm: Distance between blade tip and pivot.
+        :param swivel_angle_deg: Maximum direction change (degrees)
+            swiveled with the blade down.
+        :complexity: O(n) time, O(n) space
+        """
+    def apply_tangential_knife(self, angle_tolerance_deg: builtins.float, radius_tolerance_mm: builtins.float, safe_z: builtins.float) -> None:
+        r"""
+        Add tangential-knife A-axis rotation to vector contour paths.
+        
+        Attaches the path heading in degrees as an ``A`` extra axis to
+        every moving command of each contour. Heading changes beyond
+        ``angle_tolerance_deg`` (or arcs tighter than
+        ``radius_tolerance_mm``) lift the knife to ``safe_z``, rotate
+        in the air, and plunge back in; smaller changes rotate the
+        blade in place with the knife down.
+        
+        :param angle_tolerance_deg: Maximum heading change (degrees)
+            rotated with the knife down.
+        :param radius_tolerance_mm: Arcs tighter than this radius
+            force a lift.
+        :param safe_z: Z height used for lifting the knife.
+        :complexity: O(n) time, O(n) space
+        """
     def optimize_travel(self, allow_flip: builtins.bool = True, preserve_first: builtins.bool = False, preserve_order: typing.Sequence[builtins.str] = [], progress_cb: typing.Optional[typing.Any] = None) -> None:
         r"""
         Optimize travel distance by reordering segments.
