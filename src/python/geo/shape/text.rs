@@ -203,6 +203,18 @@ impl PyFontConfig {
         }
     }
 
+    /// Copy-protocol support: entities carrying a FontConfig (e.g.
+    /// sketch text boxes) must be deep-copyable.
+    #[gen_stub(skip)]
+    fn __copy__(&self, py: Python<'_>) -> Self {
+        self.copy(py)
+    }
+
+    #[gen_stub(skip)]
+    fn __deepcopy__(&self, py: Python<'_>, _memo: &Bound<'_, PyAny>) -> Self {
+        self.copy(py)
+    }
+
     fn __eq__(&self, py: Python<'_>, other: &Bound<'_, PyAny>) -> bool {
         if let Ok(other_fc) = other.clone().cast::<PyFontConfig>() {
             let other = other_fc.borrow();
