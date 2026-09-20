@@ -9,10 +9,10 @@ use pyo3_stub_gen::derive::{
 };
 
 use crate::cnc::execution::specs::AggregateOutput as CoreAggregateOutput;
-use crate::ops::state::AirAssistMode;
+use crate::ops::state::{AirAssistMode, PowerMode};
 use crate::python::ops::container::PyOps;
 use crate::python::ops::convert::PyEncoder;
-use crate::python::ops::state::PyAirAssistMode;
+use crate::python::ops::state::{PyAirAssistMode, PyPowerMode};
 
 // ═══════════════════════════════════════════════════════════════════
 // AggregateOutput  (result of the Aggregate stage)
@@ -265,6 +265,8 @@ pub struct PyComputePayload {
     pub head_uid: Option<String>,
     /// Air assist mode injected as ``SetAirAssist`` (default ``None``).
     pub air_assist: Option<AirAssistMode>,
+    /// Laser power mode injected as ``SetPowerMode`` (default ``None``).
+    pub power_mode: Option<PowerMode>,
     /// Print a profiling report to stdout after this node's faces have
     /// been assembled (default False).
     #[pyo3(get, set)]
@@ -291,7 +293,7 @@ pub struct PyComputePayload {
 impl PyComputePayload {
     #[new]
     #[allow(clippy::too_many_arguments)]
-    #[pyo3(signature = (assembler, transformers=vec![], state_source_keys=vec![], power=0.0, cut_speed=0, head_uid=None, air_assist=None, profile=false, wavelength_nm=0.0, max_power_watts=0.0, spot_size_mm=(0.1, 0.1), scan_speed_mm_per_s=100.0))]
+    #[pyo3(signature = (assembler, transformers=vec![], state_source_keys=vec![], power=0.0, cut_speed=0, head_uid=None, air_assist=None, profile=false, wavelength_nm=0.0, max_power_watts=0.0, spot_size_mm=(0.1, 0.1), scan_speed_mm_per_s=100.0, power_mode=None))]
     fn new(
         assembler: Py<PyAny>,
         transformers: Vec<Py<PyAny>>,
@@ -305,6 +307,7 @@ impl PyComputePayload {
         max_power_watts: f64,
         spot_size_mm: (f64, f64),
         scan_speed_mm_per_s: f64,
+        power_mode: Option<Bound<'_, PyPowerMode>>,
     ) -> Self {
         PyComputePayload {
             assembler,
@@ -314,6 +317,7 @@ impl PyComputePayload {
             cut_speed,
             head_uid,
             air_assist: air_assist.map(|a| a.borrow().0),
+            power_mode: power_mode.map(|p| p.borrow().0),
             profile,
             wavelength_nm,
             max_power_watts,
@@ -331,6 +335,17 @@ impl PyComputePayload {
     #[setter]
     fn set_air_assist(&mut self, value: Option<Bound<'_, PyAirAssistMode>>) {
         self.air_assist = value.map(|a| a.borrow().0);
+    }
+
+    /// Laser power mode injected as ``SetPowerMode``.
+    #[getter]
+    fn power_mode(&self) -> Option<PyPowerMode> {
+        self.power_mode.map(PyPowerMode)
+    }
+
+    #[setter]
+    fn set_power_mode(&mut self, value: Option<Bound<'_, PyPowerMode>>) {
+        self.power_mode = value.map(|p| p.borrow().0);
     }
 }
 

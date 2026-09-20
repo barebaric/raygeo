@@ -146,6 +146,7 @@ fn convert_stage(
                 },
                 active_head_uid: params_ref.head_uid.clone(),
                 air_assist: params_ref.air_assist,
+                power_mode: params_ref.power_mode,
                 ..Default::default()
             };
             drop(params_ref);

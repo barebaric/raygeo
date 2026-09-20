@@ -290,7 +290,14 @@ class ComputePayload:
         """
     @air_assist.setter
     def air_assist(self, value: typing.Optional[state.AirAssistMode]) -> None: ...
-    def __new__(cls, assembler: typing.Any, transformers: typing.Sequence[typing.Any] = [], state_source_keys: typing.Sequence[builtins.str] = [], power: builtins.float = 0.0, cut_speed: builtins.int = 0, head_uid: typing.Optional[builtins.str] = None, air_assist: typing.Optional[state.AirAssistMode] = None, profile: builtins.bool = False, wavelength_nm: builtins.float = 0.0, max_power_watts: builtins.float = 0.0, spot_size_mm: tuple[builtins.float, builtins.float] = (0.1, 0.1), scan_speed_mm_per_s: builtins.float = 100.0) -> ComputePayload: ...
+    @property
+    def power_mode(self) -> typing.Optional[state.PowerMode]:
+        r"""
+        Laser power mode injected as ``SetPowerMode``.
+        """
+    @power_mode.setter
+    def power_mode(self, value: typing.Optional[state.PowerMode]) -> None: ...
+    def __new__(cls, assembler: typing.Any, transformers: typing.Sequence[typing.Any] = [], state_source_keys: typing.Sequence[builtins.str] = [], power: builtins.float = 0.0, cut_speed: builtins.int = 0, head_uid: typing.Optional[builtins.str] = None, air_assist: typing.Optional[state.AirAssistMode] = None, profile: builtins.bool = False, wavelength_nm: builtins.float = 0.0, max_power_watts: builtins.float = 0.0, spot_size_mm: tuple[builtins.float, builtins.float] = (0.1, 0.1), scan_speed_mm_per_s: builtins.float = 100.0, power_mode: typing.Optional[state.PowerMode] = None) -> ComputePayload: ...
 
 @typing.final
 class EncodeSpec:
