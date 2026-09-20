@@ -910,6 +910,12 @@ fn sync_state_commands(ops: &mut Ops, state: &State, prev: &State) -> State {
         }
         prev.head_coolant = state.head_coolant;
     }
+    if state.power_mode != prev.power_mode {
+        if let Some(mode) = state.power_mode {
+            ops.set_power_mode(mode);
+        }
+        prev.power_mode = state.power_mode;
+    }
     if let Some(ref uid) = state.active_head_uid {
         if prev.active_head_uid.as_deref() != Some(uid.as_str()) {
             ops.set_head(uid);

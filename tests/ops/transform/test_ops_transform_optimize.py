@@ -1186,3 +1186,40 @@ class TestOptimizeMultiCommand:
         ops.line_to(110, 100)
         ops.optimize_travel()
         assert _count_cuts(ops) == 3
+
+
+def test_optimize_preserves_power_mode():
+    """Optimize rebuilds the op stream from state snapshots; a
+    SetPowerMode command must be re-emitted like the other state."""
+    from raygeo.ops.state import PowerMode
+
+    ops = Ops()
+    ops.set_power(0.8)
+    ops.set_power_mode(PowerMode.CONSTANT)
+    ops.set_feed_rate(1000)
+    ops.move_to(100, 100)
+    ops.line_to(110, 100)
+    ops.move_to(0, 0)
+    ops.line_to(10, 10)
+    ops.optimize_travel()
+
+    mode_cmds = [
+        ops.power_mode(i)
+        for i in range(ops.len())
+        if ops.command_type(i) == CommandType.SET_POWER_MODE
+    ]
+    assert mode_cmds == [PowerMode.CONSTANT]
+
+
+def test_optimize_without_power_mode_emits_nothing():
+    ops = Ops()
+    ops.set_power(0.8)
+    ops.set_feed_rate(1000)
+    ops.move_to(100, 100)
+    ops.line_to(110, 100)
+    ops.optimize_travel()
+
+    assert not any(
+        ops.command_type(i) == CommandType.SET_POWER_MODE
+        for i in range(ops.len())
+    )
