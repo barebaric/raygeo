@@ -41,7 +41,9 @@ from raygeo.ops.assembly import Assembler
 from raygeo.ops.assembly.contour import ContourSpec
 from raygeo.ops.convert import Encoder, GcodeDialectSpec, GcodeSpec
 from raygeo.ops.part import Part
+from raygeo.ops.state import PowerMode
 from raygeo.ops.transform.overscan import OverscanSpec
+from raygeo.ops.types import CommandType
 from raygeo.pipeline.completed import CompletedNode
 from raygeo.pipeline.execute import Pipeline, execute_stages
 from raygeo.pipeline.request import NodeRequest
@@ -523,3 +525,51 @@ def test_500_node_subsample_completes():
     completed: list[CompletedNode] = []
     execute_stages(nodes, completed.append, None)
     assert len(completed) == 500
+
+
+# ── Compute payload state injection ──────────────────────────────
+
+
+def test_compute_payload_injects_power_mode():
+    """A payload power_mode is emitted as a SetPowerMode op."""
+    node = NodeRequest(
+        key="pm1",
+        generation_id=1,
+        stage=StageSpec.Compute(
+            part=make_square_part(),
+            params=ComputePayload(
+                assembler=Assembler(ContourSpec()),
+                power=0.8,
+                power_mode=PowerMode.CONSTANT,
+            ),
+        ),
+    )
+    completed, _ = collect_completions([node])
+    ops = result_ops(completed[0])
+    mode_cmds = [
+        ops.power_mode(i)
+        for i in range(ops.len())
+        if ops.command_type(i) == CommandType.SET_POWER_MODE
+    ]
+    assert mode_cmds == [PowerMode.CONSTANT]
+
+
+def test_compute_payload_without_power_mode_emits_nothing():
+    """The default payload emits no SetPowerMode op (backward compat)."""
+    node = NodeRequest(
+        key="pm2",
+        generation_id=1,
+        stage=StageSpec.Compute(
+            part=make_square_part(),
+            params=ComputePayload(
+                assembler=Assembler(ContourSpec()),
+                power=0.8,
+            ),
+        ),
+    )
+    completed, _ = collect_completions([node])
+    ops = result_ops(completed[0])
+    assert not any(
+        ops.command_type(i) == CommandType.SET_POWER_MODE
+        for i in range(ops.len())
+    )
