@@ -47,6 +47,7 @@ impl PyGcodeDialectSpec {
         continuous_laser_mode = false,
         modal_feedrate = false,
         gcode_precision = 3u8,
+        focus_laser_on = String::new(),
     ))]
     #[allow(clippy::too_many_arguments)]
     fn new(
@@ -76,10 +77,12 @@ impl PyGcodeDialectSpec {
         continuous_laser_mode: bool,
         modal_feedrate: bool,
         gcode_precision: u8,
+        focus_laser_on: String,
     ) -> Self {
         PyGcodeDialectSpec(GcodeDialectSpec {
             laser_on,
             laser_off,
+            focus_laser_on,
             tool_change,
             set_speed,
             travel_move,

@@ -12,8 +12,8 @@ to rectangles or regions, linearizing curves, estimating processing time, and se
 numpy arrays for persistence.
 
 The module also provides command-type enumerations (CommandType, CommandCategory, SectionType),
-machine State tracking (power, feed, coolant, air_assist, head_coolant, frequency), and an Axis
-bitflag for multi-axis machines.
+machine State tracking (power, feed, coolant, air_assist, head_coolant, power_mode, frequency), and
+an Axis bitflag for multi-axis machines.
 
 ## CommandInfo
 
@@ -149,6 +149,14 @@ power: Optional[float]
 ```
 
 Power level (0–1), if a power-setting command.
+
+### `power_mode`
+
+```python
+power_mode: Optional[state.PowerMode]
+```
+
+Power mode, if a SetPowerMode command.
 
 ### `power_values`
 
@@ -1886,6 +1894,22 @@ Get the power level of a SetPower command.
 | _Returns_    | `float` | Power level (0.0–1.0 typically). |
 | _Complexity_ |         | O(1) time, O(1) space            |
 
+### `power_mode()`
+
+```python
+power_mode(idx: int) -> state.PowerMode
+```
+
+Get the power mode from a SetPowerMode command.
+
+**Raises:** `TypeError` — If the command is not a SetPowerMode.
+
+| Parameter    | Type              | Description           |
+| ------------ | ----------------- | --------------------- |
+| `idx`        | `int`             | Command index.        |
+| _Returns_    | `state.PowerMode` | The power mode.       |
+| _Complexity_ |                   | O(1) time, O(1) space |
+
 ### `preload_state()`
 
 ```python
@@ -2295,6 +2319,20 @@ Set the cutting power for subsequent commands.
 | `power`      | `float` | Power level (0.0–1.0). |
 | _Returns_    | `None`  |                        |
 | _Complexity_ |         | O(1) time, O(1) space  |
+
+### `set_power_mode()`
+
+```python
+set_power_mode(mode: state.PowerMode) -> None
+```
+
+Set the laser power mode for subsequent commands.
+
+| Parameter    | Type              | Description           |
+| ------------ | ----------------- | --------------------- |
+| `mode`       | `state.PowerMode` | Power mode.           |
+| _Returns_    | `None`            |                       |
+| _Complexity_ |                   | O(1) time, O(1) space |
 
 ### `set_pulse_width()`
 

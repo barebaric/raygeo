@@ -4,7 +4,13 @@ import pytest
 
 from raygeo.ops import Ops
 from raygeo.ops.axis import Axis
-from raygeo.ops.state import AirAssistMode, CoolantMode, HeadCoolantMode, State
+from raygeo.ops.state import (
+    AirAssistMode,
+    CoolantMode,
+    HeadCoolantMode,
+    PowerMode,
+    State,
+)
 from raygeo.ops.types import (
     CommandCategory,
     CommandType,
@@ -733,12 +739,13 @@ def test_apply_state_full():
         coolant=CoolantMode.FLOOD,
         air_assist=AirAssistMode.ON,
         head_coolant=HeadCoolantMode.ON,
+        power_mode=PowerMode.CONSTANT,
         frequency=5000,
         pulse_width=12.5,
         active_head_uid="head-1",
     )
     ops.apply_state(state)
-    assert ops.len() == 10
+    assert ops.len() == 11
     assert ops.power(0) == pytest.approx(0.7)
     assert ops.rate(1) == 1200
     assert ops.rate(2) == 4000
@@ -746,9 +753,10 @@ def test_apply_state_full():
     assert ops.coolant(4) == CoolantMode.FLOOD
     assert ops.air_assist(5) == AirAssistMode.ON
     assert ops.head_coolant(6) == HeadCoolantMode.ON
-    assert ops.frequency(7) == 5000
-    assert ops.pulse_width(8) == pytest.approx(12.5)
-    assert ops.head_uid(9) == "head-1"
+    assert ops.power_mode(7) == PowerMode.CONSTANT
+    assert ops.frequency(8) == 5000
+    assert ops.pulse_width(9) == pytest.approx(12.5)
+    assert ops.head_uid(10) == "head-1"
 
 
 def test_apply_state_default():
@@ -793,6 +801,43 @@ def test_apply_state_accumulates():
     assert ops.command_type(1) == CommandType.LINE_TO
     assert ops.power(2) == pytest.approx(1.0)
     assert ops.rate(3) == 1000
+
+
+def test_apply_state_partial_with_power_mode():
+    """power_mode set; None fields produce no command."""
+    ops = Ops()
+    state = State(power=0.3, power_mode=PowerMode.CONSTANT)
+    ops.apply_state(state)
+    assert ops.len() == 2
+    assert ops.power(0) == pytest.approx(0.3)
+    assert ops.power_mode(1) == PowerMode.CONSTANT
+
+
+# ── SetPowerMode command ─────────────────────────────────────────
+
+
+def test_set_power_mode_command():
+    ops = Ops()
+    ops.set_power_mode(PowerMode.CONSTANT)
+    assert ops.len() == 1
+    assert ops.command_type(0) == CommandType.SET_POWER_MODE
+    assert ops.power_mode(0) == PowerMode.CONSTANT
+    info = ops.inspect(0)
+    assert info.power_mode == PowerMode.CONSTANT
+
+
+def test_set_power_mode_default_state_is_none():
+    """State.power_mode defaults to None (no command emitted)."""
+    state = State()
+    assert state.power_mode is None
+
+
+def test_power_mode_command_type_metadata():
+    assert CommandType.SET_POWER_MODE.name == "SET_POWER_MODE"
+    assert CommandType.SET_POWER_MODE.value == 23
+    from raygeo.ops.types import category
+
+    assert category(CommandType.SET_POWER_MODE).name == "STATE"
 
 
 # ── Ops.heap_size ────────────────────────────────────────────────

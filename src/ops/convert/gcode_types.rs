@@ -18,6 +18,12 @@ use serde::{Deserialize, Serialize};
 pub struct GcodeDialectSpec {
     pub laser_on: String,
     pub laser_off: String,
+    /// Constant-power variant of the laser-on command (M3 on
+    /// Grbl-like controllers). Emitted instead of ``laser_on`` when
+    /// the ops request constant power mode. Empty string falls back
+    /// to ``laser_on``.
+    #[serde(default)]
+    pub focus_laser_on: String,
     pub tool_change: String,
     pub set_speed: String,
     pub travel_move: String,

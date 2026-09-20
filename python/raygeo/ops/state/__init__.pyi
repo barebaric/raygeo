@@ -17,6 +17,7 @@ __all__ = [
     "AirAssistMode",
     "CoolantMode",
     "HeadCoolantMode",
+    "PowerMode",
     "State",
 ]
 
@@ -64,6 +65,24 @@ class HeadCoolantMode:
     """
     OFF: HeadCoolantMode = HeadCoolantMode.OFF
     ON: HeadCoolantMode = HeadCoolantMode.ON
+    @property
+    def value(self) -> builtins.int: ...
+    @property
+    def name(self) -> builtins.str: ...
+    def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
+    def __hash__(self) -> builtins.int: ...
+    def __repr__(self) -> builtins.str: ...
+
+@typing.final
+class PowerMode:
+    r"""
+    Laser power mode for cutting operations.
+    
+    Controls whether power scales with head speed: ``Dynamic``
+    (speed-proportional, M4) or ``Constant`` (fixed, M3).
+    """
+    DYNAMIC: PowerMode = PowerMode.DYNAMIC
+    CONSTANT: PowerMode = PowerMode.CONSTANT
     @property
     def value(self) -> builtins.int: ...
     @property
@@ -158,7 +177,14 @@ class State:
         """
     @head_coolant.setter
     def head_coolant(self, value: typing.Optional[HeadCoolantMode]) -> None: ...
-    def __new__(cls, power: builtins.float = 0.0, feed_rate: typing.Optional[builtins.int] = None, rapid_rate: typing.Optional[builtins.int] = None, active_head_uid: typing.Optional[builtins.str] = None, frequency: typing.Optional[builtins.int] = None, pulse_width: typing.Optional[builtins.float] = None, dwell_ms: typing.Optional[builtins.float] = None, spindle_rpm: typing.Optional[builtins.int] = None, coolant: typing.Optional[CoolantMode] = None, air_assist: typing.Optional[AirAssistMode] = None, head_coolant: typing.Optional[HeadCoolantMode] = None) -> State: ...
+    @property
+    def power_mode(self) -> typing.Optional[PowerMode]:
+        r"""
+        Laser power mode (if set).
+        """
+    @power_mode.setter
+    def power_mode(self, value: typing.Optional[PowerMode]) -> None: ...
+    def __new__(cls, power: builtins.float = 0.0, feed_rate: typing.Optional[builtins.int] = None, rapid_rate: typing.Optional[builtins.int] = None, active_head_uid: typing.Optional[builtins.str] = None, frequency: typing.Optional[builtins.int] = None, pulse_width: typing.Optional[builtins.float] = None, dwell_ms: typing.Optional[builtins.float] = None, spindle_rpm: typing.Optional[builtins.int] = None, coolant: typing.Optional[CoolantMode] = None, air_assist: typing.Optional[AirAssistMode] = None, head_coolant: typing.Optional[HeadCoolantMode] = None, power_mode: typing.Optional[PowerMode] = None) -> State: ...
     def __repr__(self) -> builtins.str:
         r"""
         String representation like ``State(power=...)``.

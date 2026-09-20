@@ -64,6 +64,25 @@ name: str
 value: int
 ```
 
+## PowerMode
+
+Laser power mode for cutting operations.
+
+Controls whether power scales with head speed: `Dynamic` (speed-proportional, M4) or `Constant`
+(fixed, M3).
+
+### `name`
+
+```python
+name: str
+```
+
+### `value`
+
+```python
+value: int
+```
+
 ## State
 
 The current state of a CNC machine.
@@ -134,6 +153,14 @@ power: float
 ```
 
 Laser power level (0.0 – 1.0 typically).
+
+### `power_mode`
+
+```python
+power_mode: Optional[PowerMode]
+```
+
+Laser power mode (if set).
 
 ### `pulse_width`
 

@@ -10,7 +10,7 @@ import numpy as np
 from raygeo.ops import Ops
 from raygeo.ops.axis import Axis
 from raygeo.ops.convert import GcodeDialectSpec
-from raygeo.ops.state import AirAssistMode, CoolantMode
+from raygeo.ops.state import AirAssistMode, CoolantMode, PowerMode
 
 # ── Helpers ──────────────────────────────────────────────────────
 
@@ -889,3 +889,147 @@ def test_pulse_width_no_gcode():
     text = _encode(ops)["text"]
     lines = [line for line in text.splitlines() if "50" in line]
     assert len(lines) == 0
+
+
+# ── Power mode (constant vs dynamic) ────────────────────────────
+
+
+def _cut_ops() -> Ops:
+    ops = Ops()
+    ops.job_start()
+    ops.set_power(1.0)
+    ops.set_feed_rate(1000)
+    ops.move_to(0.0, 0.0, 0.0)
+    ops.line_to(10.0, 0.0, 0.0)
+    ops.job_end()
+    return ops
+
+
+def test_dynamic_power_default_emits_m4():
+    dialect = GcodeDialectSpec(focus_laser_on="M3 S{power:.0f}")
+    text = _encode(_cut_ops(), dialect)["text"]
+    assert "M4 S100" in text
+    assert "M3 S100" not in text
+
+
+def test_explicit_dynamic_power_emits_m4():
+    ops = Ops()
+    ops.job_start()
+    ops.set_power_mode(PowerMode.DYNAMIC)
+    ops.set_power(1.0)
+    ops.set_feed_rate(1000)
+    ops.move_to(0.0, 0.0, 0.0)
+    ops.line_to(10.0, 0.0, 0.0)
+    ops.job_end()
+    dialect = GcodeDialectSpec(focus_laser_on="M3 S{power:.0f}")
+    text = _encode(ops, dialect)["text"]
+    assert "M4 S100" in text
+
+
+def test_constant_power_emits_m3():
+    ops = Ops()
+    ops.job_start()
+    ops.set_power_mode(PowerMode.CONSTANT)
+    ops.set_power(1.0)
+    ops.set_feed_rate(1000)
+    ops.move_to(0.0, 0.0, 0.0)
+    ops.line_to(10.0, 0.0, 0.0)
+    ops.job_end()
+    dialect = GcodeDialectSpec(focus_laser_on="M3 S{power:.0f}")
+    text = _encode(ops, dialect)["text"]
+    assert "M3 S100" in text
+    assert "M4 S100" not in text
+
+
+def test_constant_power_scales_by_head_max():
+    ops = Ops()
+    ops.job_start()
+    ops.set_power_mode(PowerMode.CONSTANT)
+    ops.set_power(0.5)
+    ops.set_feed_rate(1000)
+    ops.move_to(0.0, 0.0, 0.0)
+    ops.line_to(10.0, 0.0, 0.0)
+    ops.job_end()
+    dialect = GcodeDialectSpec(focus_laser_on="M3 S{power:.0f}")
+    ctx = _ctx(heads=[{"uid": "h0", "tool_number": 0, "max_power": 200.0}])
+    text = _encode(ops, dialect, ctx)["text"]
+    assert "M3 S100" in text
+
+
+def test_constant_power_empty_focus_template_falls_back():
+    ops = _cut_ops()
+    ops.set_power_mode(PowerMode.CONSTANT)
+    dialect = GcodeDialectSpec(focus_laser_on="")
+    text = _encode(ops, dialect)["text"]
+    assert "M4 S100" in text
+    assert "M3 S100" not in text
+
+
+def test_mode_switch_back_to_dynamic_reemits():
+    ops = Ops()
+    ops.job_start()
+    ops.set_power(1.0)
+    ops.set_feed_rate(1000)
+    ops.set_power_mode(PowerMode.CONSTANT)
+    ops.move_to(0.0, 0.0, 0.0)
+    ops.line_to(5.0, 0.0, 0.0)
+    ops.set_power_mode(PowerMode.DYNAMIC)
+    ops.move_to(10.0, 0.0, 0.0)
+    ops.line_to(15.0, 0.0, 0.0)
+    ops.job_end()
+    dialect = GcodeDialectSpec(focus_laser_on="M3 S{power:.0f}")
+    text = _encode(ops, dialect)["text"]
+    lines = text.splitlines()
+    m3_idx = next(i for i, line in enumerate(lines) if line == "M3 S100")
+    m4_idxs = [i for i, line in enumerate(lines) if line == "M4 S100"]
+    m5_idx = lines.index("M5")
+    assert len(m4_idxs) == 2
+    assert m3_idx < m4_idxs[0] < m5_idx < m4_idxs[1]
+
+
+def test_mode_switch_while_active_reemits():
+    ops = Ops()
+    ops.job_start()
+    ops.set_power(1.0)
+    ops.set_feed_rate(1000)
+    ops.set_power_mode(PowerMode.DYNAMIC)
+    ops.move_to(0.0, 0.0, 0.0)
+    ops.line_to(5.0, 0.0, 0.0)
+    ops.set_power_mode(PowerMode.CONSTANT)
+    ops.line_to(10.0, 0.0, 0.0)
+    ops.job_end()
+    dialect = GcodeDialectSpec(focus_laser_on="M3 S{power:.0f}")
+    text = _encode(ops, dialect)["text"]
+    lines = text.splitlines()
+    m4_idx = next(i for i, line in enumerate(lines) if line == "M4 S100")
+    m3_idx = next(i for i, line in enumerate(lines) if line == "M3 S100")
+    m5_idx = lines.index("M5")
+    assert m4_idx < m3_idx < m5_idx
+    assert text.count("M3 S100") == 1
+
+
+def test_mode_switch_before_cut_defers_to_laser_on():
+    ops = Ops()
+    ops.job_start()
+    ops.set_power_mode(PowerMode.CONSTANT)
+    ops.set_power(1.0)
+    ops.set_feed_rate(1000)
+    ops.set_power_mode(PowerMode.DYNAMIC)
+    ops.move_to(0.0, 0.0, 0.0)
+    ops.line_to(10.0, 0.0, 0.0)
+    ops.job_end()
+    dialect = GcodeDialectSpec(focus_laser_on="M3 S{power:.0f}")
+    text = _encode(ops, dialect)["text"]
+    assert text.count("M4 S100") == 1
+    assert "M3 S100" not in text
+
+
+def test_constant_mode_mach4_dialect_uses_same_template():
+    ops = _cut_ops()
+    ops.set_power_mode(PowerMode.CONSTANT)
+    dialect = GcodeDialectSpec(
+        laser_on="M67 E0 Q{power:.0f}",
+        focus_laser_on="M67 E0 Q{power:.0f}",
+    )
+    text = _encode(ops, dialect)["text"]
+    assert "M67 E0 Q100" in text

@@ -2,7 +2,9 @@ use std::sync::Arc;
 
 use super::axis::Axis;
 use super::enums::{CommandType, RasterMode, SectionType};
-use super::state::{AirAssistMode, CoolantMode, HeadCoolantMode, State};
+use super::state::{
+    AirAssistMode, CoolantMode, HeadCoolantMode, PowerMode, State,
+};
 use crate::error::RaygeoError;
 use crate::geo::types::{Point, Point3D};
 
@@ -91,6 +93,7 @@ pub enum StateCmd {
     SetCoolant(CoolantMode),
     SetAirAssist(AirAssistMode),
     SetHeadCoolant(HeadCoolantMode),
+    SetPowerMode(PowerMode),
 }
 
 #[derive(Clone, Debug)]
@@ -338,6 +341,14 @@ impl OpNode {
         }
     }
 
+    pub fn set_power_mode(mode: PowerMode) -> Self {
+        OpNode {
+            category: OpCategory::State(StateCmd::SetPowerMode(mode)),
+            state: None,
+            extra_axes: None,
+        }
+    }
+
     pub fn job_start() -> Self {
         OpNode {
             category: OpCategory::Marker(MarkerCmd::JobStart),
@@ -494,6 +505,7 @@ impl OpNode {
                 StateCmd::SetCoolant(_) => CommandType::SetCoolant,
                 StateCmd::SetAirAssist(_) => CommandType::SetAirAssist,
                 StateCmd::SetHeadCoolant(_) => CommandType::SetHeadCoolant,
+                StateCmd::SetPowerMode(_) => CommandType::SetPowerMode,
             },
             OpCategory::Marker(cmd) => match cmd {
                 MarkerCmd::JobStart => CommandType::JobStart,

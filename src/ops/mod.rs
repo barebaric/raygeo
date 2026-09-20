@@ -22,5 +22,7 @@ pub use axis::Axis;
 pub use container::structure::{OpsSection, OpsSectionRange};
 pub use container::Ops;
 pub use enums::{CommandCategory, CommandType, RasterMode, SectionType};
-pub use state::{AirAssistMode, CoolantMode, HeadCoolantMode, State};
+pub use state::{
+    AirAssistMode, CoolantMode, HeadCoolantMode, PowerMode, State,
+};
 pub use types::{MarkerCmd, MoveCmd, OpCategory, OpNode, StateCmd};
