@@ -12,8 +12,8 @@ dict or numpy arrays for persistence.
 
 The module also provides command-type enumerations (CommandType,
 CommandCategory, SectionType), machine State tracking (power, feed,
-coolant, air_assist, head_coolant, frequency), and an Axis bitflag
-for multi-axis machines.
+coolant, air_assist, head_coolant, power_mode, frequency), and an
+Axis bitflag for multi-axis machines.
 """
 
 import builtins
@@ -161,6 +161,11 @@ class CommandInfo:
     def head_coolant(self) -> typing.Optional[state.HeadCoolantMode]:
         r"""
         Head coolant mode, if a SetHeadCoolant command.
+        """
+    @property
+    def power_mode(self) -> typing.Optional[state.PowerMode]:
+        r"""
+        Power mode, if a SetPowerMode command.
         """
     @property
     def duration_ms(self) -> typing.Optional[builtins.float]:
@@ -544,6 +549,15 @@ class Ops:
         :raises TypeError: If the command is not a SetHeadCoolant.
         :complexity: O(1) time, O(1) space
         """
+    def power_mode(self, idx: builtins.int) -> state.PowerMode:
+        r"""
+        Get the power mode from a SetPowerMode command.
+        
+        :param idx: Command index.
+        :returns: The power mode.
+        :raises TypeError: If the command is not a SetPowerMode.
+        :complexity: O(1) time, O(1) space
+        """
     def head_uid(self, idx: builtins.int) -> builtins.str:
         r"""
         Get the head UID from a SetHead command.
@@ -729,6 +743,13 @@ class Ops:
         Set the head coolant mode for subsequent commands.
         
         :param mode: Head coolant mode.
+        :complexity: O(1) time, O(1) space
+        """
+    def set_power_mode(self, mode: state.PowerMode) -> None:
+        r"""
+        Set the laser power mode for subsequent commands.
+        
+        :param mode: Power mode.
         :complexity: O(1) time, O(1) space
         """
     def apply_state(self, state: state.State) -> None:

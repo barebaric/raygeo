@@ -153,6 +153,9 @@ impl PyCommandType {
     pub const SET_HEAD_COOLANT: PyCommandType =
         PyCommandType(CommandType::SetHeadCoolant);
     #[classattr]
+    pub const SET_POWER_MODE: PyCommandType =
+        PyCommandType(CommandType::SetPowerMode);
+    #[classattr]
     pub const JOB_START: PyCommandType = PyCommandType(CommandType::JobStart);
     #[classattr]
     pub const JOB_END: PyCommandType = PyCommandType(CommandType::JobEnd);

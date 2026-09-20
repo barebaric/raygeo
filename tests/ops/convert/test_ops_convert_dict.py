@@ -1,6 +1,6 @@
 from raygeo.ops import Ops
 from raygeo.ops.axis import Axis
-from raygeo.ops.state import AirAssistMode, HeadCoolantMode
+from raygeo.ops.state import AirAssistMode, HeadCoolantMode, PowerMode
 from raygeo.ops.types import CommandType, RasterMode, SectionType
 
 
@@ -17,6 +17,7 @@ def test_serialization_deserialization_all_types():
     ops.set_power(0.8)
     ops.set_air_assist(AirAssistMode.ON)
     ops.set_head_coolant(HeadCoolantMode.ON)
+    ops.set_power_mode(PowerMode.CONSTANT)
     ops.set_head("head-2")
     ops.move_to(1, 1, 1)
     ops.line_to(2, 2, 2)
@@ -162,3 +163,20 @@ def test_raster_mode_dict_round_trip_old_format():
     }
     ops = Ops.from_dict(data)
     assert ops.sections()[0].raster_mode is None
+
+
+def test_power_mode_dict_round_trip():
+    ops = Ops()
+    ops.set_power_mode(PowerMode.CONSTANT)
+    ops.set_power_mode(PowerMode.DYNAMIC)
+
+    data = ops.to_dict()
+    assert data["commands"][0]["power_mode"] == "Constant"
+    assert data["commands"][1]["power_mode"] == "Dynamic"
+
+    restored = Ops.from_dict(data)
+    assert len(restored) == 2
+    assert restored.command_type(0) == CommandType.SET_POWER_MODE
+    assert restored.power_mode(0) == PowerMode.CONSTANT
+    assert restored.power_mode(1) == PowerMode.DYNAMIC
+    assert restored.inspect(0) == ops.inspect(0)

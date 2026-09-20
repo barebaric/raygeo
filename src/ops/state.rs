@@ -13,6 +13,20 @@ pub enum AirAssistMode {
     On,
 }
 
+/// Laser power mode for subsequent cutting commands.
+///
+/// ``Dynamic`` lets the controller scale power with head speed (M4 on
+/// Grbl-like controllers); ``Constant`` holds the power fixed
+/// regardless of speed (M3).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+pub enum PowerMode {
+    /// Power scales with head speed (M4).
+    #[default]
+    Dynamic,
+    /// Power stays fixed regardless of head speed (M3).
+    Constant,
+}
+
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum HeadCoolantMode {
     #[default]
@@ -33,6 +47,7 @@ pub struct State {
     pub coolant: Option<CoolantMode>,
     pub air_assist: Option<AirAssistMode>,
     pub head_coolant: Option<HeadCoolantMode>,
+    pub power_mode: Option<PowerMode>,
 }
 
 impl State {

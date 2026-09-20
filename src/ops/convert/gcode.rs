@@ -24,7 +24,7 @@ use crate::ops::convert::gcode_types::{
 };
 use crate::ops::convert::{EncodeCtx, EncodeOutput, Encoder};
 use crate::ops::enums::CommandType;
-use crate::ops::state::{AirAssistMode, CoolantMode};
+use crate::ops::state::{AirAssistMode, CoolantMode, PowerMode};
 use crate::ops::types::MoveCmd;
 
 const COORD_TOLERANCE: f64 = 1e-6;
@@ -107,6 +107,7 @@ pub(crate) struct GcodeEncoder<'a> {
     pub(crate) emitted_speed: Option<f64>,
     pub(crate) emitted_cut_feed: Option<f64>,
     pub(crate) air_assist: bool,
+    pub(crate) power_mode: PowerMode,
     pub(crate) laser_active: bool,
     pub(crate) active_laser_uid: Option<String>,
     pub(crate) frequency: Option<i32>,
@@ -140,6 +141,7 @@ impl<'a> GcodeEncoder<'a> {
             emitted_speed: None,
             emitted_cut_feed: None,
             air_assist: false,
+            power_mode: PowerMode::Dynamic,
             laser_active: false,
             active_laser_uid: None,
             frequency: None,
@@ -366,23 +368,42 @@ impl<'a> GcodeEncoder<'a> {
         }
     }
 
+    /// The dialect template for turning the laser on, honouring the
+    /// active power mode: constant power uses the constant-power
+    /// (focus) template, dynamic power uses the regular one.
+    fn laser_on_template(&self) -> &'a str {
+        let dialect = self.dialect;
+        if self.power_mode == PowerMode::Constant
+            && !dialect.focus_laser_on.is_empty()
+        {
+            &dialect.focus_laser_on
+        } else {
+            &dialect.laser_on
+        }
+    }
+
+    /// Render and emit the laser-on command for the current power
+    /// and power mode.
+    fn render_laser_on(&mut self) {
+        if let Some(uid) = self.get_current_laser_head_uid() {
+            let max_power = self.max_power_for_head(&uid).unwrap_or(0.0);
+            let power_abs = self.power.unwrap_or(0.0) * max_power;
+            let mut vars = NamedVars::default();
+            vars.set_num("power", power_abs);
+            let template = self.laser_on_template();
+            let out = render_named(template, &vars);
+            if !out.is_empty() {
+                self.push_line(&out);
+            }
+        }
+    }
+
     fn laser_on(&mut self) {
         if !self.laser_active {
             let needs_emit = self.power.unwrap_or(0.0) > 0.0
                 || self.dialect.continuous_laser_mode;
             if needs_emit {
-                if let Some(uid) = self.get_current_laser_head_uid() {
-                    let max_power =
-                        self.max_power_for_head(&uid).unwrap_or(0.0);
-                    let power_abs = self.power.unwrap_or(0.0) * max_power;
-                    let mut vars = NamedVars::default();
-                    vars.set_num("power", power_abs);
-                    let dialect = self.dialect;
-                    let out = render_named(&dialect.laser_on, &vars);
-                    if !out.is_empty() {
-                        self.push_line(&out);
-                    }
-                }
+                self.render_laser_on();
                 self.laser_active = true;
             }
         }
@@ -408,21 +429,26 @@ impl<'a> GcodeEncoder<'a> {
 
         if self.laser_active && !self.dialect.continuous_laser_mode {
             if power > 0.0 {
-                if let Some(uid) = self.get_current_laser_head_uid() {
-                    let max_power =
-                        self.max_power_for_head(&uid).unwrap_or(0.0);
-                    let power_abs = power * max_power;
-                    let mut vars = NamedVars::default();
-                    vars.set_num("power", power_abs);
-                    let dialect = self.dialect;
-                    let out = render_named(&dialect.laser_on, &vars);
-                    if !out.is_empty() {
-                        self.push_line(&out);
-                    }
-                }
+                self.render_laser_on();
             } else {
                 self.laser_off();
             }
+        }
+    }
+
+    /// Switch the laser power mode (constant vs dynamic). When the
+    /// beam is already on, re-emit the laser-on command so the new
+    /// mode takes effect at the current power.
+    fn update_power_mode(&mut self, mode: PowerMode) {
+        if self.power_mode == mode {
+            return;
+        }
+        self.power_mode = mode;
+        if self.laser_active
+            && !self.dialect.continuous_laser_mode
+            && self.power.unwrap_or(0.0) > 0.0
+        {
+            self.render_laser_on();
         }
     }
 
@@ -742,6 +768,9 @@ impl<'a> GcodeEncoder<'a> {
             CommandType::SetAirAssist => {
                 self.handle_air_assist(ops_air_assist(ops, idx));
             }
+            CommandType::SetPowerMode => {
+                self.update_power_mode(ops_power_mode(ops, idx));
+            }
             CommandType::SetCoolant => {
                 self.handle_coolant(ops_coolant(ops, idx));
             }
@@ -932,6 +961,17 @@ fn ops_air_assist(ops: &Ops, idx: usize) -> AirAssistMode {
         *m
     } else {
         AirAssistMode::Off
+    }
+}
+
+fn ops_power_mode(ops: &Ops, idx: usize) -> PowerMode {
+    if let crate::ops::types::OpCategory::State(
+        crate::ops::types::StateCmd::SetPowerMode(m),
+    ) = &ops.commands[idx].category
+    {
+        *m
+    } else {
+        PowerMode::Dynamic
     }
 }
 

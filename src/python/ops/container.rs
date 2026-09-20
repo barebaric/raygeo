@@ -23,7 +23,7 @@ use py_transform::{extract_transformer, PyCallableCallbacks};
 
 use super::axis::PyAxis;
 use super::state::{
-    PyAirAssistMode, PyCoolantMode, PyHeadCoolantMode, PyState,
+    PyAirAssistMode, PyCoolantMode, PyHeadCoolantMode, PyPowerMode, PyState,
 };
 use super::types::{
     PyCommandCategory, PyCommandType, PyRasterMode, PySectionType, PyStateBlock,
@@ -536,6 +536,9 @@ pub struct PyCommandInfo {
     /// Head coolant mode, if a SetHeadCoolant command.
     #[pyo3(get)]
     pub head_coolant: Option<PyHeadCoolantMode>,
+    /// Power mode, if a SetPowerMode command.
+    #[pyo3(get)]
+    pub power_mode: Option<PyPowerMode>,
     /// Dwell duration in ms, if a dwell command.
     #[pyo3(get)]
     pub duration_ms: Option<f64>,
@@ -608,6 +611,9 @@ impl PyCommandInfo {
                 return Ok(false);
             }
             if self.head_coolant != other_info.head_coolant {
+                return Ok(false);
+            }
+            if self.power_mode != other_info.power_mode {
                 return Ok(false);
             }
             if self.duration_ms != other_info.duration_ms {
@@ -1300,6 +1306,29 @@ impl PyOps {
         }
     }
 
+    /// Get the power mode from a SetPowerMode command.
+    ///
+    /// :param idx: Command index.
+    /// :returns: The power mode.
+    /// :raises TypeError: If the command is not a SetPowerMode.
+    /// :complexity: O(1) time, O(1) space
+    fn power_mode(&self, idx: usize) -> PyResult<PyPowerMode> {
+        if idx >= self.inner.len() {
+            return Err(PyErr::new::<pyo3::exceptions::PyIndexError, _>(
+                "index out of range",
+            ));
+        }
+        if let OpCategory::State(StateCmd::SetPowerMode(mode)) =
+            &self.inner.commands[idx].category
+        {
+            Ok(PyPowerMode(*mode))
+        } else {
+            Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
+                "Not a SetPowerModeCommand",
+            ))
+        }
+    }
+
     /// Get the head UID from a SetHead command.
     ///
     /// :param idx: Command index.
@@ -1672,6 +1701,14 @@ impl PyOps {
     /// :complexity: O(1) time, O(1) space
     fn set_head_coolant(&mut self, mode: &PyHeadCoolantMode) {
         self.inner.set_head_coolant(mode.0);
+    }
+
+    /// Set the laser power mode for subsequent commands.
+    ///
+    /// :param mode: Power mode.
+    /// :complexity: O(1) time, O(1) space
+    fn set_power_mode(&mut self, mode: &PyPowerMode) {
+        self.inner.set_power_mode(mode.0);
     }
 
     /// Emit the state commands needed to reach *state*.
@@ -2135,6 +2172,7 @@ impl PyOps {
             coolant: None,
             air_assist: None,
             head_coolant: None,
+            power_mode: None,
             duration_ms: None,
             layer_uid: None,
             workpiece_uid: None,
@@ -2190,6 +2228,9 @@ impl PyOps {
                 }
                 StateCmd::SetHeadCoolant(mode) => {
                     info.head_coolant = Some(PyHeadCoolantMode(*mode))
+                }
+                StateCmd::SetPowerMode(mode) => {
+                    info.power_mode = Some(PyPowerMode(*mode))
                 }
                 StateCmd::SetHead(uid) => info.head_uid = Some(uid.to_string()),
                 StateCmd::Dwell(d) => info.duration_ms = Some(*d),

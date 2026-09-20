@@ -3,7 +3,8 @@ use pyo3::types::{PyDict, PyList};
 
 use crate::ops::{
     AirAssistMode, Axis, CommandCategory, CommandType, CoolantMode,
-    HeadCoolantMode, MarkerCmd, MoveCmd, OpCategory, RasterMode, StateCmd,
+    HeadCoolantMode, MarkerCmd, MoveCmd, OpCategory, PowerMode, RasterMode,
+    StateCmd,
 };
 
 use crate::geo::types::Point3D;
@@ -113,6 +114,9 @@ pub(crate) fn cmd_to_dict<'a>(
             }
             StateCmd::SetHeadCoolant(mode) => {
                 d.set_item("head_coolant", format!("{:?}", mode))?;
+            }
+            StateCmd::SetPowerMode(mode) => {
+                d.set_item("power_mode", format!("{:?}", mode))?;
             }
             StateCmd::SetHead(uid) => {
                 d.set_item("head_uid", uid.to_string())?
@@ -370,6 +374,18 @@ pub fn create_and_append_command(
             _ => HeadCoolantMode::Off,
         };
         ops.set_head_coolant(mode);
+    } else if ct == CommandType::SetPowerMode {
+        let mode_str: String = cmd_data
+            .get_item("power_mode")?
+            .ok_or_else(|| {
+                pyo3::exceptions::PyKeyError::new_err("missing 'power_mode'")
+            })?
+            .extract()?;
+        let mode = match mode_str.as_str() {
+            "Constant" => PowerMode::Constant,
+            _ => PowerMode::Dynamic,
+        };
+        ops.set_power_mode(mode);
     } else if ct == CommandType::SetHead {
         let uid: String = cmd_data
             .get_item("head_uid")?

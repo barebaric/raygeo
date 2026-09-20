@@ -40,6 +40,8 @@ pub enum CommandType {
     SetAirAssist = 21,
     #[strum(serialize = "SET_HEAD_COOLANT")]
     SetHeadCoolant = 22,
+    #[strum(serialize = "SET_POWER_MODE")]
+    SetPowerMode = 23,
     #[strum(serialize = "JOB_START")]
     JobStart = 100,
     #[strum(serialize = "JOB_END")]
@@ -85,7 +87,8 @@ impl CommandType {
             | CommandType::SetSpindleRpm
             | CommandType::SetCoolant
             | CommandType::SetAirAssist
-            | CommandType::SetHeadCoolant => CommandCategory::State,
+            | CommandType::SetHeadCoolant
+            | CommandType::SetPowerMode => CommandCategory::State,
             CommandType::JobStart
             | CommandType::JobEnd
             | CommandType::LayerStart

@@ -6,7 +6,9 @@ use crate::error::RaygeoError;
 
 use super::axis::Axis;
 use super::enums::{CommandCategory, CommandType, RasterMode, SectionType};
-use super::state::{AirAssistMode, CoolantMode, HeadCoolantMode, State};
+use super::state::{
+    AirAssistMode, CoolantMode, HeadCoolantMode, PowerMode, State,
+};
 use super::types::{MarkerCmd, MoveCmd, OpCategory, OpNode, StateCmd};
 use crate::geo::types::{Point, Point3D, Rect};
 use std::sync::{Arc, Mutex};
@@ -399,6 +401,11 @@ impl Ops {
         self.invalidate_time_cache();
     }
 
+    pub fn set_power_mode(&mut self, mode: PowerMode) {
+        self.cmds_mut().push(OpNode::set_power_mode(mode));
+        self.invalidate_time_cache();
+    }
+
     /// Emit the state commands needed to reach *state*.
     ///
     /// Power is always emitted (default 0.0). All other fields are
@@ -424,6 +431,9 @@ impl Ops {
         }
         if let Some(h) = state.head_coolant {
             self.set_head_coolant(h);
+        }
+        if let Some(pm) = state.power_mode {
+            self.set_power_mode(pm);
         }
         if let Some(f) = state.frequency {
             self.set_frequency(f);
@@ -616,6 +626,7 @@ impl Ops {
                 StateCmd::SetHeadCoolant(mode) => {
                     state.head_coolant = Some(*mode)
                 }
+                StateCmd::SetPowerMode(mode) => state.power_mode = Some(*mode),
                 StateCmd::Dwell(d) => state.dwell_ms = Some(*d),
             }
         }

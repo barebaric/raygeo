@@ -1,4 +1,6 @@
-use crate::ops::state::{AirAssistMode, CoolantMode, HeadCoolantMode, State};
+use crate::ops::state::{
+    AirAssistMode, CoolantMode, HeadCoolantMode, PowerMode, State,
+};
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
@@ -15,14 +17,15 @@ machine parameters with moving commands and to detect rapid (non-power)
 state changes.
 ";
 
-/// Register the State, CoolantMode, AirAssistMode, and HeadCoolantMode
-/// classes with the Python module.
+/// Register the State, CoolantMode, AirAssistMode, HeadCoolantMode,
+/// and PowerMode classes with the Python module.
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.setattr("__doc__", MODULE_DOC)?;
     m.add_class::<PyState>()?;
     m.add_class::<PyCoolantMode>()?;
     m.add_class::<PyAirAssistMode>()?;
     m.add_class::<PyHeadCoolantMode>()?;
+    m.add_class::<PyPowerMode>()?;
     let sys_modules = m.py().import("sys")?.getattr("modules")?;
     sys_modules.set_item("raygeo.ops.state", m)?;
     Ok(())
@@ -167,6 +170,52 @@ impl PyHeadCoolantMode {
     }
 }
 
+/// Laser power mode for cutting operations.
+///
+/// Controls whether power scales with head speed: ``Dynamic``
+/// (speed-proportional, M4) or ``Constant`` (fixed, M3).
+#[gen_stub_pyclass]
+#[pyclass(
+    frozen,
+    eq,
+    hash,
+    skip_from_py_object,
+    module = "raygeo.ops.state",
+    name = "PowerMode"
+)]
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub struct PyPowerMode(pub PowerMode);
+
+#[gen_stub_pymethods]
+#[pymethods]
+impl PyPowerMode {
+    #[classattr]
+    pub const DYNAMIC: PyPowerMode = PyPowerMode(PowerMode::Dynamic);
+    #[classattr]
+    pub const CONSTANT: PyPowerMode = PyPowerMode(PowerMode::Constant);
+
+    fn __repr__(&self) -> String {
+        format!("PowerMode.{}", self.name())
+    }
+
+    #[getter]
+    fn value(&self) -> u8 {
+        match self.0 {
+            PowerMode::Dynamic => 0,
+            PowerMode::Constant => 1,
+        }
+    }
+
+    #[getter]
+    fn name(&self) -> String {
+        match self.0 {
+            PowerMode::Dynamic => "DYNAMIC",
+            PowerMode::Constant => "CONSTANT",
+        }
+        .to_string()
+    }
+}
+
 /// The current state of a CNC machine.
 ///
 /// Tracks power level, coolant mode, air assist, head coolant,
@@ -182,7 +231,7 @@ pub struct PyState(pub State);
 impl PyState {
     #[allow(clippy::too_many_arguments)]
     #[new]
-    #[pyo3(signature = (power=0.0, feed_rate=None, rapid_rate=None, active_head_uid=None, frequency=None, pulse_width=None, dwell_ms=None, spindle_rpm=None, coolant=None, air_assist=None, head_coolant=None))]
+    #[pyo3(signature = (power=0.0, feed_rate=None, rapid_rate=None, active_head_uid=None, frequency=None, pulse_width=None, dwell_ms=None, spindle_rpm=None, coolant=None, air_assist=None, head_coolant=None, power_mode=None))]
     fn new(
         power: f64,
         feed_rate: Option<i32>,
@@ -195,6 +244,7 @@ impl PyState {
         coolant: Option<Bound<'_, PyCoolantMode>>,
         air_assist: Option<Bound<'_, PyAirAssistMode>>,
         head_coolant: Option<Bound<'_, PyHeadCoolantMode>>,
+        power_mode: Option<Bound<'_, PyPowerMode>>,
     ) -> Self {
         PyState(State {
             power,
@@ -208,6 +258,7 @@ impl PyState {
             coolant: coolant.map(|c| c.borrow().0),
             air_assist: air_assist.map(|a| a.borrow().0),
             head_coolant: head_coolant.map(|h| h.borrow().0),
+            power_mode: power_mode.map(|p| p.borrow().0),
         })
     }
 
@@ -348,5 +399,16 @@ impl PyState {
         value: Option<Bound<'_, PyHeadCoolantMode>>,
     ) {
         self.0.head_coolant = value.map(|h| h.borrow().0);
+    }
+
+    /// Laser power mode (if set).
+    #[getter]
+    fn power_mode(&self) -> Option<PyPowerMode> {
+        self.0.power_mode.map(PyPowerMode)
+    }
+
+    #[setter]
+    fn set_power_mode(&mut self, value: Option<Bound<'_, PyPowerMode>>) {
+        self.0.power_mode = value.map(|p| p.borrow().0);
     }
 }
