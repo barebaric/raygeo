@@ -3,7 +3,7 @@ import importlib
 import pytest
 
 from raygeo.ops import Ops
-from raygeo.ops.state import AirAssistMode, CoolantMode
+from raygeo.ops.state import AirAssistMode, CoolantMode, PowerMode
 from raygeo.ops.types import CommandCategory, CommandType
 
 
@@ -1191,8 +1191,6 @@ class TestOptimizeMultiCommand:
 def test_optimize_preserves_power_mode():
     """Optimize rebuilds the op stream from state snapshots; a
     SetPowerMode command must be re-emitted like the other state."""
-    from raygeo.ops.state import PowerMode
-
     ops = Ops()
     ops.set_power(0.8)
     ops.set_power_mode(PowerMode.CONSTANT)
