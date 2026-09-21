@@ -198,6 +198,10 @@ impl PyPowerMode {
         format!("PowerMode.{}", self.name())
     }
 
+    fn __str__(&self) -> String {
+        self.name()
+    }
+
     #[getter]
     fn value(&self) -> u8 {
         match self.0 {
