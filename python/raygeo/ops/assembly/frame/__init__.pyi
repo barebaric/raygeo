@@ -14,7 +14,7 @@ class FrameSpec:
     r"""
     Parameters for the ``frame`` assembler.
     
-    Construct with ``FrameSpec(offset_mm, cut_side)``.
+    Construct with ``FrameSpec(offset_mm, cut_side, corner_radius)``.
     Wrap in an :class:`~raygeo.ops.assembly.Assembler` instance to
     drive the `Assembler` trait.
     """
@@ -28,22 +28,31 @@ class FrameSpec:
         r"""
         ``"centerline"``, ``"outside"``, or ``"inside"``.
         """
+    @property
+    def corner_radius(self) -> builtins.float:
+        r"""
+        Corner rounding radius in mm (0 = sharp corners).
+        """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __new__(cls, offset_mm: builtins.float = 0.0, cut_side: builtins.str = 'centerline') -> FrameSpec: ...
+    def __new__(cls, offset_mm: builtins.float = 0.0, cut_side: builtins.str = 'centerline', corner_radius: builtins.float = 0.0) -> FrameSpec: ...
 
-def frame(part: raygeo.ops.part.Part, offset_mm: float = 0, cut_side: str = 'centerline') -> raygeo.ops.assembly.AssemblyResult:
+def frame(part: raygeo.ops.part.Part, offset_mm: float = 0, cut_side: str = 'centerline', corner_radius: float = 0) -> raygeo.ops.assembly.AssemblyResult:
     r"""
     Generate a rectangular frame around the part boundary.
     
     Creates a rectangle matching ``part.size_mm``, computes the
     total offset from offset / cut-side, applies it, and returns
-    the frame as an :class:`AssemblyResult`.
+    the frame as an :class:`AssemblyResult`. When
+    ``corner_radius`` is positive the corners are rounded to that
+    radius (clamped to what fits the frame).
     
     :param part: The part whose size defines the frame.
     :param offset_mm: Total path offset distance in mm
         (default 0.0).
     :param cut_side: ``"centerline"``, ``"outside"``, or
         ``"inside"`` (default ``"centerline"``).
+    :param corner_radius: Corner rounding radius in mm
+        (default 0.0 = sharp corners).
     :returns: An :class:`AssemblyResult` with the frame path.
     :raises ValueError: If the part has no size information.
     """
