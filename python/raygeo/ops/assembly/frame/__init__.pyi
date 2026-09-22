@@ -14,7 +14,8 @@ class FrameSpec:
     r"""
     Parameters for the ``frame`` assembler.
     
-    Construct with ``FrameSpec(offset_mm, cut_side, corner_radius)``.
+    Construct with ``FrameSpec(offset_mm, cut_side, corner_radius,
+    arc_tolerance, allow_arcs)``.
     Wrap in an :class:`~raygeo.ops.assembly.Assembler` instance to
     drive the `Assembler` trait.
     """
@@ -33,10 +34,20 @@ class FrameSpec:
         r"""
         Corner rounding radius in mm (0 = sharp corners).
         """
+    @property
+    def arc_tolerance(self) -> builtins.float:
+        r"""
+        Maximum chord deviation in mm when arcs are not supported.
+        """
+    @property
+    def allow_arcs(self) -> builtins.bool:
+        r"""
+        Keep rounded corners as arcs; when false they are linearised.
+        """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __new__(cls, offset_mm: builtins.float = 0.0, cut_side: builtins.str = 'centerline', corner_radius: builtins.float = 0.0) -> FrameSpec: ...
+    def __new__(cls, offset_mm: builtins.float = 0.0, cut_side: builtins.str = 'centerline', corner_radius: builtins.float = 0.0, arc_tolerance: builtins.float = 0.0, allow_arcs: builtins.bool = True) -> FrameSpec: ...
 
-def frame(part: raygeo.ops.part.Part, offset_mm: float = 0, cut_side: str = 'centerline', corner_radius: float = 0) -> raygeo.ops.assembly.AssemblyResult:
+def frame(part: raygeo.ops.part.Part, offset_mm: float = 0, cut_side: str = 'centerline', corner_radius: float = 0, arc_tolerance: float = 0, allow_arcs: bool = True) -> raygeo.ops.assembly.AssemblyResult:
     r"""
     Generate a rectangular frame around the part boundary.
     
@@ -44,7 +55,7 @@ def frame(part: raygeo.ops.part.Part, offset_mm: float = 0, cut_side: str = 'cen
     total offset from offset / cut-side, applies it, and returns
     the frame as an :class:`AssemblyResult`. When
     ``corner_radius`` is positive the corners are rounded to that
-    radius (clamped to what fits the frame).
+    radius (clamped to what fits the frame) as exact circular arcs.
     
     :param part: The part whose size defines the frame.
     :param offset_mm: Total path offset distance in mm
@@ -53,6 +64,10 @@ def frame(part: raygeo.ops.part.Part, offset_mm: float = 0, cut_side: str = 'cen
         ``"inside"`` (default ``"centerline"``).
     :param corner_radius: Corner rounding radius in mm
         (default 0.0 = sharp corners).
+    :param arc_tolerance: Maximum chord deviation in mm used only
+        when ``allow_arcs`` is false (default 0.0).
+    :param allow_arcs: Keep rounded corners as arcs; when false
+        they are linearised (default True).
     :returns: An :class:`AssemblyResult` with the frame path.
     :raises ValueError: If the part has no size information.
     """

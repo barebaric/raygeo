@@ -218,6 +218,14 @@ power: float
 
 Laser power fraction (0.0 – 1.0) injected as `SetPower`.
 
+### `power_mode`
+
+```python
+power_mode: Optional[state.PowerMode]
+```
+
+Laser power mode injected as `SetPowerMode`.
+
 ### `profile`
 
 ```python

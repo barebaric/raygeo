@@ -22,7 +22,8 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 
 /// Parameters for the ``frame`` assembler.
 ///
-/// Construct with ``FrameSpec(offset_mm, cut_side, corner_radius)``.
+/// Construct with ``FrameSpec(offset_mm, cut_side, corner_radius,
+/// arc_tolerance, allow_arcs)``.
 /// Wrap in an :class:`~raygeo.ops.assembly.Assembler` instance to
 /// drive the `Assembler` trait.
 #[gen_stub_pyclass]
@@ -44,6 +45,12 @@ pub struct PyFrameSpec {
     /// Corner rounding radius in mm (0 = sharp corners).
     #[pyo3(get)]
     pub corner_radius: f64,
+    /// Maximum chord deviation in mm when arcs are not supported.
+    #[pyo3(get)]
+    pub arc_tolerance: f64,
+    /// Keep rounded corners as arcs; when false they are linearised.
+    #[pyo3(get)]
+    pub allow_arcs: bool,
 }
 
 impl PyFrameSpec {
@@ -53,6 +60,8 @@ impl PyFrameSpec {
             offset_mm: self.offset_mm,
             cut_side: self.cut_side,
             corner_radius: self.corner_radius,
+            arc_tolerance: self.arc_tolerance,
+            allow_arcs: self.allow_arcs,
         }
     }
 }
@@ -65,12 +74,22 @@ impl PyFrameSpec {
         offset_mm = 0.0,
         cut_side = "centerline",
         corner_radius = 0.0,
+        arc_tolerance = 0.0,
+        allow_arcs = true,
     ))]
-    fn new(offset_mm: f64, cut_side: &str, corner_radius: f64) -> Self {
+    fn new(
+        offset_mm: f64,
+        cut_side: &str,
+        corner_radius: f64,
+        arc_tolerance: f64,
+        allow_arcs: bool,
+    ) -> Self {
         PyFrameSpec {
             offset_mm,
             cut_side: cut_side.to_string(),
             corner_radius,
+            arc_tolerance,
+            allow_arcs,
         }
     }
 }
@@ -84,6 +103,8 @@ impl PyFrameSpec {
         offset_mm: float = 0.0,
         cut_side: str = "centerline",
         corner_radius: float = 0.0,
+        arc_tolerance: float = 0.0,
+        allow_arcs: bool = True,
     ) -> raygeo.ops.assembly.AssemblyResult:
         """Generate a rectangular frame around the part boundary.
 
@@ -91,7 +112,7 @@ impl PyFrameSpec {
         total offset from offset / cut-side, applies it, and returns
         the frame as an :class:`AssemblyResult`. When
         ``corner_radius`` is positive the corners are rounded to that
-        radius (clamped to what fits the frame).
+        radius (clamped to what fits the frame) as exact circular arcs.
 
         :param part: The part whose size defines the frame.
         :param offset_mm: Total path offset distance in mm
@@ -100,6 +121,10 @@ impl PyFrameSpec {
             ``"inside"`` (default ``"centerline"``).
         :param corner_radius: Corner rounding radius in mm
             (default 0.0 = sharp corners).
+        :param arc_tolerance: Maximum chord deviation in mm used only
+            when ``allow_arcs`` is false (default 0.0).
+        :param allow_arcs: Keep rounded corners as arcs; when false
+            they are linearised (default True).
         :returns: An :class:`AssemblyResult` with the frame path.
         :raises ValueError: If the part has no size information.
         """
@@ -112,14 +137,24 @@ impl PyFrameSpec {
     offset_mm = 0.0,
     cut_side = "centerline",
     corner_radius = 0.0,
+    arc_tolerance = 0.0,
+    allow_arcs = true,
 ))]
 fn frame_py(
     part: &PyPart,
     offset_mm: f64,
     cut_side: &str,
     corner_radius: f64,
+    arc_tolerance: f64,
+    allow_arcs: bool,
 ) -> PyResult<PyAssemblyResult> {
-    let (ops, meta) =
-        assemble_frame(part.inner.size_mm, offset_mm, cut_side, corner_radius)?;
+    let (ops, meta) = assemble_frame(
+        part.inner.size_mm,
+        offset_mm,
+        cut_side,
+        corner_radius,
+        arc_tolerance,
+        allow_arcs,
+    )?;
     Ok(PyAssemblyResult::from_parts(ops, meta, None, vec![]))
 }

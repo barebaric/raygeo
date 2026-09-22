@@ -110,21 +110,74 @@ def _points(ops) -> list[tuple[float, float]]:
     return points
 
 
-def test_frame_corner_radius_rounds_corners():
+def _arcs(ops) -> list[dict]:
+    return [
+        cmd for cmd in ops.to_dict()["commands"] if cmd["type"] == "ARC_TO"
+    ]
+
+
+def test_frame_corner_radius_emits_true_arcs():
     c = _run_one(_frame_node("rounded", spec=FrameSpec(corner_radius=3.0)))
-    points = _points(result_ops(c))
+    ops = result_ops(c)
+    points = _points(ops)
+    arcs = _arcs(ops)
     assert (10.0, 10.0) not in points
-    corner_arc = [(x, y) for x, y in points if x > 6.0 and y > 6.0]
-    assert corner_arc
-    for x, y in corner_arc:
-        assert math.hypot(x - 7.0, y - 7.0) == pytest.approx(3.0, abs=1e-6)
+    assert len(arcs) == 4
+
+    # Walk the commands so each arc knows its start point.
+    start = None
+    expected_centers = {(7.0, 3.0), (7.0, 7.0), (3.0, 7.0), (3.0, 3.0)}
+    centers = set()
+    for cmd in ops.to_dict()["commands"]:
+        if cmd["type"] in ("MOVE_TO", "LINE_TO", "ARC_TO"):
+            end = (cmd["end"][0], cmd["end"][1])
+            if cmd["type"] == "ARC_TO":
+                assert start is not None
+                cx = start[0] + cmd["center_offset"][0]
+                cy = start[1] + cmd["center_offset"][1]
+                centers.add((round(cx, 6), round(cy, 6)))
+                assert math.hypot(end[0] - cx, end[1] - cy) == pytest.approx(
+                    3.0, abs=1e-6
+                )
+                assert cmd["clockwise"] is False
+            start = end
+    assert centers == expected_centers
+
+
+def test_frame_corner_radius_linearizes_without_arc_support():
+    tolerance = 0.05
+    c = _run_one(
+        _frame_node(
+            "linear",
+            spec=FrameSpec(
+                corner_radius=3.0,
+                arc_tolerance=tolerance,
+                allow_arcs=False,
+            ),
+        )
+    )
+    ops = result_ops(c)
+    assert not _arcs(ops)
+    points = _points(ops)
+
+    # Bottom-right fillet is centred at (7, 3) with radius 3; every
+    # chord point must stay within the requested tolerance of the arc.
+    fillet = [
+        (x, y) for x, y in points if 7.0 <= x <= 10.0 and 0.0 <= y <= 3.0
+    ]
+    assert len(fillet) > 2
+    for x, y in fillet:
+        deviation = 3.0 - math.hypot(x - 7.0, y - 3.0)
+        assert deviation <= tolerance + 1e-9
 
 
 def test_frame_corner_radius_zero_keeps_sharp_corners():
     c = _run_one(_frame_node("sharp", spec=FrameSpec(corner_radius=0.0)))
-    points = _points(result_ops(c))
+    ops = result_ops(c)
+    points = _points(ops)
     assert (10.0, 0.0) in points
     assert (10.0, 10.0) in points
+    assert not _arcs(ops)
 
 
 def test_frame_corner_radius_clamps_to_frame():
