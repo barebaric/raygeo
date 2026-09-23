@@ -97,8 +97,6 @@ pub(crate) fn register(parent: &Bound<'_, PyModule>) -> PyResult<()> {
 
     parent.add_submodule(&mod_)?;
 
-    let sys_modules = parent.py().import("sys")?.getattr("modules")?;
-    sys_modules.set_item("raygeo.fstring", &mod_)?;
 
     Ok(())
 }

@@ -42,8 +42,6 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     trace_mod
         .add_function(wrap_pyfunction!(get_route_detail_name, &trace_mod)?)?;
     m.add_submodule(&trace_mod)?;
-    let sys_modules = py.import("sys")?.getattr("modules")?;
-    sys_modules.set_item("raygeo.trace", &trace_mod)?;
     Ok(())
 }
 

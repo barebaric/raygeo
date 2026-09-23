@@ -22,8 +22,6 @@ pub(crate) fn register(parent: &Bound<'_, PyModule>) -> PyResult<()> {
     tool::register(&cnc_mod)?;
     parent.add_submodule(&cnc_mod)?;
 
-    let sys_modules = py.import("sys")?.getattr("modules")?;
-    sys_modules.set_item("raygeo.cnc", &cnc_mod)?;
 
     Ok(())
 }
