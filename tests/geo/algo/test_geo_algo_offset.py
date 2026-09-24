@@ -1,3 +1,5 @@
+import pytest
+
 from raygeo.geo import Geometry
 from raygeo.geo.algo.offset import (
     compute_inset_region,
@@ -374,3 +376,21 @@ def test_inset_join_style_round_corners():
     poly = region[0]
     n = len(poly)
     assert n > 20, f"expected Round >20 vertices for notched rect, got {n}"
+
+
+def test_grow_overlapping_solids_offset_separately():
+    """
+    Regression test (rayforge issue #456): overlapping solids must be
+    offset as separate outlines. The old containment probe classified
+    one figure as a hole of the other, so grow() subtracted it instead
+    of growing both outlines.
+    """
+    a = Geometry.from_points([(0, 0), (10, 0), (10, 40), (0, 40)])
+    b = Geometry.from_points([(8, 20), (18, 20), (18, 60), (8, 60)])
+    combined = a.copy()
+    combined.extend(b)
+
+    grown = combined.grow(1.0)
+    assert len(grown.split_into_contours()) == 2
+    # Each 10x40 rect grows by 1 mm on every side -> 12x42 = 504 each.
+    assert grown.area() == pytest.approx(2 * 12 * 42, rel=1e-3)
