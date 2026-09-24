@@ -11,16 +11,53 @@ use rstar::{RTree, RTreeObject, AABB};
 use crate::geo::algo::analysis::{get_subpath_area_from_array, is_closed};
 use crate::geo::geometry::Geometry;
 use crate::geo::shape::polygon::{
-    is_point_inside_polygon, is_point_strictly_inside_polygon,
+    get_polygon_signed_area, get_polygons_intersection, is_point_inside_polygon,
 };
-use crate::geo::types::{Command, Point, Point3D, Rect};
+use crate::geo::types::{Command, Point, Point3D, Polygon, Rect};
+
+/// Fraction of a candidate child's area that must be covered by the
+/// candidate parent for containment to be accepted.  Genuine containment
+/// yields ~1.0; shapes that merely overlap each other (rayforge #456)
+/// yield far less.
+const CONTAINMENT_COVERAGE: f64 = 0.999;
+
+/// A candidate parent must exceed the child's area by this relative
+/// margin, so coincident duplicate contours never nest inside each
+/// other.
+const CONTAINMENT_AREA_MARGIN: f64 = 1e-6;
 
 /// Preprocessed contour data for hierarchy analysis.
 #[derive(Clone, Debug)]
 pub struct ContourInfo {
     pub vertices: Vec<Point>,
     pub rect: Rect,
-    pub test_point: Point,
+    /// Absolute area enclosed by `vertices`.
+    pub area: f64,
+}
+
+/// Decide whether the polygon `inner` lies (almost) entirely inside the
+/// polygon `outer`.
+///
+/// Containment is decided by *area coverage*, not by a single sample
+/// point: the clipped intersection of the two polygons must cover at
+/// least [`CONTAINMENT_COVERAGE`] of `inner`'s area, and `outer` must be
+/// strictly larger than `inner` (so coincident duplicate contours do not
+/// nest inside each other).  Two shapes that merely overlap score a low
+/// coverage fraction and correctly stay separate.
+fn is_contained_in(
+    inner: &Polygon,
+    inner_area: f64,
+    outer: &Polygon,
+    outer_area: f64,
+) -> bool {
+    if outer_area <= inner_area * (1.0 + CONTAINMENT_AREA_MARGIN) {
+        return false;
+    }
+    let covered: f64 = get_polygons_intersection(inner, outer)
+        .iter()
+        .map(|p| get_polygon_signed_area(p).abs())
+        .sum();
+    covered >= CONTAINMENT_COVERAGE * inner_area
 }
 
 /// Result of building a containment hierarchy over contours.
@@ -54,8 +91,6 @@ impl ContourHierarchy {
                         Some(ci) => ci,
                         None => continue,
                     };
-                    let tx = current.test_point.x;
-                    let ty = current.test_point.y;
                     let mut best_parent: isize = -1;
                     let mut best_parent_area = f64::INFINITY;
 
@@ -70,27 +105,27 @@ impl ContourHierarchy {
                         if self.nesting_depths[j] < 0 {
                             continue;
                         }
-                        if tx < other.rect.min.x
-                            || tx > other.rect.max.x
-                            || ty < other.rect.min.y
-                            || ty > other.rect.max.y
+                        // Bounding-box overlap pre-filter.
+                        if current.rect.max.x < other.rect.min.x
+                            || current.rect.min.x > other.rect.max.x
+                            || current.rect.max.y < other.rect.min.y
+                            || current.rect.min.y > other.rect.max.y
                         {
-                            continue;
-                        }
-                        if !is_point_inside_polygon(
-                            current.test_point,
-                            &other.vertices,
-                        ) {
                             continue;
                         }
                         if !should_keep(i, j) {
                             continue;
                         }
-                        let other_bbox_area = (other.rect.max.x
-                            - other.rect.min.x)
-                            * (other.rect.max.y - other.rect.min.y);
-                        if other_bbox_area < best_parent_area {
-                            best_parent_area = other_bbox_area;
+                        if !is_contained_in(
+                            &current.vertices,
+                            current.area,
+                            &other.vertices,
+                            other.area,
+                        ) {
+                            continue;
+                        }
+                        if other.area < best_parent_area {
+                            best_parent_area = other.area;
                             best_parent = j as isize;
                         }
                     }
@@ -159,11 +194,6 @@ pub fn build_hierarchy(contours: &[&Geometry]) -> ContourHierarchy {
         let verts_2d: Vec<Point> =
             verts_3d.iter().map(|p| Point::new(p.x, p.y)).collect();
         let rect = c.rect();
-        let test_point = if verts_2d.is_empty() {
-            Point::new(0.0, 0.0)
-        } else {
-            verts_2d[0]
-        };
 
         let area = get_subpath_area_from_array(&c.data, 0);
         if area.abs() < 1e-9 {
@@ -171,10 +201,12 @@ pub fn build_hierarchy(contours: &[&Geometry]) -> ContourHierarchy {
             continue;
         }
 
+        let poly_area = get_polygon_signed_area(&verts_2d).abs();
+
         info.push(Some(ContourInfo {
             vertices: verts_2d,
             rect,
-            test_point,
+            area: poly_area,
         }));
     }
 
@@ -203,11 +235,15 @@ pub fn build_hierarchy(contours: &[&Geometry]) -> ContourHierarchy {
         let mut depth = 0i32;
         let mut best_parent: isize = -1;
         let mut best_parent_area = f64::INFINITY;
-        let tp = [current.test_point.x, current.test_point.y];
 
-        // O(log n + k) query: only check contours whose bounding boxes contain the test point.
-        let point_envelope = AABB::from_point(tp);
-        for candidate in rtree.locate_in_envelope_intersecting(point_envelope) {
+        // O(log n + k) query: only check contours whose bounding boxes
+        // overlap this contour's bounding box (a prerequisite for either
+        // containment or overlap).
+        let self_envelope = AABB::from_corners(
+            [current.rect.min.x, current.rect.min.y],
+            [current.rect.max.x, current.rect.max.y],
+        );
+        for candidate in rtree.locate_in_envelope_intersecting(self_envelope) {
             let j = candidate.index;
             if i == j {
                 continue;
@@ -217,15 +253,15 @@ pub fn build_hierarchy(contours: &[&Geometry]) -> ContourHierarchy {
                 None => continue,
             };
 
-            if is_point_strictly_inside_polygon(
-                current.test_point,
+            if is_contained_in(
+                &current.vertices,
+                current.area,
                 &other.vertices,
+                other.area,
             ) {
                 depth += 1;
-                let other_bbox_area = (other.rect.max.x - other.rect.min.x)
-                    * (other.rect.max.y - other.rect.min.y);
-                if other_bbox_area < best_parent_area {
-                    best_parent_area = other_bbox_area;
+                if other.area < best_parent_area {
+                    best_parent_area = other.area;
                     best_parent = j as isize;
                 }
             }

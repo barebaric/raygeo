@@ -117,6 +117,57 @@ def test_split_inner_and_outer_contours_two_letter_b_shapes():
     assert len(external) == 2
 
 
+def test_split_inner_and_outer_overlapping_solids():
+    """
+    Regression test (rayforge issue #456): two solid figures that
+    overlap slightly must both remain external contours.
+
+    The old containment probe used the first vertex of each contour as
+    its only test point. Here that vertex of `b` (8, 20) lies inside
+    `a`, so `b` was misclassified as a hole of `a` and ended up
+    attached to the wrong place during toolpath generation.
+    """
+    a = Geometry.from_points([(0, 0), (10, 0), (10, 40), (0, 40)])
+    b = Geometry.from_points([(8, 20), (18, 20), (18, 60), (8, 60)])
+
+    combined = a.copy()
+    combined.extend(b)
+    internal, external = combined.split_inner_and_outer_contours()
+    assert internal == []
+    assert len(external) == 2
+
+
+def _signed_area(points):
+    """Shoelace signed area of a vertex list (positive = CCW)."""
+    total = 0.0
+    n = len(points)
+    for i in range(n):
+        x1, y1 = points[i][0], points[i][1]
+        x2, y2 = points[(i + 1) % n][0], points[(i + 1) % n][1]
+        total += x1 * y2 - x2 * y1
+    return total / 2.0
+
+
+def test_normalize_winding_overlapping_solids_not_flipped():
+    """
+    Regression test (rayforge issue #456): winding normalisation must
+    not flip a slightly overlapping solid to CW (hole) just because its
+    first vertex happens to lie inside the neighbouring figure.
+    """
+    a = Geometry.from_points([(0, 0), (10, 0), (10, 40), (0, 40)])
+    b = Geometry.from_points([(8, 20), (18, 20), (18, 60), (8, 60)])
+
+    combined = a.copy()
+    combined.extend(b)
+    result = combined.normalize_winding_orders()
+    contours = result.split_into_contours()
+    assert len(contours) == 2
+    for c in contours:
+        # Both figures must remain CCW (solids); a flip to CW would
+        # mean one was misread as a hole.
+        assert _signed_area(c.get_valid_contours_data()[0]["vertices"]) > 0.0
+
+
 def test_normalize_winding_donut_all_ccw():
     """Tests a donut where both contours are incorrectly CCW."""
     outer = Geometry.from_points([(0, 0), (20, 0), (20, 20), (0, 20)])
