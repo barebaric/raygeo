@@ -528,6 +528,17 @@ class Geometry:
         :returns: ``True`` if the geometry has self-intersections.
         :complexity: O(n²) worst-case time, O(1) space
         """
+    def remove_self_intersections(self, tolerance: builtins.float = 0.01) -> Geometry:
+        r"""
+        Rebuild self-intersecting or overlapping closed contours.
+        
+        Affected contours are replaced by the union of their linearised
+        outlines; clean contours (and their curves) are kept as-is.
+        
+        :param tolerance: Linearisation tolerance in mm for affected contours.
+        :returns: The geometry (for method chaining).
+        :complexity: O(n log n) average time, O(n) space
+        """
     def intersects_with(self, other: Geometry) -> builtins.bool:
         r"""
         Check if this geometry intersects with another.
