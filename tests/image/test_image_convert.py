@@ -13,16 +13,13 @@ def _surface_to_flat(surface):
     height = surface.get_height()
     stride = surface.get_stride() // 4
     buf = surface.get_data()
-    # Cairo ARGB32 stores each pixel as a native-endian 32-bit 0xAARRGGBB
-    # value. Decode it via bit shifts so the flattened buffer is BGRA byte
-    # order on little- and big-endian hosts alike.
-    pixels = np.ndarray(shape=(height, stride), dtype=np.uint32, buffer=buf)
-    bgra = np.empty((height, stride, 4), dtype=np.uint8)
-    bgra[:, :, 0] = pixels & 0xFF
-    bgra[:, :, 1] = (pixels >> 8) & 0xFF
-    bgra[:, :, 2] = (pixels >> 16) & 0xFF
-    bgra[:, :, 3] = (pixels >> 24) & 0xFF
-    return bgra.flatten(), width, height, stride
+    # Cairo ARGB32 stores native-endian 0xAARRGGBB pixels; the conversion
+    # functions accept exactly this layout, so no byte-order translation
+    # happens here (matching how rayforge feeds surface data in).
+    data_with_padding = np.ndarray(
+        shape=(height, stride, 4), dtype=np.uint8, buffer=buf
+    )
+    return data_with_padding.flatten(), width, height, stride
 
 
 def _fill_pixels(surface, a, r, g, b):
@@ -38,6 +35,21 @@ def _fill_pixels(surface, a, r, g, b):
     )
     pixels[:, : surface.get_width()] = (a << 24) | (r << 16) | (g << 8) | b
     surface.mark_dirty()
+
+
+def _flat_to_bgra(flat, height, stride):
+    """Decode a flat ARGB32 buffer into per-pixel (B, G, R, A) channels.
+
+    Cairo ARGB32 pixels are native-endian 0xAARRGGBB values, so decoding
+    via bit shifts is byte-order independent.
+    """
+    pixels = np.asarray(flat).view(np.uint32).reshape(height, stride)
+    bgra = np.empty((height, stride, 4), dtype=np.uint8)
+    bgra[:, :, 0] = pixels & 0xFF
+    bgra[:, :, 1] = (pixels >> 8) & 0xFF
+    bgra[:, :, 2] = (pixels >> 16) & 0xFF
+    bgra[:, :, 3] = (pixels >> 24) & 0xFF
+    return bgra
 
 
 # ---------------------------------------------------------------------------
@@ -162,14 +174,14 @@ class TestRgbaToGrayscaleInplace:
         _fill_pixels(surface, a=255, r=0, g=0, b=255)
         flat, w, h, stride = _surface_to_flat(surface)
         rgba_to_grayscale_inplace(flat, w, h, stride)
-        arr_out = flat.reshape(h, stride, 4)
-        assert arr_out[0, 0, 0] == arr_out[0, 0, 1]
-        assert arr_out[0, 0, 1] == arr_out[0, 0, 2]
+        bgra = _flat_to_bgra(flat, h, stride)
+        assert bgra[0, 0, 0] == bgra[0, 0, 1]
+        assert bgra[0, 0, 1] == bgra[0, 0, 2]
 
     def test_preserves_alpha(self):
         surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, 2, 2)
         _fill_pixels(surface, a=128, r=200, g=150, b=100)
         flat, w, h, stride = _surface_to_flat(surface)
         rgba_to_grayscale_inplace(flat, w, h, stride)
-        arr_out = flat.reshape(h, stride, 4)
-        assert arr_out[0, 0, 3] == 128
+        bgra = _flat_to_bgra(flat, h, stride)
+        assert bgra[0, 0, 3] == 128

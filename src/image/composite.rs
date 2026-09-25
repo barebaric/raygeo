@@ -76,7 +76,7 @@ fn composite_one(
                 .clamp(0.0, (src.src_w - 1) as f64) as u32;
 
             let src_off = src_row_off + sx as usize * 4;
-            let sa = src.bitmap[src_off + 3] as u32;
+            let sa = src.bitmap[src_off + super::layout::OFFSET_A] as u32;
 
             if sa == 0 {
                 continue;
@@ -89,18 +89,15 @@ fn composite_one(
                     .copy_from_slice(&src.bitmap[src_off..src_off + 4]);
             } else {
                 let inv_a = 255 - sa;
-                target[dst_off] = ((src.bitmap[src_off] as u32)
-                    + (target[dst_off] as u32 * inv_a + 127) / 255)
-                    as u8;
-                target[dst_off + 1] = ((src.bitmap[src_off + 1] as u32)
-                    + (target[dst_off + 1] as u32 * inv_a + 127) / 255)
-                    as u8;
-                target[dst_off + 2] = ((src.bitmap[src_off + 2] as u32)
-                    + (target[dst_off + 2] as u32 * inv_a + 127) / 255)
-                    as u8;
-                target[dst_off + 3] = ((src.bitmap[src_off + 3] as u32)
-                    + (target[dst_off + 3] as u32 * inv_a + 127) / 255)
-                    as u8;
+                // The premultiplied-over formula is identical for every
+                // byte of the pixel, so applying it positionally needs no
+                // channel offsets; only the alpha extraction above depends
+                // on the host byte order.
+                for i in 0..4 {
+                    target[dst_off + i] = ((src.bitmap[src_off + i] as u32)
+                        + (target[dst_off + i] as u32 * inv_a + 127) / 255)
+                        as u8;
+                }
             }
         }
     }

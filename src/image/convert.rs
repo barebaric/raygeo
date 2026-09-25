@@ -1,3 +1,4 @@
+use super::layout::{OFFSET_A, OFFSET_B, OFFSET_G, OFFSET_R};
 use crate::image::srgb;
 
 /// Epsilon used when dividing by alpha to avoid division by zero.
@@ -20,10 +21,10 @@ pub fn rgba_to_grayscale(
     for y in 0..height {
         for x in 0..width {
             let px = y * stride * 4 + x * 4;
-            let b = rgba[px] as f32;
-            let g = rgba[px + 1] as f32;
-            let r = rgba[px + 2] as f32;
-            let a = rgba[px + 3] as f32 / 255.0;
+            let b = rgba[px + OFFSET_B] as f32;
+            let g = rgba[px + OFFSET_G] as f32;
+            let r = rgba[px + OFFSET_R] as f32;
+            let a = rgba[px + OFFSET_A] as f32 / 255.0;
 
             let a_safe = a.max(ALPHA_EPSILON);
             let r_unpremult = (r / a_safe).clamp(0.0, 255.0);
@@ -69,10 +70,10 @@ pub fn rgba_to_binary(
     for y in 0..height {
         for x in 0..width {
             let px = y * stride * 4 + x * 4;
-            let b = rgba[px];
-            let g = rgba[px + 1];
-            let r = rgba[px + 2];
-            let a = rgba[px + 3];
+            let b = rgba[px + OFFSET_B];
+            let g = rgba[px + OFFSET_G];
+            let r = rgba[px + OFFSET_R];
+            let a = rgba[px + OFFSET_A];
 
             let r_lin = lut[r as usize];
             let g_lin = lut[g as usize];
@@ -110,9 +111,9 @@ pub fn rgba_to_grayscale_inplace(
     for y in 0..height {
         for x in 0..width {
             let px = y * stride * 4 + x * 4;
-            let b = rgba[px];
-            let g = rgba[px + 1];
-            let r = rgba[px + 2];
+            let b = rgba[px + OFFSET_B];
+            let g = rgba[px + OFFSET_G];
+            let r = rgba[px + OFFSET_R];
 
             let r_lin = lut[r as usize];
             let g_lin = lut[g as usize];
@@ -125,9 +126,9 @@ pub fn rgba_to_grayscale_inplace(
             let li = (vi * scale as f32).round() as usize;
             let gray_srgb = inv_lut[li.min(scale)];
 
-            rgba[px] = gray_srgb;
-            rgba[px + 1] = gray_srgb;
-            rgba[px + 2] = gray_srgb;
+            rgba[px + OFFSET_B] = gray_srgb;
+            rgba[px + OFFSET_G] = gray_srgb;
+            rgba[px + OFFSET_R] = gray_srgb;
         }
     }
 }
