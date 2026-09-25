@@ -16,12 +16,14 @@ use crate::image::convert;
         height: int,
         stride: int,
     ) -> tuple[numpy.typing.NDArray[numpy.uint8], numpy.typing.NDArray[numpy.float32]]:
-        """Convert raw BGRA pixel buffer to grayscale with alpha unpremultiplication.
+        """Convert a raw Cairo ARGB32 pixel buffer to grayscale with alpha unpremultiplication.
 
         Performs proper unpremultiplication of alpha and blends to white
         background for grayscale calculation using BT.601 luminance weights.
 
-        :param rgba: Flattened uint8 buffer of shape (stride * height * 4,).
+        :param rgba: Flattened uint8 buffer of shape (stride * height * 4,)
+            in Cairo ARGB32 layout (native-endian 0xAARRGGBB pixels, as
+            produced by cairo.ImageSurface.get_data()).
         :param width: Image width in pixels.
         :param height: Image height in pixels.
         :param stride: Row stride in pixels (may be larger than width).
@@ -79,11 +81,13 @@ fn py_rgba_to_grayscale(
         threshold: int = 128,
         invert: bool = False,
     ) -> numpy.typing.NDArray[numpy.uint8]:
-        """Convert raw BGRA pixel buffer to binary image using thresholding.
+        """Convert a raw Cairo ARGB32 pixel buffer to binary image using thresholding.
 
         Transparent pixels (alpha == 0) are always treated as white (0).
 
-        :param rgba: Flattened uint8 buffer of shape (stride * height * 4,).
+        :param rgba: Flattened uint8 buffer of shape (stride * height * 4,)
+            in Cairo ARGB32 layout (native-endian 0xAARRGGBB pixels, as
+            produced by cairo.ImageSurface.get_data()).
         :param width: Image width in pixels.
         :param height: Image height in pixels.
         :param stride: Row stride in pixels.
@@ -140,12 +144,14 @@ fn py_rgba_to_binary(
         height: int,
         stride: int,
     ) -> None:
-        """Convert raw BGRA pixel buffer to grayscale in place.
+        """Convert a raw Cairo ARGB32 pixel buffer to grayscale in place.
 
-        Modifies the buffer directly, converting BGR channels to grayscale
-        while preserving the alpha channel.
+        Modifies the buffer directly, converting the RGB channels to
+        grayscale while preserving the alpha channel.
 
-        :param rgba: Flattened uint8 buffer of shape (stride * height * 4,).
+        :param rgba: Flattened uint8 buffer of shape (stride * height * 4,)
+            in Cairo ARGB32 layout (native-endian 0xAARRGGBB pixels, as
+            produced by cairo.ImageSurface.get_data()).
         :param width: Image width in pixels.
         :param height: Image height in pixels.
         :param stride: Row stride in pixels.
