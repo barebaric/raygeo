@@ -1033,3 +1033,68 @@ def test_constant_mode_mach4_dialect_uses_same_template():
     )
     text = _encode(ops, dialect)["text"]
     assert "M67 E0 Q100" in text
+
+
+# ── Power cap ────────────────────────────────────────────────────
+
+
+def test_power_cap_clamps_set_power():
+    ops = Ops()
+    ops.job_start()
+    ops.set_power(0.8)
+    ops.set_feed_rate(1000)
+    ops.move_to(0.0, 0.0, 0.0)
+    ops.line_to(10.0, 0.0, 0.0)
+    ops.job_end()
+    text = _encode(ops, ctx=_ctx(power_cap=0.1))["text"]
+    assert "M4 S10" in text
+    assert "M4 S80" not in text
+
+
+def test_power_cap_keeps_lower_power():
+    ops = Ops()
+    ops.job_start()
+    ops.set_power(0.05)
+    ops.set_feed_rate(1000)
+    ops.move_to(0.0, 0.0, 0.0)
+    ops.line_to(10.0, 0.0, 0.0)
+    ops.job_end()
+    text = _encode(ops, ctx=_ctx(power_cap=0.1))["text"]
+    assert "M4 S5" in text
+
+
+def test_power_cap_zero_disables_beam():
+    ops = Ops()
+    ops.job_start()
+    ops.set_power(0.8)
+    ops.set_feed_rate(1000)
+    ops.move_to(0.0, 0.0, 0.0)
+    ops.line_to(10.0, 0.0, 0.0)
+    ops.job_end()
+    text = _encode(ops, ctx=_ctx(power_cap=0.0))["text"]
+    assert "M4" not in text
+
+
+def test_power_cap_clamps_scanline_power():
+    ops = Ops()
+    ops.job_start()
+    ops.set_feed_rate(1000)
+    ops.move_to(0.0, 0.0, 0.0)
+    ops.scan_to(10.0, 0.0, 0.0, power_values=[255, 128, 0])
+    ops.job_end()
+    text = _encode(ops, ctx=_ctx(power_cap=0.1))["text"]
+    assert "M4 S10" in text
+    assert "M4 S100" not in text
+    assert "M4 S50" not in text
+
+
+def test_power_cap_absent_leaves_power_untouched():
+    ops = Ops()
+    ops.job_start()
+    ops.set_power(0.8)
+    ops.set_feed_rate(1000)
+    ops.move_to(0.0, 0.0, 0.0)
+    ops.line_to(10.0, 0.0, 0.0)
+    ops.job_end()
+    text = _encode(ops, ctx=_ctx(power_cap=None))["text"]
+    assert "M4 S80" in text

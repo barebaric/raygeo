@@ -199,6 +199,13 @@ pub struct EncodeContext {
     /// `true` so existing configs stay 3D.
     #[serde(default = "default_true")]
     pub has_z_axis: bool,
+    /// Optional upper bound for laser power as a fraction of maximum
+    /// power (0.0–1.0). When set, every power value the encoder emits
+    /// is clamped to it — vector `SetPower` commands and per-dot
+    /// scanline power alike — so the encoded job cannot fire the beam
+    /// above the cap. `None` leaves power values untouched.
+    #[serde(default)]
+    pub power_cap: Option<f64>,
 }
 
 /// Result of encoding: the G-code text and the bidirectional map between
