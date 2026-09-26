@@ -947,6 +947,40 @@ impl Ops {
         }
         baked
     }
+
+    /// Cap all laser power at *max_power*, in place.
+    ///
+    /// ``SetPower`` state commands are clamped to *max_power* (a
+    /// 0–1 fraction of maximum power). ScanLine commands carry
+    /// per-dot 8-bit power values, so each byte is clamped to the
+    /// equivalent byte cap of ``round(max_power * 255)``. All other
+    /// commands are left unchanged.
+    ///
+    /// Operates in place: the command buffer is only re-allocated
+    /// (CoW) when it is still shared with another ``Ops`` clone.
+    pub fn cap_power(&mut self, max_power: f64) {
+        let max_power = max_power.clamp(0.0, 1.0);
+        let cap_byte = (max_power * 255.0).round() as u8;
+        let commands = Arc::make_mut(&mut self.commands);
+        for node in commands.iter_mut() {
+            match &mut node.category {
+                OpCategory::State(StateCmd::SetPower(power)) => {
+                    *power = power.min(max_power);
+                }
+                OpCategory::Moving {
+                    cmd: MoveCmd::ScanLine { power_values },
+                    ..
+                } => {
+                    let values = Arc::make_mut(power_values);
+                    for value in values.iter_mut() {
+                        *value = (*value).min(cap_byte);
+                    }
+                }
+                _ => {}
+            }
+        }
+        self.invalidate_time_cache();
+    }
 }
 
 impl Default for Ops {

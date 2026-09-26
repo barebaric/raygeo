@@ -1542,6 +1542,21 @@ class Ops:
         For every moving command, replaces Y with the rotary degrees
         value from extra_axes. Non-moving commands are copied as-is.
         """
+    def cap_power(self, max_power: builtins.float) -> None:
+        r"""
+        Cap all laser power at a maximum, in place.
+        
+        ``SetPower`` commands are clamped to ``max_power`` (a 0-1
+        fraction of maximum power) and per-dot 8-bit scanline power
+        values are clamped to the equivalent byte cap. All other
+        commands are left unchanged. The command buffer is only
+        re-allocated (CoW) when it is still shared with another Ops
+        clone.
+        
+        :param max_power: Maximum power fraction (0-1). Values outside
+            the range are clamped into it.
+        :complexity: O(n) time, O(1) additional space
+        """
     def extract_range(self, start: builtins.int, end: builtins.int) -> Ops:
         r"""
         Extract commands `[start, end)` into a new Ops.

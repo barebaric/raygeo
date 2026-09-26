@@ -691,6 +691,24 @@ is cached per parameter set and invalidated when the ops are mutated.
 | _Returns_            | `list[float]`    | List of cumulative times in seconds, one per command. |
 | _Complexity_         |                  | O(n) time, O(n) space                                 |
 
+### `cap_power()`
+
+```python
+cap_power(max_power: float) -> None
+```
+
+Cap all laser power at a maximum, in place.
+
+`SetPower` commands are clamped to `max_power` (a 0-1 fraction of maximum power) and per-dot 8-bit
+scanline power values are clamped to the equivalent byte cap. All other commands are left unchanged.
+The command buffer is only re-allocated (CoW) when it is still shared with another Ops clone.
+
+| Parameter    | Type    | Description                                                                 |
+| ------------ | ------- | --------------------------------------------------------------------------- |
+| `max_power`  | `float` | Maximum power fraction (0-1). Values outside the range are clamped into it. |
+| _Returns_    | `None`  |                                                                             |
+| _Complexity_ |         | O(n) time, O(1) additional space                                            |
+
 ### `category()`
 
 ```python
