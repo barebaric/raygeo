@@ -947,6 +947,52 @@ impl Ops {
         }
         baked
     }
+
+    /// Return a copy with all laser power capped at *max_power*.
+    ///
+    /// ``SetPower`` state commands are clamped to *max_power* (a
+    /// 0–1 fraction of maximum power). ScanLine commands carry
+    /// per-dot 8-bit power values, so each byte is clamped to the
+    /// equivalent byte cap of ``round(max_power * 255)``. All other
+    /// commands are copied unchanged.
+    pub fn cap_power(&self, max_power: f64) -> Ops {
+        let max_power = max_power.clamp(0.0, 1.0);
+        let cap_byte = (max_power * 255.0).round() as u8;
+        let mut capped = Ops::new();
+        capped.cmds_mut().reserve(self.commands.len());
+
+        for node in self.commands.iter() {
+            let node = match &node.category {
+                OpCategory::State(StateCmd::SetPower(power)) => {
+                    let mut new_node = node.clone();
+                    new_node.category = OpCategory::State(StateCmd::SetPower(
+                        power.min(max_power),
+                    ));
+                    new_node
+                }
+                OpCategory::Moving {
+                    cmd: MoveCmd::ScanLine { .. },
+                    ..
+                } => {
+                    let mut new_node = node.clone();
+                    if let OpCategory::Moving {
+                        cmd: MoveCmd::ScanLine { power_values },
+                        ..
+                    } = &mut new_node.category
+                    {
+                        let values = Arc::make_mut(power_values);
+                        for value in values.iter_mut() {
+                            *value = (*value).min(cap_byte);
+                        }
+                    }
+                    new_node
+                }
+                _ => node.clone(),
+            };
+            capped.cmds_mut().push(node);
+        }
+        capped
+    }
 }
 
 impl Default for Ops {

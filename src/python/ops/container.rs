@@ -3332,6 +3332,22 @@ impl PyOps {
         Py::new(py, PyOps { inner: baked })
     }
 
+    /// Return a copy with all laser power capped at a maximum.
+    ///
+    /// ``SetPower`` commands are clamped to ``max_power`` (a 0-1
+    /// fraction of maximum power) and per-dot 8-bit scanline power
+    /// values are clamped to the equivalent byte cap. All other
+    /// commands are copied unchanged.
+    ///
+    /// :param max_power: Maximum power fraction (0-1). Values outside
+    ///     the range are clamped into it.
+    /// :returns: A new Ops with all power values capped.
+    /// :complexity: O(n) time, O(n) space
+    fn cap_power(&self, py: Python<'_>, max_power: f64) -> PyOps {
+        let capped = py.detach(|| self.inner.cap_power(max_power));
+        PyOps { inner: capped }
+    }
+
     /// Extract commands `[start, end)` into a new Ops.
     fn extract_range(
         &self,
