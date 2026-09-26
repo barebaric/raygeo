@@ -420,6 +420,10 @@ impl<'a> GcodeEncoder<'a> {
     }
 
     fn update_power(&mut self, power: f64) {
+        let power = match self.ctx.power_cap {
+            Some(cap) if power > cap => cap,
+            _ => power,
+        };
         if let Some(p) = self.power {
             if (power - p).abs() < 1e-12 {
                 return;
