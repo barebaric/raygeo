@@ -62,7 +62,7 @@ pub fn geometry_to_image(
 
     // Fill background
     let bg = opts.bg_color.to_le_bytes();
-    for px in buf.chunks_exact_mut(4) {
+    for px in buf.as_chunks_mut::<4>().0 {
         px.copy_from_slice(&bg);
     }
 

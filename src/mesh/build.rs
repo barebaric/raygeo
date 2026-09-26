@@ -394,7 +394,7 @@ pub fn build_prism_mesh(
         mesh.uvs
             .extend_from_slice(&[(x / uv_scale) as f32, (y / uv_scale) as f32]);
     }
-    for t in tris.chunks_exact(3) {
+    for t in tris.as_chunks::<3>().0 {
         mesh.indices.extend_from_slice(&[
             t[0] as u32,
             t[1] as u32,
@@ -414,7 +414,7 @@ pub fn build_prism_mesh(
         mesh.uvs
             .extend_from_slice(&[(x / uv_scale) as f32, (y / uv_scale) as f32]);
     }
-    for t in tris.chunks_exact(3) {
+    for t in tris.as_chunks::<3>().0 {
         mesh.indices.extend_from_slice(&[
             n_verts + t[0] as u32,
             n_verts + t[2] as u32,

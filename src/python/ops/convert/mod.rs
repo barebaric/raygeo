@@ -580,7 +580,9 @@ impl PyEncodeOutput {
                     bytes.len() / 4,
                 )
             };
-            raw.chunks_exact(2)
+            raw.as_chunks::<2>()
+                .0
+                .iter()
                 .map(|c| OpLineRange {
                     start: c[0],
                     len: c[1],

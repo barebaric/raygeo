@@ -22,7 +22,7 @@ pub fn compute_power_uvs(positions: &[f32], grid: &GridSpec) -> Vec<f32> {
     let w = grid.size_px.0.max(1) as f64;
     let h = grid.size_px.1.max(1) as f64;
     let mut out = Vec::with_capacity(positions.len() / 3 * 2);
-    for chunk in positions.chunks_exact(3) {
+    for chunk in positions.as_chunks::<3>().0 {
         out.push(((chunk[0] as f64 - ox) * ppm_x / w) as f32);
         out.push(((chunk[1] as f64 - oy) * ppm_y / h) as f32);
     }
