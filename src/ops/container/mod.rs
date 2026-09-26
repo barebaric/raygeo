@@ -948,50 +948,38 @@ impl Ops {
         baked
     }
 
-    /// Return a copy with all laser power capped at *max_power*.
+    /// Cap all laser power at *max_power*, in place.
     ///
     /// ``SetPower`` state commands are clamped to *max_power* (a
     /// 0–1 fraction of maximum power). ScanLine commands carry
     /// per-dot 8-bit power values, so each byte is clamped to the
     /// equivalent byte cap of ``round(max_power * 255)``. All other
-    /// commands are copied unchanged.
-    pub fn cap_power(&self, max_power: f64) -> Ops {
+    /// commands are left unchanged.
+    ///
+    /// Operates in place: the command buffer is only re-allocated
+    /// (CoW) when it is still shared with another ``Ops`` clone.
+    pub fn cap_power(&mut self, max_power: f64) {
         let max_power = max_power.clamp(0.0, 1.0);
         let cap_byte = (max_power * 255.0).round() as u8;
-        let mut capped = Ops::new();
-        capped.cmds_mut().reserve(self.commands.len());
-
-        for node in self.commands.iter() {
-            let node = match &node.category {
+        let commands = Arc::make_mut(&mut self.commands);
+        for node in commands.iter_mut() {
+            match &mut node.category {
                 OpCategory::State(StateCmd::SetPower(power)) => {
-                    let mut new_node = node.clone();
-                    new_node.category = OpCategory::State(StateCmd::SetPower(
-                        power.min(max_power),
-                    ));
-                    new_node
+                    *power = power.min(max_power);
                 }
                 OpCategory::Moving {
-                    cmd: MoveCmd::ScanLine { .. },
+                    cmd: MoveCmd::ScanLine { power_values },
                     ..
                 } => {
-                    let mut new_node = node.clone();
-                    if let OpCategory::Moving {
-                        cmd: MoveCmd::ScanLine { power_values },
-                        ..
-                    } = &mut new_node.category
-                    {
-                        let values = Arc::make_mut(power_values);
-                        for value in values.iter_mut() {
-                            *value = (*value).min(cap_byte);
-                        }
+                    let values = Arc::make_mut(power_values);
+                    for value in values.iter_mut() {
+                        *value = (*value).min(cap_byte);
                     }
-                    new_node
                 }
-                _ => node.clone(),
-            };
-            capped.cmds_mut().push(node);
+                _ => {}
+            }
         }
-        capped
+        self.invalidate_time_cache();
     }
 }
 
