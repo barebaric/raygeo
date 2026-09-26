@@ -1001,9 +1001,9 @@ pub fn clean_polygon(polygon: &Polygon, tolerance: f64) -> Option<Polygon> {
         clean_tol / GeoScale::MULTIPLIER,
         false,
     );
-    let cleaned = match cleaned_paths.get(0) {
-        Some(p) => p.clone(),
-        None => return None,
+    let cleaned = {
+        let p = cleaned_paths.get(0)?;
+        p.clone()
     };
     let mut result = path_to_polygon(&cleaned);
     if result.len() > 1 {

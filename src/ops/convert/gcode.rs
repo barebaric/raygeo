@@ -115,6 +115,7 @@ pub(crate) struct GcodeEncoder<'a> {
     pub(crate) spindle_rpm: u32,
     pub(crate) coolant_mode: Option<CoolantMode>,
     pub(crate) current_pos: AxisMap,
+    pub(crate) position_established: bool,
     pub(crate) active_wcs: Option<String>,
     pub(crate) path_vars: HashMap<String, String>,
 
@@ -149,6 +150,7 @@ impl<'a> GcodeEncoder<'a> {
             spindle_rpm: 0,
             coolant_mode: None,
             current_pos: AxisMap::default(),
+            position_established: false,
             active_wcs: None,
             path_vars: ctx.path_vars.clone(),
             gcode: String::new(),
@@ -601,6 +603,37 @@ impl<'a> GcodeEncoder<'a> {
         self.vars.set("power", power);
     }
 
+    /// True when a travel move would not move the machine at all.
+    /// Some firmwares mis-handle the resulting no-op line, so it is
+    /// left out of the file entirely. Only applies once the tracked
+    /// position has been established by a previously emitted move;
+    /// the encoder starts from an assumed (0, 0, 0), so a matching
+    /// initial travel may still be needed to actually position the
+    /// head.
+    fn is_noop_travel(
+        &self,
+        x: f64,
+        y: f64,
+        z: f64,
+        extra_axes: Option<&[(Axis, f64)]>,
+    ) -> bool {
+        if !self.position_established {
+            return false;
+        }
+        if (x - self.current_pos.x).abs() > 1e-12
+            || (y - self.current_pos.y).abs() > 1e-12
+            || (z - self.current_pos.z).abs() > 1e-12
+        {
+            return false;
+        }
+        match extra_axes {
+            None => true,
+            Some(ea) => ea.iter().all(|&(axis, value)| {
+                (value - self.current_pos.get(axis)).abs() <= 1e-12
+            }),
+        }
+    }
+
     fn handle_move_to(
         &mut self,
         x: f64,
@@ -609,6 +642,10 @@ impl<'a> GcodeEncoder<'a> {
         extra_axes: Option<&[(Axis, f64)]>,
     ) {
         self.laser_off();
+        if self.is_noop_travel(x, y, z, extra_axes) {
+            return;
+        }
+        self.position_established = true;
         self.vars.pairs.clear();
 
         self.build_coord_commands(x, y, z, extra_axes);
@@ -724,16 +761,19 @@ impl<'a> GcodeEncoder<'a> {
             CommandType::LineTo => {
                 let end = ops.endpoint(idx);
                 self.handle_line_to(end.x, end.y, end.z, ea);
+                self.position_established = true;
                 self.update_current_pos(ops, idx);
             }
             CommandType::ArcTo => {
                 let end = ops.endpoint(idx);
                 let (i, j, cw) = ops_arc_params(ops, idx);
                 self.handle_arc_to(end, (i, j), cw, ea);
+                self.position_established = true;
                 self.update_current_pos(ops, idx);
             }
             CommandType::BezierTo => {
                 self.handle_bezier_to(ops, idx, ea);
+                self.position_established = true;
                 self.update_current_pos(ops, idx);
             }
             CommandType::ScanLine => {
@@ -742,6 +782,7 @@ impl<'a> GcodeEncoder<'a> {
                 for j in 0..sub_ops.len() {
                     self.handle_command(&sub_ops, j);
                 }
+                self.position_established = true;
                 // Avoid float precision errors: explicitly set final pos.
                 self.update_current_pos(ops, idx);
             }

@@ -5,6 +5,8 @@ Each test builds an Ops sequence, calls ops.to_gcode(), and asserts
 on the emitted G-code text and op-map.
 """
 
+import struct
+
 import numpy as np
 
 from raygeo.ops import Ops
@@ -265,6 +267,73 @@ def test_rapid_move_basic():
     ops.job_end()
     text = _encode(ops)["text"]
     assert "G0 X10 Y20 Z30" in text
+
+
+def test_noop_travel_omitted():
+    ops = Ops()
+    ops.job_start()
+    ops.set_power(1.0)
+    ops.set_feed_rate(1000)
+    ops.move_to(10.0, 20.0, 0.0)
+    ops.move_to(10.0, 20.0, 0.0)
+    ops.line_to(30.0, 20.0, 0.0)
+    ops.job_end()
+    result = _encode(ops)
+    lines = result["text"].splitlines()
+    assert "G0 X10 Y20" in lines
+    g0_lines = [line for line in lines if line.startswith("G0")]
+    assert g0_lines == ["G0 X10 Y20"]
+
+
+def test_initial_noop_travel_still_emitted():
+    ops = Ops()
+    ops.job_start()
+    ops.move_to(0.0, 0.0, 0.0)
+    ops.job_end()
+    text = _encode(ops)["text"]
+    assert "G0 X0" in text
+
+
+def test_noop_travel_keeps_laser_state_consistent():
+    ops = Ops()
+    ops.job_start()
+    ops.set_power(1.0)
+    ops.set_feed_rate(1000)
+    ops.move_to(0.0, 0.0, 0.0)
+    ops.line_to(10.0, 0.0, 0.0)
+    ops.move_to(10.0, 0.0, 0.0)
+    ops.line_to(20.0, 0.0, 0.0)
+    ops.job_end()
+    lines = _encode(ops)["text"].splitlines()
+    assert lines.count("M4 S100") == 2
+    m5_indices = [i for i, line in enumerate(lines) if line == "M5"]
+    cut2_index = lines.index("G1 X20 F1000 S100")
+    assert len(m5_indices) == 2
+    assert m5_indices[0] < cut2_index < m5_indices[1]
+
+
+def test_axis_only_travel_not_omitted():
+    ops = Ops()
+    ops.job_start()
+    ops.move_to(10.0, 20.0, 0.0)
+    ops.move_to(10.0, 20.0, 5.0)
+    ops.job_end()
+    text = _encode(ops)["text"]
+    assert "G0 Z5" in text
+
+
+def test_noop_travel_op_map_is_empty():
+    ops = Ops()
+    ops.job_start()
+    ops.move_to(10.0, 20.0, 0.0)
+    ops.move_to(10.0, 20.0, 0.0)
+    ops.job_end()
+    result = _encode(ops)
+    raw = result["op_to_machine_code"]
+    spans = [struct.unpack_from("<II", raw, i) for i in range(0, len(raw), 8)]
+    start, length = spans[2]
+    assert length == 0
+    assert start == spans[1][0] + spans[1][1]
 
 
 # ── Cut moves ───────────────────────────────────────────────────
