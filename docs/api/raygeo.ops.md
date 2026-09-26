@@ -701,16 +701,13 @@ Cap all laser power at a maximum, in place.
 
 `SetPower` commands are clamped to `max_power` (a 0-1 fraction of maximum power) and per-dot 8-bit
 scanline power values are clamped to the equivalent byte cap. All other commands are left unchanged.
-
-```
-command buffer is shared with another Ops clone
-```
+The command buffer is only re-allocated (CoW) when it is still shared with another Ops clone.
 
 | Parameter    | Type    | Description                                                                 |
 | ------------ | ------- | --------------------------------------------------------------------------- |
 | `max_power`  | `float` | Maximum power fraction (0-1). Values outside the range are clamped into it. |
 | _Returns_    | `None`  |                                                                             |
-| _Complexity_ |         | O(n) time, O(1) additional space unless the                                 |
+| _Complexity_ |         | O(n) time, O(1) additional space                                            |
 
 ### `category()`
 

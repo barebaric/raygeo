@@ -3337,12 +3337,13 @@ impl PyOps {
     /// ``SetPower`` commands are clamped to ``max_power`` (a 0-1
     /// fraction of maximum power) and per-dot 8-bit scanline power
     /// values are clamped to the equivalent byte cap. All other
-    /// commands are left unchanged.
+    /// commands are left unchanged. The command buffer is only
+    /// re-allocated (CoW) when it is still shared with another Ops
+    /// clone.
     ///
     /// :param max_power: Maximum power fraction (0-1). Values outside
     ///     the range are clamped into it.
-    /// :complexity: O(n) time, O(1) additional space unless the
-    ///     command buffer is shared with another Ops clone
+    /// :complexity: O(n) time, O(1) additional space
     fn cap_power(&mut self, py: Python<'_>, max_power: f64) {
         py.detach(|| self.inner.cap_power(max_power));
     }
