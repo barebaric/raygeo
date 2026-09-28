@@ -1,3 +1,5 @@
+import pytest
+
 from raygeo.ops import Ops
 from raygeo.ops.axis import Axis
 from raygeo.ops.state import AirAssistMode, HeadCoolantMode, PowerMode
@@ -180,3 +182,36 @@ def test_power_mode_dict_round_trip():
     assert restored.power_mode(0) == PowerMode.CONSTANT
     assert restored.power_mode(1) == PowerMode.DYNAMIC
     assert restored.inspect(0) == ops.inspect(0)
+
+
+def test_custom_dict_round_trip():
+    ops = Ops()
+    ops.job_start()
+    ops.set_power(1.0)
+    ops.custom("M101 ; {machine.name}")
+    ops.move_to(1, 2, 3)
+    ops.custom("(hello)")
+    ops.job_end()
+
+    data = ops.to_dict()
+    custom_cmds = [c for c in data["commands"] if c["type"] == "CUSTOM"]
+    assert custom_cmds == [
+        {"type": "CUSTOM", "custom_text": "M101 ; {machine.name}"},
+        {"type": "CUSTOM", "custom_text": "(hello)"},
+    ]
+
+    restored = Ops.from_dict(data)
+    assert len(restored) == len(ops)
+    for i in range(ops.len()):
+        assert ops.inspect(i) == restored.inspect(i)
+    assert restored.custom_text(2) == "M101 ; {machine.name}"
+    assert restored.custom_text(4) == "(hello)"
+
+
+def test_custom_from_dict_missing_text_raises():
+    data = {
+        "commands": [{"type": "CUSTOM"}],
+        "last_move_to": [0, 0, 0],
+    }
+    with pytest.raises(KeyError):
+        Ops.from_dict(data)

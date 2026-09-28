@@ -13,6 +13,12 @@ def test_state_block_command_type_values():
     assert CommandType.STATE_BLOCK_END.value == 109
 
 
+def test_custom_command_type():
+    assert CommandType.CUSTOM.value == 30
+    assert CommandType.CUSTOM.name == "CUSTOM"
+    assert category(CommandType.CUSTOM) == CommandCategory.STATE
+
+
 def test_state_block_category():
     assert category(CommandType.STATE_BLOCK_START) == CommandCategory.MARKER
     assert category(CommandType.STATE_BLOCK_END) == CommandCategory.MARKER
@@ -76,6 +82,7 @@ def test_category_state():
         CommandType.SET_COOLANT,
         CommandType.SET_AIR_ASSIST,
         CommandType.SET_HEAD_COOLANT,
+        CommandType.CUSTOM,
     ]:
         assert category(ct) == CommandCategory.STATE
 

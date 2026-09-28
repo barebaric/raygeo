@@ -780,3 +780,24 @@ def test_get_cumulative_time_at_last_equals_estimate_time():
     assert ops.get_cumulative_time_at(ops.len() - 1) == pytest.approx(
         total, rel=1e-10
     )
+
+
+# --- Custom commands cost zero time ---
+
+
+def test_estimate_time_custom_commands_only():
+    ops = Ops()
+    ops.custom("M101")
+    ops.custom("M102")
+    assert ops.estimate_time() == 0.0
+
+
+def test_estimate_time_custom_commands_do_not_add_time():
+    ops = Ops()
+    ops.set_feed_rate(600)
+    ops.move_to(0, 0)
+    ops.line_to(50, 0)
+    base = ops.estimate_time()
+
+    ops.custom("M103")
+    assert ops.estimate_time() == pytest.approx(base, rel=1e-12)

@@ -406,6 +406,14 @@ impl Ops {
         self.invalidate_time_cache();
     }
 
+    /// Emit a raw machine-code line (one command per line; the caller
+    /// splits multi-line input). The text reaches the encoder verbatim,
+    /// aside from path-variable expansion in the G-code encoder.
+    pub fn custom(&mut self, text: &str) {
+        self.cmds_mut().push(OpNode::custom(text));
+        self.invalidate_time_cache();
+    }
+
     /// Emit the state commands needed to reach *state*.
     ///
     /// Power is always emitted (default 0.0). All other fields are
@@ -628,6 +636,7 @@ impl Ops {
                 }
                 StateCmd::SetPowerMode(mode) => state.power_mode = Some(*mode),
                 StateCmd::Dwell(d) => state.dwell_ms = Some(*d),
+                StateCmd::Custom(_) => {}
             }
         }
     }

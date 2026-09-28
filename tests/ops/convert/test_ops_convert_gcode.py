@@ -442,6 +442,86 @@ def test_dwell_empty_template():
     assert "G4" not in text
 
 
+# ── Custom machine-code lines ────────────────────────────────────
+
+
+def test_custom_line_emitted_verbatim():
+    ops = Ops()
+    ops.job_start()
+    ops.custom("M101 P5")
+    ops.job_end()
+    text = _encode(ops)["text"]
+    assert "M101 P5" in text.splitlines()
+
+
+def test_custom_line_emitted_at_position():
+    ops = Ops()
+    ops.job_start()
+    ops.set_power(1.0)
+    ops.set_feed_rate(1000)
+    ops.move_to(0.0, 0.0, 0.0)
+    ops.line_to(10.0, 0.0, 0.0)
+    ops.custom("M101")
+    ops.job_end()
+    lines = _encode(ops)["text"].splitlines()
+    assert lines.index("M101") > lines.index("G1 X10 F1000 S100")
+
+
+def test_custom_line_unresolved_vars_left_verbatim():
+    ops = Ops()
+    ops.job_start()
+    ops.custom("; {unknown.var}")
+    ops.job_end()
+    text = _encode(ops)["text"]
+    assert "; {unknown.var}" in text.splitlines()
+
+
+def test_custom_line_path_vars_expanded():
+    ops = Ops()
+    ops.job_start()
+    ops.custom("; machine {machine.name}, first {job.extents[0]}mm")
+    ops.job_end()
+    ctx = _ctx(path_vars={"machine.name": "my-laser", "job.extents[0]": "10"})
+    text = _encode(ops, ctx=ctx)["text"]
+    assert "; machine my-laser, first 10mm" in text.splitlines()
+
+
+def test_custom_line_mid_layer_vars_expanded():
+    ops = Ops()
+    ops.job_start()
+    ops.layer_start("layer-1")
+    ops.set_power(1.0)
+    ops.set_feed_rate(1000)
+    ops.move_to(0.0, 0.0, 0.0)
+    ops.line_to(10.0, 0.0, 0.0)
+    ops.custom("; cutting layer {layer.name}")
+    ops.layer_end("layer-1")
+    ops.job_end()
+    ctx = _ctx(layer_path_vars={"layer-1": {"layer.name": "outline"}})
+    text = _encode(ops, ctx=ctx)["text"]
+    assert "; cutting layer outline" in text.splitlines()
+
+
+def test_custom_line_op_map_covers_emitted_line():
+    ops = Ops()
+    ops.job_start()
+    ops.custom("M101")
+    ops.job_end()
+    result = _encode(ops)
+    raw = result["op_to_machine_code"]
+    spans = [struct.unpack_from("<II", raw, i) for i in range(0, len(raw), 8)]
+    lines = result["text"].splitlines()
+
+    start, length = spans[1]
+    assert length == 1
+    assert lines[start] == "M101"
+
+    line_map = struct.unpack_from(
+        f"<{len(lines)}i", result["machine_code_to_op"]
+    )
+    assert line_map[start] == 1
+
+
 # ── Air assist ──────────────────────────────────────────────────
 
 
