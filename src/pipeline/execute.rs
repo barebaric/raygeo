@@ -84,8 +84,10 @@ pub fn execute_stages(
         dependents,
         shadows,
         dep_map: Mutex::new(HashMap::with_capacity(total)),
-        progress: Mutex::new(HashMap::with_capacity(total)),
-        completed_count: Mutex::new(0usize),
+        batch_progress: Mutex::new(BatchProgress {
+            done: 0,
+            in_flight: HashMap::with_capacity(total),
+        }),
         cache: Arc::clone(cache),
         on_completed: Arc::new(on_completed),
         on_batch: on_batch_progress,
@@ -130,14 +132,25 @@ pub fn execute_stages(
     }
 }
 
+/// Batch-progress bookkeeping for one `execute_stages` run.
+///
+/// `done` and the per-node in-flight fractions must live behind a
+/// single lock: `emit_batch_progress` computes the batch fraction as
+/// `(done + sum(in_flight)) / total`, and a snapshot taken across two
+/// separate locks can double-count (or drop) a node that completes
+/// between the reads — making the emitted fraction non-monotonic.
+struct BatchProgress {
+    done: usize,
+    in_flight: HashMap<String, f64>,
+}
+
 struct SharedState {
     node_by_key: Mutex<HashMap<String, NodeRequest>>,
     deps_remaining: Mutex<HashMap<String, usize>>,
     dependents: HashMap<String, Vec<String>>,
     shadows: HashMap<String, Vec<u64>>,
     dep_map: Mutex<DepMap>,
-    progress: Mutex<HashMap<String, f64>>,
-    completed_count: Mutex<usize>,
+    batch_progress: Mutex<BatchProgress>,
     cache: Arc<Mutex<Cache>>,
     on_completed: Arc<dyn Fn(CompletedNode) + Send + Sync + 'static>,
     on_batch: Option<Arc<dyn Fn(f64, String) + Send + Sync + 'static>>,
@@ -290,12 +303,9 @@ fn spawn_one(s: &Scope<'_>, shared: &Arc<SharedState>, key: String) {
         }
 
         {
-            let mut pm = shared.progress.lock().unwrap();
-            pm.remove(&node_key);
-        }
-        {
-            let mut cc = shared.completed_count.lock().unwrap();
-            *cc += 1;
+            let mut bp = shared.batch_progress.lock().unwrap();
+            bp.in_flight.remove(&node_key);
+            bp.done += 1;
         }
         emit_batch_progress(&shared, "", &node_key);
 
@@ -373,12 +383,9 @@ fn propagate_failure(
         }
 
         {
-            let mut pm = shared.progress.lock().unwrap();
-            pm.remove(&dep_key);
-        }
-        {
-            let mut cc = shared.completed_count.lock().unwrap();
-            *cc += 1;
+            let mut bp = shared.batch_progress.lock().unwrap();
+            bp.in_flight.remove(&dep_key);
+            bp.done += 1;
         }
         emit_batch_progress(shared, "", &dep_key);
 
@@ -471,9 +478,11 @@ fn emit_batch_progress(shared: &Arc<SharedState>, key: &str, detail: &str) {
         Some(cb) => cb,
         None => return,
     };
-    let in_flight: f64 =
-        shared.progress.lock().unwrap().values().copied().sum();
-    let done = *shared.completed_count.lock().unwrap() as f64;
+    let (done, in_flight) = {
+        let bp = shared.batch_progress.lock().unwrap();
+        let in_flight: f64 = bp.in_flight.values().copied().sum();
+        (bp.done as f64, in_flight)
+    };
     let frac = if shared.total > 0 {
         ((done + in_flight) / shared.total as f64).min(1.0)
     } else {
@@ -501,9 +510,10 @@ impl<'a> Callbacks for ProgressWrapper<'a> {
     fn report_progress(&self, frac: f64, msg: &str) {
         self.inner.report_progress(frac, msg);
         self.shared
-            .progress
+            .batch_progress
             .lock()
             .unwrap()
+            .in_flight
             .insert(self.key.clone(), frac);
         emit_batch_progress(self.shared, &self.key, msg);
     }
