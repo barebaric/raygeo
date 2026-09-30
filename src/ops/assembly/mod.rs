@@ -17,6 +17,7 @@
 
 pub mod adaptive;
 pub mod contour;
+pub mod custom;
 pub mod frame;
 pub mod helix;
 pub mod material_test_grid;

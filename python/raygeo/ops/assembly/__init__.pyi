@@ -22,6 +22,7 @@ from raygeo.ops.cut import search
 import typing
 from . import adaptive
 from . import contour
+from . import custom
 from . import frame
 from . import helix
 from . import material_test_grid
@@ -41,6 +42,7 @@ __all__ = [
     "AssemblyWarningKind",
     "adaptive",
     "contour",
+    "custom",
     "frame",
     "helix",
     "material_test_grid",
