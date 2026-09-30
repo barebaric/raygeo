@@ -28,6 +28,7 @@ use crate::ops::assembly::{
 
 pub(crate) mod adaptive;
 pub(crate) mod contour;
+pub(crate) mod custom;
 pub(crate) mod frame;
 pub(crate) mod helix;
 pub(crate) mod material_test_grid;
@@ -47,6 +48,7 @@ use crate::python::geo::flex_point::{
 };
 use crate::python::ops::assembly::adaptive::PyAdaptiveClearingSpec;
 use crate::python::ops::assembly::contour::PyContourSpec;
+use crate::python::ops::assembly::custom::PyCustomSpec;
 use crate::python::ops::assembly::frame::PyFrameSpec;
 use crate::python::ops::assembly::helix::PyHelixSpec;
 use crate::python::ops::assembly::material_test_grid::PyMaterialTestGridSpec;
@@ -69,6 +71,9 @@ pub fn extract_assembler(
     ob: &Bound<'_, PyAny>,
 ) -> PyResult<Box<dyn Assembler>> {
     if let Ok(s) = ob.extract::<PyContourSpec>() {
+        return Ok(Box::new(s.into_core()));
+    }
+    if let Ok(s) = ob.extract::<PyCustomSpec>() {
         return Ok(Box::new(s.into_core()));
     }
     if let Ok(s) = ob.extract::<PyAdaptiveClearingSpec>() {
@@ -468,6 +473,7 @@ pub(crate) fn register(ops_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 
     adaptive::register(&assembly_mod)?;
     contour::register(&assembly_mod)?;
+    custom::register(&assembly_mod)?;
     frame::register(&assembly_mod)?;
     helix::register(&assembly_mod)?;
     material_test_grid::register(&assembly_mod)?;
