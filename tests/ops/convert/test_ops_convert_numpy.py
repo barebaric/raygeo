@@ -185,3 +185,42 @@ def test_numpy_round_trip_preserves_all_data():
 
     for i in range(ops.len()):
         assert ops.inspect(i) == restored.inspect(i)
+
+
+def test_numpy_round_trip_custom_commands():
+    ops = Ops()
+    ops.custom("M101")
+    ops.move_to(0, 0)
+    ops.line_to(10, 0)
+    ops.custom("; done {machine.name}")
+
+    arrays = ops.to_numpy_arrays()
+    restored = Ops.from_numpy_arrays(arrays)
+
+    assert len(restored) == ops.len()
+    for i in range(ops.len()):
+        assert ops.inspect(i) == restored.inspect(i)
+    assert restored.custom_text(0) == "M101"
+    assert restored.custom_text(3) == "; done {machine.name}"
+
+
+def test_numpy_custom_commands_add_no_geometry():
+    plain = Ops()
+    plain.move_to(0, 0)
+    plain.line_to(10, 0)
+    plain_arrays = plain.to_numpy_arrays()
+
+    with_custom = Ops()
+    with_custom.custom("M101")
+    with_custom.move_to(0, 0)
+    with_custom.line_to(10, 0)
+    custom_arrays = with_custom.to_numpy_arrays()
+
+    # The layout is per-command-index, so the custom command shifts the
+    # moving commands by one slot — the moved geometry itself is
+    # unchanged and no curve/raster data appears for it.
+    assert custom_arrays["types"][0] == CommandType.CUSTOM.value
+    for key in ("types", "endpoints", "arc_map", "bezier_map"):
+        assert np.array_equal(custom_arrays[key][1:], plain_arrays[key])
+    for key in ("arc_data", "bezier_data", "scanline_data"):
+        assert custom_arrays[key].shape[0] == 0

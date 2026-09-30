@@ -78,6 +78,14 @@ coolant: Optional[state.CoolantMode]
 
 Coolant mode, if a SetCoolant command.
 
+### `custom_text`
+
+```python
+custom_text: Optional[str]
+```
+
+Raw machine-code text, if a Custom command.
+
 ### `duration_ms`
 
 ```python
@@ -931,6 +939,39 @@ Return the number of travel (MoveTo) commands in this sequence.
 | ------------ | ----- | -------------------------- |
 | _Returns_    | `int` | Number of travel commands. |
 | _Complexity_ |       | O(n) time, O(1) space      |
+
+### `custom()`
+
+```python
+custom(text: str) -> None
+```
+
+Emit a raw machine-code line, passed through to the encoder verbatim (aside from path-variable
+expansion).
+
+One command per line: split multi-line input before calling this.
+
+| Parameter    | Type   | Description                                     |
+| ------------ | ------ | ----------------------------------------------- |
+| `text`       | `str`  | The machine-code line (unexpanded, UTF-8 text). |
+| _Returns_    | `None` |                                                 |
+| _Complexity_ |        | O(1) time, O(1) space                           |
+
+### `custom_text()`
+
+```python
+custom_text(idx: int) -> str
+```
+
+Get the raw text of a Custom command.
+
+**Raises:** `TypeError` — If the command is not a Custom command.
+
+| Parameter    | Type  | Description                            |
+| ------------ | ----- | -------------------------------------- |
+| `idx`        | `int` | Command index.                         |
+| _Returns_    | `str` | The unexpanded machine-code text line. |
+| _Complexity_ |       | O(1) time, O(1) space                  |
 
 ### `cut_distance()`
 

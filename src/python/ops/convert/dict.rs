@@ -121,6 +121,9 @@ pub(crate) fn cmd_to_dict<'a>(
             StateCmd::SetHead(uid) => {
                 d.set_item("head_uid", uid.to_string())?
             }
+            StateCmd::Custom(text) => {
+                d.set_item("custom_text", text.to_string())?
+            }
         },
         OpCategory::Marker(cmd) => match cmd {
             MarkerCmd::LayerStart(uid) | MarkerCmd::LayerEnd(uid) => {
@@ -394,6 +397,14 @@ pub fn create_and_append_command(
             })?
             .extract()?;
         ops.set_head(&uid);
+    } else if ct == CommandType::Custom {
+        let text: String = cmd_data
+            .get_item("custom_text")?
+            .ok_or_else(|| {
+                pyo3::exceptions::PyKeyError::new_err("missing 'custom_text'")
+            })?
+            .extract()?;
+        ops.custom(&text);
     } else if ct == CommandType::LayerStart || ct == CommandType::LayerEnd {
         let uid: String = cmd_data
             .get_item("layer_uid")?

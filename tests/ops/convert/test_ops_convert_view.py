@@ -444,3 +444,23 @@ def test_render_ops_into_degenerate_bbox_returns_false():
     )
     result = render_ops_into(ops, spec, bitmap, (0.0, 0.0, 0.0, 0.0))
     assert result is False
+
+
+# ---------------------------------------------------------------------------
+# Custom commands are not rendered
+# ---------------------------------------------------------------------------
+
+
+def test_custom_commands_do_not_affect_render():
+    plain = _cut_line_ops()
+    with_custom = Ops()
+    with_custom.move_to(0.0, 0.0)
+    with_custom.custom("M101")
+    with_custom.set_power(1.0)
+    with_custom.line_to(10.0, 10.0)
+
+    plain_result = _render(plain, bbox=(0.0, 0.0, 10.0, 10.0))
+    custom_result = _render(with_custom, bbox=(0.0, 0.0, 10.0, 10.0))
+    assert plain_result is not None
+    assert custom_result is not None
+    assert np.array_equal(custom_result.bitmap, plain_result.bitmap)

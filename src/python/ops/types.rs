@@ -156,6 +156,8 @@ impl PyCommandType {
     pub const SET_POWER_MODE: PyCommandType =
         PyCommandType(CommandType::SetPowerMode);
     #[classattr]
+    pub const CUSTOM: PyCommandType = PyCommandType(CommandType::Custom);
+    #[classattr]
     pub const JOB_START: PyCommandType = PyCommandType(CommandType::JobStart);
     #[classattr]
     pub const JOB_END: PyCommandType = PyCommandType(CommandType::JobEnd);

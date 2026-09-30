@@ -173,6 +173,11 @@ class CommandInfo:
         Dwell duration in ms, if a dwell command.
         """
     @property
+    def custom_text(self) -> typing.Optional[builtins.str]:
+        r"""
+        Raw machine-code text, if a Custom command.
+        """
+    @property
     def layer_uid(self) -> typing.Optional[builtins.str]:
         r"""
         Unique identifier of the active layer, if a layer-start command.
@@ -576,6 +581,15 @@ class Ops:
         :raises TypeError: If the command is not a Layer command.
         :complexity: O(1) time, O(1) space
         """
+    def custom_text(self, idx: builtins.int) -> builtins.str:
+        r"""
+        Get the raw text of a Custom command.
+        
+        :param idx: Command index.
+        :returns: The unexpanded machine-code text line.
+        :raises TypeError: If the command is not a Custom command.
+        :complexity: O(1) time, O(1) space
+        """
     def workpiece_uid(self, idx: builtins.int) -> builtins.str:
         r"""
         Get the workpiece UID from a WorkpieceStart or WorkpieceEnd command.
@@ -694,6 +708,17 @@ class Ops:
         Pause execution for a given duration.
         
         :param duration_ms: Dwell duration in milliseconds.
+        :complexity: O(1) time, O(1) space
+        """
+    def custom(self, text: builtins.str) -> None:
+        r"""
+        Emit a raw machine-code line, passed through to the encoder
+        verbatim (aside from path-variable expansion).
+        
+        One command per line: split multi-line input before calling
+        this.
+        
+        :param text: The machine-code line (unexpanded, UTF-8 text).
         :complexity: O(1) time, O(1) space
         """
     def set_head(self, head_uid: builtins.str) -> None:

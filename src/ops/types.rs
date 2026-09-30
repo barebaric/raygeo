@@ -94,6 +94,7 @@ pub enum StateCmd {
     SetAirAssist(AirAssistMode),
     SetHeadCoolant(HeadCoolantMode),
     SetPowerMode(PowerMode),
+    Custom(Arc<str>),
 }
 
 #[derive(Clone, Debug)]
@@ -349,6 +350,17 @@ impl OpNode {
         }
     }
 
+    /// A raw machine-code line, passed through to the encoder verbatim
+    /// (aside from path-variable expansion). One command per line; the
+    /// caller splits multi-line input.
+    pub fn custom(text: &str) -> Self {
+        OpNode {
+            category: OpCategory::State(StateCmd::Custom(Arc::from(text))),
+            state: None,
+            extra_axes: None,
+        }
+    }
+
     pub fn job_start() -> Self {
         OpNode {
             category: OpCategory::Marker(MarkerCmd::JobStart),
@@ -506,6 +518,7 @@ impl OpNode {
                 StateCmd::SetAirAssist(_) => CommandType::SetAirAssist,
                 StateCmd::SetHeadCoolant(_) => CommandType::SetHeadCoolant,
                 StateCmd::SetPowerMode(_) => CommandType::SetPowerMode,
+                StateCmd::Custom(_) => CommandType::Custom,
             },
             OpCategory::Marker(cmd) => match cmd {
                 MarkerCmd::JobStart => CommandType::JobStart,
@@ -557,6 +570,15 @@ impl OpNode {
     pub fn as_state(&self) -> Option<&StateCmd> {
         if let OpCategory::State(cmd) = &self.category {
             Some(cmd)
+        } else {
+            None
+        }
+    }
+
+    /// The raw text of a Custom command, or `None` for other commands.
+    pub fn custom_text(&self) -> Option<&str> {
+        if let OpCategory::State(StateCmd::Custom(text)) = &self.category {
+            Some(text)
         } else {
             None
         }

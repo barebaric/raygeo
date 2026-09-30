@@ -542,6 +542,9 @@ pub struct PyCommandInfo {
     /// Dwell duration in ms, if a dwell command.
     #[pyo3(get)]
     pub duration_ms: Option<f64>,
+    /// Raw machine-code text, if a Custom command.
+    #[pyo3(get)]
+    pub custom_text: Option<String>,
     /// Unique identifier of the active layer, if a layer-start command.
     #[pyo3(get)]
     pub layer_uid: Option<String>,
@@ -617,6 +620,9 @@ impl PyCommandInfo {
                 return Ok(false);
             }
             if self.duration_ms != other_info.duration_ms {
+                return Ok(false);
+            }
+            if self.custom_text != other_info.custom_text {
                 return Ok(false);
             }
             if self.layer_uid != other_info.layer_uid {
@@ -1375,6 +1381,26 @@ impl PyOps {
         }
     }
 
+    /// Get the raw text of a Custom command.
+    ///
+    /// :param idx: Command index.
+    /// :returns: The unexpanded machine-code text line.
+    /// :raises TypeError: If the command is not a Custom command.
+    /// :complexity: O(1) time, O(1) space
+    fn custom_text(&self, idx: usize) -> PyResult<String> {
+        if idx >= self.inner.len() {
+            return Err(PyErr::new::<pyo3::exceptions::PyIndexError, _>(
+                "index out of range",
+            ));
+        }
+        match &self.inner.commands[idx].category {
+            OpCategory::State(StateCmd::Custom(text)) => Ok(text.to_string()),
+            _ => Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
+                "Not a Custom command",
+            )),
+        }
+    }
+
     /// Get the workpiece UID from a WorkpieceStart or WorkpieceEnd command.
     ///
     /// :param idx: Command index.
@@ -1645,6 +1671,18 @@ impl PyOps {
     /// :complexity: O(1) time, O(1) space
     fn dwell(&mut self, duration_ms: f64) {
         self.inner.dwell(duration_ms);
+    }
+
+    /// Emit a raw machine-code line, passed through to the encoder
+    /// verbatim (aside from path-variable expansion).
+    ///
+    /// One command per line: split multi-line input before calling
+    /// this.
+    ///
+    /// :param text: The machine-code line (unexpanded, UTF-8 text).
+    /// :complexity: O(1) time, O(1) space
+    fn custom(&mut self, text: &str) {
+        self.inner.custom(text);
     }
 
     /// Switch to a specific head by UID.
@@ -2174,6 +2212,7 @@ impl PyOps {
             head_coolant: None,
             power_mode: None,
             duration_ms: None,
+            custom_text: None,
             layer_uid: None,
             workpiece_uid: None,
             section_type: None,
@@ -2234,6 +2273,9 @@ impl PyOps {
                 }
                 StateCmd::SetHead(uid) => info.head_uid = Some(uid.to_string()),
                 StateCmd::Dwell(d) => info.duration_ms = Some(*d),
+                StateCmd::Custom(text) => {
+                    info.custom_text = Some(text.to_string())
+                }
             },
             OpCategory::Marker(cmd) => match cmd {
                 MarkerCmd::LayerStart(uid) | MarkerCmd::LayerEnd(uid) => {

@@ -840,6 +840,11 @@ impl<'a> GcodeEncoder<'a> {
                     }
                 }
             }
+            CommandType::Custom => {
+                let text = ops_custom_text(ops, idx);
+                let expanded = resolve_path_vars(&text, &self.path_vars);
+                self.push_line(&expanded);
+            }
             CommandType::JobStart => {
                 // 1. Preamble
                 let lines = self.format_script_lines(&self.dialect.preamble);
@@ -1061,6 +1066,17 @@ fn ops_dwell(ops: &Ops, idx: usize) -> f64 {
         *ms
     } else {
         0.0
+    }
+}
+
+fn ops_custom_text(ops: &Ops, idx: usize) -> String {
+    if let crate::ops::types::OpCategory::State(
+        crate::ops::types::StateCmd::Custom(text),
+    ) = &ops.commands[idx].category
+    {
+        text.to_string()
+    } else {
+        String::new()
     }
 }
 
