@@ -29,6 +29,14 @@ use crate::svg::traverse::{
 
 use std::ops::Range;
 
+pub(crate) fn parse_xml(
+    svg_str: &str,
+) -> Result<roxmltree::Document<'_>, roxmltree::Error> {
+    let mut options = roxmltree::ParsingOptions::default();
+    options.allow_dtd = true;
+    roxmltree::Document::parse_with_options(svg_str, options)
+}
+
 pub(crate) fn parse_coords(s: &str) -> Vec<f64> {
     let mut coords = Vec::new();
     let mut chars = s.chars().peekable();
@@ -179,7 +187,7 @@ pub fn svg_string_to_geometries(
     scale_x: f64,
     scale_y: f64,
 ) -> RaygeoResult<Vec<Geometry>> {
-    let all_geometries = match roxmltree::Document::parse(svg_str) {
+    let all_geometries = match parse_xml(svg_str) {
         Ok(doc) => {
             let mut geos = Vec::new();
             let identity = Matrix::identity();
@@ -222,7 +230,7 @@ pub fn svg_string_to_geometries_by_layer(
     scale_x: f64,
     scale_y: f64,
 ) -> RaygeoResult<Vec<(String, Vec<Geometry>)>> {
-    let doc = roxmltree::Document::parse(svg_str)
+    let doc = parse_xml(svg_str)
         .map_err(|e| RaygeoError::SvgParseError(format!("{e}")))?;
     let root = doc.root_element();
 
@@ -296,7 +304,7 @@ pub fn svg_string_to_geometries_by_color(
     scale_y: f64,
     mode: ColorAttr,
 ) -> RaygeoResult<Vec<(String, Vec<Geometry>)>> {
-    let doc = roxmltree::Document::parse(svg_str)
+    let doc = parse_xml(svg_str)
         .map_err(|e| RaygeoError::SvgParseError(format!("{e}")))?;
     let root = doc.root_element();
 
@@ -352,7 +360,7 @@ pub fn filter_svg_by_color(
     mode: ColorAttr,
     color_key: &str,
 ) -> RaygeoResult<String> {
-    let doc = roxmltree::Document::parse(svg_str)
+    let doc = parse_xml(svg_str)
         .map_err(|e| RaygeoError::SvgParseError(format!("{e}")))?;
     let root = doc.root_element();
 
