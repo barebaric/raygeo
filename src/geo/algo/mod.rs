@@ -27,6 +27,7 @@ pub mod polylabel;
 pub mod project;
 pub mod ramp;
 pub mod rootfind;
+pub mod self_intersect;
 pub mod simplify;
 pub mod smooth;
 pub mod spatial_grid2d;

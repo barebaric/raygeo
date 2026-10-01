@@ -26,6 +26,7 @@ use crate::geo::algo::intersect::{
     check_intersection_from_array, check_self_intersection_from_array,
 };
 use crate::geo::algo::offset::grow_geometry;
+use crate::geo::algo::self_intersect::resolve_self_intersections;
 use crate::geo::algo::simplify::simplify_data;
 use crate::geo::algo::topology::{
     close_all_contours, filter_to_external_contours, get_valid_contours_data,
@@ -1424,6 +1425,27 @@ impl Geometry {
             return false;
         }
         check_self_intersection_from_array(&self.inner.data, fail_on_t_junction)
+    }
+
+    /// Rebuild self-intersecting or overlapping closed contours.
+    ///
+    /// Affected contours are replaced by the union of their linearised
+    /// outlines; clean contours (and their curves) are kept as-is.
+    ///
+    /// :param tolerance: Linearisation tolerance in mm for affected contours.
+    /// :returns: The geometry (for method chaining).
+    /// :complexity: O(n log n) average time, O(n) space
+    #[pyo3(signature = (tolerance=0.01))]
+    fn remove_self_intersections(
+        slf: Bound<'_, Self>,
+        tolerance: f64,
+    ) -> Bound<'_, Self> {
+        let result = {
+            let geo = slf.borrow();
+            resolve_self_intersections(&geo.inner, tolerance)
+        };
+        slf.borrow_mut().inner = result;
+        slf
     }
 
     /// Check if this geometry intersects with another.
