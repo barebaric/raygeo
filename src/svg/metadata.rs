@@ -1,5 +1,6 @@
 use crate::error::{RaygeoError, RaygeoResult};
 use crate::svg::length::parse_svg_length;
+use crate::svg::parse_xml;
 
 // ── SVG Metadata extraction ───────────────────────────────────────
 
@@ -15,7 +16,7 @@ pub struct SvgMetadata {
 
 /// Extract metadata (width, height, units, viewBox) from an SVG string.
 pub fn extract_svg_metadata(svg_str: &str) -> RaygeoResult<SvgMetadata> {
-    let doc = roxmltree::Document::parse(svg_str)
+    let doc = parse_xml(svg_str)
         .map_err(|e| RaygeoError::SvgParseError(format!("{e}")))?;
     let root = doc.root_element();
     if root.tag_name().name() != "svg" {

@@ -1447,3 +1447,28 @@ class TestFilterSvgByColor:
     def test_no_paths(self):
         svg = '<svg xmlns="http://www.w3.org/2000/svg"></svg>'
         assert svg_string_to_geometry_by_color(svg) == []
+
+
+AFFINITY_SVG = """<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 1749 2481" version="1.1"
+     xmlns="http://www.w3.org/2000/svg">
+    <path d="M456,354C498.52,345.405 815,1555 815,1555"
+          style="fill:none;stroke:rgb(255,0,0);stroke-width:1px;"/>
+</svg>
+"""
+
+
+def test_svg_with_doctype_parses():
+    geos = svg_string_to_geometries(AFFINITY_SVG, 1.0, 1.0)
+    assert len(geos) == 1
+    without = AFFINITY_SVG.split("\n", 2)[2]
+    assert svg_string_to_geometries(without, 1.0, 1.0) == geos
+    meta = extract_svg_metadata(AFFINITY_SVG)
+    assert meta.viewbox == (0.0, 0.0, 1749.0, 2481.0)
+
+
+def test_undefined_entity_reference_still_fails():
+    svg = '<svg xmlns="http://www.w3.org/2000/svg">&undefined;</svg>'
+    with pytest.raises(ValueError):
+        svg_string_to_geometries_by_layer(svg, 1.0, 1.0)
