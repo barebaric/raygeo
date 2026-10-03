@@ -10,6 +10,7 @@ from . import drag_knife
 from . import lead_in_out
 from . import link
 from . import merge_lines
+from . import merge_scanlines
 from . import multipass
 from . import optimize
 from . import overscan
@@ -25,6 +26,7 @@ __all__ = [
     "lead_in_out",
     "link",
     "merge_lines",
+    "merge_scanlines",
     "multipass",
     "optimize",
     "overscan",

@@ -4,6 +4,7 @@ use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 use crate::ops::transform::optimize::{
     optimize_travel, OptimizeSpec as CoreOptimizeSpec,
 };
+use crate::python::ops::transform::merge_scanlines::MergeScanlinesSpec;
 use crate::python::ops::transform::PyCallableCallbacks;
 
 pub(crate) fn register(transform_mod: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -60,6 +61,10 @@ pub struct OptimizeSpec {
     /// Workpiece UIDs whose order to preserve.
     #[pyo3(get)]
     pub preserve_order: Vec<String>,
+    /// When set, acceleration-aware scanline merging runs before the
+    /// travel optimization.
+    #[pyo3(get)]
+    pub merge_scanlines: Option<MergeScanlinesSpec>,
 }
 
 impl OptimizeSpec {
@@ -69,6 +74,7 @@ impl OptimizeSpec {
             allow_flip: self.allow_flip,
             preserve_first: self.preserve_first,
             preserve_order: self.preserve_order,
+            merge_scanlines: self.merge_scanlines.map(|m| m.into_core()),
         }
     }
 }
@@ -76,16 +82,19 @@ impl OptimizeSpec {
 #[gen_stub_pymethods]
 #[pymethods]
 impl OptimizeSpec {
+    #[pyo3(signature = (allow_flip, preserve_first, preserve_order, merge_scanlines=None))]
     #[new]
     fn new(
         allow_flip: bool,
         preserve_first: bool,
         preserve_order: Vec<String>,
+        merge_scanlines: Option<MergeScanlinesSpec>,
     ) -> Self {
         Self {
             allow_flip,
             preserve_first,
             preserve_order,
+            merge_scanlines,
         }
     }
 }

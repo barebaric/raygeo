@@ -173,6 +173,34 @@ impl Ops {
     }
 }
 
+/// Duration (seconds) of a single move of `distance` millimetres at
+/// `speed` mm/min with trapezoidal acceleration `acceleration`
+/// mm/s², starting and ending at rest.
+///
+/// This is the canonical motion model shared by the time estimator
+/// and the transformers that compare motion costs (e.g.
+/// `merge_scanlines`); use it everywhere so their predictions can
+/// never diverge.
+pub(crate) fn move_duration(
+    distance: f64,
+    speed: f64,
+    acceleration: f64,
+) -> f64 {
+    let speed_mm_per_sec = speed / 60.0;
+    if acceleration > 0.0 {
+        let accel_time = speed_mm_per_sec / acceleration;
+        let accel_distance = 0.5 * acceleration * accel_time * accel_time;
+        if distance < 2.0 * accel_distance {
+            2.0 * (distance / acceleration).sqrt()
+        } else {
+            let cruise_distance = distance - 2.0 * accel_distance;
+            2.0 * accel_time + cruise_distance / speed_mm_per_sec
+        }
+    } else {
+        distance / speed_mm_per_sec
+    }
+}
+
 fn command_duration(
     node: &OpNode,
     last_point: &mut Point3D,
@@ -203,21 +231,7 @@ fn command_duration(
                     *feed_rate
                 };
 
-                let speed_mm_per_sec = speed / 60.0;
-                let move_time = if acceleration > 0.0 {
-                    let accel_time = speed_mm_per_sec / acceleration;
-                    let accel_distance =
-                        0.5 * acceleration * accel_time * accel_time;
-                    if distance < 2.0 * accel_distance {
-                        2.0 * (distance / acceleration).sqrt()
-                    } else {
-                        let cruise_distance = distance - 2.0 * accel_distance;
-                        let cruise_time = cruise_distance / speed_mm_per_sec;
-                        2.0 * accel_time + cruise_time
-                    }
-                } else {
-                    distance / speed_mm_per_sec
-                };
+                let move_time = move_duration(distance, speed, acceleration);
 
                 *last_point = *end;
                 move_time

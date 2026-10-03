@@ -1,5 +1,12 @@
 .PHONY: build dev stubs format format-rust format-python lint lint-rust lint-python test check visual doc docs install-test-deps install-visual-deps install-docs-deps venv
 
+# Prefer the rustup toolchain when one exists: distro cargos are
+# often too old for this project's Cargo.lock format (v4), and cargo
+# resolves rustc via PATH, so the rustup bin dir must come first.
+ifneq ($(wildcard $(HOME)/.cargo/bin/cargo),)
+export PATH := $(HOME)/.cargo/bin:$(PATH)
+endif
+
 build:
 	maturin build --release --out dist
 
