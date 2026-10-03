@@ -2,6 +2,7 @@
 # ruff: noqa: E501, F401, F403, F405
 
 import builtins
+from raygeo.ops.transform import merge_scanlines
 import typing
 __all__ = [
     "OptimizeSpec",
@@ -27,6 +28,12 @@ class OptimizeSpec:
         r"""
         Workpiece UIDs whose order to preserve.
         """
+    @property
+    def merge_scanlines(self) -> typing.Optional[merge_scanlines.MergeScanlinesSpec]:
+        r"""
+        When set, acceleration-aware scanline merging runs before the
+        travel optimization.
+        """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __new__(cls, allow_flip: builtins.bool, preserve_first: builtins.bool, preserve_order: typing.Sequence[builtins.str]) -> OptimizeSpec: ...
+    def __new__(cls, allow_flip: builtins.bool, preserve_first: builtins.bool, preserve_order: typing.Sequence[builtins.str], merge_scanlines: typing.Optional[merge_scanlines.MergeScanlinesSpec] = None) -> OptimizeSpec: ...
 

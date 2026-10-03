@@ -1441,6 +1441,24 @@ class Ops:
         :param distance_mm: Overscan distance in millimeters.
         :complexity: O(n) time, O(n) space
         """
+    def apply_merge_scanlines(self, acceleration: builtins.float, cut_speed: builtins.float, rapid_speed: builtins.float, max_gap_mm: builtins.float = 0.0, tolerance: builtins.float = 0.05) -> None:
+        r"""
+        Merge collinear cut lines into acceleration-aware scanlines.
+        
+        Bridges the gaps between parallel cut lines on the same scan
+        row at zero power when the machine's acceleration profile
+        makes the merged sweep faster than decelerating, traveling,
+        and re-accelerating.
+        
+        :param acceleration: Machine acceleration in mm/s².
+        :param cut_speed: Fallback cut speed in mm/min.
+        :param rapid_speed: Fallback rapid speed in mm/min.
+        :param max_gap_mm: Manual ceiling on bridged gaps in mm
+            (0 = unlimited).
+        :param tolerance: Maximum perpendicular distance for two
+            parallel lines to share a row, in mm.
+        :complexity: O(n log n) time, O(n) space
+        """
     def apply_bidir_scan_offset(self, offset_mm: builtins.float) -> None:
         r"""
         Correct X misalignment between left-to-right and right-to-left

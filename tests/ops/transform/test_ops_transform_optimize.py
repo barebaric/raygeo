@@ -1221,3 +1221,48 @@ def test_optimize_without_power_mode_emits_nothing():
         ops.command_type(i) == CommandType.SET_POWER_MODE
         for i in range(ops.len())
     )
+
+
+class TestNestedMergeScanlines:
+    def test_optimize_merges_scanlines_first(self):
+        from raygeo.ops.transform.merge_scanlines import MergeScanlinesSpec
+        from raygeo.ops.transform.optimize import OptimizeSpec
+
+        ops = Ops()
+        ops.set_feed_rate(6000)
+        ops.set_rapid_rate(12000)
+        for x0 in (0.0, 12.0):
+            ops.move_to(x0, 0)
+            ops.scan_to(x0 + 10, 0, 0, power_values=[128] * 10)
+
+        spec = OptimizeSpec(
+            allow_flip=True,
+            preserve_first=False,
+            preserve_order=[],
+            merge_scanlines=MergeScanlinesSpec(
+                acceleration=500.0,
+                cut_speed=6000.0,
+                rapid_speed=12000.0,
+                max_gap_mm=0.0,
+                tolerance=0.05,
+            ),
+        )
+        Ops.apply_transformers(ops, [spec], progress_cb=None)
+        scanlines = ops.indices_of(CommandType.SCAN_LINE)
+        assert len(scanlines) == 1
+        data = list(ops.scanline_data(scanlines[0]))
+        assert data == [128] * 10 + [0, 0] + [128] * 10
+
+    def test_optimize_without_merge_leaves_scanlines(self):
+        from raygeo.ops.transform.optimize import OptimizeSpec
+
+        ops = Ops()
+        ops.set_feed_rate(6000)
+        ops.set_rapid_rate(12000)
+        for x0 in (0.0, 12.0):
+            ops.move_to(x0, 0)
+            ops.scan_to(x0 + 10, 0, 0, power_values=[128] * 10)
+
+        spec = OptimizeSpec(True, False, [])
+        Ops.apply_transformers(ops, [spec], progress_cb=None)
+        assert len(ops.indices_of(CommandType.SCAN_LINE)) == 2

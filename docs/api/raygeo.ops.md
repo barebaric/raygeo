@@ -419,6 +419,38 @@ lead-out segments along the tangent direction at the path start and end.
 
 *Lead-in and lead-out paths*
 
+### `apply_merge_scanlines()`
+
+```python
+apply_merge_scanlines(
+    acceleration: float,
+    cut_speed: float,
+    rapid_speed: float,
+    max_gap_mm: float = 0.0,
+    tolerance: float = 0.05,
+) -> None
+```
+
+Merge collinear cut lines into acceleration-aware scanlines.
+
+Bridges the gaps between parallel cut lines on the same scan row at zero power when the machine's
+acceleration profile makes the merged sweep faster than decelerating, traveling, and
+re-accelerating.
+
+| Parameter      | Type           | Description                                                                  |
+| -------------- | -------------- | ---------------------------------------------------------------------------- |
+| `acceleration` | `float`        | Machine acceleration in mm/s².                                               |
+| `cut_speed`    | `float`        | Fallback cut speed in mm/min.                                                |
+| `rapid_speed`  | `float`        | Fallback rapid speed in mm/min.                                              |
+| `max_gap_mm`   | `float = 0.0`  | Manual ceiling on bridged gaps in mm (0 = unlimited).                        |
+| `tolerance`    | `float = 0.05` | Maximum perpendicular distance for two parallel lines to share a row, in mm. |
+| _Returns_      | `None`         |                                                                              |
+| _Complexity_   |                | O(n log n) time, O(n) space                                                  |
+
+![Scanline merging across gaps: engaged at low acceleration, declined when it would lose time](images/ops-transform-merge-scanlines-apply-merge-scanlines.png)
+
+*Scanline merging across gaps: engaged at low acceleration, declined when it would lose time*
+
 ### `apply_multipass()`
 
 ```python

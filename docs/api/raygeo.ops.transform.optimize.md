@@ -15,6 +15,14 @@ allow_flip: bool
 
 Whether flipping subpaths is allowed.
 
+### `merge_scanlines`
+
+```python
+merge_scanlines: Optional[merge_scanlines.MergeScanlinesSpec]
+```
+
+When set, acceleration-aware scanline merging runs before the travel optimization.
+
 ### `preserve_first`
 
 ```python

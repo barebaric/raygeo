@@ -21,7 +21,7 @@ const TWO_OPT_COMMAND_LIMIT: usize = 10000;
 const TWO_OPT_MAX_ITER: usize = 10;
 
 /// Parameters for the [`optimize_travel`] transformer.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct OptimizeSpec {
     /// Whether flipping subpaths is allowed.
     pub allow_flip: bool,
@@ -29,6 +29,12 @@ pub struct OptimizeSpec {
     pub preserve_first: bool,
     /// Workpiece UIDs whose order to preserve.
     pub preserve_order: Vec<String>,
+    /// When set, acceleration-aware scanline merging runs as the
+    /// first step of optimization: parallel cut lines on the same
+    /// scan row — including rows spanning multiple workpieces — are
+    /// bridged at zero power when the machine's motion profile makes
+    /// the merged sweep faster. `None` disables merging.
+    pub merge_scanlines: Option<super::merge_scanlines::MergeScanlinesSpec>,
 }
 
 impl Transformer for OptimizeSpec {
@@ -37,6 +43,13 @@ impl Transformer for OptimizeSpec {
     }
 
     fn apply(&self, ctx: &mut TransformCtx<'_>) {
+        if let Some(spec) = &self.merge_scanlines {
+            super::merge_scanlines::merge_scanlines(
+                ctx.ops,
+                spec,
+                ctx.callbacks,
+            );
+        }
         optimize_travel(
             ctx.ops,
             self.allow_flip,
@@ -57,6 +70,11 @@ impl Transformer for OptimizeSpec {
         self.allow_flip.hash(&mut h);
         self.preserve_first.hash(&mut h);
         self.preserve_order.hash(&mut h);
+        self.merge_scanlines
+            .as_ref()
+            .map(|m| m.cache_key())
+            .unwrap_or(0)
+            .hash(&mut h);
         h.finish()
     }
 }
