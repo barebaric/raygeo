@@ -384,6 +384,14 @@ Converts world-space Ops into machine-space Ops by applying curve linearization,
 axis mapping, world→machine coordinate transforms, WCS offsets, Z-flip, and AXIS_REPLACEMENT
 downstream conversion.
 
+### `default_transformers`
+
+```python
+default_transformers: list
+```
+
+Transformer specs applied outside any layer span.
+
 ### `default_wcs_offset`
 
 ```python
@@ -391,6 +399,14 @@ default_wcs_offset: list[float]
 ```
 
 Default per-layer WCS command offset (x, y, z).
+
+### `layer_transformers`
+
+```python
+layer_transformers: list
+```
+
+Transformer specs per layer, as `(layer_uid, [specs])`.
 
 ### `layer_wcs_offsets`
 

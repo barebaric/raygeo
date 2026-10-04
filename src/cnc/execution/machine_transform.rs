@@ -3,13 +3,16 @@ use std::sync::Arc;
 
 use glam::{DMat4, DVec4};
 
+use crate::cnc::execution::callbacks::OpsCallbacksAdapter;
 use crate::cnc::execution::specs::{
     AggregateOutput, MachineTransformSpec, RotaryMappingSpec,
 };
 use crate::geo::types::Point3D;
 use crate::ops::assembly::AssemblyOutput;
 use crate::ops::axis::Axis;
+use crate::ops::callbacks::Callbacks as _;
 use crate::ops::container::Ops;
+use crate::ops::transform::{TransformCtx, Transformer};
 use crate::ops::types::{MarkerCmd, MoveCmd, OpCategory};
 use crate::pipeline::cache::CacheKey;
 use crate::pipeline::completed::PipelineError;
@@ -20,6 +23,86 @@ pub struct MachineTransformCompute {
 }
 
 impl MachineTransformCompute {
+    /// Apply the spec's post-transformers, in machine space, as the
+    /// last machine-transform step.
+    ///
+    /// Commands inside a `LayerStart`/`LayerEnd` span (markers
+    /// included) get that layer's transformer list; a layer without
+    /// an entry — and commands outside any layer span — get the
+    /// default list. Runs with an empty effective list are skipped
+    /// without extracting the segment, so jobs that configure no
+    /// post-transformers pay nothing.
+    fn apply_post_transformers(&self, ctx: &ComputeCtx, ops: &mut Ops) {
+        let n = ops.commands.len();
+        let default_empty = self.spec.default_transformers.is_empty();
+        let layer_map: std::collections::HashMap<&str, usize> = self
+            .spec
+            .layer_transformers
+            .iter()
+            .enumerate()
+            .map(|(k, (uid, _))| (uid.as_str(), k))
+            .collect();
+        if default_empty && layer_map.is_empty() {
+            return;
+        }
+
+        // Effective transformer-list key per command: 0 = default
+        // list, k+1 = layer_transformers[k]. A layer's own
+        // LayerStart/LayerEnd markers belong to the layer span.
+        let mut keys: Vec<usize> = Vec::with_capacity(n);
+        let mut current_layer: Option<&str> = None;
+        for i in 0..n {
+            if let OpCategory::Marker(cmd) = &ops.commands[i].category {
+                match cmd {
+                    MarkerCmd::LayerEnd(_) => {
+                        keys.push(
+                            current_layer
+                                .and_then(|l| layer_map.get(l).copied())
+                                .map_or(0, |k| k + 1),
+                        );
+                        current_layer = None;
+                        continue;
+                    }
+                    MarkerCmd::LayerStart(uid) => current_layer = Some(uid),
+                    _ => {}
+                }
+            }
+            keys.push(
+                current_layer
+                    .and_then(|l| layer_map.get(l).copied())
+                    .map_or(0, |k| k + 1),
+            );
+        }
+
+        // Partition into maximal runs sharing one key, then apply
+        // back-to-front so earlier indices stay valid when a
+        // transformer changes the command count.
+        let mut spans: Vec<(usize, usize, usize)> = Vec::new();
+        let mut span_start = 0usize;
+        for i in 1..=n {
+            if i == n || keys[i] != keys[span_start] {
+                spans.push((span_start, i, keys[span_start]));
+                span_start = i;
+            }
+        }
+
+        for &(start, end, key) in spans.iter().rev() {
+            let list: &[Box<dyn Transformer>] = if key == 0 {
+                &self.spec.default_transformers
+            } else {
+                &self.spec.layer_transformers[key - 1].1
+            };
+            if list.is_empty() || ctx.callbacks.is_cancelled() {
+                continue;
+            }
+            let mut segment = ops.extract_range(start, end);
+            apply_transformers_in_phase_order(&mut segment, list, ctx);
+            ops.cmds_mut()
+                .splice(start..end, segment.commands.iter().cloned());
+        }
+        ops.invalidate_time_cache();
+    }
+
     fn apply_rotary_mapping(&self, ops: &mut Ops) {
         let layer_map: std::collections::HashMap<&str, &RotaryMappingSpec> =
             self.spec
@@ -390,6 +473,8 @@ impl Compute for MachineTransformCompute {
         // 4. AXIS_REPLACEMENT degrees→mm (per-layer, machine-space).
         self.apply_axis_replacement(&mut ops);
 
+        // 5. Post-transformers (per-layer/default, machine-space).
+        self.apply_post_transformers(ctx, &mut ops);
         Ok(Box::new(AggregateOutput { ops, time_estimate }))
     }
 
@@ -430,6 +515,42 @@ impl Compute for MachineTransformCompute {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────
+
+/// Apply *specs* to *ops* in [`Transformer::phase`] order.
+///
+/// Mirrors [`crate::ops::transform::apply_transformers`] but works
+/// from shared spec references (the spec lists live in
+/// [`MachineTransformSpec`]), polling cancellation and reporting
+/// progress between transformers like the aggregate path does.
+fn apply_transformers_in_phase_order(
+    ops: &mut Ops,
+    specs: &[Box<dyn Transformer>],
+    ctx: &ComputeCtx,
+) {
+    let adapter = OpsCallbacksAdapter {
+        inner: ctx.callbacks,
+    };
+    let mut ordered: Vec<&dyn Transformer> =
+        specs.iter().map(|t| t.as_ref()).collect();
+    ordered.sort_by_key(|t| t.phase());
+    let total = ordered.len();
+    for (i, transformer) in ordered.iter().enumerate() {
+        if adapter.is_cancelled() {
+            return;
+        }
+        let progress = if total == 0 {
+            0.0
+        } else {
+            i as f64 / total as f64
+        };
+        adapter.report_progress(progress, transformer.name());
+        let mut tctx = TransformCtx {
+            ops,
+            callbacks: &adapter,
+        };
+        transformer.apply(&mut tctx);
+    }
+}
 
 fn mu_to_degrees(
     mu: f64,

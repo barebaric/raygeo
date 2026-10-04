@@ -9,6 +9,7 @@
 use crate::error::RaygeoError;
 use crate::ops::callbacks::Callbacks;
 use crate::ops::container::Ops;
+use crate::ops::transform::{Phase, Transformer};
 use crate::ops::types::{MoveCmd, OpCategory};
 
 /// A probed bed height map and the parameters needed to sample it.
@@ -39,6 +40,17 @@ pub struct MeshCorrectionSpec {
 }
 
 impl MeshCorrectionSpec {
+    /// Validate *spec*'s grid and return it unchanged.
+    ///
+    /// The Python binding validates at construction so the
+    /// [`Transformer::apply`] path is infallible; direct Rust
+    /// construction skips validation and [`mesh_correction`] rejects
+    /// the result instead.
+    pub fn validated(spec: MeshCorrectionSpec) -> Result<Self, RaygeoError> {
+        spec.validate()?;
+        Ok(spec)
+    }
+
     /// Bilinearly interpolated height at ``(x, y)``. Coordinates
     /// outside the grid are clamped to the nearest edge sample.
     pub fn sample(&self, x: f64, y: f64) -> f64 {
@@ -105,6 +117,41 @@ impl MeshCorrectionSpec {
             )));
         }
         Ok(())
+    }
+}
+
+impl Transformer for MeshCorrectionSpec {
+    fn phase(&self) -> Phase {
+        Phase::PostProcessing
+    }
+
+    fn apply(&self, ctx: &mut crate::ops::transform::TransformCtx<'_>) {
+        // Specs built through `try_new` (the Python binding) are
+        // pre-validated; a directly-constructed invalid spec is a
+        // no-op rather than a panic.
+        let _ = mesh_correction(ctx.ops, self, ctx.callbacks);
+    }
+
+    fn name(&self) -> &str {
+        "mesh_correction"
+    }
+
+    fn cache_key(&self) -> u64 {
+        use std::hash::{Hash, Hasher};
+        let mut h = std::collections::hash_map::DefaultHasher::new();
+        self.name().hash(&mut h);
+        self.x0.to_bits().hash(&mut h);
+        self.y0.to_bits().hash(&mut h);
+        self.dx.to_bits().hash(&mut h);
+        self.dy.to_bits().hash(&mut h);
+        self.heights.len().hash(&mut h);
+        for height in &self.heights {
+            height.to_bits().hash(&mut h);
+        }
+        self.nx.hash(&mut h);
+        self.ny.hash(&mut h);
+        self.z_offset.to_bits().hash(&mut h);
+        h.finish()
     }
 }
 

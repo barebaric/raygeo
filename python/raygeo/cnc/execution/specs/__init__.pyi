@@ -424,7 +424,17 @@ class MachineTransformSpec:
         r"""
         Per-layer rotary mapping configs.
         """
-    def __new__(cls, source_key: builtins.str, linearize_curves: builtins.bool, world_to_machine: typing.Sequence[typing.Sequence[builtins.float]], default_wcs_offset: typing.Sequence[builtins.float], layer_wcs_offsets: typing.Sequence[tuple[builtins.str, typing.Sequence[builtins.float]]], reverse_z: builtins.bool, rotary_mappings: typing.Sequence[RotaryMappingSpec]) -> MachineTransformSpec: ...
+    @property
+    def default_transformers(self) -> list:
+        r"""
+        Transformer specs applied outside any layer span.
+        """
+    @property
+    def layer_transformers(self) -> list:
+        r"""
+        Transformer specs per layer, as ``(layer_uid, [specs])``.
+        """
+    def __new__(cls, source_key: builtins.str, linearize_curves: builtins.bool, world_to_machine: typing.Sequence[typing.Sequence[builtins.float]], default_wcs_offset: typing.Sequence[builtins.float], layer_wcs_offsets: typing.Sequence[tuple[builtins.str, typing.Sequence[builtins.float]]], reverse_z: builtins.bool, rotary_mappings: typing.Sequence[RotaryMappingSpec], default_transformers: typing.Optional[typing.Sequence[typing.Any]] = None, layer_transformers: typing.Optional[typing.Sequence[tuple[builtins.str, typing.Sequence[typing.Any]]]] = None) -> MachineTransformSpec: ...
 
 class Marker:
     r"""

@@ -89,7 +89,9 @@ pub struct AggregateOutput {
 ///    axes, Z-flip) combined with the default WCS offset
 /// 4. Per-layer WCS offset translation
 /// 5. AXIS_REPLACEMENT degrees→scaled-mu downstream pass
-#[derive(Debug, Clone)]
+/// 6. Post-transformers, in machine space: the layer's entry from
+///    `layer_transformers` (or `default_transformers` outside any
+///    layer span)
 pub struct MachineTransformSpec {
     /// Key of the upstream node whose Ops to transform.
     pub source_key: String,
@@ -107,6 +109,44 @@ pub struct MachineTransformSpec {
     pub reverse_z: bool,
     /// Per-layer rotary mapping configs (empty when no rotary).
     pub rotary_mappings: Vec<RotaryMappingSpec>,
+    /// Transformers applied — last, in machine space — to command
+    /// spans outside any `LayerStart`/`LayerEnd` pair (job wrap
+    /// content).
+    pub default_transformers: Vec<Box<dyn Transformer>>,
+    /// Transformers applied — last, in machine space — to the command
+    /// span of each layer, keyed by layer UID. Layers without an
+    /// entry keep the default list for their span too.
+    pub layer_transformers: Vec<(String, Vec<Box<dyn Transformer>>)>,
+}
+
+impl std::fmt::Debug for MachineTransformSpec {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MachineTransformSpec")
+            .field("source_key", &self.source_key)
+            .field("linearize_curves", &self.linearize_curves)
+            .field("world_to_machine", &self.world_to_machine)
+            .field("default_wcs_offset", &self.default_wcs_offset)
+            .field("layer_wcs_offsets", &self.layer_wcs_offsets)
+            .field("reverse_z", &self.reverse_z)
+            .field("rotary_mappings", &self.rotary_mappings)
+            .field(
+                "default_transformers",
+                &format!("[{} transformers]", self.default_transformers.len()),
+            )
+            .field(
+                "layer_transformers",
+                &format!(
+                    "[{} layers: {}]",
+                    self.layer_transformers.len(),
+                    self.layer_transformers
+                        .iter()
+                        .map(|(uid, ts)| format!("{uid}:{}", ts.len()))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                ),
+            )
+            .finish()
+    }
 }
 
 #[derive(Debug, Clone)]

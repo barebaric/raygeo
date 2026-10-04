@@ -11,6 +11,7 @@ from . import lead_in_out
 from . import link
 from . import merge_lines
 from . import merge_scanlines
+from . import mesh_correction
 from . import multipass
 from . import optimize
 from . import overscan
@@ -27,6 +28,7 @@ __all__ = [
     "link",
     "merge_lines",
     "merge_scanlines",
+    "mesh_correction",
     "multipass",
     "optimize",
     "overscan",

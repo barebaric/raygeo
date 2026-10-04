@@ -28,6 +28,7 @@ use crate::python::ops::transform::drag_knife::DragKnifeSpec;
 use crate::python::ops::transform::lead_in_out::LeadInOutSpec;
 use crate::python::ops::transform::merge_lines::MergeLinesSpec;
 use crate::python::ops::transform::merge_scanlines::MergeScanlinesSpec;
+use crate::python::ops::transform::mesh_correction::MeshCorrectionSpec;
 use crate::python::ops::transform::multipass::MultiPassSpec;
 use crate::python::ops::transform::optimize::OptimizeSpec;
 use crate::python::ops::transform::overscan::OverscanSpec;
@@ -42,6 +43,7 @@ pub(crate) mod lead_in_out;
 pub(crate) mod link;
 pub(crate) mod merge_lines;
 pub(crate) mod merge_scanlines;
+pub(crate) mod mesh_correction;
 pub(crate) mod multipass;
 pub(crate) mod optimize;
 pub(crate) mod overscan;
@@ -64,6 +66,7 @@ pub(crate) fn register(ops_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     link::register(&transform_mod)?;
     merge_lines::register(&transform_mod)?;
     merge_scanlines::register(&transform_mod)?;
+    mesh_correction::register(&transform_mod)?;
     multipass::register(&transform_mod)?;
     optimize::register(&transform_mod)?;
     overscan::register(&transform_mod)?;
@@ -136,6 +139,9 @@ pub fn extract_transformer(
         return Ok(Box::new(s.into_core()));
     }
     if let Ok(s) = ob.extract::<MergeScanlinesSpec>() {
+        return Ok(Box::new(s.into_core()));
+    }
+    if let Ok(s) = ob.extract::<MeshCorrectionSpec>() {
         return Ok(Box::new(s.into_core()));
     }
     if let Ok(s) = ob.extract::<OverscanSpec>() {

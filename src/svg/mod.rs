@@ -32,8 +32,10 @@ use std::ops::Range;
 pub(crate) fn parse_xml(
     svg_str: &str,
 ) -> Result<roxmltree::Document<'_>, roxmltree::Error> {
-    let mut options = roxmltree::ParsingOptions::default();
-    options.allow_dtd = true;
+    let options = roxmltree::ParsingOptions {
+        allow_dtd: true,
+        ..Default::default()
+    };
     roxmltree::Document::parse_with_options(svg_str, options)
 }
 

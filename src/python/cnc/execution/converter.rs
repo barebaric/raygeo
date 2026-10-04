@@ -206,7 +206,7 @@ fn convert_machine_transform_spec(
     spec: &PyMachineTransformSpec,
 ) -> PyResult<CoreStageSpec> {
     let compute = MachineTransformCompute {
-        spec: spec.to_core(py),
+        spec: spec.to_core(py)?,
     };
     Ok(CoreStageSpec::Compute {
         compute_fn: Box::new(compute),

@@ -10,8 +10,13 @@ producing wrong G-code whenever the w2m matrix was not identity (e.g.
 axis reversal or non-bottom-left origin).
 """
 
+import numpy as np
 import pytest
-from conftest import collect_completions, make_square_part
+from conftest import (
+    collect_completions,
+    make_square_part,
+    result_ops,
+)
 
 from raygeo.cnc.execution.specs import (
     AggregateGroup,
@@ -24,6 +29,7 @@ from raygeo.cnc.execution.specs import (
 )
 from raygeo.ops.assembly import Assembler
 from raygeo.ops.assembly.contour import ContourSpec
+from raygeo.ops.transform.mesh_correction import MeshCorrectionSpec
 from raygeo.pipeline.completed import CompletedNode
 from raygeo.pipeline.request import NodeRequest
 from raygeo.pipeline.stage import StageSpec
@@ -347,3 +353,224 @@ def test_per_layer_wcs_different_offsets():
     pt = _first_point(results["xform"])
     # Correct: sign_flip(0,0) - (-5,15) = (0,0)-(-5,15) = (5,-15)
     assert pt == pytest.approx((5.0, -15.0), abs=1e-6)
+
+
+# ── Post-transformers (per-layer, machine space) ──────────────────
+
+
+def _constant_mesh(value: float):
+    return MeshCorrectionSpec(0.0, 0.0, 10.0, 10.0, np.full((2, 2), value))
+
+
+def _layered_agg_node(key: str, layers: list[tuple[str, str]]) -> NodeRequest:
+    """Aggregate one contour group per ``(layer_uid, source_key)``.
+
+    Layers with uid ``""`` are emitted without layer markers, so their
+    commands land outside any layer span.
+    """
+    groups = []
+    for uid, sk in layers:
+        start = [Marker.LayerStart(uid=uid, _tag=True)] if uid else []
+        end = [Marker.LayerEnd(uid=uid, _tag=True)] if uid else []
+        groups.append(
+            AggregateGroup(
+                start_markers=start,
+                inputs=[
+                    AggregateInput(
+                        source_key=sk,
+                        placement_matrix=IDENTITY,
+                        uid="",
+                        target_dimensions=(0.0, 0.0),
+                    )
+                ],
+                end_markers=end,
+            )
+        )
+    return NodeRequest(
+        key=key,
+        generation_id=1,
+        stage=StageSpec.Aggregate(
+            spec=AggregateSpec(
+                wrap_start=[],
+                groups=groups,
+                wrap_end=[],
+                machine=MachineParams(),
+            )
+        ),
+    )
+
+
+def _post_transform_node(
+    key: str,
+    source_key: str,
+    default_transformers=None,
+    layer_transformers=None,
+) -> NodeRequest:
+    return NodeRequest(
+        key=key,
+        generation_id=1,
+        stage=MachineTransformSpec(
+            source_key=source_key,
+            linearize_curves=False,
+            world_to_machine=IDENTITY,
+            default_wcs_offset=[0.0, 0.0, 0.0],
+            layer_wcs_offsets=[],
+            reverse_z=False,
+            rotary_mappings=[],
+            default_transformers=default_transformers,
+            layer_transformers=layer_transformers,
+        ),
+    )
+
+
+def _moves_by_layer(node: CompletedNode) -> list[tuple[str | None, float]]:
+    """``(layer_uid_or_None, z)`` for every moving command."""
+    layer = None
+    out = []
+    for cmd in result_ops(node).to_dict()["commands"]:
+        if cmd["type"] == "LAYER_START":
+            layer = cmd["layer_uid"]
+        elif cmd["type"] == "LAYER_END":
+            layer = None
+        elif "end" in cmd:
+            out.append((layer, cmd["end"][2]))
+    return out
+
+
+def test_layer_transformers_apply_per_layer():
+    """Each layer's mesh applies only to that layer's span."""
+    nodes = [
+        _contour_node("src-a"),
+        _contour_node("src-b"),
+        _layered_agg_node("agg", [("a", "src-a"), ("b", "src-b")]),
+        _post_transform_node(
+            "xform",
+            "agg",
+            layer_transformers=[
+                ("a", [_constant_mesh(1.0)]),
+                ("b", [_constant_mesh(3.0)]),
+            ],
+        ),
+    ]
+    results = _run_transform(nodes)
+    moves = _moves_by_layer(results["xform"])
+    assert moves
+    assert all(z == pytest.approx(1.0) for lay, z in moves if lay == "a")
+    assert all(z == pytest.approx(3.0) for lay, z in moves if lay == "b")
+
+
+def test_default_transformers_apply_outside_layers():
+    """The default list covers commands outside any layer span."""
+    nodes = [
+        _contour_node("in-layer"),
+        _contour_node("outside"),
+        _layered_agg_node("agg", [("a", "in-layer"), ("", "outside")]),
+        _post_transform_node(
+            "xform",
+            "agg",
+            default_transformers=[_constant_mesh(7.0)],
+            layer_transformers=[("a", [])],
+        ),
+    ]
+    results = _run_transform(nodes)
+    moves = _moves_by_layer(results["xform"])
+    assert all(z == pytest.approx(7.0) for lay, z in moves if lay is None)
+    assert all(z == pytest.approx(0.0) for lay, z in moves if lay == "a")
+
+
+def test_layer_without_entry_falls_back_to_default():
+    """A layer with no layer_transformers entry uses the default list."""
+    nodes = [
+        _contour_node("src-a"),
+        _contour_node("src-b"),
+        _layered_agg_node("agg", [("a", "src-a"), ("b", "src-b")]),
+        _post_transform_node(
+            "xform",
+            "agg",
+            default_transformers=[_constant_mesh(5.0)],
+            layer_transformers=[("a", [])],
+        ),
+    ]
+    results = _run_transform(nodes)
+    moves = _moves_by_layer(results["xform"])
+    assert all(z == pytest.approx(0.0) for lay, z in moves if lay == "a")
+    assert all(z == pytest.approx(5.0) for lay, z in moves if lay == "b")
+
+
+def test_no_post_transformers_is_noop():
+    """Without post-transformers the output matches the classic path."""
+    nodes = [
+        _contour_node("src"),
+        _agg_node("agg", ["src"]),
+        _transform_node("classic", "agg"),
+        _post_transform_node("post", "agg"),
+    ]
+    results = _run_transform(nodes)
+    assert _first_point(results["classic"]) == pytest.approx(
+        _first_point(results["post"])
+    )
+    classic = result_ops(results["classic"])
+    post = result_ops(results["post"])
+    assert classic.len() == post.len()
+
+
+def test_multiple_specs_in_one_list_apply_in_order():
+    """Two mesh specs in one list compose (both PostProcessing)."""
+    nodes = [
+        _contour_node("src"),
+        _agg_node("agg", ["src"]),
+        _post_transform_node(
+            "xform",
+            "agg",
+            default_transformers=[
+                _constant_mesh(1.0),
+                _constant_mesh(2.0),
+            ],
+        ),
+    ]
+    results = _run_transform(nodes)
+    moves = _moves_by_layer(results["xform"])
+    assert all(z == pytest.approx(3.0) for _, z in moves)
+
+
+def test_mesh_correction_spec_validates_at_construction():
+    with pytest.raises(ValueError, match="dx"):
+        MeshCorrectionSpec(0.0, 0.0, 0.0, 10.0, np.zeros((2, 2)))
+    with pytest.raises(ValueError, match="finite"):
+        MeshCorrectionSpec(
+            0.0, 0.0, 10.0, 10.0, np.array([[0.0, np.nan], [0.0, 0.0]])
+        )
+    spec = MeshCorrectionSpec(
+        0.0, 0.0, 10.0, 10.0, np.array([[1.0, 2.0], [3.0, 4.0]])
+    )
+    assert spec.heights.shape == (2, 2)
+    assert spec.z_offset == 0.0
+
+
+def test_mesh_correction_runs_after_wcs_and_reverse_z():
+    """Post-transformers see final machine-space coordinates: with
+    reverse_z and a WCS Z offset, the mesh is a plain Z addition on
+    the emitted values."""
+    nodes = [
+        _contour_node("src"),
+        _agg_node("agg", ["src"]),
+        NodeRequest(
+            key="xform",
+            generation_id=1,
+            stage=MachineTransformSpec(
+                source_key="agg",
+                linearize_curves=False,
+                world_to_machine=IDENTITY,
+                default_wcs_offset=[0.0, 0.0, 0.5],
+                layer_wcs_offsets=[],
+                reverse_z=True,
+                rotary_mappings=[],
+                default_transformers=[_constant_mesh(1.0)],
+            ),
+        ),
+    ]
+    results = _run_transform(nodes)
+    moves = _moves_by_layer(results["xform"])
+    # Emitted Z before the mesh: -(0) - 0.5 = -0.5; the mesh adds 1.0
+    # regardless of the sign conventions above it.
+    assert all(z == pytest.approx(0.5) for _, z in moves)

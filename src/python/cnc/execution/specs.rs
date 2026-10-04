@@ -731,14 +731,44 @@ pub struct PyMachineTransformSpec {
     /// Per-layer rotary mapping configs.
     #[pyo3(get)]
     pub rotary_mappings: Vec<Py<PyRotaryMappingSpec>>,
+    /// Transformer specs applied — last, in machine space — to
+    /// command spans outside any layer (job wrap content). Any
+    /// ``raygeo.ops.transform`` spec type is accepted.
+    pub default_transformers: Vec<Py<PyAny>>,
+    /// Transformer specs applied — last, in machine space — per
+    /// layer, keyed by layer UID. Any ``raygeo.ops.transform`` spec
+    /// type is accepted.
+    pub layer_transformers: Vec<(String, Vec<Py<PyAny>>)>,
 }
 
 impl PyMachineTransformSpec {
     pub fn to_core(
         &self,
         py: Python<'_>,
-    ) -> crate::cnc::execution::specs::MachineTransformSpec {
-        crate::cnc::execution::specs::MachineTransformSpec {
+    ) -> PyResult<crate::cnc::execution::specs::MachineTransformSpec> {
+        let default_transformers = self
+            .default_transformers
+            .iter()
+            .map(|ob| {
+                crate::python::ops::transform::extract_transformer(ob.bind(py))
+            })
+            .collect::<PyResult<Vec<_>>>()?;
+        let layer_transformers = self
+            .layer_transformers
+            .iter()
+            .map(|(uid, obs)| {
+                let specs = obs
+                    .iter()
+                    .map(|ob| {
+                        crate::python::ops::transform::extract_transformer(
+                            ob.bind(py),
+                        )
+                    })
+                    .collect::<PyResult<Vec<_>>>()?;
+                Ok((uid.clone(), specs))
+            })
+            .collect::<PyResult<Vec<_>>>()?;
+        Ok(crate::cnc::execution::specs::MachineTransformSpec {
             source_key: self.source_key.clone(),
             linearize_curves: self.linearize_curves,
             world_to_machine: self.world_to_machine,
@@ -750,7 +780,9 @@ impl PyMachineTransformSpec {
                 .iter()
                 .map(|rm| rm.borrow(py).to_core())
                 .collect(),
-        }
+            default_transformers,
+            layer_transformers,
+        })
     }
 }
 
@@ -766,6 +798,8 @@ impl PyMachineTransformSpec {
         layer_wcs_offsets,
         reverse_z,
         rotary_mappings,
+        default_transformers = None,
+        layer_transformers = None,
     ))]
     #[allow(clippy::too_many_arguments)]
     fn new(
@@ -777,6 +811,8 @@ impl PyMachineTransformSpec {
         layer_wcs_offsets: Vec<(String, [f64; 3])>,
         reverse_z: bool,
         rotary_mappings: Vec<Py<PyRotaryMappingSpec>>,
+        default_transformers: Option<Vec<Py<PyAny>>>,
+        layer_transformers: Option<Vec<(String, Vec<Py<PyAny>>)>>,
     ) -> Self {
         PyMachineTransformSpec {
             source_key,
@@ -786,7 +822,40 @@ impl PyMachineTransformSpec {
             layer_wcs_offsets,
             reverse_z,
             rotary_mappings,
+            default_transformers: default_transformers.unwrap_or_default(),
+            layer_transformers: layer_transformers.unwrap_or_default(),
         }
+    }
+
+    /// Transformer specs applied outside any layer span.
+    #[getter]
+    fn default_transformers<'py>(
+        &self,
+        py: Python<'py>,
+    ) -> Bound<'py, pyo3::types::PyList> {
+        pyo3::types::PyList::new(py, &self.default_transformers)
+            .expect("PyList from stored spec objects cannot fail")
+    }
+
+    /// Transformer specs per layer, as ``(layer_uid, [specs])``.
+    #[getter]
+    fn layer_transformers<'py>(
+        &self,
+        py: Python<'py>,
+    ) -> Bound<'py, pyo3::types::PyList> {
+        let items: Vec<(String, Bound<'py, pyo3::types::PyList>)> = self
+            .layer_transformers
+            .iter()
+            .map(|(uid, specs)| {
+                (
+                    uid.clone(),
+                    pyo3::types::PyList::new(py, specs)
+                        .expect("PyList from stored specs cannot fail"),
+                )
+            })
+            .collect();
+        pyo3::types::PyList::new(py, items)
+            .expect("PyList from layer entries cannot fail")
     }
 }
 
