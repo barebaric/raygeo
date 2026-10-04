@@ -1472,6 +1472,29 @@ class Ops:
         :param offset_mm: Offset in millimeters to apply to RTL passes.
         :complexity: O(n) time, O(n) space
         """
+    def mesh_correction(self, x0: builtins.float, y0: builtins.float, dx: builtins.float, dy: builtins.float, heights: numpy.typing.NDArray[numpy.float64], z_offset: builtins.float = 0.0) -> None:
+        r"""
+        Warp every moving command's Z onto a probed bed height map.
+        
+        The height at each command's XY position is bilinearly
+        interpolated from *heights* and added to its Z, together with
+        *z_offset*. This covers travel moves as well as cutting moves.
+        Coordinates outside the grid are clamped to the nearest edge
+        sample. Arcs keep their shape (a corrected arc becomes a
+        helical arc), and bezier control points are corrected at their
+        own XY positions.
+        
+        :param x0: X coordinate of the first grid column.
+        :param y0: Y coordinate of the first grid row.
+        :param dx: Grid column spacing in millimetres.
+        :param dy: Grid row spacing in millimetres.
+        :param heights: 2-D float64 array of shape ``(ny, nx)``;
+            ``heights[j, i]`` is the surface height at
+            ``(x0 + i*dx, y0 + j*dy)``.
+        :param z_offset: Constant Z added on top of every sampled
+            height.
+        :complexity: O(n) time, O(n) extra space
+        """
     def apply_multipass(self, passes: builtins.int, z_step_down: builtins.float) -> None:
         r"""
         Repeats the ops sequence multiple times, optionally stepping
