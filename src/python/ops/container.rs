@@ -1,5 +1,5 @@
 use glam::{DMat4, DVec4};
-use numpy::PyArray1;
+use numpy::{PyArray1, PyReadonlyArray2};
 use pyo3::prelude::*;
 use pyo3::types::{PyByteArray, PyBytes, PyDict, PyList, PyType};
 use pyo3::{Bound, Py, PyAny, PyResult};
@@ -3180,6 +3180,56 @@ impl PyOps {
             &mut self.inner,
             offset_mm,
         );
+    }
+
+    /// Warp every moving command's Z onto a probed bed height map.
+    ///
+    /// The height at each command's XY position is bilinearly
+    /// interpolated from *heights* and added to its Z, together with
+    /// *z_offset*. This covers travel moves as well as cutting moves.
+    /// Coordinates outside the grid are clamped to the nearest edge
+    /// sample. Arcs keep their shape (a corrected arc becomes a
+    /// helical arc), and bezier control points are corrected at their
+    /// own XY positions.
+    ///
+    /// :param x0: X coordinate of the first grid column.
+    /// :param y0: Y coordinate of the first grid row.
+    /// :param dx: Grid column spacing in millimetres.
+    /// :param dy: Grid row spacing in millimetres.
+    /// :param heights: 2-D float64 array of shape ``(ny, nx)``;
+    ///     ``heights[j, i]`` is the surface height at
+    ///     ``(x0 + i*dx, y0 + j*dy)``.
+    /// :param z_offset: Constant Z added on top of every sampled
+    ///     height.
+    /// :complexity: O(n) time, O(n) extra space
+    #[pyo3(signature = (x0, y0, dx, dy, heights, z_offset=0.0))]
+    fn mesh_correction(
+        &mut self,
+        x0: f64,
+        y0: f64,
+        dx: f64,
+        dy: f64,
+        heights: PyReadonlyArray2<f64>,
+        z_offset: f64,
+    ) -> PyResult<()> {
+        let array = heights.as_array();
+        let spec = crate::ops::transform::mesh_correction::MeshCorrectionSpec {
+            x0,
+            y0,
+            dx,
+            dy,
+            heights: array.iter().copied().collect(),
+            nx: array.shape()[1],
+            ny: array.shape()[0],
+            z_offset,
+        };
+        let callbacks = PyCallableCallbacks::new(None);
+        crate::ops::transform::mesh_correction::mesh_correction(
+            &mut self.inner,
+            &spec,
+            &callbacks,
+        )
+        .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
     }
 
     /// Repeats the ops sequence multiple times, optionally stepping

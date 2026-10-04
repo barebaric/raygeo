@@ -40,6 +40,7 @@ pub mod linearize;
 pub mod link;
 pub mod merge_lines;
 pub mod merge_scanlines;
+pub mod mesh_correction;
 pub mod multipass;
 pub mod optimize;
 pub mod overscan;

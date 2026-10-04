@@ -1866,6 +1866,41 @@ travel moves to avoid cutting the same line twice.
 
 *Line merging before and after*
 
+### `mesh_correction()`
+
+```python
+mesh_correction(
+    x0: float,
+    y0: float,
+    dx: float,
+    dy: float,
+    heights: numpy.NDArray[numpy.float64],
+    z_offset: float = 0.0,
+) -> None
+```
+
+Warp every moving command's Z onto a probed bed height map.
+
+The height at each command's XY position is bilinearly interpolated from *heights* and added to its
+Z, together with *z_offset*. This covers travel moves as well as cutting moves. Coordinates outside
+the grid are clamped to the nearest edge sample. Arcs keep their shape (a corrected arc becomes a
+helical arc), and bezier control points are corrected at their own XY positions.
+
+| Parameter    | Type                           | Description                                                                                               |
+| ------------ | ------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| `x0`         | `float`                        | X coordinate of the first grid column.                                                                    |
+| `y0`         | `float`                        | Y coordinate of the first grid row.                                                                       |
+| `dx`         | `float`                        | Grid column spacing in millimetres.                                                                       |
+| `dy`         | `float`                        | Grid row spacing in millimetres.                                                                          |
+| `heights`    | `numpy.NDArray[numpy.float64]` | 2-D float64 array of shape `(ny, nx)`; `heights[j, i]` is the surface height at `(x0 + i*dx, y0 + j*dy)`. |
+| `z_offset`   | `float = 0.0`                  | Constant Z added on top of every sampled height.                                                          |
+| _Returns_    | `None`                         |                                                                                                           |
+| _Complexity_ |                                | O(n) time, O(n) extra space                                                                               |
+
+![A flat toolpath warped onto a bed height map so the focal point tracks the wavy surface](images/ops-transform-mesh-correction-mesh-correction-example.png)
+
+*A flat toolpath warped onto a bed height map so the focal point tracks the wavy surface*
+
 ### `move_to()`
 
 ```python
