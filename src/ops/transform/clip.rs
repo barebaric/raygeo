@@ -872,13 +872,16 @@ fn accumulate_distance_to_hit(
 /// - `gaps`: Slice of `(start, end)` distance ranges to remove.
 /// - Returns: A new `Ops` with the gaps removed.
 fn build_clipped_subpath(temp_ops: &Ops, gaps: &[(f64, f64)]) -> Ops {
+    let first = first_move_index(temp_ops);
     let mut new_subpath = Ops::new();
-    new_subpath.cmds_mut().push(temp_ops.commands[0].clone());
+    for node in &temp_ops.commands[..=first] {
+        new_subpath.cmds_mut().push(node.clone());
+    }
 
     let mut accum_dist = 0.0;
-    let mut last_pos = temp_ops.commands[0].end_point();
+    let mut last_pos = temp_ops.commands[first].end_point();
 
-    for node in temp_ops.commands.iter().skip(1) {
+    for node in temp_ops.commands.iter().skip(first + 1) {
         if let OpCategory::Moving {
             end: p2,
             cmd: MoveCmd::LineTo,
@@ -985,6 +988,15 @@ fn build_clipped_subpath(temp_ops: &Ops, gaps: &[(f64, f64)]) -> Ops {
     new_subpath
 }
 
+/// Index of the subpath's MoveTo. State commands (power, feed rate)
+/// may precede it, e.g. after the travel optimizer reordered paths;
+/// distances along the path are measured from the MoveTo.
+fn first_move_index(ops: &Ops) -> usize {
+    (0..ops.len())
+        .find(|&j| ops.command_type(j) == CommandType::MoveTo)
+        .unwrap_or(0)
+}
+
 /// Linearize once and apply all clip gaps in a single pass.
 ///
 /// Unlike calling `clip_at` in a loop (whose successive calls
@@ -1002,9 +1014,10 @@ pub fn clip_subpath_linear(
     // Compute total length by summing the same way build_clipped_subpath
     // will traverse — avoids floating-point drift between geo.distance()
     // and the iterated segment lengths in build_clipped_subpath.
-    let total_len: f64 = (1..temp.len())
+    let first = first_move_index(&temp);
+    let total_len: f64 = (first + 1..temp.len())
         .filter(|&j| temp.command_type(j) == CommandType::LineTo)
-        .scan(temp.commands[0].end_point(), |last, j| {
+        .scan(temp.commands[first].end_point(), |last, j| {
             let ep = temp.endpoint(j);
             let d = ((ep.x - last.x).powi(2) + (ep.y - last.y).powi(2)).sqrt();
             *last = ep;
@@ -1033,9 +1046,9 @@ pub fn clip_subpath_linear(
         // index in the geometry data (0 = Move, 1 = first LineTo, …).
         // We skip the Move (index 0) and count LineTo commands.
         let mut hd = 0.0;
-        let mut last = temp.commands[0].end_point();
+        let mut last = temp.commands[first].end_point();
         let mut line_idx = 0usize;
-        for j in 1..temp.len() {
+        for j in first + 1..temp.len() {
             if temp.command_type(j) != CommandType::LineTo {
                 continue;
             }

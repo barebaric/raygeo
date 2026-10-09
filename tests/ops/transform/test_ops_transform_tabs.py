@@ -717,3 +717,56 @@ def test_assembly_apply_tab_power():
         ops.command_type(i) == CommandType.SET_POWER for i in range(ops.len())
     )
     assert has_power_cmd
+
+
+# ---------------------------------------------------------------------------
+# Subpaths that start with state commands
+# ---------------------------------------------------------------------------
+
+
+def _cut_points(ops):
+    ops.preload_state()
+    return [ops.endpoint(i) for i in range(ops.len()) if ops.is_cutting(i)]
+
+
+class TestTabsWithLeadingStateCommands:
+    """The travel optimizer moves the state commands of the first path
+    into the section, ahead of its MoveTo. The tab code must still
+    measure the path from that MoveTo, not from the origin."""
+
+    def test_gap_on_first_edge_keeps_the_edge(self):
+        ops = make_rect_ops(10, 10, 20, 10)
+        ops.apply_tab_gaps([(20, 10, 2)])
+        ops.preload_state()
+        assert math.isclose(ops.cut_distance(), 58.0, abs_tol=1e-6)
+
+    def test_gap_never_cuts_from_the_origin(self):
+        ops = make_rect_ops(10, 10, 20, 10)
+        ops.apply_tab_gaps([(20, 10, 2), (30, 15, 2)])
+        for x, y, _z in _cut_points(ops):
+            assert 10 - 1e-6 <= x <= 30 + 1e-6
+            assert 10 - 1e-6 <= y <= 20 + 1e-6
+
+    def test_gap_lands_at_the_clip_point(self):
+        ops = make_rect_ops(10, 10, 20, 10)
+        ops.apply_tab_gaps([(20, 10, 2)])
+        ops.preload_state()
+        moves = [
+            ops.endpoint(i)
+            for i in range(ops.len())
+            if ops.command_type(i) == CommandType.MOVE_TO
+        ]
+        assert any(
+            math.isclose(x, 21.0, abs_tol=1e-6)
+            and math.isclose(y, 10.0, abs_tol=1e-6)
+            for x, y, _z in moves
+        )
+
+    def test_power_tab_keeps_path_length(self):
+        ops = make_rect_ops(10, 10, 20, 10)
+        ops.apply_tab_power([(20, 10, 2)], 0.2, 1.0)
+        ops.preload_state()
+        assert math.isclose(ops.distance(), 60.0, abs_tol=1e-6)
+        for x, y, _z in _cut_points(ops):
+            assert 10 - 1e-6 <= x <= 30 + 1e-6
+            assert 10 - 1e-6 <= y <= 20 + 1e-6
