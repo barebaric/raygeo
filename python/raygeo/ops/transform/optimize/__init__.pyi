@@ -34,6 +34,18 @@ class OptimizeSpec:
         When set, acceleration-aware scanline merging runs before the
         travel optimization.
         """
+    @property
+    def best_start_point(self) -> builtins.bool:
+        r"""
+        When set, closed paths are rotated so they are entered at the
+        vertex nearest the current head position.
+        """
+    @property
+    def prefer_corners(self) -> builtins.bool:
+        r"""
+        With *best_start_point*, restrict the candidate start vertices
+        of a closed path to its corners.
+        """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __new__(cls, allow_flip: builtins.bool, preserve_first: builtins.bool, preserve_order: typing.Sequence[builtins.str], merge_scanlines: typing.Optional[merge_scanlines.MergeScanlinesSpec] = None) -> OptimizeSpec: ...
+    def __new__(cls, allow_flip: builtins.bool, preserve_first: builtins.bool, preserve_order: typing.Sequence[builtins.str], merge_scanlines: typing.Optional[merge_scanlines.MergeScanlinesSpec] = None, best_start_point: builtins.bool = False, prefer_corners: builtins.bool = False) -> OptimizeSpec: ...
 
