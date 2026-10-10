@@ -5,8 +5,11 @@ import numpy as np
 
 from raygeo.image.dither import (
     apply_bayer_dither,
+    apply_error_diffusion_dither,
     apply_floyd_steinberg_dither,
+    apply_halftone_dither,
     apply_minimum_run_length,
+    apply_newsprint_dither,
 )
 from raygeo.image.grayscale import normalize_grayscale
 from tools.plot import make_pattern
@@ -80,6 +83,92 @@ def generate_min_run_len():
     return fig
 
 
+def generate_error_diffusion():
+    """Error diffusion dither."""
+    w, h = 128, 128
+    arr = make_pattern(w, h, "Gradient")
+    gray = normalize_grayscale(arr).astype(np.uint8)
+
+    kernels = [
+        ("atkinson", "Atkinson"),
+        ("stucki", "Stucki"),
+        ("jarvis_judice_ninke", "Jarvis, Judice & Ninke"),
+        ("sierra", "Sierra"),
+        ("sierra_2row", "Sierra 2-Row"),
+        ("burkes", "Burkes"),
+    ]
+    fig, axes = plt.subplots(2, 3, figsize=(10, 7))
+    for ax, (kernel, title) in zip(axes.ravel(), kernels):
+        dithered = apply_error_diffusion_dither(gray, kernel)
+        ax.imshow(dithered, cmap="gray", vmin=0, vmax=1)
+        ax.set_title(title)
+    plt.tight_layout()
+    return fig
+
+
+def generate_error_diffusion_serpentine():
+    """Serpentine error diffusion dither."""
+    w, h = 128, 128
+    arr = make_pattern(w, h, "Gradient")
+    gray = normalize_grayscale(arr).astype(np.uint8)
+
+    fig, axes = plt.subplots(1, 2, figsize=(10, 5))
+    panels = (
+        (False, "Stucki, plain scan"),
+        (True, "Stucki, serpentine scan"),
+    )
+    for ax, (serpentine, title) in zip(axes, panels):
+        dithered = apply_error_diffusion_dither(
+            gray, "stucki", serpentine=serpentine
+        )
+        ax.imshow(dithered, cmap="gray", vmin=0, vmax=1)
+        ax.set_title(title)
+    plt.tight_layout()
+    return fig
+
+
+def generate_halftone():
+    """Halftone dither."""
+    w, h = 128, 128
+    arr = make_pattern(w, h, "Radial")
+    gray = normalize_grayscale(arr).astype(np.uint8)
+
+    panels = [
+        (45.0, 1.5, "45 deg, 1.5 mm"),
+        (0.0, 1.5, "0 deg, 1.5 mm"),
+        (45.0, 3.0, "45 deg, 3 mm"),
+    ]
+    fig, axes = plt.subplots(1, 3, figsize=(12, 4))
+    for ax, (angle, cell_mm, title) in zip(axes, panels):
+        dithered = apply_halftone_dither(
+            gray, cell_mm, angle, pixels_per_mm=(10.0, 10.0)
+        )
+        ax.imshow(dithered, cmap="gray", vmin=0, vmax=1)
+        ax.set_title(title)
+    plt.tight_layout()
+    return fig
+
+
+def generate_newsprint():
+    """Newsprint dither."""
+    w, h = 128, 128
+    arr = make_pattern(w, h, "Radial")
+    gray = normalize_grayscale(arr).astype(np.uint8)
+
+    fig, axes = plt.subplots(1, 2, figsize=(10, 5))
+    for ax, cell_size, title in (
+        (axes[0], 1, "cell size 1 px"),
+        (axes[1], 3, "cell size 3 px"),
+    ):
+        dithered = apply_newsprint_dither(
+            gray, cell_size, pixels_per_mm=(10.0, 10.0)
+        )
+        ax.imshow(dithered, cmap="gray", vmin=0, vmax=1)
+        ax.set_title(title)
+    plt.tight_layout()
+    return fig
+
+
 __docs_target__ = ["raygeo.image.dither.md"]
 __images__ = [
     {
@@ -96,5 +185,25 @@ __images__ = [
         "heading": "apply_minimum_run_length",
         "caption": "Minimum run length applied to binary image",
         "function": generate_min_run_len,
+    },
+    {
+        "heading": "apply_error_diffusion_dither",
+        "caption": "Error-diffusion kernel comparison",
+        "function": generate_error_diffusion,
+    },
+    {
+        "heading": "apply_error_diffusion_dither",
+        "caption": "Stucki kernel with plain and serpentine scan",
+        "function": generate_error_diffusion_serpentine,
+    },
+    {
+        "heading": "apply_halftone_dither",
+        "caption": "Halftone screens at different angles and cell sizes",
+        "function": generate_halftone,
+    },
+    {
+        "heading": "apply_newsprint_dither",
+        "caption": "Newsprint clustered-dot screen at two cell sizes",
+        "function": generate_newsprint,
     },
 ]

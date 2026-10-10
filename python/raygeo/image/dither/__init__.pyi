@@ -5,8 +5,11 @@ import numpy
 import numpy.typing
 __all__ = [
     "apply_bayer_dither",
+    "apply_error_diffusion_dither",
     "apply_floyd_steinberg_dither",
+    "apply_halftone_dither",
     "apply_minimum_run_length",
+    "apply_newsprint_dither",
 ]
 
 def apply_bayer_dither(grayscale: numpy.typing.NDArray[numpy.uint8], bayer_matrix: numpy.typing.NDArray[numpy.float32], invert: bool, cell_size: int = 1) -> numpy.typing.NDArray[numpy.uint8]:
@@ -21,6 +24,24 @@ def apply_bayer_dither(grayscale: numpy.typing.NDArray[numpy.uint8], bayer_matri
     :complexity: O(w*h)
     """
 
+def apply_error_diffusion_dither(grayscale: numpy.typing.NDArray[numpy.uint8], kernel: str, invert: bool = False, serpentine: bool = False) -> numpy.typing.NDArray[numpy.uint8]:
+    r"""
+    Error-diffusion dithering with a named kernel.
+    
+    Dithers in linear light. Available kernels: atkinson, burkes,
+    floyd_steinberg, jarvis_judice_ninke, sierra, sierra_2row,
+    sierra_lite, stucki.
+    
+    :param grayscale: 2D grayscale image as uint8 array.
+    :param kernel: Name of the error-diffusion kernel to use.
+    :param invert: If True, invert the output (swap black/white).
+    :param serpentine: Scan odd rows right-to-left, mirroring the
+        kernel. Avoids directional artifacts.
+    :returns: 2D binary uint8 array (values 0 or 1, 1 marks dark).
+    :raises ValueError: If the kernel name is not recognized.
+    :complexity: O(w*h)
+    """
+
 def apply_floyd_steinberg_dither(grayscale: numpy.typing.NDArray[numpy.uint8], invert: bool) -> numpy.typing.NDArray[numpy.uint8]:
     r"""
     Apply Floyd-Steinberg error-diffusion dithering.
@@ -31,6 +52,26 @@ def apply_floyd_steinberg_dither(grayscale: numpy.typing.NDArray[numpy.uint8], i
     :complexity: O(w*h)
     """
 
+def apply_halftone_dither(grayscale: numpy.typing.NDArray[numpy.uint8], cell_size_mm: float, angle_degrees: float, pixels_per_mm: tuple[float, float] = (1, 1), invert: bool = False) -> numpy.typing.NDArray[numpy.uint8]:
+    r"""
+    Amplitude-modulated halftone screen with round dots.
+    
+    The screen is laid out in millimetres, so dots stay round on
+    non-square pixels. Dot area tracks darkness: a pixel is set
+    when its brightness is below the share of the cell that the
+    spot function ranks at or under it.
+    
+    :param grayscale: 2D grayscale image as uint8 array.
+    :param cell_size_mm: Distance between dot centres in mm.
+        Non-positive values fall back to one-pixel cells.
+    :param angle_degrees: Rotation of the dot grid in degrees.
+    :param pixels_per_mm: (x, y) image resolution in pixels per mm.
+    :param invert: If True, invert the output (swap black/white).
+    :returns: 2D binary uint8 array (values 0 or 1, 1 marks dark).
+    :raises ValueError: If pixels_per_mm is not positive.
+    :complexity: O(w*h)
+    """
+
 def apply_minimum_run_length(binary: numpy.typing.NDArray[numpy.uint8], min_run_length: int) -> numpy.typing.NDArray[numpy.uint8]:
     r"""
     Remove binary runs shorter than the given minimum.
@@ -38,6 +79,24 @@ def apply_minimum_run_length(binary: numpy.typing.NDArray[numpy.uint8], min_run_
     :param binary: 2D binary uint8 array (values 0 or 1).
     :param min_run_length: Minimum run length to keep.
     :returns: 2D binary uint8 array with short runs removed.
+    :complexity: O(w*h)
+    """
+
+def apply_newsprint_dither(grayscale: numpy.typing.NDArray[numpy.uint8], cell_size: int = 1, pixels_per_mm: tuple[float, float] = (1, 1), invert: bool = False) -> numpy.typing.NDArray[numpy.uint8]:
+    r"""
+    Clustered-dot ordered dithering (newsprint screen).
+    
+    Tiles an 8x8 threshold matrix whose dots sit on a 45 degree
+    lattice. Cells are kept square in millimetres using
+    pixels_per_mm, so the screen does not stretch on non-square
+    pixels.
+    
+    :param grayscale: 2D grayscale image as uint8 array.
+    :param cell_size: Screen cell size in pixels.
+    :param pixels_per_mm: (x, y) image resolution in pixels per mm.
+    :param invert: If True, invert the output (swap black/white).
+    :returns: 2D binary uint8 array (values 0 or 1, 1 marks dark).
+    :raises ValueError: If pixels_per_mm is not positive.
     :complexity: O(w*h)
     """
 
