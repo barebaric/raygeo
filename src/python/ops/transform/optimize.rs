@@ -21,13 +21,15 @@ pub(crate) fn register(transform_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 }
 
 #[pyfunction(name = "optimize_travel")]
-#[pyo3(signature = (ops, allow_flip=true, preserve_first=false, preserve_order=Vec::new(), progress_cb=None))]
+#[pyo3(signature = (ops, allow_flip=true, preserve_first=false, preserve_order=Vec::new(), progress_cb=None, best_start_point=false, prefer_corners=false))]
 fn optimize_travel_py(
     ops: &mut crate::python::ops::PyOps,
     allow_flip: bool,
     preserve_first: bool,
     preserve_order: Vec<String>,
     progress_cb: Option<&Bound<'_, PyAny>>,
+    best_start_point: bool,
+    prefer_corners: bool,
 ) -> PyResult<()> {
     let py_callbacks =
         PyCallableCallbacks::new(progress_cb.map(|b| b.clone().unbind()));
@@ -37,6 +39,8 @@ fn optimize_travel_py(
         preserve_first,
         preserve_order,
         &py_callbacks,
+        best_start_point,
+        prefer_corners,
     );
     Ok(())
 }
@@ -65,6 +69,14 @@ pub struct OptimizeSpec {
     /// travel optimization.
     #[pyo3(get)]
     pub merge_scanlines: Option<MergeScanlinesSpec>,
+    /// When set, closed paths are rotated so they are entered at the
+    /// vertex nearest the current head position.
+    #[pyo3(get)]
+    pub best_start_point: bool,
+    /// With *best_start_point*, restrict the candidate start vertices
+    /// of a closed path to its corners.
+    #[pyo3(get)]
+    pub prefer_corners: bool,
 }
 
 impl OptimizeSpec {
@@ -75,6 +87,8 @@ impl OptimizeSpec {
             preserve_first: self.preserve_first,
             preserve_order: self.preserve_order,
             merge_scanlines: self.merge_scanlines.map(|m| m.into_core()),
+            best_start_point: self.best_start_point,
+            prefer_corners: self.prefer_corners,
         }
     }
 }
@@ -82,19 +96,23 @@ impl OptimizeSpec {
 #[gen_stub_pymethods]
 #[pymethods]
 impl OptimizeSpec {
-    #[pyo3(signature = (allow_flip, preserve_first, preserve_order, merge_scanlines=None))]
+    #[pyo3(signature = (allow_flip, preserve_first, preserve_order, merge_scanlines=None, best_start_point=false, prefer_corners=false))]
     #[new]
     fn new(
         allow_flip: bool,
         preserve_first: bool,
         preserve_order: Vec<String>,
         merge_scanlines: Option<MergeScanlinesSpec>,
+        best_start_point: bool,
+        prefer_corners: bool,
     ) -> Self {
         Self {
             allow_flip,
             preserve_first,
             preserve_order,
             merge_scanlines,
+            best_start_point,
+            prefer_corners,
         }
     }
 }
