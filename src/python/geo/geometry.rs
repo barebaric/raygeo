@@ -1215,6 +1215,90 @@ impl Geometry {
         slf
     }
 
+    /// Close every open contour whose start and end point lie within
+    /// the tolerance of each other. Existing points are never moved:
+    /// the gap is bridged with a straight segment between two existing
+    /// end points. Contours that draw nothing are dropped.
+    ///
+    /// :param tolerance: The largest gap that is closed.
+    /// :returns: Tuple of the new geometry and the number of closed
+    ///     contours.
+    /// :complexity: O(n) time, O(n) space
+    #[pyo3(signature = (tolerance))]
+    fn close_open_contours(&self, tolerance: f64) -> (Geometry, usize) {
+        let (geo, count) = crate::geo::algo::cleanup::close_open_contours(
+            &self.inner,
+            tolerance,
+        );
+        (Geometry { inner: geo }, count)
+    }
+
+    /// Join open contours whose end points meet within the tolerance
+    /// into longer contours, reversing contours where needed. A joined
+    /// contour whose own ends then meet within the tolerance is
+    /// closed. Closed contours are left untouched.
+    ///
+    /// :param tolerance: The largest gap between two end points that
+    ///     is joined.
+    /// :returns: Tuple of the new geometry and the number of joins made.
+    /// :complexity: O(n) average time, O(n) space
+    #[pyo3(signature = (tolerance))]
+    fn join_open_contours(&self, tolerance: f64) -> (Geometry, usize) {
+        let (geo, count) = crate::geo::algo::cleanup::join_open_contours(
+            &self.inner,
+            tolerance,
+        );
+        (Geometry { inner: geo }, count)
+    }
+
+    /// Remove contours that duplicate an earlier contour within the
+    /// tolerance, regardless of direction or start point. The first
+    /// occurrence is kept and the order of the remaining contours is
+    /// preserved.
+    ///
+    /// :param tolerance: The largest distance between two matching paths.
+    /// :returns: Tuple of the new geometry and the number of removed
+    ///     contours.
+    /// :complexity: O(n) average time, O(n) space
+    #[pyo3(signature = (tolerance))]
+    fn remove_duplicate_contours(&self, tolerance: f64) -> (Geometry, usize) {
+        let (geo, count) = crate::geo::algo::cleanup::remove_duplicate_contours(
+            &self.inner,
+            tolerance,
+        );
+        (Geometry { inner: geo }, count)
+    }
+
+    /// True if both geometries consist of the same contours within the
+    /// tolerance, in any order, direction or start point. Empty
+    /// geometries never match.
+    ///
+    /// :param other: The geometry to compare against.
+    /// :param tolerance: The largest distance between two matching paths.
+    /// :complexity: O(n * m) average time, O(n) space
+    #[pyo3(signature = (other, tolerance))]
+    fn matches(&self, other: &Geometry, tolerance: f64) -> bool {
+        crate::geo::algo::cleanup::geometries_match(
+            &self.inner,
+            &other.inner,
+            tolerance,
+        )
+    }
+
+    /// Split the geometry into one geometry per contour. Unlike
+    /// :meth:`split_into_contours`, contours that draw nothing are
+    /// dropped; holes become parts of their own and open contours are
+    /// kept.
+    ///
+    /// :returns: List of Geometry objects, one per drawn contour.
+    /// :complexity: O(n) time, O(n) space
+    fn split_drawn_contours(&self) -> Vec<Geometry> {
+        crate::geo::algo::cleanup::split_drawn_contours(&self.inner)
+            .into_iter()
+            .map(|g| Geometry { inner: g })
+            .collect()
+    }
+
     /// Mirror the geometry along the X axis.
     ///
     /// :returns: The geometry (for method chaining).
