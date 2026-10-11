@@ -20,6 +20,16 @@ const TWO_OPT_SEGMENT_THRESHOLD: usize = 1000;
 const TWO_OPT_COMMAND_LIMIT: usize = 10000;
 const TWO_OPT_MAX_ITER: usize = 10;
 
+/// Minimum direction change (degrees) for a vertex to count as a
+/// corner for the cut planner's "prefer corners" mode. A square's
+/// corners turn by 90°, a polyline circle approximation turns by far
+/// less per vertex, so this separates real corners from smooth curves.
+const CORNER_ANGLE_DEG: f64 = 25.0;
+
+/// Tolerance (mm) used to recognise a closed subpath: its last moving
+/// command ends where its MoveTo started.
+const CLOSED_PATH_EPS: f64 = 1e-6;
+
 /// Parameters for the [`optimize_travel`] transformer.
 #[derive(Clone, Debug, PartialEq)]
 pub struct OptimizeSpec {
@@ -35,6 +45,19 @@ pub struct OptimizeSpec {
     /// bridged at zero power when the machine's motion profile makes
     /// the merged sweep faster. `None` disables merging.
     pub merge_scanlines: Option<super::merge_scanlines::MergeScanlinesSpec>,
+    /// When set, a closed path picked as the next segment may be
+    /// entered at any of its vertices: the segment is rotated so its
+    /// start (and end) sits at the vertex nearest the current head
+    /// position. Open paths keep their current behaviour and closed
+    /// paths with lead-ins, overcut or tabs (no longer closed) are
+    /// never rotated.
+    pub best_start_point: bool,
+    /// Only meaningful together with `best_start_point`: restrict the
+    /// candidate start vertices of a closed path to its corners
+    /// (vertices where the path direction changes by more than
+    /// [`CORNER_ANGLE_DEG`]). Paths without corners, like circles,
+    /// fall back to any vertex. Defaults to false.
+    pub prefer_corners: bool,
 }
 
 impl Transformer for OptimizeSpec {
@@ -56,6 +79,8 @@ impl Transformer for OptimizeSpec {
             self.preserve_first,
             self.preserve_order.clone(),
             ctx.callbacks,
+            self.best_start_point,
+            self.prefer_corners,
         );
     }
 
@@ -70,6 +95,8 @@ impl Transformer for OptimizeSpec {
         self.allow_flip.hash(&mut h);
         self.preserve_first.hash(&mut h);
         self.preserve_order.hash(&mut h);
+        self.best_start_point.hash(&mut h);
+        self.prefer_corners.hash(&mut h);
         self.merge_scanlines
             .as_ref()
             .map(|m| m.cache_key())
@@ -112,7 +139,12 @@ impl rstar::Point for Point2D {
 struct SegmentPoint {
     point: Point2D,
     segment_idx: usize,
+    /// True when this point is the segment's exit (used to flip open
+    /// segments on entry).
     is_exit: bool,
+    /// When set, the segment is a closed path and this is the command
+    /// index of the vertex it should be entered at (cut planner).
+    vertex: Option<usize>,
 }
 
 impl RTreeObject for SegmentPoint {
@@ -212,11 +244,13 @@ fn kdtree_order_workpieces(metas: &mut [WorkpieceMeta]) -> Vec<WorkpieceMeta> {
             point: entry,
             segment_idx: i,
             is_exit: false,
+            vertex: None,
         });
         points.push(SegmentPoint {
             point: exit,
             segment_idx: i,
             is_exit: true,
+            vertex: None,
         });
     }
 
@@ -231,11 +265,13 @@ fn kdtree_order_workpieces(metas: &mut [WorkpieceMeta]) -> Vec<WorkpieceMeta> {
         point: entry_points[0],
         segment_idx: 0,
         is_exit: false,
+        vertex: None,
     });
     tree.remove(&SegmentPoint {
         point: exit_points[0],
         segment_idx: 0,
         is_exit: true,
+        vertex: None,
     });
 
     while ordered.len() < n {
@@ -264,11 +300,13 @@ fn kdtree_order_workpieces(metas: &mut [WorkpieceMeta]) -> Vec<WorkpieceMeta> {
             point: entry_points[seg_idx],
             segment_idx: seg_idx,
             is_exit: false,
+            vertex: None,
         });
         tree.remove(&SegmentPoint {
             point: exit_points[seg_idx],
             segment_idx: seg_idx,
             is_exit: true,
+            vertex: None,
         });
     }
 
@@ -405,32 +443,159 @@ fn group_mixed_continuity(ops: &Ops) -> Vec<Ops> {
     segments
 }
 
-fn kdtree_order_segments(segments: &mut [Ops], allow_flip: bool) -> Vec<Ops> {
+fn is_closed_segment(seg: &Ops) -> bool {
+    if seg.len() < 2 {
+        return false;
+    }
+    let start = seg.endpoint(0);
+    let mut last = start;
+    for i in (0..seg.len()).rev() {
+        if seg.category(i) == CommandCategory::Moving {
+            last = seg.endpoint(i);
+            break;
+        }
+    }
+    dist_xy(start, last) < CLOSED_PATH_EPS
+}
+
+/// Direction change in degrees at vertex *b* between *a* and *c*.
+fn corner_angle_deg(a: Point3D, b: Point3D, c: Point3D) -> f64 {
+    let v1x = b.x - a.x;
+    let v1y = b.y - a.y;
+    let v2x = c.x - b.x;
+    let v2y = c.y - b.y;
+    let l1 = v1x.hypot(v1y);
+    let l2 = v2x.hypot(v2y);
+    if l1 < 1e-12 || l2 < 1e-12 {
+        return 0.0;
+    }
+    let dot = (v1x * v2x + v1y * v2y) / (l1 * l2);
+    dot.clamp(-1.0, 1.0).acos().to_degrees()
+}
+
+/// Command indices of the vertices of a closed subpath, in cyclic
+/// order. A subpath is `[MoveTo, LineTo, …]` (optionally closing back
+/// to its start), so every moving command ends at a vertex. With
+/// `prefer_corners` only vertices whose direction changes by more than
+/// [`CORNER_ANGLE_DEG`] are kept; paths without corners (circles) keep
+/// every vertex. Returns `None` for open paths or degenerate loops.
+fn closed_segment_vertex_indices(
+    seg: &Ops,
+    prefer_corners: bool,
+) -> Option<Vec<usize>> {
+    if !is_closed_segment(seg) {
+        return None;
+    }
+    let moving: Vec<usize> = (0..seg.len())
+        .filter(|&i| seg.category(i) == CommandCategory::Moving)
+        .collect();
+    if moving.len() < 3 {
+        return None; // a loop needs at least three vertices
+    }
+    if !prefer_corners {
+        return Some(moving);
+    }
+    let pts: Vec<Point3D> = moving.iter().map(|&i| seg.endpoint(i)).collect();
+    let n = pts.len();
+    let corners: Vec<usize> = (0..n)
+        .filter(|&v| {
+            corner_angle_deg(pts[(v + n - 1) % n], pts[v], pts[(v + 1) % n])
+                > CORNER_ANGLE_DEG
+        })
+        .map(|v| moving[v])
+        .collect();
+    if corners.is_empty() {
+        return Some(moving);
+    }
+    Some(corners)
+}
+
+/// Rotate a closed subpath so it starts (MoveTo) at the vertex ended by
+/// the command *vertex_cmd*, keeping the command order cyclically
+/// intact. The path stays closed: the final command still ends at the
+/// new start. State commands ahead of the path are kept in front of it.
+fn rotate_closed_segment(seg: &Ops, vertex_cmd: usize) -> Ops {
+    let mut out = Ops::new();
+    let moving: Vec<usize> = (0..seg.len())
+        .filter(|&i| seg.category(i) == CommandCategory::Moving)
+        .collect();
+    if moving.len() < 2 || vertex_cmd == moving[0] {
+        return seg.copy();
+    }
+    for i in 0..moving[0] {
+        out.transfer_command_from(seg, i);
+    }
+    let start = seg.endpoint(vertex_cmd);
+    out.move_to(start.x, start.y, start.z, None);
+    // The line commands (everything after the initial MoveTo) are
+    // replayed cyclically starting just after the chosen vertex, so the
+    // loop wraps around and ends back at the new start.
+    let lines = &moving[1..];
+    let n_lines = lines.len();
+    let pos = lines.iter().position(|&i| i == vertex_cmd).unwrap();
+    for offset in 1..=n_lines {
+        out.transfer_command_from(seg, lines[(pos + offset) % n_lines]);
+    }
+    for i in (moving[moving.len() - 1] + 1)..seg.len() {
+        out.transfer_command_from(seg, i);
+    }
+    out
+}
+
+fn kdtree_order_segments(
+    segments: &mut [Ops],
+    allow_flip: bool,
+    best_start_point: bool,
+    prefer_corners: bool,
+) -> Vec<Ops> {
     let n = segments.len();
     if n < 2 {
         return segments.to_vec();
     }
 
-    let mut entry_points: Vec<Point2D> = Vec::with_capacity(n);
-    let mut exit_points: Vec<Point2D> = Vec::with_capacity(n);
+    let mut points_by_segment: Vec<Vec<SegmentPoint>> = Vec::with_capacity(n);
     let mut points: Vec<SegmentPoint> = Vec::with_capacity(n * 2);
     for (i, seg) in segments.iter().enumerate() {
         let start = seg.endpoint(0);
         let end = seg.endpoint(seg.len() - 1);
         let start_pt = Point2D([start.x, start.y]);
         let end_pt = Point2D([end.x, end.y]);
-        entry_points.push(start_pt);
-        exit_points.push(end_pt);
-        points.push(SegmentPoint {
-            point: start_pt,
-            segment_idx: i,
-            is_exit: false,
-        });
-        points.push(SegmentPoint {
-            point: end_pt,
-            segment_idx: i,
-            is_exit: true,
-        });
+
+        let vertices = if best_start_point {
+            closed_segment_vertex_indices(seg, prefer_corners)
+        } else {
+            None
+        };
+        let seg_points = if let Some(cmds) = vertices {
+            cmds.iter()
+                .map(|&cmd| {
+                    let p = seg.endpoint(cmd);
+                    SegmentPoint {
+                        point: Point2D([p.x, p.y]),
+                        segment_idx: i,
+                        is_exit: false,
+                        vertex: Some(cmd),
+                    }
+                })
+                .collect()
+        } else {
+            vec![
+                SegmentPoint {
+                    point: start_pt,
+                    segment_idx: i,
+                    is_exit: false,
+                    vertex: None,
+                },
+                SegmentPoint {
+                    point: end_pt,
+                    segment_idx: i,
+                    is_exit: true,
+                    vertex: None,
+                },
+            ]
+        };
+        points_by_segment.push(seg_points.clone());
+        points.extend(seg_points);
     }
 
     let mut tree = RTree::bulk_load(points);
@@ -441,16 +606,7 @@ fn kdtree_order_segments(segments: &mut [Ops], allow_flip: bool) -> Vec<Ops> {
     let last = first_seg.endpoint(first_seg.len() - 1);
     let mut current_pos = Point2D([last.x, last.y]);
 
-    tree.remove(&SegmentPoint {
-        point: entry_points[0],
-        segment_idx: 0,
-        is_exit: false,
-    });
-    tree.remove(&SegmentPoint {
-        point: exit_points[0],
-        segment_idx: 0,
-        is_exit: true,
-    });
+    remove_segment_points(&mut tree, &points_by_segment[0]);
 
     while ordered.len() < n {
         let sp = match tree.nearest_neighbor(current_pos) {
@@ -459,29 +615,29 @@ fn kdtree_order_segments(segments: &mut [Ops], allow_flip: bool) -> Vec<Ops> {
         };
 
         let seg_idx = sp.segment_idx;
-        let next_seg = if sp.is_exit && allow_flip {
-            segments[seg_idx].flip_ops()
-        } else {
-            segments[seg_idx].clone()
+        let next_seg = match sp.vertex {
+            Some(cmd) => rotate_closed_segment(&segments[seg_idx], cmd),
+            None if sp.is_exit && allow_flip => segments[seg_idx].flip_ops(),
+            None => segments[seg_idx].clone(),
         };
 
         let last = next_seg.endpoint(next_seg.len() - 1);
         current_pos = Point2D([last.x, last.y]);
         ordered.push(next_seg);
 
-        tree.remove(&SegmentPoint {
-            point: entry_points[seg_idx],
-            segment_idx: seg_idx,
-            is_exit: false,
-        });
-        tree.remove(&SegmentPoint {
-            point: exit_points[seg_idx],
-            segment_idx: seg_idx,
-            is_exit: true,
-        });
+        remove_segment_points(&mut tree, &points_by_segment[seg_idx]);
     }
 
     ordered
+}
+
+fn remove_segment_points(
+    tree: &mut RTree<SegmentPoint>,
+    points: &[SegmentPoint],
+) {
+    for p in points {
+        tree.remove(p);
+    }
 }
 
 fn two_opt(ordered: &mut [Ops], allow_flip: bool, callbacks: &dyn Callbacks) {
@@ -748,11 +904,13 @@ fn kdtree_order_runs(
             point: start_pt,
             segment_idx: i,
             is_exit: false,
+            vertex: None,
         });
         points.push(SegmentPoint {
             point: end_pt,
             segment_idx: i,
             is_exit: true,
+            vertex: None,
         });
     }
 
@@ -767,11 +925,13 @@ fn kdtree_order_runs(
         point: entry_points[0],
         segment_idx: 0,
         is_exit: false,
+        vertex: None,
     });
     tree.remove(&SegmentPoint {
         point: exit_points[0],
         segment_idx: 0,
         is_exit: true,
+        vertex: None,
     });
 
     while ordered.len() < n {
@@ -794,11 +954,13 @@ fn kdtree_order_runs(
             point: entry_points[seg_idx],
             segment_idx: seg_idx,
             is_exit: false,
+            vertex: None,
         });
         tree.remove(&SegmentPoint {
             point: exit_points[seg_idx],
             segment_idx: seg_idx,
             is_exit: true,
+            vertex: None,
         });
     }
 
@@ -964,6 +1126,8 @@ pub fn optimize_travel(
     preserve_first: bool,
     preserve_order: Vec<String>,
     callbacks: &dyn Callbacks,
+    best_start_point: bool,
+    prefer_corners: bool,
 ) {
     ops.preload_state();
 
@@ -980,7 +1144,13 @@ pub fn optimize_travel(
         return;
     }
 
-    optimize_segments(ops, allow_flip, callbacks);
+    optimize_segments(
+        ops,
+        allow_flip,
+        best_start_point,
+        prefer_corners,
+        callbacks,
+    );
 }
 
 fn report_progress(callbacks: &dyn Callbacks, progress: f64, message: &str) {
@@ -1076,6 +1246,8 @@ fn reassemble_workpieces(ops: &mut Ops, ordered_metas: &[WorkpieceMeta]) {
 fn optimize_segments(
     ops: &mut Ops,
     allow_flip: bool,
+    best_start_point: bool,
+    prefer_corners: bool,
     callbacks: &dyn Callbacks,
 ) {
     report_progress(callbacks, 0.0, "Preprocessing for optimization...");
@@ -1163,8 +1335,12 @@ fn optimize_segments(
                 );
 
                 let mut sub_segments = sub_segments.clone();
-                let ordered =
-                    kdtree_order_segments(&mut sub_segments, allow_flip);
+                let ordered = kdtree_order_segments(
+                    &mut sub_segments,
+                    allow_flip,
+                    best_start_point,
+                    prefer_corners,
+                );
 
                 let final_segments = if matches!(job, OptJob::TwoOpt { .. }) {
                     let mut segs = ordered;

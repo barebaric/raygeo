@@ -3323,14 +3323,20 @@ impl PyOps {
     /// :param preserve_first: Keep the first workpiece in place.
     /// :param preserve_order: Workpiece UIDs whose order to preserve.
     /// :param progress_cb: Optional callable(progress, message).
+    /// :param best_start_point: Rotate closed paths so they are entered
+    ///     at the vertex nearest the current head position.
+    /// :param prefer_corners: With *best_start_point*, restrict the
+    ///     candidate start vertices of a closed path to its corners.
     /// :complexity: O(n²) average time, O(n) space
-    #[pyo3(signature = (allow_flip=true, preserve_first=false, preserve_order=Vec::new(), progress_cb=None))]
+    #[pyo3(signature = (allow_flip=true, preserve_first=false, preserve_order=Vec::new(), progress_cb=None, best_start_point=false, prefer_corners=false))]
     fn optimize_travel(
         &mut self,
         allow_flip: bool,
         preserve_first: bool,
         preserve_order: Vec<String>,
         progress_cb: Option<&Bound<'_, PyAny>>,
+        best_start_point: bool,
+        prefer_corners: bool,
     ) -> PyResult<()> {
         let py_callbacks =
             PyCallableCallbacks::new(progress_cb.map(|b| b.clone().unbind()));
@@ -3340,6 +3346,8 @@ impl PyOps {
             preserve_first,
             preserve_order,
             &py_callbacks,
+            best_start_point,
+            prefer_corners,
         );
         Ok(())
     }

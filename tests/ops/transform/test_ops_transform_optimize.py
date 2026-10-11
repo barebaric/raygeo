@@ -1266,3 +1266,143 @@ class TestNestedMergeScanlines:
         spec = OptimizeSpec(True, False, [])
         Ops.apply_transformers(ops, [spec], progress_cb=None)
         assert len(ops.indices_of(CommandType.SCAN_LINE)) == 2
+
+
+# ---------------------------------------------------------------------------
+# Cut planner: rotate closed paths to the vertex nearest the head
+# ---------------------------------------------------------------------------
+
+
+def _closed_loop(start, points):
+    """A closed MoveTo + LineTo loop returning to *start*."""
+    ops = Ops()
+    ops.move_to(*start)
+    for x, y, _z in points:
+        ops.line_to(x, y)
+    ops.line_to(*start)
+    return ops
+
+
+def _move_to_points(ops):
+    return [
+        ops.endpoint(i)
+        for i in range(ops.len())
+        if ops.command_type(i) == CommandType.MOVE_TO
+    ]
+
+
+def _closed_subpaths(ops):
+    """Split the ops into the emitted closed loops (by MoveTo)."""
+    loops = []
+    current = None
+    for i in range(ops.len()):
+        if ops.command_type(i) == CommandType.MOVE_TO:
+            if current is not None:
+                loops.append(current)
+            current = [ops.endpoint(i)]
+        else:
+            if current is not None:
+                current.append(ops.endpoint(i))
+    if current is not None:
+        loops.append(current)
+    return loops
+
+
+def _rect_a():
+    """Seed loop that exits at (30, 5)."""
+    return _closed_loop((30, 5, 0), [(32, 5, 0), (32, 7, 0), (30, 7, 0)])
+
+
+def _rect_b():
+    """Loop with a mid-edge vertex (30, 5) closest to the seed exit."""
+    return _closed_loop(
+        (45, 5, 0),
+        [(30, 5, 0), (25, 5, 0), (25, 20, 0), (45, 20, 0)],
+    )
+
+
+class TestCutPlanner:
+    def test_default_keeps_drawn_start(self):
+        ops = _rect_a()
+        ops.extend(_rect_b())
+        ops.optimize_travel(allow_flip=False)
+        loops = _closed_subpaths(ops)
+        assert len(loops) == 2
+        assert loops[1][0][:2] == (45.0, 5.0)
+
+    def test_best_start_rotates_to_nearest_vertex(self):
+        ops = _rect_a()
+        ops.extend(_rect_b())
+        ops.optimize_travel(allow_flip=False, best_start_point=True)
+        loops = _closed_subpaths(ops)
+        assert len(loops) == 2
+        # nearest vertex to the seed exit (30, 5) is the mid-edge vertex
+        assert loops[1][0][:2] == (30.0, 5.0)
+        # the loop is still closed
+        assert loops[1][0][:2] == loops[1][-1][:2]
+
+    def test_prefer_corners_skips_mid_edge_vertices(self):
+        ops = _rect_a()
+        ops.extend(_rect_b())
+        ops.optimize_travel(
+            allow_flip=False,
+            best_start_point=True,
+            prefer_corners=True,
+        )
+        loops = _closed_subpaths(ops)
+        assert len(loops) == 2
+        # the mid-edge vertex (30, 5) is nearest but not a corner; the
+        # nearest corner is (25, 5)
+        assert loops[1][0][:2] == (25.0, 5.0)
+
+    def test_best_start_reduces_travel(self):
+        ops = _rect_a()
+        ops.extend(_rect_b())
+        plain = ops.copy()
+        plain.optimize_travel(allow_flip=False)
+        optimized = _rect_a()
+        optimized.extend(_rect_b())
+        optimized.optimize_travel(
+            allow_flip=False, best_start_point=True
+        )
+        assert _travel_distance(optimized) < _travel_distance(plain)
+
+    def test_open_paths_keep_their_start(self):
+        ops = _rect_a()
+        ops.move_to(60, 10, 0)
+        ops.line_to(70, 10, 0)
+        ops.optimize_travel(allow_flip=False, best_start_point=True)
+        starts = [p[:2] for p in _move_to_points(ops)]
+        assert (30.0, 5.0) in starts
+        assert (60.0, 10.0) in starts
+
+    def test_circle_uses_any_vertex_when_preferring_corners(self):
+        import math
+
+        ops = _rect_a()
+        cx, cy, r, n = 60.0, 12.0, 6.0, 24
+        circle = Ops()
+        circle.move_to(cx + r, cy, 0)
+        for k in range(1, n + 1):
+            angle = 2 * math.pi * k / n
+            circle.line_to(
+                cx + r * math.cos(angle),
+                cy + r * math.sin(angle),
+                0,
+            )
+        ops.extend(circle)
+        ops.optimize_travel(
+            allow_flip=False,
+            best_start_point=True,
+            prefer_corners=True,
+        )
+        loops = _closed_subpaths(ops)
+        assert len(loops) == 2
+        # a circle has no real corners: it still rotates to a vertex
+        # near the seed exit (30, 5); any of the left arc vertices is
+        # equally valid, so just check it lies on the circle and is not
+        # the drawn start (66, 12) on the right
+        x, y = loops[1][0][:2]
+        assert math.isclose(math.hypot(x - cx, y - cy), r, abs_tol=1e-9)
+        assert x < cx - 2.0
+        assert (x, y) != (cx + r, cy)
