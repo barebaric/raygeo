@@ -266,6 +266,22 @@ Close gaps between sub-paths.
 | _Returns_    | `Geometry`               | The geometry (for method chaining). |
 | _Complexity_ |                          | O(n) time, O(n) space               |
 
+### `close_open_contours()`
+
+```python
+close_open_contours(tolerance: float) -> tuple[Geometry, int]
+```
+
+Close every open contour whose start and end point lie within the tolerance of each other. Existing
+points are never moved: the gap is bridged with a straight segment between two existing end points.
+Contours that draw nothing are dropped.
+
+| Parameter    | Type                   | Description                                                  |
+| ------------ | ---------------------- | ------------------------------------------------------------ |
+| `tolerance`  | `float`                | The largest gap that is closed.                              |
+| _Returns_    | `tuple[Geometry, int]` | Tuple of the new geometry and the number of closed contours. |
+| _Complexity_ |                        | O(n) time, O(n) space                                        |
+
 ### `close_path()`
 
 ```python
@@ -707,6 +723,22 @@ Iterate over all commands as typed command objects.
 | _Returns_    | `list[Move &#124; Line &#124; Arc &#124; Bezier]` |                       |
 | _Complexity_ |                                                   | O(n) time, O(n) space |
 
+### `join_open_contours()`
+
+```python
+join_open_contours(tolerance: float) -> tuple[Geometry, int]
+```
+
+Join open contours whose end points meet within the tolerance into longer contours, reversing
+contours where needed. A joined contour whose own ends then meet within the tolerance is closed.
+Closed contours are left untouched.
+
+| Parameter    | Type                   | Description                                             |
+| ------------ | ---------------------- | ------------------------------------------------------- |
+| `tolerance`  | `float`                | The largest gap between two end points that is joined.  |
+| _Returns_    | `tuple[Geometry, int]` | Tuple of the new geometry and the number of joins made. |
+| _Complexity_ |                        | O(n) average time, O(n) space                           |
+
 ### `line_to()`
 
 ```python
@@ -765,6 +797,22 @@ Map the geometry into a rectangular frame.
 | _Returns_           | `Geometry`               | The geometry (for method chaining). |
 | _Complexity_        |                          | O(n) time, O(n) space               |
 
+### `matches()`
+
+```python
+matches(other: Geometry, tolerance: float) -> bool
+```
+
+True if both geometries consist of the same contours within the tolerance, in any order, direction
+or start point. Empty geometries never match.
+
+| Parameter    | Type       | Description                                      |
+| ------------ | ---------- | ------------------------------------------------ |
+| `other`      | `Geometry` | The geometry to compare against.                 |
+| `tolerance`  | `float`    | The largest distance between two matching paths. |
+| _Returns_    | `bool`     |                                                  |
+| _Complexity_ |            | O(n * m) average time, O(n) space                |
+
 ### `move_to()`
 
 ```python
@@ -806,6 +854,21 @@ Return the bounding rectangle (x_min, y_min, x_max, y_max).
 | ------------ | ----------------------------------- | ----------------------------- |
 | _Returns_    | `tuple[float, float, float, float]` | (x_min, y_min, x_max, y_max). |
 | _Complexity_ |                                     | O(n) time, O(1) space         |
+
+### `remove_duplicate_contours()`
+
+```python
+remove_duplicate_contours(tolerance: float) -> tuple[Geometry, int]
+```
+
+Remove contours that duplicate an earlier contour within the tolerance, regardless of direction or
+start point. The first occurrence is kept and the order of the remaining contours is preserved.
+
+| Parameter    | Type                   | Description                                                   |
+| ------------ | ---------------------- | ------------------------------------------------------------- |
+| `tolerance`  | `float`                | The largest distance between two matching paths.              |
+| _Returns_    | `tuple[Geometry, int]` | Tuple of the new geometry and the number of removed contours. |
+| _Complexity_ |                        | O(n) average time, O(n) space                                 |
 
 ### `remove_inner_edges()`
 
@@ -892,6 +955,20 @@ Simplify the geometry using Ramer-Douglas-Peucker.
 | `tolerance`  | `float`    | Maximum deviation from original.    |
 | _Returns_    | `Geometry` | The geometry (for method chaining). |
 | _Complexity_ |            | O(n log n) average time, O(n) space |
+
+### `split_drawn_contours()`
+
+```python
+split_drawn_contours() -> list[Geometry]
+```
+
+Split the geometry into one geometry per contour. Unlike **split_into_contours**, contours that draw
+nothing are dropped; holes become parts of their own and open contours are kept.
+
+| Parameter    | Type             | Description                                      |
+| ------------ | ---------------- | ------------------------------------------------ |
+| _Returns_    | `list[Geometry]` | List of Geometry objects, one per drawn contour. |
+| _Complexity_ |                  | O(n) time, O(n) space                            |
 
 ### `split_inner_and_outer_contours()`
 
