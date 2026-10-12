@@ -5,6 +5,7 @@ pub mod grayscale;
 mod layout;
 pub mod pbr;
 pub mod preprocess;
+pub mod ramp;
 pub mod render;
 pub mod scan;
 pub mod srgb;

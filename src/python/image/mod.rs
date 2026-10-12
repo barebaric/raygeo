@@ -6,6 +6,7 @@ mod dither;
 mod grayscale;
 mod pbr;
 mod preprocess;
+mod ramp;
 mod rasterize_scanlines;
 mod render;
 pub(crate) mod scan;
@@ -21,8 +22,8 @@ Provides sRGB/linear color space conversions, RGBA-to-grayscale/binary \
 conversions with alpha unpremultiplication, grayscale normalization \
 with auto-levels, dithering algorithms (error diffusion with \
 serpentine scan, Bayer, newsprint and halftone screens, minimum run \
-length) for converting grayscale images to binary output, and \
-scanline rasterization for converting Ops scanlines into pixel buffers.
+length) for converting grayscale images to binary output, edge ramps \
+for sloped relief edges, and scanline rasterization for converting Ops scanlines into pixel buffers.
 ";
 
 pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -38,6 +39,7 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
             "grayscale",
             "pbr",
             "preprocess",
+            "ramp",
             "rasterize_scanlines",
             "render",
             "scan",
@@ -53,6 +55,7 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     dither::register(&image_mod)?;
     pbr::register(&image_mod)?;
     preprocess::register(&image_mod)?;
+    ramp::register(&image_mod)?;
     render::register(&image_mod)?;
     rasterize_scanlines::register(&image_mod)?;
     scan::register(&image_mod)?;

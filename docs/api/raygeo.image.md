@@ -8,8 +8,8 @@ Image processing functions for CNC engraving applications.
 Provides sRGB/linear color space conversions, RGBA-to-grayscale/binary conversions with alpha
 unpremultiplication, grayscale normalization with auto-levels, dithering algorithms (error diffusion
 with serpentine scan, Bayer, newsprint and halftone screens, minimum run length) for converting
-grayscale images to binary output, and scanline rasterization for converting Ops scanlines into
-pixel buffers.
+grayscale images to binary output, edge ramps for sloped relief edges, and scanline rasterization
+for converting Ops scanlines into pixel buffers.
 
 ## Functions
 
