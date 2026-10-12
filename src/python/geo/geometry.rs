@@ -1233,6 +1233,103 @@ impl Geometry {
         (Geometry { inner: geo }, count)
     }
 
+    /// Move the node at a command index to a new position, dragging its
+    /// Bezier handles along. In a closed contour the start and end node
+    /// are one node. Arcs touching the node become Beziers first.
+    ///
+    /// :param index: Index of the command whose end point is the node.
+    /// :param x: New X coordinate.
+    /// :param y: New Y coordinate.
+    /// :returns: Tuple of the new geometry and the node's index in it.
+    /// :complexity: O(n) time, O(n) space
+    #[pyo3(signature = (index, x, y))]
+    fn move_node(&self, index: usize, x: f64, y: f64) -> (Geometry, usize) {
+        let (geo, index) =
+            crate::geo::algo::node_edit::move_node(&self.inner, index, x, y);
+        (Geometry { inner: geo }, index)
+    }
+
+    /// Delete the node at a command index, joining the segments on both
+    /// sides into one (a Bezier if either was curved). The open end of a
+    /// contour is dropped, and a contour left without segments is
+    /// removed.
+    ///
+    /// :param index: Index of the command whose end point is the node.
+    /// :returns: Tuple of the new geometry and the index of the joined
+    ///     command, or of the command now at the removed position.
+    /// :complexity: O(n) time, O(n) space
+    #[pyo3(signature = (index))]
+    fn delete_node(&self, index: usize) -> (Geometry, usize) {
+        let (geo, index) =
+            crate::geo::algo::node_edit::delete_node(&self.inner, index);
+        (Geometry { inner: geo }, index)
+    }
+
+    /// Split the segment at a command index at parameter t, adding a
+    /// node there. Lines split into lines, Beziers into Beziers; an arc
+    /// becomes Beziers first.
+    ///
+    /// :param index: Index of the segment command.
+    /// :param t: Position along the segment, from 0 to 1.
+    /// :returns: Tuple of the new geometry and the index of the new
+    ///     node.
+    /// :complexity: O(n) time, O(n) space
+    #[pyo3(signature = (index, t))]
+    fn insert_node(&self, index: usize, t: f64) -> (Geometry, usize) {
+        let (geo, index) =
+            crate::geo::algo::node_edit::insert_node(&self.inner, index, t);
+        (Geometry { inner: geo }, index)
+    }
+
+    /// Turn the segment at a command index into a cubic Bezier (handles
+    /// at a third and two thirds of the chord) or into a straight line.
+    ///
+    /// :param index: Index of the segment command.
+    /// :param curve: True for a Bezier, False for a line.
+    /// :returns: Tuple of the new geometry and the segment's index.
+    /// :complexity: O(n) time, O(n) space
+    #[pyo3(signature = (index, curve))]
+    fn set_segment_curve(
+        &self,
+        index: usize,
+        curve: bool,
+    ) -> (Geometry, usize) {
+        let (geo, index) = crate::geo::algo::node_edit::set_segment_curve(
+            &self.inner,
+            index,
+            curve,
+        );
+        (Geometry { inner: geo }, index)
+    }
+
+    /// Move one handle of the Bezier at a command index. Commands that
+    /// are not Beziers are left unchanged.
+    ///
+    /// :param index: Index of the Bezier command.
+    /// :param handle: 1 for the first control point, 2 for the second.
+    /// :param x: New X coordinate.
+    /// :param y: New Y coordinate.
+    /// :returns: The new geometry.
+    /// :complexity: O(n) time, O(n) space
+    #[pyo3(signature = (index, handle, x, y))]
+    fn move_handle(
+        &self,
+        index: usize,
+        handle: u8,
+        x: f64,
+        y: f64,
+    ) -> Geometry {
+        Geometry {
+            inner: crate::geo::algo::node_edit::move_handle(
+                &self.inner,
+                index,
+                handle,
+                x,
+                y,
+            ),
+        }
+    }
+
     /// Join open contours whose end points meet within the tolerance
     /// into longer contours, reversing contours where needed. A joined
     /// contour whose own ends then meet within the tolerance is
