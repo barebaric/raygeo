@@ -64,6 +64,10 @@ impl Assembler for FrameSpec {
         "frame"
     }
 
+    fn is_part_scoped(&self) -> bool {
+        true
+    }
+
     fn boxed_clone(&self) -> Box<dyn Assembler> {
         Box::new(self.clone())
     }

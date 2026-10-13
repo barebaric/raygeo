@@ -317,6 +317,15 @@ pub trait Assembler: Send + Sync {
     /// Short, human-readable name used in progress messages.
     fn name(&self) -> &str;
 
+    /// Whether this assembler operates on the part as a whole rather
+    /// than on individual faces. Part-scoped assemblers (e.g. the
+    /// frame, which traces the part's overall `size_mm`) must run
+    /// exactly once per part; running them once per face would emit
+    /// one identical copy per face.
+    fn is_part_scoped(&self) -> bool {
+        false
+    }
+
     /// Reconstruct the cached output from a stored entry.
     ///
     /// Defaults to returning a clone of the cached output. Override
