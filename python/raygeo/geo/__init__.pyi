@@ -460,6 +460,64 @@ class Geometry:
             contours.
         :complexity: O(n) time, O(n) space
         """
+    def move_node(self, index: builtins.int, x: builtins.float, y: builtins.float) -> tuple[Geometry, builtins.int]:
+        r"""
+        Move the node at a command index to a new position, dragging its
+        Bezier handles along. In a closed contour the start and end node
+        are one node. Arcs touching the node become Beziers first.
+        
+        :param index: Index of the command whose end point is the node.
+        :param x: New X coordinate.
+        :param y: New Y coordinate.
+        :returns: Tuple of the new geometry and the node's index in it.
+        :complexity: O(n) time, O(n) space
+        """
+    def delete_node(self, index: builtins.int) -> tuple[Geometry, builtins.int]:
+        r"""
+        Delete the node at a command index, joining the segments on both
+        sides into one (a Bezier if either was curved). The open end of a
+        contour is dropped, and a contour left without segments is
+        removed.
+        
+        :param index: Index of the command whose end point is the node.
+        :returns: Tuple of the new geometry and the index of the joined
+            command, or of the command now at the removed position.
+        :complexity: O(n) time, O(n) space
+        """
+    def insert_node(self, index: builtins.int, t: builtins.float) -> tuple[Geometry, builtins.int]:
+        r"""
+        Split the segment at a command index at parameter t, adding a
+        node there. Lines split into lines, Beziers into Beziers; an arc
+        becomes Beziers first.
+        
+        :param index: Index of the segment command.
+        :param t: Position along the segment, from 0 to 1.
+        :returns: Tuple of the new geometry and the index of the new
+            node.
+        :complexity: O(n) time, O(n) space
+        """
+    def set_segment_curve(self, index: builtins.int, curve: builtins.bool) -> tuple[Geometry, builtins.int]:
+        r"""
+        Turn the segment at a command index into a cubic Bezier (handles
+        at a third and two thirds of the chord) or into a straight line.
+        
+        :param index: Index of the segment command.
+        :param curve: True for a Bezier, False for a line.
+        :returns: Tuple of the new geometry and the segment's index.
+        :complexity: O(n) time, O(n) space
+        """
+    def move_handle(self, index: builtins.int, handle: builtins.int, x: builtins.float, y: builtins.float) -> Geometry:
+        r"""
+        Move one handle of the Bezier at a command index. Commands that
+        are not Beziers are left unchanged.
+        
+        :param index: Index of the Bezier command.
+        :param handle: 1 for the first control point, 2 for the second.
+        :param x: New X coordinate.
+        :param y: New Y coordinate.
+        :returns: The new geometry.
+        :complexity: O(n) time, O(n) space
+        """
     def join_open_contours(self, tolerance: builtins.float) -> tuple[Geometry, builtins.int]:
         r"""
         Join open contours whose end points meet within the tolerance

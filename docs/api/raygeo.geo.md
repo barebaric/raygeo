@@ -327,6 +327,21 @@ Return a deep copy of this geometry.
 | _Returns_    | `Geometry` | A deep copy of the geometry. |
 | _Complexity_ |            | O(n) time, O(n) space        |
 
+### `delete_node()`
+
+```python
+delete_node(index: int) -> tuple[Geometry, int]
+```
+
+Delete the node at a command index, joining the segments on both sides into one (a Bezier if either
+was curved). The open end of a contour is dropped, and a contour left without segments is removed.
+
+| Parameter    | Type                   | Description                                                                                                   |
+| ------------ | ---------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `index`      | `int`                  | Index of the command whose end point is the node.                                                             |
+| _Returns_    | `tuple[Geometry, int]` | Tuple of the new geometry and the index of the joined command, or of the command now at the removed position. |
+| _Complexity_ |                        | O(n) time, O(n) space                                                                                         |
+
 ### `distance()`
 
 ```python
@@ -656,6 +671,22 @@ Check if the geometry has self-intersections.
 | _Returns_            | `bool`         | `True` if the geometry has self-intersections. |
 | _Complexity_         |                | O(n²) worst-case time, O(1) space              |
 
+### `insert_node()`
+
+```python
+insert_node(index: int, t: float) -> tuple[Geometry, int]
+```
+
+Split the segment at a command index at parameter t, adding a node there. Lines split into lines,
+Beziers into Beziers; an arc becomes Beziers first.
+
+| Parameter    | Type                   | Description                                              |
+| ------------ | ---------------------- | -------------------------------------------------------- |
+| `index`      | `int`                  | Index of the segment command.                            |
+| `t`          | `float`                | Position along the segment, from 0 to 1.                 |
+| _Returns_    | `tuple[Geometry, int]` | Tuple of the new geometry and the index of the new node. |
+| _Complexity_ |                        | O(n) time, O(n) space                                    |
+
 ### `intersects_with()`
 
 ```python
@@ -813,6 +844,40 @@ or start point. Empty geometries never match.
 | _Returns_    | `bool`     |                                                  |
 | _Complexity_ |            | O(n * m) average time, O(n) space                |
 
+### `move_handle()`
+
+```python
+move_handle(index: int, handle: int, x: float, y: float) -> Geometry
+```
+
+Move one handle of the Bezier at a command index. Commands that are not Beziers are left unchanged.
+
+| Parameter    | Type       | Description                                      |
+| ------------ | ---------- | ------------------------------------------------ |
+| `index`      | `int`      | Index of the Bezier command.                     |
+| `handle`     | `int`      | 1 for the first control point, 2 for the second. |
+| `x`          | `float`    | New X coordinate.                                |
+| `y`          | `float`    | New Y coordinate.                                |
+| _Returns_    | `Geometry` | The new geometry.                                |
+| _Complexity_ |            | O(n) time, O(n) space                            |
+
+### `move_node()`
+
+```python
+move_node(index: int, x: float, y: float) -> tuple[Geometry, int]
+```
+
+Move the node at a command index to a new position, dragging its Bezier handles along. In a closed
+contour the start and end node are one node. Arcs touching the node become Beziers first.
+
+| Parameter    | Type                   | Description                                           |
+| ------------ | ---------------------- | ----------------------------------------------------- |
+| `index`      | `int`                  | Index of the command whose end point is the node.     |
+| `x`          | `float`                | New X coordinate.                                     |
+| `y`          | `float`                | New Y coordinate.                                     |
+| _Returns_    | `tuple[Geometry, int]` | Tuple of the new geometry and the node's index in it. |
+| _Complexity_ |                        | O(n) time, O(n) space                                 |
+
 ### `move_to()`
 
 ```python
@@ -941,6 +1006,22 @@ commands.
 | `y2`         | `float`     | Second corner Y.         |
 | _Returns_    | `list[int]` | List of segment indices. |
 | _Complexity_ |             | O(n) time, O(n) space    |
+
+### `set_segment_curve()`
+
+```python
+set_segment_curve(index: int, curve: bool) -> tuple[Geometry, int]
+```
+
+Turn the segment at a command index into a cubic Bezier (handles at a third and two thirds of the
+chord) or into a straight line.
+
+| Parameter    | Type                   | Description                                        |
+| ------------ | ---------------------- | -------------------------------------------------- |
+| `index`      | `int`                  | Index of the segment command.                      |
+| `curve`      | `bool`                 | True for a Bezier, False for a line.               |
+| _Returns_    | `tuple[Geometry, int]` | Tuple of the new geometry and the segment's index. |
+| _Complexity_ |                        | O(n) time, O(n) space                              |
 
 ### `simplify()`
 

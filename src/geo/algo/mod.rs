@@ -19,6 +19,7 @@ pub mod medial_axis;
 pub mod minkowski2d;
 pub mod narrow;
 pub mod nest2d;
+pub mod node_edit;
 pub mod offset;
 pub mod ordering;
 pub mod overcut;
