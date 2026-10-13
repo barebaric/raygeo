@@ -3,7 +3,7 @@
 r"""
 Image processing functions for CNC engraving applications.
 
-Provides sRGB/linear color space conversions, RGBA-to-grayscale/binary conversions with alpha unpremultiplication, grayscale normalization with auto-levels, dithering algorithms (error diffusion with serpentine scan, Bayer, newsprint and halftone screens, minimum run length) for converting grayscale images to binary output, and scanline rasterization for converting Ops scanlines into pixel buffers.
+Provides sRGB/linear color space conversions, RGBA-to-grayscale/binary conversions with alpha unpremultiplication, grayscale normalization with auto-levels, dithering algorithms (error diffusion with serpentine scan, Bayer, newsprint and halftone screens, minimum run length) for converting grayscale images to binary output, edge ramps for sloped relief edges, and scanline rasterization for converting Ops scanlines into pixel buffers.
 """
 
 import raygeo
@@ -13,6 +13,7 @@ from . import dither
 from . import grayscale
 from . import pbr
 from . import preprocess
+from . import ramp
 from . import render
 from . import scan
 from . import srgb
@@ -24,6 +25,7 @@ __all__ = [
     "grayscale",
     "pbr",
     "preprocess",
+    "ramp",
     "rasterize_scanlines",
     "render",
     "scan",
