@@ -55,11 +55,14 @@ impl AssemblerCompute {
     /// Determine the target faces.
     ///
     /// A non-empty `face_id` processes only that face; an empty one
-    /// processes every face of the part.
+    /// processes every face of the part — except for part-scoped
+    /// assemblers, which run once against the part as a whole.
     fn resolve_face_ids(&self) -> (bool, Vec<String>) {
         let explicit_face = !self.face_id.is_empty();
         let face_ids = if explicit_face {
             vec![self.face_id.clone()]
+        } else if self.assembler.is_part_scoped() {
+            vec![String::new()]
         } else {
             self.part.face_ids_ordered()
         };

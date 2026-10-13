@@ -22,6 +22,7 @@ from conftest import (
 )
 
 from raygeo.cnc.execution.specs import ComputePayload
+from raygeo.geo import Geometry
 from raygeo.ops.assembly import Assembler
 from raygeo.ops.assembly.frame import FrameSpec, frame
 from raygeo.ops.part import Part
@@ -78,6 +79,36 @@ def test_frame_pipeline_matches_direct_call():
     assert pipe_ops["commands"][0] == {"type": "SET_POWER", "power": 0.0}
     assert pipe_ops["commands"][1:] == direct_ops["commands"]
     assert pipe_ops["last_move_to"] == direct_ops["last_move_to"]
+
+
+def test_frame_runs_once_on_multi_face_part():
+    a = Geometry()
+    a.move_to(0, 0)
+    a.line_to(10, 0)
+    a.line_to(10, 10)
+    a.line_to(0, 10)
+    a.line_to(0, 0)
+    b = Geometry()
+    b.move_to(30, 30)
+    b.line_to(34, 30)
+    b.line_to(34, 34)
+    b.line_to(30, 34)
+    b.line_to(30, 30)
+    combined = Geometry()
+    combined.extend(a)
+    combined.extend(b)
+    part = Part.from_geometry_multi_face(
+        combined, size_mm=(40.0, 40.0)
+    )
+    assert len(part.face_ids) == 2
+
+    c = _run_one(_frame_node("multi", part=part))
+    assert c.error is None
+    ops = result_ops(c).to_dict()
+    move_tos = [
+        cmd for cmd in ops["commands"] if cmd["type"] == "MOVE_TO"
+    ]
+    assert len(move_tos) == 1
 
 
 def test_frame_cut_side_changes_output():
