@@ -731,6 +731,22 @@ is cached per parameter set and invalidated when the ops are mutated.
 | _Returns_            | `list[float]`    | List of cumulative times in seconds, one per command. |
 | _Complexity_         |                  | O(n) time, O(n) space                                 |
 
+### `burning_rect()`
+
+```python
+burning_rect() -> tuple[float, float, float, float]
+```
+
+Compute the bounding rectangle of the geometry the laser actually burns.
+
+Excludes travel moves, cutting moves issued at zero power (e.g. overscan lead-in/lead-out) and zero
+pixels on scanlines, so the result is the envelope of the material the beam touches.
+
+| Parameter    | Type                                | Description                     |
+| ------------ | ----------------------------------- | ------------------------------- |
+| _Returns_    | `tuple[float, float, float, float]` | `(x_min, y_min, x_max, y_max)`. |
+| _Complexity_ |                                     | O(n) time, O(1) space           |
+
 ### `cap_power()`
 
 ```python
