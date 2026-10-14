@@ -24,7 +24,7 @@ rstar = "0.13"
 roxmltree = "0.21"
 strum = { version = "0.28", features = ["derive"] }
 thiserror = "2"
-glam = { version = "0.33", features = ["serde"] }
+glam = { version = "0.34", features = ["serde"] }
 svgtypes = "0.16"
 spade = "2"
 nalgebra = "0.35"
