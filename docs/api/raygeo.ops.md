@@ -731,22 +731,6 @@ is cached per parameter set and invalidated when the ops are mutated.
 | _Returns_            | `list[float]`    | List of cumulative times in seconds, one per command. |
 | _Complexity_         |                  | O(n) time, O(n) space                                 |
 
-### `burning_rect()`
-
-```python
-burning_rect() -> tuple[float, float, float, float]
-```
-
-Compute the bounding rectangle of the geometry the laser actually burns.
-
-Excludes travel moves, cutting moves issued at zero power (e.g. overscan lead-in/lead-out) and zero
-pixels on scanlines, so the result is the envelope of the material the beam touches.
-
-| Parameter    | Type                                | Description                     |
-| ------------ | ----------------------------------- | ------------------------------- |
-| _Returns_    | `tuple[float, float, float, float]` | `(x_min, y_min, x_max, y_max)`. |
-| _Complexity_ |                                     | O(n) time, O(1) space           |
-
 ### `cap_power()`
 
 ```python
@@ -2055,6 +2039,23 @@ Get the power mode from a SetPowerMode command.
 | `idx`        | `int`             | Command index.        |
 | _Returns_    | `state.PowerMode` | The power mode.       |
 | _Complexity_ |                   | O(1) time, O(1) space |
+
+### `powered_rect()`
+
+```python
+powered_rect() -> tuple[float, float, float, float]
+```
+
+Compute the bounding rectangle of the powered geometry.
+
+Excludes travel moves, moves issued at zero power (e.g. overscan lead-in/lead-out) and zero-power
+pixels on scanlines, so the result is the envelope of the geometry that actually affects the
+material.
+
+| Parameter    | Type                                | Description                     |
+| ------------ | ----------------------------------- | ------------------------------- |
+| _Returns_    | `tuple[float, float, float, float]` | `(x_min, y_min, x_max, y_max)`. |
+| _Complexity_ |                                     | O(n) time, O(1) space           |
 
 ### `preload_state()`
 

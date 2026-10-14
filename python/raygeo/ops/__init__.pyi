@@ -1270,15 +1270,14 @@ class Ops:
         :returns: ``(x_min, y_min, x_max, y_max)``.
         :complexity: O(n) time, O(1) space
         """
-    def burning_rect(self) -> tuple[builtins.float, builtins.float, builtins.float, builtins.float]:
+    def powered_rect(self) -> tuple[builtins.float, builtins.float, builtins.float, builtins.float]:
         r"""
-        Compute the bounding rectangle of the geometry the laser
-        actually burns.
+        Compute the bounding rectangle of the powered geometry.
         
-        Excludes travel moves, cutting moves issued at zero power
-        (e.g. overscan lead-in/lead-out) and zero pixels on scanlines,
-        so the result is the envelope of the material the beam
-        touches.
+        Excludes travel moves, moves issued at zero power (e.g.
+        overscan lead-in/lead-out) and zero-power pixels on scanlines,
+        so the result is the envelope of the geometry that actually
+        affects the material.
         :returns: ``(x_min, y_min, x_max, y_max)``.
         :complexity: O(n) time, O(1) space
         """

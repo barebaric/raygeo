@@ -2800,17 +2800,16 @@ impl PyOps {
         }
     }
 
-    /// Compute the bounding rectangle of the geometry the laser
-    /// actually burns.
+    /// Compute the bounding rectangle of the powered geometry.
     ///
-    /// Excludes travel moves, cutting moves issued at zero power
-    /// (e.g. overscan lead-in/lead-out) and zero pixels on scanlines,
-    /// so the result is the envelope of the material the beam
-    /// touches.
+    /// Excludes travel moves, moves issued at zero power (e.g.
+    /// overscan lead-in/lead-out) and zero-power pixels on scanlines,
+    /// so the result is the envelope of the geometry that actually
+    /// affects the material.
     /// :returns: ``(x_min, y_min, x_max, y_max)``.
     /// :complexity: O(n) time, O(1) space
-    fn burning_rect(&self) -> (f64, f64, f64, f64) {
-        match self.inner.burning_rect() {
+    fn powered_rect(&self) -> (f64, f64, f64, f64) {
+        match self.inner.powered_rect() {
             Some(r) => (r.min.x, r.min.y, r.max.x, r.max.y),
             None => (0.0, 0.0, 0.0, 0.0),
         }

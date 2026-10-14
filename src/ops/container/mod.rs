@@ -786,16 +786,15 @@ impl Ops {
         }
     }
 
-    /// Compute the bounding rectangle of the geometry the laser
-    /// actually burns.
+    /// Compute the bounding rectangle of the powered geometry.
     ///
-    /// Travel moves never contribute. Cutting moves issued at zero
-    /// power (e.g. the lead-in/lead-out moves the overscan transformer
-    /// adds) are ignored, and scanlines are trimmed to the extent of
-    /// their non-zero pixels, so the result is the envelope of the
-    /// material the beam touches — independent of acceleration
-    /// margins added by transforms.
-    pub fn burning_rect(&self) -> Option<Rect> {
+    /// Travel moves never contribute. Moves issued at zero power
+    /// (e.g. the lead-in/lead-out moves the overscan transformer
+    /// adds) are ignored, and scanlines are trimmed to their
+    /// non-zero power values, so the result is the envelope of the
+    /// geometry that actually affects the material — independent of
+    /// acceleration margins added by transforms.
+    pub fn powered_rect(&self) -> Option<Rect> {
         let mut min_x = f64::INFINITY;
         let mut min_y = f64::INFINITY;
         let mut max_x = f64::NEG_INFINITY;
@@ -823,7 +822,7 @@ impl Ops {
 
                     if let MoveCmd::ScanLine { power_values } = cmd {
                         if let Some((t_start, t_end)) =
-                            Self::scanline_burn_span(power_values)
+                            Self::scanline_powered_span(power_values)
                         {
                             Self::update_bounds(
                                 &mut min_x,
@@ -864,10 +863,10 @@ impl Ops {
         }
     }
 
-    /// Fractional span of a scanline that carries non-zero pixels, as
-    /// ``(t_start, t_end)`` fractions of the line length. ``None``
-    /// when every pixel is zero.
-    fn scanline_burn_span(power_values: &[u8]) -> Option<(f64, f64)> {
+    /// Fractional span of a scanline that carries non-zero power
+    /// values, as ``(t_start, t_end)`` fractions of the line length.
+    /// ``None`` when every value is zero.
+    fn scanline_powered_span(power_values: &[u8]) -> Option<(f64, f64)> {
         let len = power_values.len();
         if len == 0 {
             return None;
