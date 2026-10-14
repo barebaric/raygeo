@@ -1270,6 +1270,17 @@ class Ops:
         :returns: ``(x_min, y_min, x_max, y_max)``.
         :complexity: O(n) time, O(1) space
         """
+    def powered_rect(self) -> tuple[builtins.float, builtins.float, builtins.float, builtins.float]:
+        r"""
+        Compute the bounding rectangle of the powered geometry.
+        
+        Excludes travel moves, moves issued at zero power (e.g.
+        overscan lead-in/lead-out) and zero-power pixels on scanlines,
+        so the result is the envelope of the geometry that actually
+        affects the material.
+        :returns: ``(x_min, y_min, x_max, y_max)``.
+        :complexity: O(n) time, O(1) space
+        """
     def get_frame(self, power: typing.Optional[builtins.float] = None, feed_rate: typing.Optional[builtins.float] = None) -> Ops:
         r"""
         Extract a frame (first and last endpoints) from the sequence.

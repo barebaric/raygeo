@@ -2040,6 +2040,23 @@ Get the power mode from a SetPowerMode command.
 | _Returns_    | `state.PowerMode` | The power mode.       |
 | _Complexity_ |                   | O(1) time, O(1) space |
 
+### `powered_rect()`
+
+```python
+powered_rect() -> tuple[float, float, float, float]
+```
+
+Compute the bounding rectangle of the powered geometry.
+
+Excludes travel moves, moves issued at zero power (e.g. overscan lead-in/lead-out) and zero-power
+pixels on scanlines, so the result is the envelope of the geometry that actually affects the
+material.
+
+| Parameter    | Type                                | Description                     |
+| ------------ | ----------------------------------- | ------------------------------- |
+| _Returns_    | `tuple[float, float, float, float]` | `(x_min, y_min, x_max, y_max)`. |
+| _Complexity_ |                                     | O(n) time, O(1) space           |
+
 ### `preload_state()`
 
 ```python

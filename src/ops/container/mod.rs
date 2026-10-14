@@ -768,84 +768,11 @@ impl Ops {
                     continue;
                 }
 
-                Self::update_bounds(
+                Self::update_cut_extremes(
                     &mut min_x, &mut min_y, &mut max_x, &mut max_y, curr_x,
-                    curr_y,
-                );
-                Self::update_bounds(
-                    &mut min_x, &mut min_y, &mut max_x, &mut max_y, end_x,
-                    end_y,
+                    curr_y, end_x, end_y, cmd,
                 );
                 has_content = true;
-
-                if let MoveCmd::ArcTo(data) = cmd {
-                    let radius = (data.center.x * data.center.x
-                        + data.center.y * data.center.y)
-                        .sqrt();
-                    if (curr_x - end_x).abs() < EPSILON_COLLINEAR
-                        && (curr_y - end_y).abs() < EPSILON_COLLINEAR
-                        && radius > EPSILON_COLLINEAR
-                    {
-                        let cx = curr_x + data.center.x;
-                        let cy = curr_y + data.center.y;
-                        Self::update_bounds(
-                            &mut min_x,
-                            &mut min_y,
-                            &mut max_x,
-                            &mut max_y,
-                            cx - radius,
-                            cy - radius,
-                        );
-                        Self::update_bounds(
-                            &mut min_x,
-                            &mut min_y,
-                            &mut max_x,
-                            &mut max_y,
-                            cx + radius,
-                            cy + radius,
-                        );
-                    } else {
-                        let abox = crate::geo::shape::arc::get_arc_bounds(
-                            Point::new(curr_x, curr_y),
-                            Point::new(end_x, end_y),
-                            Point::new(data.center.x, data.center.y),
-                            data.cw,
-                        );
-                        Self::update_bounds(
-                            &mut min_x, &mut min_y, &mut max_x, &mut max_y,
-                            abox.min.x, abox.min.y,
-                        );
-                        Self::update_bounds(
-                            &mut min_x, &mut min_y, &mut max_x, &mut max_y,
-                            abox.max.x, abox.max.y,
-                        );
-                    }
-                }
-
-                if let MoveCmd::BezierTo(data) = cmd {
-                    Self::update_bounds(
-                        &mut min_x,
-                        &mut min_y,
-                        &mut max_x,
-                        &mut max_y,
-                        data.control1.x,
-                        data.control1.y,
-                    );
-                    Self::update_bounds(
-                        &mut min_x,
-                        &mut min_y,
-                        &mut max_x,
-                        &mut max_y,
-                        data.control2.x,
-                        data.control2.y,
-                    );
-                }
-                if let MoveCmd::QuadraticBezierTo { control } = cmd {
-                    Self::update_bounds(
-                        &mut min_x, &mut min_y, &mut max_x, &mut max_y,
-                        control.x, control.y,
-                    );
-                }
 
                 curr_x = end_x;
                 curr_y = end_y;
@@ -856,6 +783,182 @@ impl Ops {
             Some(Rect::new(min_x, min_y, max_x, max_y))
         } else {
             None
+        }
+    }
+
+    /// Compute the bounding rectangle of the powered geometry.
+    ///
+    /// Travel moves never contribute. Moves issued at zero power
+    /// (e.g. the lead-in/lead-out moves the overscan transformer
+    /// adds) are ignored, and scanlines are trimmed to their
+    /// non-zero power values, so the result is the envelope of the
+    /// geometry that actually affects the material — independent of
+    /// acceleration margins added by transforms.
+    pub fn powered_rect(&self) -> Option<Rect> {
+        let mut min_x = f64::INFINITY;
+        let mut min_y = f64::INFINITY;
+        let mut max_x = f64::NEG_INFINITY;
+        let mut max_y = f64::NEG_INFINITY;
+        let mut has_content = false;
+
+        let mut curr_x = 0.0;
+        let mut curr_y = 0.0;
+        let mut power = 0.0;
+
+        for node in self.commands.iter() {
+            match &node.category {
+                OpCategory::State(StateCmd::SetPower(p)) => {
+                    power = *p;
+                }
+                OpCategory::State(_) | OpCategory::Marker(_) => {}
+                OpCategory::Moving { end, cmd } => {
+                    let (end_x, end_y) = (end.x, end.y);
+
+                    if matches!(cmd, MoveCmd::MoveTo) {
+                        curr_x = end_x;
+                        curr_y = end_y;
+                        continue;
+                    }
+
+                    if let MoveCmd::ScanLine { power_values } = cmd {
+                        if let Some((t_start, t_end)) =
+                            Self::scanline_powered_span(power_values)
+                        {
+                            Self::update_bounds(
+                                &mut min_x,
+                                &mut min_y,
+                                &mut max_x,
+                                &mut max_y,
+                                curr_x + (end_x - curr_x) * t_start,
+                                curr_y + (end_y - curr_y) * t_start,
+                            );
+                            Self::update_bounds(
+                                &mut min_x,
+                                &mut min_y,
+                                &mut max_x,
+                                &mut max_y,
+                                curr_x + (end_x - curr_x) * t_end,
+                                curr_y + (end_y - curr_y) * t_end,
+                            );
+                            has_content = true;
+                        }
+                    } else if power > 0.0 {
+                        Self::update_cut_extremes(
+                            &mut min_x, &mut min_y, &mut max_x, &mut max_y,
+                            curr_x, curr_y, end_x, end_y, cmd,
+                        );
+                        has_content = true;
+                    }
+
+                    curr_x = end_x;
+                    curr_y = end_y;
+                }
+            }
+        }
+
+        if has_content {
+            Some(Rect::new(min_x, min_y, max_x, max_y))
+        } else {
+            None
+        }
+    }
+
+    /// Fractional span of a scanline that carries non-zero power
+    /// values, as ``(t_start, t_end)`` fractions of the line length.
+    /// ``None`` when every value is zero.
+    fn scanline_powered_span(power_values: &[u8]) -> Option<(f64, f64)> {
+        let len = power_values.len();
+        if len == 0 {
+            return None;
+        }
+        let first = power_values.iter().position(|&p| p != 0)?;
+        let last = power_values.iter().rposition(|&p| p != 0)?;
+        let len_f = len as f64;
+        Some((first as f64 / len_f, (last + 1) as f64 / len_f))
+    }
+
+    /// Add the endpoints of a cutting move, plus its geometric
+    /// extremes (arc bulge, bezier control points), to the running
+    /// bounds.
+    #[allow(clippy::too_many_arguments)]
+    fn update_cut_extremes(
+        min_x: &mut f64,
+        min_y: &mut f64,
+        max_x: &mut f64,
+        max_y: &mut f64,
+        curr_x: f64,
+        curr_y: f64,
+        end_x: f64,
+        end_y: f64,
+        cmd: &MoveCmd,
+    ) {
+        Self::update_bounds(min_x, min_y, max_x, max_y, curr_x, curr_y);
+        Self::update_bounds(min_x, min_y, max_x, max_y, end_x, end_y);
+
+        if let MoveCmd::ArcTo(data) = cmd {
+            let radius = (data.center.x * data.center.x
+                + data.center.y * data.center.y)
+                .sqrt();
+            if (curr_x - end_x).abs() < EPSILON_COLLINEAR
+                && (curr_y - end_y).abs() < EPSILON_COLLINEAR
+                && radius > EPSILON_COLLINEAR
+            {
+                let cx = curr_x + data.center.x;
+                let cy = curr_y + data.center.y;
+                Self::update_bounds(
+                    min_x,
+                    min_y,
+                    max_x,
+                    max_y,
+                    cx - radius,
+                    cy - radius,
+                );
+                Self::update_bounds(
+                    min_x,
+                    min_y,
+                    max_x,
+                    max_y,
+                    cx + radius,
+                    cy + radius,
+                );
+            } else {
+                let abox = crate::geo::shape::arc::get_arc_bounds(
+                    Point::new(curr_x, curr_y),
+                    Point::new(end_x, end_y),
+                    Point::new(data.center.x, data.center.y),
+                    data.cw,
+                );
+                Self::update_bounds(
+                    min_x, min_y, max_x, max_y, abox.min.x, abox.min.y,
+                );
+                Self::update_bounds(
+                    min_x, min_y, max_x, max_y, abox.max.x, abox.max.y,
+                );
+            }
+        }
+
+        if let MoveCmd::BezierTo(data) = cmd {
+            Self::update_bounds(
+                min_x,
+                min_y,
+                max_x,
+                max_y,
+                data.control1.x,
+                data.control1.y,
+            );
+            Self::update_bounds(
+                min_x,
+                min_y,
+                max_x,
+                max_y,
+                data.control2.x,
+                data.control2.y,
+            );
+        }
+        if let MoveCmd::QuadraticBezierTo { control } = cmd {
+            Self::update_bounds(
+                min_x, min_y, max_x, max_y, control.x, control.y,
+            );
         }
     }
 
