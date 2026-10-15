@@ -345,6 +345,8 @@ def _scanline_extents(ops):
         if ct == CommandType.MOVE_TO:
             start = ops.endpoint(i)
         elif ct == CommandType.SCAN_LINE:
+            if start is None:
+                continue
             end = ops.endpoint(i)
             extents.append((min(start[0], end[0]), max(start[0], end[0])))
     return extents
