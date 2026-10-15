@@ -1,7 +1,7 @@
 use crate::image::scan::{
     apply_dot_width_trim, compute_power_values, downsample_power_values,
-    find_mask_bounding_box, find_segments, generate_scan_lines,
-    sample_mask_along_line, ScanLine,
+    find_content_extent, find_mask_bounding_box, find_segments,
+    generate_scan_lines, sample_mask_along_line, ScanLine,
 };
 use crate::ops::container::Ops;
 
@@ -113,18 +113,6 @@ fn segment_endpoints_mm(
     )
 }
 
-fn endpoints_for_scan(
-    scan_line: &ScanLine,
-    rev: bool,
-    pixels_per_mm: (f64, f64),
-) -> ((f64, f64), (f64, f64)) {
-    let (mut s, mut e) = line_endpoints_mm(scan_line, pixels_per_mm);
-    if rev {
-        std::mem::swap(&mut s, &mut e);
-    }
-    (s, e)
-}
-
 fn emit_downsampled_scan(
     ops: &mut Ops,
     power: &[u8],
@@ -214,8 +202,17 @@ fn process_power_full_sweep(
     rev: bool,
     trim_px: usize,
 ) {
-    let (start_mm, end_mm) = line_endpoints_mm(scan_line, pixels_per_mm);
-    let mut power_values = power_values.to_vec();
+    let Some((start_idx, end_idx)) = find_content_extent(power_values) else {
+        return;
+    };
+    let (start_mm, end_mm) = segment_endpoints_mm(
+        scan_line,
+        start_idx,
+        end_idx,
+        false,
+        pixels_per_mm,
+    );
+    let mut power_values = power_values[start_idx..end_idx].to_vec();
     apply_dot_width_trim(&mut power_values, trim_px);
     emit_downsampled_scan(
         ops,
@@ -288,14 +285,19 @@ fn process_scan_full_sweep(
     rev: bool,
     trim_px: usize,
 ) {
+    let Some((start_idx, end_idx)) = find_content_extent(values) else {
+        return;
+    };
+
     let power_byte = (255.0 * step_power).round() as u8;
-    let mut power_values: Vec<u8> = values
+    let mut power_values: Vec<u8> = values[start_idx..end_idx]
         .iter()
         .map(|&v| if v > 0 { power_byte } else { 0 })
         .collect();
     apply_dot_width_trim(&mut power_values, trim_px);
 
-    let (start_mm, end_mm) = endpoints_for_scan(scan_line, rev, pixels_per_mm);
+    let (start_mm, end_mm) =
+        segment_endpoints_mm(scan_line, start_idx, end_idx, rev, pixels_per_mm);
     let pw = if rev {
         power_values.into_iter().rev().collect()
     } else {
@@ -349,11 +351,11 @@ fn process_line_full_sweep(
     z: f64,
     rev: bool,
 ) {
-    if !values.iter().any(|&v| v > 0) {
+    let Some((start_idx, end_idx)) = find_content_extent(values) else {
         return;
-    }
+    };
 
-    let power_values: Vec<u8> = values
+    let power_values: Vec<u8> = values[start_idx..end_idx]
         .iter()
         .map(|&v| if v > 0 { 255 } else { 0 })
         .collect();
@@ -362,7 +364,8 @@ fn process_line_full_sweep(
     } else {
         power_values
     };
-    let (start_mm, end_mm) = endpoints_for_scan(scan_line, rev, pixels_per_mm);
+    let (start_mm, end_mm) =
+        segment_endpoints_mm(scan_line, start_idx, end_idx, rev, pixels_per_mm);
     emit_scan(ops, start_mm, end_mm, ymax_mm, z, pw);
 }
 
