@@ -140,6 +140,23 @@ linear interpolation along the scanline segment from *start* to *end*.
 | _Returns_      | `list[float]`                | Flat list of `[sx, sy, sz, ex, ey, ez, ...]` segments. |
 | _Complexity_   |                              | O(n) where n = number of steps                         |
 
+### `find_content_extent()`
+
+```python
+find_content_extent(values: numpy.ndarray) -> tuple[int, int] | None
+```
+
+Find the first and last non-zero sample as a half-open range.
+
+Returns `(start, end)` covering every sample from the first non-zero value up to (but not including)
+one past the last non-zero value, or `None` when all values are zero.
+
+| Parameter    | Type                          | Description                                      |
+| ------------ | ----------------------------- | ------------------------------------------------ |
+| `values`     | `numpy.ndarray`               | 1-D array of byte values.                        |
+| _Returns_    | `tuple[int, int] &#124; None` | `(start, end)` half-open index range, or `None`. |
+| _Complexity_ |                               | O(n)                                             |
+
 ### `find_mask_bounding_box()`
 
 ```python

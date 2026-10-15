@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 from raygeo.image.scan import ScanMode
 from raygeo.ops import Ops
@@ -250,7 +251,8 @@ class TestFullSweepMaskLines:
 
     def test_power_zero_in_gaps(self):
         mask = np.zeros((30, 30), dtype=np.uint8)
-        mask[5:25, 5:25] = 1
+        mask[5:25, 5:12] = 1
+        mask[5:25, 18:25] = 1
         ops = Ops.from_mask_lines(
             mask, (10.0, 10.0), 0, 0, 0.1, scan_mode=ScanMode.FULL_SWEEP
         )
@@ -332,6 +334,105 @@ class TestFullSweepMultiPass:
             scan_mode=ScanMode.FULL_SWEEP,
         )
         assert ops.is_empty()
+
+
+def _scanline_extents(ops):
+    """Return the ``(min_x, max_x)`` span of every scan line in ``ops``."""
+    extents = []
+    start = None
+    for i in range(ops.len()):
+        ct = ops.command_type(i)
+        if ct == CommandType.MOVE_TO:
+            start = ops.endpoint(i)
+        elif ct == CommandType.SCAN_LINE:
+            if start is None:
+                continue
+            end = ops.endpoint(i)
+            extents.append((min(start[0], end[0]), max(start[0], end[0])))
+    return extents
+
+
+def _hourglass_mask(size=21):
+    """Wide at the top and bottom, pinched in the middle."""
+    mask = np.zeros((size, size), dtype=np.uint8)
+    center = (size - 1) // 2
+    for y in range(size):
+        half = min(2 + abs(y - center), center)
+        mask[y, center - half : center + half + 1] = 1
+    return mask
+
+
+class TestFullSweepPerLineExtent:
+    """Full sweep spans each raster line's own content extent instead of
+    the artwork's bounding box (rayforge#565)."""
+
+    def test_mask_lines_narrows_with_content(self):
+        mask = _hourglass_mask()
+        ops = Ops.from_mask_lines(
+            mask, (10.0, 10.0), 0, 0, 0.1, scan_mode=ScanMode.FULL_SWEEP
+        )
+        extents = _scanline_extents(ops)
+        assert len(extents) > 2
+        top = extents[0]
+        middle = extents[len(extents) // 2]
+        assert (middle[1] - middle[0]) < (top[1] - top[0])
+
+    def test_mask_scan_narrows_with_content(self):
+        mask = _hourglass_mask()
+        ops = Ops.from_mask_scan(
+            mask, (10.0, 10.0), 0, 0, 0.1, scan_mode=ScanMode.FULL_SWEEP
+        )
+        extents = _scanline_extents(ops)
+        assert len(extents) > 2
+        top = extents[0]
+        middle = extents[len(extents) // 2]
+        assert (middle[1] - middle[0]) < (top[1] - top[0])
+
+    def test_power_modulated_narrows_with_content(self):
+        mask = _hourglass_mask()
+        gray = np.zeros_like(mask)
+        alpha = (mask * 255).astype(np.uint8)
+        ops = Ops.from_power_modulated_image(
+            gray,
+            alpha,
+            (10.0, 10.0),
+            0,
+            0,
+            0.1,
+            0.05,
+            scan_mode=ScanMode.FULL_SWEEP,
+        )
+        extents = _scanline_extents(ops)
+        assert len(extents) > 2
+        top = extents[0]
+        middle = extents[len(extents) // 2]
+        assert (middle[1] - middle[0]) < (top[1] - top[0])
+
+    def test_span_matches_content_extent(self):
+        mask = np.zeros((10, 20), dtype=np.uint8)
+        mask[2:8, 4:8] = 1
+        ops = Ops.from_mask_scan(
+            mask, (10.0, 10.0), 0, 0, 0.1, scan_mode=ScanMode.FULL_SWEEP
+        )
+        extents = _scanline_extents(ops)
+        assert extents
+        for lo, hi in extents:
+            # Columns 4..7 are pixel centres 0.45..0.75, extended by
+            # half a pixel at each end.
+            assert lo == pytest.approx(0.4, abs=1e-6)
+            assert hi == pytest.approx(0.8, abs=1e-6)
+
+    def test_segmented_unchanged(self):
+        mask = np.zeros((10, 20), dtype=np.uint8)
+        mask[2:8, 4:6] = 1
+        mask[2:8, 12:16] = 1
+        ops = Ops.from_mask_scan(
+            mask, (10.0, 10.0), 0, 0, 0.1, scan_mode=ScanMode.SEGMENTED
+        )
+        extents = _scanline_extents(ops)
+        assert extents
+        for lo, hi in extents:
+            assert hi - lo < 0.5
 
 
 def test_from_mask_lines():

@@ -11,6 +11,7 @@ __all__ = [
     "ScanMode",
     "downsample_power_values",
     "extract_zero_power_segments",
+    "find_content_extent",
     "find_mask_bounding_box",
     "find_segments",
     "generate_horizontal_scan_positions",
@@ -84,6 +85,19 @@ def extract_zero_power_segments(start: tuple[float, float, float], end: tuple[fl
     :param power_values: Per-step power bytes.
     :returns: Flat list of ``[sx, sy, sz, ex, ey, ez, ...]`` segments.
     :complexity: O(n) where n = number of steps
+    """
+
+def find_content_extent(values: numpy.ndarray) -> tuple[int, int] | None:
+    r"""
+    Find the first and last non-zero sample as a half-open range.
+    
+    Returns ``(start, end)`` covering every sample from the first
+    non-zero value up to (but not including) one past the last
+    non-zero value, or ``None`` when all values are zero.
+    
+    :param values: 1-D array of byte values.
+    :returns: ``(start, end)`` half-open index range, or ``None``.
+    :complexity: O(n)
     """
 
 def find_mask_bounding_box(mask: numpy.ndarray) -> tuple[int, int, int, int] | None:

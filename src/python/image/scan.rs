@@ -6,7 +6,7 @@ use pyo3_stub_gen::derive::{
 };
 
 use crate::image::scan::{
-    self, downsample_power_values, find_mask_bounding_box,
+    self, downsample_power_values, find_content_extent, find_mask_bounding_box,
     generate_horizontal_scan_positions, generate_scan_lines, line_pixels,
     resample_rows,
 };
@@ -216,6 +216,34 @@ fn py_find_segments(
 ) -> PyResult<Vec<(usize, usize)>> {
     let list: Vec<u8> = values.call_method0("tolist")?.extract()?;
     Ok(scan::find_segments(&list))
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import numpy
+
+    def find_content_extent(
+        values: numpy.ndarray,
+    ) -> tuple[int, int] | None:
+        """Find the first and last non-zero sample as a half-open range.
+
+        Returns ``(start, end)`` covering every sample from the first
+        non-zero value up to (but not including) one past the last
+        non-zero value, or ``None`` when all values are zero.
+
+        :param values: 1-D array of byte values.
+        :returns: ``(start, end)`` half-open index range, or ``None``.
+        :complexity: O(n)
+        """
+"#,
+    module = "raygeo.image.scan"
+)]
+#[pyfunction(name = "find_content_extent")]
+fn py_find_content_extent(
+    values: &Bound<'_, PyAny>,
+) -> PyResult<Option<(usize, usize)>> {
+    let list: Vec<u8> = values.call_method0("tolist")?.extract()?;
+    Ok(find_content_extent(&list))
 }
 
 #[gen_stub_pyfunction(
@@ -504,6 +532,10 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     )?)?;
     scan_mod
         .add_function(wrap_pyfunction!(py_find_segments, scan_mod.clone())?)?;
+    scan_mod.add_function(wrap_pyfunction!(
+        py_find_content_extent,
+        scan_mod.clone()
+    )?)?;
     scan_mod
         .add_function(wrap_pyfunction!(py_line_pixels, scan_mod.clone())?)?;
     scan_mod.add_function(wrap_pyfunction!(

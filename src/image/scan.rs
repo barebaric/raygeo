@@ -523,6 +523,18 @@ pub fn find_segments(values: &[u8]) -> Vec<(usize, usize)> {
     segments
 }
 
+/// First and last non-zero sample as a half-open index range.
+///
+/// Returns `None` when every sample is zero. Full-sweep rasterization
+/// uses this to limit each pass to the samples that can actually burn,
+/// instead of the whole image bounding box, while still emitting the
+/// zero-power gaps in between.
+pub fn find_content_extent(values: &[u8]) -> Option<(usize, usize)> {
+    let start = values.iter().position(|&v| v != 0)?;
+    let end = values.iter().rposition(|&v| v != 0)? + 1;
+    Some((start, end))
+}
+
 /// Zeroes `trim_px` samples at each end of every contiguous nonzero run,
 /// shortening firing time without moving toolpath geometry.
 pub fn apply_dot_width_trim(values: &mut [u8], trim_px: usize) {
