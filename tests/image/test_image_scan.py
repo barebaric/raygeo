@@ -5,6 +5,7 @@ from raygeo.image.scan import (
     ScanLine,
     ScanMode,
     downsample_power_values,
+    find_content_extent,
     find_mask_bounding_box,
     find_segments,
     generate_horizontal_scan_positions,
@@ -251,6 +252,36 @@ class TestFindSegments:
             (0, 1),
             (2, 4),
         ]
+
+
+class TestFindContentExtent:
+    def test_empty(self):
+        assert find_content_extent(np.array([], dtype=np.uint8)) is None
+
+    def test_all_zero(self):
+        assert find_content_extent(np.array([0, 0, 0], dtype=np.uint8)) is None
+
+    def test_all_nonzero(self):
+        assert find_content_extent(np.array([1, 1, 1], dtype=np.uint8)) == (
+            0,
+            3,
+        )
+
+    def test_single_nonzero(self):
+        assert find_content_extent(np.array([0, 1, 0], dtype=np.uint8)) == (
+            1,
+            2,
+        )
+
+    def test_trims_edges_keeps_gaps(self):
+        values = np.array([0, 5, 0, 0, 3, 0], dtype=np.uint8)
+        assert find_content_extent(values) == (1, 5)
+
+    def test_leading_and_trailing_runs(self):
+        assert find_content_extent(np.array([1, 0, 1, 1], dtype=np.uint8)) == (
+            0,
+            4,
+        )
 
 
 class TestFindMaskBoundingBox:
