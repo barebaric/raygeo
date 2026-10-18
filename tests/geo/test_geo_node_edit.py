@@ -172,3 +172,44 @@ class TestMoveHandle:
     def test_ignores_lines(self):
         geo = _polyline(SQUARE)
         assert _ends(geo.move_handle(1, 1, 5.0, 5.0)) == SQUARE
+
+
+class TestContourInfo:
+    def test_open_contour(self):
+        assert _polyline(SQUARE).contour_info(2) == (0, 3, False)
+
+    def test_closed_contour(self):
+        geo = _polyline(SQUARE, close=True)
+        assert geo.contour_info(4) == (0, 4, True)
+        assert geo.contour_info(0) == (0, 4, True)
+
+    def test_reports_the_contour_of_the_index(self):
+        geo = _polyline(SQUARE)
+        geo.extend(_polyline([(20, 20), (30, 20), (30, 30)]))
+        assert geo.contour_info(0) == (0, 3, False)
+        assert geo.contour_info(4) == (4, 6, False)
+
+    def test_closure_tolerance_matches_the_node_operations(self):
+        closed = Geometry()
+        closed.move_to(0, 0)
+        closed.line_to(10, 0)
+        closed.line_to(5e-10, 0)
+        assert closed.contour_info(2) == (0, 2, True)
+        open_geo = Geometry()
+        open_geo.move_to(0, 0)
+        open_geo.line_to(10, 0)
+        open_geo.line_to(1e-6, 0)
+        assert open_geo.contour_info(2) == (0, 2, False)
+
+    def test_leading_line_without_a_move(self):
+        geo = Geometry()
+        geo.line_to(5, 5)
+        assert geo.contour_info(0) == (0, 0, False)
+
+    def test_a_lone_move(self):
+        geo = Geometry()
+        geo.move_to(1, 1)
+        assert geo.contour_info(0) == (0, 0, False)
+
+    def test_out_of_range_is_degenerate(self):
+        assert _polyline(SQUARE).contour_info(99) == (99, 99, False)

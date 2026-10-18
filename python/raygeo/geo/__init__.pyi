@@ -460,6 +460,18 @@ class Geometry:
             contours.
         :complexity: O(n) time, O(n) space
         """
+    def contour_info(self, index: builtins.int) -> tuple[builtins.int, builtins.int, builtins.bool]:
+        r"""
+        The contour holding a command index: the index of its Move, the
+        index of its last command, and whether it is closed. In a closed
+        contour the end of the last command and the Move are one node,
+        exactly as the node operations treat them.
+        
+        :param index: Index of any command of the contour.
+        :returns: Tuple of the Move index, the last command index, and
+            whether the contour is closed.
+        :complexity: O(n) time, O(1) space
+        """
     def move_node(self, index: builtins.int, x: builtins.float, y: builtins.float) -> tuple[Geometry, builtins.int]:
         r"""
         Move the node at a command index to a new position, dragging its
