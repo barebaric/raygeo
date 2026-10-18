@@ -44,6 +44,18 @@ fn start_of(data: &[Command], index: usize) -> Point3D {
     }
 }
 
+/// The contour holding `index`: the (Move index, last command index)
+/// range, and whether the contour is closed, meaning the node
+/// operations treat the end of the last command and the Move as one
+/// node.
+pub fn contour_info(geo: &Geometry, index: usize) -> (usize, usize, bool) {
+    if index >= geo.data.len() {
+        return (index, index, false);
+    }
+    let (start, end) = contour_range(&geo.data, index);
+    (start, end, is_closed(&geo.data, start, end))
+}
+
 fn finish(data: Vec<Command>) -> Geometry {
     let mut geo = Geometry::new();
     geo.last_move_to = data
