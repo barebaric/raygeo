@@ -295,6 +295,22 @@ Close the current sub-path.
 | _Returns_    | `Geometry` | The geometry (for method chaining). |
 | _Complexity_ |            | O(1) time, O(1) space               |
 
+### `contour_info()`
+
+```python
+contour_info(index: int) -> tuple[int, int, bool]
+```
+
+The contour holding a command index: the index of its Move, the index of its last command, and
+whether it is closed. In a closed contour the end of the last command and the Move are one node,
+exactly as the node operations treat them.
+
+| Parameter    | Type                    | Description                                                                         |
+| ------------ | ----------------------- | ----------------------------------------------------------------------------------- |
+| `index`      | `int`                   | Index of any command of the contour.                                                |
+| _Returns_    | `tuple[int, int, bool]` | Tuple of the Move index, the last command index, and whether the contour is closed. |
+| _Complexity_ |                         | O(n) time, O(1) space                                                               |
+
 ### `convert_arcs_to_beziers()`
 
 ```python
