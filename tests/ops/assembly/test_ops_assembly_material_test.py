@@ -515,3 +515,47 @@ def test_cut_grid_is_single_vector_section():
     sections = result.ops.sections()
     assert len(sections) == 1
     assert sections[0].section_type == SectionType.VECTOR_OUTLINE
+
+
+# ── Degenerate line intervals ────────────────────────────────────
+
+
+# Keep in sync with MAX_SCAN_LINES in material_test_grid/mod.rs.
+MAX_SCAN_LINES = 20_000
+
+
+def _scan_line_count(**kwargs) -> int:
+    result = generate_material_test_grid(
+        size_mm=(200.0, 200.0),
+        mode="engrave",
+        include_labels=False,
+        **kwargs,
+    )
+    return sum(1 for i in range(result.ops.len()) if result.ops.is_cutting(i))
+
+
+@pytest.mark.parametrize("line_interval_mm", [0.0, 1e-9, -0.5])
+def test_degenerate_line_interval_generates_bounded_scan_lines(
+    line_interval_mm,
+):
+    """A zero, near-zero, or negative line interval must not generate
+    an unbounded number of scan lines.
+
+    Regression test: the cell height divided by 0 evaluated to
+    infinity, and the u32 cast saturated to ~4.3 billion scan lines
+    per cell, exhausting all memory.
+    """
+    cut_count = _scan_line_count(
+        cols=2,
+        rows=2,
+        line_interval_mm=line_interval_mm,
+    )
+    assert cut_count <= 4 * (MAX_SCAN_LINES + 1)
+
+
+def test_line_interval_still_controls_scan_density():
+    """Sane line intervals keep control over the scan line count, so
+    the bound must not kick in for them."""
+    fine = _scan_line_count(cols=1, rows=1, line_interval_mm=0.05)
+    coarse = _scan_line_count(cols=1, rows=1, line_interval_mm=1.0)
+    assert fine > coarse
