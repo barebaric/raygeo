@@ -849,6 +849,12 @@ fn draw_rectangle(
     );
 }
 
+/// Upper bound on scan lines generated per cell pass. A degenerate
+/// ``line_interval_mm`` (zero, near-zero, or non-finite) would
+/// otherwise divide the cell height into up to ``u32::MAX`` lines and
+/// exhaust memory.
+const MAX_SCAN_LINES: u32 = 20_000;
+
 #[allow(clippy::too_many_arguments)]
 fn draw_filled_box(
     trace: &mut Tracelet,
@@ -864,7 +870,11 @@ fn draw_filled_box(
         return;
     }
 
-    let num_lines = (h / line_spacing) as u32;
+    let num_lines = if line_spacing.is_finite() && line_spacing > 0.0 {
+        ((h / line_spacing) as u32).min(MAX_SCAN_LINES)
+    } else {
+        MAX_SCAN_LINES
+    };
     if num_lines < 1 {
         trace.move_to(x, y + h / 2.0, 0.0, None);
         trace.move_event(
