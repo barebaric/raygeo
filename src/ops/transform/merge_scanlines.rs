@@ -1097,8 +1097,11 @@ fn emit_line_run(
             sync.sync(new_ops, &c.state, false);
             new_ops.move_to(entry.x, entry.y, entry.z, None);
         } else {
-            // Bridge the gap at zero power.
+            // Bridge the gap at zero power. `prev` must track the
+            // emitted switch, or the following sync sees no power
+            // change and never restores the cutting power.
             new_ops.set_power(0.0);
+            sync.prev.power = 0.0;
             new_ops.line_to(entry.x, entry.y, entry.z, None);
             sync.sync(new_ops, &c.state, false);
         }
