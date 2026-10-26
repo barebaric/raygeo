@@ -415,6 +415,44 @@ class TestConstantPowerLines:
         assert powers.get(bridge - 1) == 0.0
         assert any(p == pytest.approx(0.8) for p in powers.values())
 
+    def test_power_restored_after_each_bridge(self):
+        """Every bridge must switch the power back on after the gap.
+
+        The bridge emits a zero-power power switch; the state tracker
+        must follow it, or the next sync sees no power change and
+        every later cut in the unit runs with the laser off
+        (barebaric/rayforge#639).
+        """
+        ops = Ops()
+        ops.set_power(0.8)
+        ops.set_feed_rate(CUT_SPEED)
+        ops.set_rapid_rate(RAPID_SPEED)
+        for x0 in (0.0, 12.0, 24.0):
+            ops.move_to(x0, 0, 0)
+            ops.line_to(x0 + 10, 0, 0)
+        apply(ops)
+
+        lines = ops.indices_of(CommandType.LINE_TO)
+        assert len(lines) == 5  # 3 content cuts + 2 bridges
+
+        power = 0.0
+        bridges = 0
+        restores = 0
+        pending_restore = False
+        for idx in range(ops.len()):
+            ct = ops.command_type(idx)
+            if ct == CommandType.SET_POWER:
+                power = ops.power(idx)
+                if pending_restore and power == pytest.approx(0.8):
+                    restores += 1
+                    pending_restore = False
+            elif ct == CommandType.LINE_TO:
+                if power == 0.0:
+                    bridges += 1
+                    pending_restore = True
+        assert bridges == 2
+        assert restores == 2
+
     def test_different_powers_not_merged(self):
         ops = Ops()
         ops.set_feed_rate(CUT_SPEED)
