@@ -97,17 +97,13 @@ def test_frame_runs_once_on_multi_face_part():
     combined = Geometry()
     combined.extend(a)
     combined.extend(b)
-    part = Part.from_geometry_multi_face(
-        combined, size_mm=(40.0, 40.0)
-    )
+    part = Part.from_geometry_multi_face(combined, size_mm=(40.0, 40.0))
     assert len(part.face_ids) == 2
 
     c = _run_one(_frame_node("multi", part=part))
     assert c.error is None
     ops = result_ops(c).to_dict()
-    move_tos = [
-        cmd for cmd in ops["commands"] if cmd["type"] == "MOVE_TO"
-    ]
+    move_tos = [cmd for cmd in ops["commands"] if cmd["type"] == "MOVE_TO"]
     assert len(move_tos) == 1
 
 

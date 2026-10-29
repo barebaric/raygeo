@@ -1362,9 +1362,7 @@ class TestCutPlanner:
         plain.optimize_travel(allow_flip=False)
         optimized = _rect_a()
         optimized.extend(_rect_b())
-        optimized.optimize_travel(
-            allow_flip=False, best_start_point=True
-        )
+        optimized.optimize_travel(allow_flip=False, best_start_point=True)
         assert _travel_distance(optimized) < _travel_distance(plain)
 
     def test_open_paths_keep_their_start(self):
