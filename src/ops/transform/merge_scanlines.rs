@@ -559,7 +559,13 @@ type CellKey = (i64, i64);
 /// the data: the tolerance, capped at half the smallest gap between
 /// distinct offsets. A fixed tolerance alone cannot work for rasters
 /// whose line interval is finer than the tolerance — the entire band
-/// would chain into one "row" and be dropped as overlapping.
+/// would chain into one "row" and bridge across every line.
+///
+/// Every candidate is returned exactly once: rows with a single
+/// member are returned unmerged, and rows whose projections overlap
+/// are split into single-member rows. A restructured unit re-emits
+/// only these rows, so returning all of them is what keeps
+/// unmergeable candidates from being lost.
 fn bucket_rows(unit: &Unit, tolerance: f64) -> Vec<Vec<usize>> {
     let angle_buckets = (std::f64::consts::PI / ANGLE_BUCKET_RAD).ceil() as i64;
 
@@ -614,10 +620,6 @@ fn bucket_rows(unit: &Unit, tolerance: f64) -> Vec<Vec<usize>> {
 
     let mut result: Vec<Vec<usize>> = Vec::new();
     for mut members in groups.into_values() {
-        if members.len() < 2 {
-            continue;
-        }
-
         // Cluster on the perpendicular offset: sort, then split
         // wherever the gap to the previous offset exceeds the
         // threshold. The threshold adapts to the row spacing so a
@@ -652,9 +654,6 @@ fn bucket_rows(unit: &Unit, tolerance: f64) -> Vec<Vec<usize>> {
         rows.push(current);
 
         for mut row in rows {
-            if row.len() < 2 {
-                continue;
-            }
             row.sort_by(|&a, &b| {
                 unit.candidates[a]
                     .proj_lo
@@ -662,7 +661,9 @@ fn bucket_rows(unit: &Unit, tolerance: f64) -> Vec<Vec<usize>> {
                     .unwrap_or(std::cmp::Ordering::Equal)
             });
 
-            // Drop rows whose projections overlap.
+            // Rows whose projections overlap cannot be bridged
+            // cleanly; keep their members as separate single-run rows
+            // so a restructured unit still emits every candidate.
             let mut overlap = false;
             for w in row.windows(2) {
                 let prev = &unit.candidates[w[0]];
@@ -672,7 +673,9 @@ fn bucket_rows(unit: &Unit, tolerance: f64) -> Vec<Vec<usize>> {
                     break;
                 }
             }
-            if !overlap {
+            if overlap {
+                result.extend(row.into_iter().map(|idx| vec![idx]));
+            } else {
                 result.push(row);
             }
         }

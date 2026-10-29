@@ -19,6 +19,12 @@ def selection_rect():
     return (10.0, 10.0, 50.0, 50.0)
 
 
+def _approx_points(points):
+    """pytest.approx per point; approx() rejects nested structures
+    since pytest 9.2."""
+    return [pytest.approx(p) for p in points]
+
+
 def test_get_circle_circle_intersections():
     # Two intersection points
     c1, r1 = (0, 0), 5
@@ -30,7 +36,7 @@ def test_get_circle_circle_intersections():
     # comparison
     sorted_intersections = sorted(intersections)
     expected_intersections = sorted([(4.0, 3.0), (4.0, -3.0)])
-    assert sorted_intersections == pytest.approx(expected_intersections)
+    assert sorted_intersections == _approx_points(expected_intersections)
 
     # One intersection point (tangent)
     c1, r1 = (0, 0), 5
@@ -192,7 +198,7 @@ class TestGetLineCircleIntersections:
         results = get_line_circle_intersections((-2, 0), (2, 0), (0, 0), 1)
         assert len(results) == 2
         sorted_pts = sorted(results)
-        assert sorted_pts == pytest.approx([(-1, 0), (1, 0)])
+        assert sorted_pts == _approx_points([(-1, 0), (1, 0)])
 
     def test_tangent(self):
         results = get_line_circle_intersections((0, 1), (2, 1), (1, 0), 1)
@@ -229,7 +235,7 @@ class TestGetLineCircleIntersections:
         results = get_line_circle_intersections((8, -2), (8, 2), (8, 0), 1)
         assert len(results) == 2
         sorted_pts = sorted(results, key=lambda p: p[1])
-        assert sorted_pts == pytest.approx([(8, -1), (8, 1)])
+        assert sorted_pts == _approx_points([(8, -1), (8, 1)])
 
     def test_zero_length_segment(self):
         results = get_line_circle_intersections((5, 5), (5, 5), (0, 0), 10)
@@ -239,7 +245,7 @@ class TestGetLineCircleIntersections:
         results = get_line_circle_intersections((-1, 0), (1, 0), (0, 0), 1)
         assert len(results) == 2
         sorted_pts = sorted(results)
-        assert sorted_pts == pytest.approx([(-1, 0), (1, 0)])
+        assert sorted_pts == _approx_points([(-1, 0), (1, 0)])
 
 
 def _dist(p, q):

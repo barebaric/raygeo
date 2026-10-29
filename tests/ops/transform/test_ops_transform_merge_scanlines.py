@@ -302,6 +302,57 @@ class TestScanlineMerging:
         data = scanline_values(ops, scanlines[0])
         assert data == [0] * 2 + [100] * 10 + [0] * 3 + [100] * 10 + [0] * 2
 
+    def test_singleton_row_survives_restructuring(self):
+        """A row without a merge partner survives a restructured unit.
+
+        Regression: when any row of a unit merged, candidates without
+        a partner on their own row were dropped from the output,
+        deleting whole scanlines from raster engravings.
+        """
+        ops = Ops()
+        ops.set_feed_rate(CUT_SPEED)
+        ops.set_rapid_rate(RAPID_SPEED)
+        add_scanline(ops, 0, 4, 0.0, [128] * 4)
+        add_scanline(ops, 0, 4, 0.08, [128] * 4)
+        add_scanline(ops, 6, 10, 0.08, [128] * 4)
+        apply(ops)
+
+        scanlines = ops.indices_of(CommandType.SCAN_LINE)
+        assert len(scanlines) == 2
+        # Row 0.08 merges into one sweep with a 2mm zero bridge; row
+        # 0.0 has no partner and must come through with its ink.
+        values = {tuple(scanline_values(ops, i)) for i in scanlines}
+        assert values == {
+            tuple([128] * 4),
+            tuple([128] * 4 + [0] * 2 + [128] * 4),
+        }
+
+    def test_overlapping_row_survives_restructuring(self):
+        """An unmergeable overlapping row is emitted, not dropped.
+
+        The overlapping pair on row 0 cannot bridge; the pair on row 1
+        can. Restructuring the unit must still emit the overlapping
+        candidates once each.
+        """
+        ops = Ops()
+        ops.set_feed_rate(CUT_SPEED)
+        ops.set_rapid_rate(RAPID_SPEED)
+        add_scanline(ops, 0, 10, 0.0, [128] * 10)
+        add_scanline(ops, 5, 15, 0.0, [128] * 10)
+        add_scanline(ops, 0, 4, 0.08, [128] * 4)
+        add_scanline(ops, 6, 10, 0.08, [128] * 4)
+        apply(ops)
+
+        # Row 0.08 merges into one sweep; row 0.0 stays as two sweeps.
+        scanlines = ops.indices_of(CommandType.SCAN_LINE)
+        assert len(scanlines) == 3
+        merged = [
+            i
+            for i in scanlines
+            if scanline_values(ops, i) == [128] * 4 + [0] * 2 + [128] * 4
+        ]
+        assert len(merged) == 1
+
     def test_differing_sample_density_not_merged(self):
         ops = Ops()
         ops.set_feed_rate(CUT_SPEED)

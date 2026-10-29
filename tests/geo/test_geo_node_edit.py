@@ -128,6 +128,7 @@ class TestInsertNode:
         geo.move_to(0, 0)
         geo.bezier_to(10, 0, 0, 10, 10, 10)
         point = geo.get_point_at(1, 0.5)
+        assert point is not None
         split, index = geo.insert_node(1, 0.5)
         assert _kinds(split) == ["Move", "Bezier", "Bezier"]
         assert _ends(split)[index] == pytest.approx(point[:2])
