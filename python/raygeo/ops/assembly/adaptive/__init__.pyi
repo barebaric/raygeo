@@ -99,7 +99,7 @@ def adaptive_clearing(part: raygeo.ops.part.Part, tool_radius: float = 3, step_o
     :param safe_z: Retract Z height for travel (default 2.0).
     :param max_deflection_deg: Maximum steering deflection per step
                                in degrees (default 30).
-    :param wall_margin: Extra clearance between tool and boundary (default 0.0).
+    :param wall_margin: Reserved for extra wall clearance; the clearing engine does not apply it yet (default 0.0).
     :param area_tolerance: Stop when remaining uncut area drops below
                            this threshold (default 1.0).
     :param cut_feed_rate: Feed rate for cutting moves (default 1200).

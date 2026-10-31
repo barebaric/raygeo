@@ -23,6 +23,15 @@ Requires Python 3.10+ and a compatible platform (Linux, Windows, macOS Intel,
 or macOS Apple Silicon). Pre-compiled wheels are available on
 [PyPI](https://pypi.org/project/raygeo/).
 
+## Embedding from Rust
+
+The CNC stack (adaptive clearing, entries, G-code-ready ops) is pure Rust with
+no Python prerequisite: add `raygeo` with `default-features = false`, plan a
+pocket with `plan_clearing`, and run it with
+[`cnc::execution::run::run_plan`](src/cnc/execution/run.rs). See
+[docs/embedding-rust.md](docs/embedding-rust.md) and
+`examples/plan_clearing.rs`.
+
 ## Quick Start
 
 ### Building Paths

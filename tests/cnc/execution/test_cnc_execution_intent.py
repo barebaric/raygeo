@@ -48,3 +48,28 @@ def test_run_intent_with_callback():
     assert len(completed) >= 2, (
         f"expected >=2 completions, got {len(completed)}"
     )
+
+
+def test_feed_rate_reaches_the_ops():
+    """The planner's feed_rate lands in the emitted ops' state, so Rust
+    embedders get feeds without post-processing the toolpath."""
+    boundary = _rect(-10, -10, 20, 20)
+    part, plan = _plan(
+        boundary, tool_radius=3.0, safe_z=2.0, target_z=-2.0, feed_rate=900.0
+    )
+    ops = run_intent(create_intent(plan, part, 0))
+    feed_rates = [
+        cmd.get("speed")
+        for cmd in ops.to_dict()["commands"]
+        if cmd["type"] == "SET_FEED_RATE"
+    ]
+    assert 900 in feed_rates, f"no SET_FEED_RATE 900 in {feed_rates[:5]}"
+
+    # Without the option the ops stay feed-free, as before.
+    part2, plan2 = _plan(boundary, tool_radius=3.0, safe_z=2.0, target_z=-2.0)
+    ops2 = run_intent(create_intent(plan2, part2, 0))
+    assert not [
+        cmd
+        for cmd in ops2.to_dict()["commands"]
+        if cmd["type"] == "SET_FEED_RATE"
+    ]

@@ -27,7 +27,9 @@ use crate::cnc::plan::entry::{self, EntryWorkplanOptions};
 use crate::cnc::plan::plan::{Plan, PlanStep};
 use crate::error::RaygeoResult;
 use crate::geo::algo::helix::HelixDirection;
-use crate::geo::shape::polygon::{get_polygon_bounds, get_polygon_centroid};
+use crate::geo::shape::polygon::{
+    get_polygon_bounds, get_polygon_centroid, is_point_inside_polygon,
+};
 use crate::geo::types::{Point, Point3D, Polygon};
 use crate::ops::assembly::adaptive::AdaptiveClearingSpec;
 use crate::ops::assembly::profile::{ProfileKind, ProfileSpec};
@@ -60,6 +62,9 @@ pub struct ClearingWorkplanOptions {
     pub area_tolerance: f64,
     pub max_deflection_deg: f64,
     pub finishing: bool,
+    /// Cut feed rate (mm/min) the plan's moves carry. `None` leaves the
+    /// cut state unset, for embedders that map feeds themselves.
+    pub feed_rate: Option<f64>,
 }
 
 /// A directed edge in the region graph.
@@ -68,6 +73,25 @@ struct PassageEdge {
     passage_idx: usize,
     region_a: usize,
     region_b: usize,
+}
+
+/// The islands that lie inside `polygon`.
+///
+/// A region's polygon is the outer shell only — `shell_to_region` keeps the
+/// largest ring and drops the hole rings the polygon difference carved out —
+/// so every region-scoped step must carry the islands again. Without them the
+/// scoped step swaps the face's stock region for a hole-free boundary and
+/// machines straight through the island.
+fn islands_inside(polygon: &Polygon, islands: &[Polygon]) -> Vec<Polygon> {
+    islands
+        .iter()
+        .filter(|island| {
+            island
+                .first()
+                .is_some_and(|p| is_point_inside_polygon(*p, polygon))
+        })
+        .cloned()
+        .collect()
 }
 
 #[prof]
@@ -165,7 +189,10 @@ pub fn plan_clearing(
             // Set per-region boundary on entry steps so the seed is
             // created inside the region boundary.
             if matches!(via_class, None | Some(PassageClass::Unreachable)) {
-                let bnd = Some((region.polygon.clone(), Vec::new()));
+                let bnd = Some((
+                    region.polygon.clone(),
+                    islands_inside(&region.polygon, &islands),
+                ));
                 for es in &mut entry_steps {
                     es.region_boundary = bnd.clone();
                 }
@@ -208,7 +235,10 @@ pub fn plan_clearing(
                 cancel_check: None,
             }),
             region_boundary: if use_region_bnd {
-                Some((region.polygon.clone(), Vec::new()))
+                Some((
+                    region.polygon.clone(),
+                    islands_inside(&region.polygon, &islands),
+                ))
             } else {
                 None
             },
@@ -306,7 +336,7 @@ pub fn plan_clearing(
                         step_length: opts.step_length,
                         target_z: opts.target_z,
                         safe_z: opts.safe_z,
-                        wall_margin: 0.0,
+                        wall_margin: opts.wall_margin,
                         stock_to_leave: opts.stock_to_leave,
                         cut_direction: crate::ops::types::CutDirection::Ccw,
                         start_pos: None,
@@ -318,7 +348,10 @@ pub fn plan_clearing(
                         feed_reduction_factor: 0.5,
                         trace_path: None,
                     }),
-                    region_boundary: Some((reg.polygon.clone(), Vec::new())),
+                    region_boundary: Some((
+                        reg.polygon.clone(),
+                        islands_inside(&reg.polygon, &islands),
+                    )),
                 });
             }
         } else {
@@ -331,7 +364,7 @@ pub fn plan_clearing(
                     step_length: opts.step_length,
                     target_z: opts.target_z,
                     safe_z: opts.safe_z,
-                    wall_margin: 0.0,
+                    wall_margin: opts.wall_margin,
                     stock_to_leave: opts.stock_to_leave,
                     cut_direction: crate::ops::types::CutDirection::Ccw,
                     start_pos: None,
@@ -349,6 +382,7 @@ pub fn plan_clearing(
     }
 
     let mut plan = Plan::new(boundary, islands, opts.safe_z);
+    plan.cut_state.feed_rate = opts.feed_rate.map(|f| f.round() as i32);
     plan.extend(steps);
     Ok(plan)
 }
@@ -374,9 +408,23 @@ fn emit_passage_step(
 ) -> Option<(Point, Point)> {
     match passage.class {
         PassageClass::Narrow => {
-            if let Some((start, end)) =
-                find_ramp_carrier(&passage.polygon, islands, tool_radius, 45.0)
-            {
+            // Room for the trochoid's lateral swing about the carrier: the
+            // loop radius the passage's own step-over produces.
+            let step_for_margin =
+                safe_toroidal_step_over(passage.min_width, tool_radius);
+            let swing = crate::geo::algo::trochoid::trochoid_lateral_swing(
+                tool_radius * 2.0,
+                step_for_margin / (tool_radius * 2.0),
+                30.0,
+                (step_for_margin * 0.3).max(0.05),
+            );
+            if let Some((start, end)) = find_ramp_carrier(
+                &passage.polygon,
+                islands,
+                tool_radius,
+                45.0,
+                swing,
+            ) {
                 let carrier_arr = [start, end];
                 let pw =
                     measure_passage_min_width(&passage.polygon, &carrier_arr);

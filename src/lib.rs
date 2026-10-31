@@ -160,7 +160,7 @@ pub mod error;
 pub mod fstring;
 pub mod geo;
 pub mod image;
-pub(crate) mod log;
+pub mod log;
 pub mod mesh;
 pub mod ops;
 pub mod pipeline;

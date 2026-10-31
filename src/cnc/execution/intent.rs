@@ -17,7 +17,6 @@ use crate::cnc::execution::specs::{
 use crate::cnc::plan::plan::Plan;
 use crate::ops::material::spec::LaserPhysics;
 use crate::ops::part::Part;
-use crate::ops::state::State;
 use crate::pipeline::callbacks::NoCallbacks;
 use crate::pipeline::request::NodeRequest;
 use crate::pipeline::stage::StageSpec;
@@ -60,7 +59,7 @@ pub fn create_intent(
             part: part.clone(),
             face_id: step.face_id.clone(),
             transformers: Vec::new(),
-            cut_state: State::default(),
+            cut_state: plan.cut_state.clone(),
             laser: LaserPhysics::default(),
             state_source_keys,
             region_boundary: step.region_boundary.clone(),
