@@ -128,7 +128,9 @@ jobs:
         run: |
           VERSION="${GITHUB_REF#refs/tags/v}"
           for i in $(seq 1 24); do
+            # crates.io rejects API requests without a User-Agent.
             code=$(curl -s -o /dev/null -w "%{http_code}" \
+              -A "raygeo-release-workflow" \
               "https://crates.io/api/v1/crates/prof-macros/$VERSION")
             [ "$code" = "200" ] && exit 0
             sleep 5
