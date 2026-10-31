@@ -150,7 +150,7 @@ calling this method, and prepending the entry Ops to the result.
 | `target_z`             | `float = -5`                                | Cutting Z height (default -5.0).                                                                                                  |
 | `safe_z`               | `float = 2`                                 | Retract Z height for travel (default 2.0).                                                                                        |
 | `max_deflection_deg`   | `float = 30`                                | Maximum steering deflection per step in degrees (default 30).                                                                     |
-| `wall_margin`          | `float = 0`                                 | Extra clearance between tool and boundary (default 0.0).                                                                          |
+| `wall_margin`          | `float = 0`                                 | Reserved for extra wall clearance; the clearing engine does not apply it yet (default 0.0).                                       |
 | `area_tolerance`       | `float = 1`                                 | Stop when remaining uncut area drops below this threshold (default 1.0).                                                          |
 | `cut_feed_rate`        | `int = 1200`                                | Feed rate for cutting moves (default 1200).                                                                                       |
 | `cut_power`            | `float = 1`                                 | Laser power for cutting moves (0.0-1.0, default 1.0).                                                                             |
