@@ -5,6 +5,9 @@ edition = "2021"
 description = "2D/3D geometry library for CAD/CAM applications with Python bindings"
 license = "MIT"
 repository = "https://github.com/barebaric/raygeo"
+# The generated API docs (with their PNG galleries) push the package over
+# crates.io's 10 MB upload limit; they stay on the website instead.
+exclude = ["docs"]
 
 [features]
 # No defaults: embedding applications consume the pure Rust core with
