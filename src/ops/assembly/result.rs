@@ -11,6 +11,7 @@ use crate::trace_types::{
 /// describes WHAT happened (kind, tool state, progress, move
 /// classification, meta).
 #[derive(Clone, Debug)]
+#[cfg_attr(not(feature = "python"), allow(dead_code))]
 pub struct TraceEventData {
     pub(crate) kind: EventKind,
     pub(crate) move_kind: Option<MoveKind>,
@@ -38,6 +39,7 @@ pub struct AssemblyMeta {
 ///
 /// Used by callers that drive an assembler through [`Tracelet`] and
 /// by the Python `write_trace` binding.
+#[cfg_attr(not(feature = "python"), allow(dead_code))]
 pub(crate) fn emit_trace_events(
     tracer: &mut Tracer,
     span: u32,

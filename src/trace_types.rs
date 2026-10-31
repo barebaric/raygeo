@@ -161,7 +161,7 @@ pub(crate) struct SpanRecord {
 #[derive(Clone, Debug)]
 pub(crate) struct TraceFileData {
     pub ver: u16,
-    #[expect(dead_code)]
+    #[allow(dead_code)]
     pub record_count: u32,
     pub records: Vec<Vec<u8>>,
 }

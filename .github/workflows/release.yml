@@ -82,3 +82,59 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: dist/*
+
+  # Publishes the pure-Rust crates for embedding consumers.
+  # Version numbers never live in git: they are stamped
+  # from the release tag into both Cargo.tomls before publishing.
+  # Uses crates.io trusted publishing: after each crate's first (manual)
+  # publish, register this repository's release.yml as a trusted publisher
+  # on the crate's crates.io settings page; no token lives in this repo.
+  publish-crates:
+    name: Publish to crates.io
+    needs: [build-wheels, build-sdist]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set version from tag
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          sed -i.bak "s/^version = \".*\"/version = \"$VERSION\"/" Cargo.toml
+          sed -i.bak "s/^prof-macros = .*/prof-macros = { path = \"prof-macros\", version = \"$VERSION\" }/" Cargo.toml
+          sed -i.bak "s/^version = \".*\"/version = \"$VERSION\"/" prof-macros/Cargo.toml
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      # Trusted publishing: the auth action exchanges GitHub's OIDC token
+      # for a short-lived crates.io token (revoked when the job ends); no
+      # long-lived token lives in this repository. Requires this
+      # repository's release.yml to be registered as a trusted publisher
+      # on each crate's crates.io settings page.
+      - name: Authenticate to crates.io
+        id: crates-auth
+        uses: rust-lang/crates-io-auth-action@v1
+
+      - name: Publish prof-macros
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.crates-auth.outputs.token }}
+        run: cargo publish --allow-dirty -p prof-macros
+
+      - name: Wait for prof-macros to appear in the index
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          for i in $(seq 1 24); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" \
+              "https://crates.io/api/v1/crates/prof-macros/$VERSION")
+            [ "$code" = "200" ] && exit 0
+            sleep 5
+          done
+          echo "prof-macros $VERSION did not appear in the index" >&2
+          exit 1
+
+      - name: Publish raygeo
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.crates-auth.outputs.token }}
+        run: cargo publish --allow-dirty

@@ -52,6 +52,8 @@ raygeo-docs = "tools.cli:main"
 [tool.maturin]
 module-name = "raygeo"
 python-source = "python"
+# The Rust crate has no default features; the Python build opts in.
+features = ["python", "allocator"]
 
 [tool.pyo3-stub-gen]
 module-name = "raygeo"

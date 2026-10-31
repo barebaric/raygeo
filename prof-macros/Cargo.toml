@@ -2,6 +2,9 @@
 name = "prof-macros"
 version = "0.1.0"
 edition = "2021"
+description = "Proc macro that instruments functions with raygeo's profiling guard"
+license = "MIT"
+repository = "https://github.com/barebaric/raygeo"
 
 [lib]
 proc-macro = true
