@@ -120,7 +120,9 @@ jobs:
       - name: Publish prof-macros
         env:
           CARGO_REGISTRY_TOKEN: ${{ steps.crates-auth.outputs.token }}
-        run: cargo publish --allow-dirty -p prof-macros
+        # prof-macros is a path dependency, not a workspace member, so -p
+        # does not see it; publish through its manifest.
+        run: cargo publish --allow-dirty --manifest-path prof-macros/Cargo.toml
 
       - name: Wait for prof-macros to appear in the index
         run: |
