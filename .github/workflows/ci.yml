@@ -7,6 +7,47 @@ on:
     branches: [main]
 
 jobs:
+  rust:
+    name: Rust
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Format
+        run: cargo fmt --all -- --check
+
+      - name: Clippy (python feature, as the wheel build)
+        run: cargo clippy --lib --features python -- -D warnings
+
+      - name: Clippy (pure Rust core, as embedded consumers build it)
+        run: cargo clippy --lib --no-default-features -- -D warnings
+
+      # Embedding applications build the core for wasm32; keep it clean. The
+      # C/C++ parts (clipper2, zstd) cross-compile with the WASI SDK
+      # toolchain, targeting wasm32-wasip1 so clang gets its complete
+      # sysroot; the objects stay link-compatible with rustc's
+      # wasm32-unknown-unknown output (same approach as the clipper2
+      # repo's scripts/wasm-check.sh).
+      - name: Check wasm32
+        run: |
+          curl -fsSL \
+            https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-24/wasi-sdk-24.0-x86_64-linux.tar.gz \
+            | tar -xz -C /tmp
+          export CC=/tmp/wasi-sdk-24.0-x86_64-linux/bin/clang
+          export CXX=/tmp/wasi-sdk-24.0-x86_64-linux/bin/clang++
+          export AR=/tmp/wasi-sdk-24.0-x86_64-linux/bin/llvm-ar
+          export CFLAGS_wasm32_unknown_unknown="--target=wasm32-wasip1"
+          export CXXFLAGS_wasm32_unknown_unknown="--target=wasm32-wasip1"
+          rustup target add wasm32-unknown-unknown
+          cargo check --lib --target wasm32-unknown-unknown --no-default-features
+
+      - name: Rust unit tests
+        run: cargo test --lib --no-default-features
+
   lint-and-typecheck:
     name: Lint and typecheck
     runs-on: ubuntu-latest

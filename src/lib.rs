@@ -94,24 +94,35 @@
 /// Purges run immediately: mimalloc's default 10 ms purge delay keeps
 /// the churn pages from a pipeline run committed long enough to stick
 /// in RSS (measured ~500 MB higher in the rayforge app).
+///
+/// Only compiled when the `allocator` feature is on. Embedding
+/// applications (which install their own allocator) and wasm32 builds
+/// leave it off.
+#[cfg(all(feature = "allocator", not(target_arch = "wasm32")))]
 use std::alloc::{GlobalAlloc, Layout};
+#[cfg(all(feature = "allocator", not(target_arch = "wasm32")))]
 use std::sync::Once;
 
 /// `mi_option_purge_delay` in the mimalloc v3 option enum (not
 /// exposed by libmimalloc-sys): delay in ms before freed memory is
 /// purged back to the OS; 0 = immediate.
+#[cfg(all(feature = "allocator", not(target_arch = "wasm32")))]
 const MI_OPTION_PURGE_DELAY: libmimalloc_sys::mi_option_t = 15;
 
+#[cfg(all(feature = "allocator", not(target_arch = "wasm32")))]
 static CONFIGURE_MIMALLOC: Once = Once::new();
 
+#[cfg(all(feature = "allocator", not(target_arch = "wasm32")))]
 fn configure_mimalloc() {
     CONFIGURE_MIMALLOC.call_once(|| unsafe {
         libmimalloc_sys::mi_option_set(MI_OPTION_PURGE_DELAY, 0);
     });
 }
 
+#[cfg(all(feature = "allocator", not(target_arch = "wasm32")))]
 struct RaygeoAlloc;
 
+#[cfg(all(feature = "allocator", not(target_arch = "wasm32")))]
 unsafe impl GlobalAlloc for RaygeoAlloc {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         configure_mimalloc();
@@ -138,6 +149,7 @@ unsafe impl GlobalAlloc for RaygeoAlloc {
     }
 }
 
+#[cfg(all(feature = "allocator", not(target_arch = "wasm32")))]
 #[global_allocator]
 static GLOBAL: RaygeoAlloc = RaygeoAlloc;
 
@@ -154,9 +166,12 @@ pub mod ops;
 pub mod pipeline;
 pub mod prof;
 pub mod svg;
-pub(crate) mod trace_types;
-
+// The tracing machinery is only driven from the Python bindings; the
+// pure Rust core compiles it but has no caller.
+#[cfg_attr(not(feature = "python"), allow(dead_code))]
 pub(crate) mod trace;
+#[cfg_attr(not(feature = "python"), allow(dead_code))]
+pub(crate) mod trace_types;
 pub mod utils;
 
 pub use constants::{
