@@ -105,6 +105,24 @@ Get the bounding rectangle of an arc.
 | _Returns_    | `types.Rect`  | Bounding rectangle as (x_min, y_min, x_max, y_max). |
 | _Complexity_ |               | O(1) time, O(1) space                               |
 
+### `get_arc_chord_steps()`
+
+```python
+get_arc_chord_steps(radius: float, sweep: float, sag: float) -> int
+```
+
+Count the equal chords that keep a chord within `sag` of an arc.
+
+At least 1; a `sag` that is not a usable fraction of the radius falls back to quarter-turn chords.
+
+| Parameter    | Type    | Description                                     |
+| ------------ | ------- | ----------------------------------------------- |
+| `radius`     | `float` | Arc radius.                                     |
+| `sweep`      | `float` | Signed sweep angle in radians.                  |
+| `sag`        | `float` | Largest allowed distance between chord and arc. |
+| _Returns_    | `int`   | The number of chords to walk the arc with.      |
+| _Complexity_ |         | O(1) time, O(1) space                           |
+
 ### `get_arc_closest_point()`
 
 ```python

@@ -21,6 +21,7 @@ pub mod narrow;
 pub mod nest2d;
 pub mod node_edit;
 pub mod offset;
+pub mod offset_exact;
 pub mod ordering;
 pub mod overcut;
 pub mod planar;

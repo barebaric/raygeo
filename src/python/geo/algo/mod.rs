@@ -14,6 +14,7 @@ pub(crate) mod minkowski2d;
 pub(crate) mod narrow;
 pub(crate) mod nest2d;
 pub(crate) mod offset;
+pub(crate) mod offset_exact;
 pub(crate) mod ordering;
 pub(crate) mod overcut;
 pub(crate) mod polylabel;
@@ -78,6 +79,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     narrow::register(&algo_mod)?;
     nest2d::register(&algo_mod)?;
     offset::register(&algo_mod)?;
+    offset_exact::register(&algo_mod)?;
     ordering::register(&algo_mod)?;
     overcut::register(&algo_mod)?;
     polylabel::register(&algo_mod)?;
