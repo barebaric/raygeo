@@ -7,9 +7,11 @@ use crate::geo::types::Polygon;
 
 /// Classification of a narrow passage for machining strategy selection.
 ///
-/// Width hierarchy from widest to narrowest:
-///   `Adaptive` (≥ 1.5×D) → **Narrow / toroidal** (D+tol < w < 1.5×D) →
-///   **Slot** (D < w ≤ D+tol) → **Unreachable** (w ≤ D)
+/// Width hierarchy from widest to narrowest, with `D` the diameter the
+/// tool must clear (`2 × (tool_radius + wall_margin)` when a wall margin
+/// is set):
+///   `Adaptive` (≥ 1.5×D) → **Narrow / toroidal** (D+tol < w < 1.5×D) →
+///   **Slot** (D < w ≤ D+tol) → **Unreachable** (w ≤ D)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum PassageClass {
     /// Wide enough for toroidal/trochoidal clearing
@@ -17,7 +19,8 @@ pub enum PassageClass {
     Narrow,
     /// Tight enough for slotting (`D < width ≤ D + tol`).
     Slot,
-    /// Too small for any tool to pass (`width ≤ D`).
+    /// Too small for the tool to pass while honouring the wall margin
+    /// (`width ≤ D`).
     Unreachable,
 }
 
@@ -43,8 +46,13 @@ pub struct NarrowAnalysisOptions {
     /// Additional clearance tolerance in mm.
     pub tolerance: f64,
     /// Minimum passage width for slotting in mm.
-    /// When set to `0.0` (default) it defaults to `tool_diameter`.
+    /// When set to `0.0` (default) it defaults to the clearance diameter
+    /// (`2 × (tool_radius + wall_margin)`).
     pub min_slot_width: f64,
+    /// Wall margin in mm. The tool must keep `tool_radius + wall_margin`
+    /// from the walls, so a passage narrower than the tool plus twice the
+    /// margin is classified `Unreachable` (default `0.0`).
+    pub wall_margin: f64,
 }
 
 impl Default for NarrowAnalysisOptions {
@@ -53,6 +61,7 @@ impl Default for NarrowAnalysisOptions {
             tool_radius: 3.0,
             tolerance: 0.5,
             min_slot_width: 0.0,
+            wall_margin: 0.0,
         }
     }
 }
@@ -121,21 +130,28 @@ fn compute_min_width(polygon: &Polygon, entry_indices: &[usize]) -> f64 {
 /// minimum passage width.
 ///
 /// Classification uses Clipper2 offset checks: a passage is inset by
-/// `tool_radius / 2` and `(tool_diameter + tolerance) / 2`.  Results
-/// are sorted widest-first.
+/// `clearance_diameter / 2` (with and without the tolerance) and is
+/// `Unreachable` when the inset at the clearance diameter
+/// (`2 × (tool_radius + wall_margin)`) is empty.  Results are sorted
+/// widest-first.
 pub fn analyze_pocket(
     polygon: &Polygon,
     holes: &[Polygon],
     options: &NarrowAnalysisOptions,
 ) -> Result<Vec<NarrowRegion>, String> {
     let tool_diameter = 2.0 * options.tool_radius;
+    // With a wall margin the tool must keep tool_radius + wall_margin
+    // from the walls, so the class bands sit at the clearance diameter:
+    // a passage that cannot hold the tool plus twice the margin is
+    // unreachable.
+    let clearance_diameter = 2.0 * (options.tool_radius + options.wall_margin);
     let max_width = 1.5 * tool_diameter;
     let min_slot = if options.min_slot_width > 0.0 {
         options.min_slot_width
     } else {
-        tool_diameter
+        clearance_diameter
     };
-    let narrow_threshold = tool_diameter + options.tolerance;
+    let narrow_threshold = clearance_diameter + options.tolerance;
 
     let passages = find_narrow_passages(polygon, holes, max_width)?;
 
@@ -179,9 +195,9 @@ pub fn analyze_pocket(
             if survives_wide {
                 narrow_threshold + 0.01
             } else if survives_tight {
-                tool_diameter + 0.01
+                clearance_diameter + 0.01
             } else {
-                tool_diameter * 0.5
+                clearance_diameter * 0.5
             }
         } else {
             compute_min_width(&passage, &entry_edges)

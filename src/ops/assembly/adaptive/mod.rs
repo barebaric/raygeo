@@ -231,6 +231,7 @@ fn clear_by_regions(
         &ctx.face.stock_region.islands,
         opts.tool_radius,
         opts.area_tolerance,
+        0.0,
     );
     if regions.is_empty() {
         // Cannot split — propagate the whole-face failure.

@@ -6,7 +6,7 @@ __all__ = [
     "analyze_pocket",
 ]
 
-def analyze_pocket(polygon: collections.abc.Sequence[tuple[float, float]], holes: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] | None = None, tool_radius: float = 3, tolerance: float = 0.5, min_slot_width: float | None = None) -> list[tuple[list[tuple[float, float]], str, float, list[int]]]:
+def analyze_pocket(polygon: collections.abc.Sequence[tuple[float, float]], holes: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] | None = None, tool_radius: float = 3, tolerance: float = 0.5, min_slot_width: float | None = None, wall_margin: float = 0) -> list[tuple[list[tuple[float, float]], str, float, list[int]]]:
     r"""
     Analyze a pocket and return classified narrow regions.
     
@@ -25,7 +25,11 @@ def analyze_pocket(polygon: collections.abc.Sequence[tuple[float, float]], holes
     :param tool_radius: Tool radius in mm.
     :param tolerance: Additional clearance tolerance in mm.
     :param min_slot_width: Minimum passage width for slotting in mm.
-        Defaults to ``2 × tool_radius`` (tool diameter) when ``None``.
+        Defaults to the clearance diameter when ``None``.
+    :param wall_margin: Wall margin in mm.  The tool must keep
+        ``tool_radius + wall_margin`` from the walls, so a passage
+        narrower than the tool plus twice the margin is classified
+        ``"unreachable"``.
     :returns: List of ``(polygon, class, min_width, entry_edge_indices)`` tuples.
     :raises RuntimeError: If the polygon cannot be analyzed.
     """

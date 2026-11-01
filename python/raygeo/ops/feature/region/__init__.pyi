@@ -6,7 +6,7 @@ __all__ = [
     "find_regions",
 ]
 
-def find_regions(boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] | None = None, tool_radius: float = 3, tolerance: float = 0.5) -> list[tuple[list[tuple[float, float]], float, tuple[float, float], float]]:
+def find_regions(boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] | None = None, tool_radius: float = 3, tolerance: float = 0.5, wall_margin: float = 0) -> list[tuple[list[tuple[float, float]], float, tuple[float, float], float]]:
     r"""
     Detect disconnected wide sub-regions of a pocket.
     
@@ -27,6 +27,10 @@ def find_regions(boundary: collections.abc.Sequence[tuple[float, float]], island
     :param islands: List of island polygons, each as ``[(x, y), ...]``.
     :param tool_radius: Tool radius in mm.
     :param tolerance: Additional clearance tolerance in mm.
+    :param wall_margin: Wall margin in mm.  Passage classification
+        requires the tool to keep ``tool_radius + wall_margin`` from
+        the walls, so a passage narrower than the tool plus twice the
+        margin separates the regions like an unreachable passage.
     :returns: List of ``(polygon, area, entry_pt, r_max)`` tuples.
     """
 

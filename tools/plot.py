@@ -293,6 +293,7 @@ def plot_ops_2d(
     total_edges=None,
     boundary=None,
     islands=None,
+    wall_margin=0.0,
     mark_cut_start=False,
     mark_start=True,
     mark_end=True,
@@ -311,6 +312,11 @@ def plot_ops_2d(
         Pocket boundary polygon drawn as a black outline underlay.
     islands : list of sequences of (x, y), optional
         Island polygons drawn as light-gray filled underlay.
+    wall_margin : float, optional
+        Draw the machined-material limit ``wall_margin`` inside the
+        boundary (and around the islands) as a dashed line: everything
+        the plan cuts stays inside it, and the skin between it and the
+        boundary is the wall margin left for a later pass.
     mark_cut_start : bool, default False
         If True, mark the start of each cutting segment with a small red dot.
     mark_start : bool, default True
@@ -332,6 +338,22 @@ def plot_ops_2d(
         by = [p[1] for p in boundary] + [boundary[0][1]]
         h = ax.plot(bx, by, "k-", linewidth=1.5, label="Boundary")
         own_handles.extend(h)
+    if wall_margin > 0.0 and boundary is not None:
+        from raygeo.geo.shape.polygon import JoinStyle, offset_polygon
+
+        rings = offset_polygon(boundary, -wall_margin, JoinStyle.ROUND)
+        for isl in islands or []:
+            rings.extend(offset_polygon(isl, wall_margin, JoinStyle.ROUND))
+        first = True
+        for ring in rings:
+            mx = [p[0] for p in ring] + [ring[0][0]]
+            my = [p[1] for p in ring] + [ring[0][1]]
+            lbl = "Wall margin" if first else "_nolegend_"
+            h = ax.plot(
+                mx, my, "--", color="#555555", linewidth=0.9, label=lbl
+            )
+            own_handles.extend(h)
+            first = False
     if islands:
         first = True
         for isl in islands:

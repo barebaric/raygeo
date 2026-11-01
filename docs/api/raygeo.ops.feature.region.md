@@ -13,6 +13,7 @@ find_regions(
     islands: Sequence[Sequence[tuple[float, float]]] | None = None,
     tool_radius: float = 3,
     tolerance: float = 0.5,
+    wall_margin: float = 0,
 ) -> list[tuple[list[tuple[float, float]], float, tuple[float, float], float]]
 ```
 
@@ -30,13 +31,14 @@ into disconnected wide sub-regions. Each sub-region is returned as a tuple of
 Results are sorted by area descending (largest region first). Returns an empty list when the pocket
 is entirely narrow/slot.
 
-| Parameter     | Type                                                                        | Description                                        |
-| ------------- | --------------------------------------------------------------------------- | -------------------------------------------------- |
-| `boundary`    | `Sequence[tuple[float, float]]`                                             | Outer pocket boundary as `[(x, y), ...]`.          |
-| `islands`     | `Sequence[Sequence[tuple[float, float]]] &#124; None = None`                | List of island polygons, each as `[(x, y), ...]`.  |
-| `tool_radius` | `float = 3`                                                                 | Tool radius in mm.                                 |
-| `tolerance`   | `float = 0.5`                                                               | Additional clearance tolerance in mm.              |
-| _Returns_     | `list[tuple[list[tuple[float, float]], float, tuple[float, float], float]]` | List of `(polygon, area, entry_pt, r_max)` tuples. |
+| Parameter     | Type                                                                        | Description                                                                                                                                                                                                                  |
+| ------------- | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `boundary`    | `Sequence[tuple[float, float]]`                                             | Outer pocket boundary as `[(x, y), ...]`.                                                                                                                                                                                    |
+| `islands`     | `Sequence[Sequence[tuple[float, float]]] &#124; None = None`                | List of island polygons, each as `[(x, y), ...]`.                                                                                                                                                                            |
+| `tool_radius` | `float = 3`                                                                 | Tool radius in mm.                                                                                                                                                                                                           |
+| `tolerance`   | `float = 0.5`                                                               | Additional clearance tolerance in mm.                                                                                                                                                                                        |
+| `wall_margin` | `float = 0`                                                                 | Wall margin in mm. Passage classification requires the tool to keep `tool_radius + wall_margin` from the walls, so a passage narrower than the tool plus twice the margin separates the regions like an unreachable passage. |
+| _Returns_     | `list[tuple[list[tuple[float, float]], float, tuple[float, float], float]]` | List of `(polygon, area, entry_pt, r_max)` tuples.                                                                                                                                                                           |
 
 ![The barebaric text SVG: each face's wide sub-regions, entry points, and largest inscribed circles](images/ops-feature-region-svg-regions.png)
 

@@ -13,6 +13,7 @@ use crate::ops::feature::region::find_regions;
         islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] | None = None,
         tool_radius: float = 3.0,
         tolerance: float = 0.5,
+        wall_margin: float = 0.0,
     ) -> list[tuple[list[tuple[float, float]], float, tuple[float, float], float]]:
         """Detect disconnected wide sub-regions of a pocket.
 
@@ -33,6 +34,10 @@ use crate::ops::feature::region::find_regions;
         :param islands: List of island polygons, each as ``[(x, y), ...]``.
         :param tool_radius: Tool radius in mm.
         :param tolerance: Additional clearance tolerance in mm.
+        :param wall_margin: Wall margin in mm.  Passage classification
+            requires the tool to keep ``tool_radius + wall_margin`` from
+            the walls, so a passage narrower than the tool plus twice the
+            margin separates the regions like an unreachable passage.
         :returns: List of ``(polygon, area, entry_pt, r_max)`` tuples.
         """
     "#,
@@ -40,12 +45,13 @@ use crate::ops::feature::region::find_regions;
 )]
 #[allow(clippy::type_complexity)]
 #[pyfunction(name = "find_regions")]
-#[pyo3(signature = (boundary, islands = None, tool_radius = 3.0, tolerance = 0.5))]
+#[pyo3(signature = (boundary, islands = None, tool_radius = 3.0, tolerance = 0.5, wall_margin = 0.0))]
 fn find_regions_py(
     boundary: Vec<(f64, f64)>,
     islands: Option<Vec<Vec<(f64, f64)>>>,
     tool_radius: f64,
     tolerance: f64,
+    wall_margin: f64,
 ) -> Vec<(Vec<(f64, f64)>, f64, (f64, f64), f64)> {
     let boundary_pts: Vec<Point> = boundary
         .into_iter()
@@ -57,8 +63,13 @@ fn find_regions_py(
         .map(|h| h.into_iter().map(|(x, y)| Point::new(x, y)).collect())
         .collect();
 
-    let regions =
-        find_regions(&boundary_pts, &islands_pts, tool_radius, tolerance);
+    let regions = find_regions(
+        &boundary_pts,
+        &islands_pts,
+        tool_radius,
+        tolerance,
+        wall_margin,
+    );
 
     regions
         .into_iter()
