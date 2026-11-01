@@ -4,7 +4,9 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+    # Any base branch, so stacked pull requests (a fix based on another
+    # open fix) get checks on their own diff, not just PRs to main.
+    branches: ["**"]
 
 jobs:
   rust:
