@@ -30,11 +30,13 @@ pub struct Region {
 fn build_narrow_options(
     tool_radius: f64,
     tolerance: f64,
+    wall_margin: f64,
 ) -> NarrowAnalysisOptions {
     NarrowAnalysisOptions {
         tool_radius,
         tolerance,
         min_slot_width: 0.0,
+        wall_margin,
     }
 }
 
@@ -120,6 +122,11 @@ fn shell_to_region(
 /// is one wide region.  This is what `adaptive_clearing` can seed and clear
 /// independently — it must never have to navigate across a passage.
 ///
+/// With `wall_margin` set, the passage classification requires the tool to
+/// keep `tool_radius + wall_margin` from the walls, so a passage narrower
+/// than the tool plus twice the margin is classified unreachable (the
+/// region polygons themselves still describe the plain tool-centre area).
+///
 /// Results are sorted by area descending (largest region first).
 /// Returns an empty `Vec` when no tool-reachable wide area remains.
 #[prof]
@@ -128,8 +135,9 @@ pub fn find_regions(
     islands: &[Polygon],
     tool_radius: f64,
     tolerance: f64,
+    wall_margin: f64,
 ) -> Vec<Region> {
-    let options = build_narrow_options(tool_radius, tolerance);
+    let options = build_narrow_options(tool_radius, tolerance, wall_margin);
 
     let narrow_regions = match analyze_pocket(boundary, islands, &options) {
         Ok(r) => r,

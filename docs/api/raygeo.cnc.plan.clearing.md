@@ -56,3 +56,7 @@ plan_clearing(
 ![Clearing workplan: narrow passage (ToroidalClear), slot (Slot), dual-entry dumbbell (Unreachable).](images/cnc-plan-clearing-clearing.png)
 
 *Clearing workplan: narrow passage (ToroidalClear), slot (Slot), dual-entry dumbbell (Unreachable).*
+
+![The same pockets with a 0.5 mm wall margin: too-narrow passages stay uncut.](images/cnc-plan-clearing-wall-margin.png)
+
+*The same pockets with a 0.5 mm wall margin: too-narrow passages stay uncut.*

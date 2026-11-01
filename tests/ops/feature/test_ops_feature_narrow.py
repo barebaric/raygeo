@@ -127,3 +127,30 @@ def test_entry_edge_indices_in_regions():
     )
     for _poly, _cls, _min_w, entry_idxs in regions:
         assert isinstance(entry_idxs, list)
+
+
+def test_wall_margin_makes_tight_corridors_unreachable():
+    """With a wall margin the class bands sit at the clearance diameter
+    (tool + 2 x margin): a 6.2 mm corridor is Slot without a margin and
+    Unreachable with a 0.5 mm margin (tool + 2 x margin = 7 mm), a
+    7.2 mm corridor is Slot at that margin, and an 8.5 mm corridor stays
+    Narrow."""
+    tool_radius = 3.0
+
+    def classes(width, wall_margin):
+        boundary = _rect(0, 0, 80, width)
+        return [
+            cls
+            for _, cls, _, _ in analyze_pocket(
+                boundary,
+                holes=None,
+                tool_radius=tool_radius,
+                tolerance=0.5,
+                wall_margin=wall_margin,
+            )
+        ]
+
+    assert classes(6.2, 0.0) == ["slot"]
+    assert classes(6.2, 0.5) == ["unreachable"]
+    assert classes(7.2, 0.5) == ["slot"]
+    assert classes(8.5, 0.5) == ["narrow"]

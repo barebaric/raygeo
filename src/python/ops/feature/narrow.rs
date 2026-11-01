@@ -16,6 +16,7 @@ use crate::ops::feature::narrow::{
         tool_radius: float = 3.0,
         tolerance: float = 0.5,
         min_slot_width: float | None = None,
+        wall_margin: float = 0.0,
     ) -> list[tuple[list[tuple[float, float]], str, float, list[int]]]:
         """Analyze a pocket and return classified narrow regions.
 
@@ -34,7 +35,11 @@ use crate::ops::feature::narrow::{
         :param tool_radius: Tool radius in mm.
         :param tolerance: Additional clearance tolerance in mm.
         :param min_slot_width: Minimum passage width for slotting in mm.
-            Defaults to ``2 × tool_radius`` (tool diameter) when ``None``.
+            Defaults to the clearance diameter when ``None``.
+        :param wall_margin: Wall margin in mm.  The tool must keep
+            ``tool_radius + wall_margin`` from the walls, so a passage
+            narrower than the tool plus twice the margin is classified
+            ``"unreachable"``.
         :returns: List of ``(polygon, class, min_width, entry_edge_indices)`` tuples.
         :raises RuntimeError: If the polygon cannot be analyzed.
         """
@@ -43,13 +48,14 @@ use crate::ops::feature::narrow::{
 )]
 #[allow(clippy::type_complexity)]
 #[pyfunction(name = "analyze_pocket")]
-#[pyo3(signature = (polygon, holes = None, tool_radius = 3.0, tolerance = 0.5, min_slot_width = None))]
+#[pyo3(signature = (polygon, holes = None, tool_radius = 3.0, tolerance = 0.5, min_slot_width = None, wall_margin = 0.0))]
 fn analyze_pocket_py(
     polygon: Vec<(f64, f64)>,
     holes: Option<Vec<Vec<(f64, f64)>>>,
     tool_radius: f64,
     tolerance: f64,
     min_slot_width: Option<f64>,
+    wall_margin: f64,
 ) -> PyResult<Vec<(Vec<(f64, f64)>, String, f64, Vec<usize>)>> {
     let poly: Vec<Point> =
         polygon.into_iter().map(|(x, y)| Point::new(x, y)).collect();
@@ -63,6 +69,7 @@ fn analyze_pocket_py(
         tool_radius,
         tolerance,
         min_slot_width: min_slot_width.unwrap_or(0.0),
+        wall_margin,
     };
 
     let regions = analyze_pocket(&poly, &holes_pts, &opts)

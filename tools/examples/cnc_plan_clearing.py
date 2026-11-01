@@ -67,10 +67,13 @@ def _step_summary(steps):
     return " + ".join(seen)
 
 
-def _annotate_regions(ax, boundary, islands, tool_radius):
+def _annotate_regions(ax, boundary, islands, tool_radius, wall_margin=0.0):
     """Draw region/passage overlays with labels."""
     regions = find_regions(
-        boundary=boundary, islands=islands, tool_radius=tool_radius
+        boundary=boundary,
+        islands=islands,
+        tool_radius=tool_radius,
+        wall_margin=wall_margin,
     )
     for i, reg in enumerate(regions):
         poly, area, entry_pt, r_max = reg
@@ -97,6 +100,7 @@ def _annotate_regions(ax, boundary, islands, tool_radius):
         polygon=boundary,
         holes=islands,
         tool_radius=tool_radius,
+        wall_margin=wall_margin,
     )
     passage_colors = {
         "narrow": "#DD8452",
@@ -197,6 +201,73 @@ def generate_clearing():
     return fig
 
 
+def generate_wall_margin():
+    """2x3 grid: the same pockets planned with a wall margin."""
+    margin = dict(
+        tool_radius=3.0,
+        step_over=2.0,
+        step_length=0.6,
+        target_z=-5.0,
+        safe_z=2.0,
+        area_tolerance=5.0,
+        wall_margin=0.5,
+        finishing=True,
+    )
+
+    nar_db = _dumbbell(8.5)
+    nar_db_plan, nar_db_ops = _build_and_execute(nar_db, **margin)
+
+    slot_db = _dumbbell(6.2)
+    slot_db_plan, slot_db_ops = _build_and_execute(slot_db, **margin)
+
+    db_un = _dumbbell(5.0)
+    db_un_plan, db_un_ops = _build_and_execute(db_un, **margin)
+
+    nar_de = _hshape(8.5)
+    nar_de_plan, nar_de_ops = _build_and_execute(nar_de, **margin)
+
+    slot_de = _hshape(6.2)
+    slot_de_plan, slot_de_ops = _build_and_execute(slot_de, **margin)
+
+    un_de = _hshape(5.0)
+    un_de_plan, un_de_ops = _build_and_execute(un_de, **margin)
+
+    panels = [
+        (nar_db, nar_db_plan, nar_db_ops, "Dumbbell narrow 8.5 mm (margin)"),
+        (slot_db, slot_db_plan, slot_db_ops, "Dumbbell slot 6.2 mm (margin)"),
+        (db_un, db_un_plan, db_un_ops, "Dumbbell unreachable 5 mm (margin)"),
+        (nar_de, nar_de_plan, nar_de_ops, "Dead-end narrow 8.5 mm (margin)"),
+        (slot_de, slot_de_plan, slot_de_ops, "Dead-end slot 6.2 mm (margin)"),
+        (un_de, un_de_plan, un_de_ops, "Dead-end unreachable 5 mm (margin)"),
+    ]
+
+    fig, axes = plt.subplots(2, 3, figsize=(18, 12))
+
+    for idx, (bnd, plan, ops, title) in enumerate(panels):
+        row, col = divmod(idx, 3)
+        ax = axes[row][col]
+        if ops is not None:
+            plot_ops_2d(
+                ax, ops, boundary=bnd, wall_margin=margin["wall_margin"]
+            )
+        _annotate_regions(
+            ax, bnd, [], margin["tool_radius"], margin["wall_margin"]
+        )
+        ax.set_title(f"{title}\n{_step_summary(plan.steps)}", fontsize=9)
+
+    for row in axes:
+        for ax in row:
+            if not ax.get_visible():
+                continue
+            ax.set_xlabel("X (mm)")
+            ax.set_ylabel("Y (mm)")
+            ax.set_aspect("equal")
+            ax.grid(True, alpha=0.25)
+
+    fig.tight_layout()
+    return fig
+
+
 __docs_target__ = ["raygeo.cnc.plan.clearing.md"]
 
 __images__ = [
@@ -207,6 +278,14 @@ __images__ = [
             " slot (Slot), dual-entry dumbbell (Unreachable)."
         ),
         "function": generate_clearing,
+    },
+    {
+        "heading": "plan_clearing",
+        "caption": (
+            "The same pockets with a 0.5 mm wall margin:"
+            " too-narrow passages stay uncut."
+        ),
+        "function": generate_wall_margin,
     },
 ]
 

@@ -150,8 +150,13 @@ pub fn plan_clearing(
 
     let mut steps = Vec::new();
 
-    let regions =
-        region::find_regions(&boundary, &islands, opts.tool_radius, 0.5);
+    let regions = region::find_regions(
+        &boundary,
+        &islands,
+        opts.tool_radius,
+        0.5,
+        opts.wall_margin,
+    );
 
     if regions.is_empty() {
         return Ok(Plan::new(boundary, islands, opts.safe_z));
@@ -164,6 +169,7 @@ pub fn plan_clearing(
             tool_radius: opts.tool_radius,
             tolerance: 0.5,
             min_slot_width: 0.0,
+            wall_margin: opts.wall_margin,
         },
     )
     .unwrap_or_default();
@@ -390,8 +396,20 @@ pub fn plan_clearing(
         let has_unreachable = passages
             .iter()
             .any(|p| p.class == PassageClass::Unreachable);
+        // One whole-boundary profile only reaches every wall while the
+        // inset ring (tool radius + margins) stays connected. Where the
+        // inset pinches a passage closed, the ring splits and the profile
+        // engine machines only the largest piece — scope the profiles per
+        // region instead, like the unreachable passages already do.
+        let inset_splits = offset_polygon(
+            &boundary,
+            -(opts.tool_radius + opts.wall_margin + opts.stock_to_leave),
+            JoinStyle::Round,
+        )
+        .len()
+            > 1;
 
-        if has_unreachable {
+        if has_unreachable || inset_splits {
             for reg in &regions {
                 steps.push(PlanStep {
                     face_id: cur_face.clone(),

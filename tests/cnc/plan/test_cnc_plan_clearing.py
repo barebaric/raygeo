@@ -274,7 +274,8 @@ def test_passage_too_narrow_for_the_margin_is_left_uncut():
     both sides (tool + 2 x margin = 7 mm): the passage pass honours the
     margin and cuts nothing in the corridor — the material stays for a
     later pass or a smaller tool — while both rooms are still machined
-    inside the margin."""
+    inside the margin. The profile inset pinches the corridor closed, so
+    the finishing profiles are scoped per room; both rooms keep theirs."""
     bnd = _two_room_dumbbell(6.2)
     part = Part.from_polygons(bnd, [], (80.0, 40.0))
     plan = plan_clearing(
@@ -288,6 +289,10 @@ def test_passage_too_narrow_for_the_margin_is_left_uncut():
         finishing=True,
     )
     assert "slot" not in [s.kind for s in plan.steps]
+    profiles = [s for s in plan.steps if s.kind == "profile_inner"]
+    assert len(profiles) == 2, (
+        f"one finishing profile per room, got {len(profiles)}"
+    )
     ops = run_intent(create_intent(plan, part, 0))
     in_left_room = in_far_room = 0
     for cmd in ops.to_dict()["commands"]:
