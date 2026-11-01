@@ -11,4 +11,5 @@ pub mod encode;
 pub mod intent;
 pub mod machine_transform;
 pub mod material_fold;
+pub mod run;
 pub mod specs;

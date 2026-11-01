@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use crate::geo::types::Polygon;
 use crate::ops::assembly::Assembler;
+use crate::ops::state::State;
 
 /// One step in a [`Plan`]: a typed assembler spec targeting a face.
 ///
@@ -47,6 +48,9 @@ pub struct Plan {
     pub pocket_boundary: Polygon,
     /// Islands inside the pocket.
     pub islands: Vec<Polygon>,
+    /// The cut state (feeds, spindle) the steps' moves carry. Set by the
+    /// planner from its options; `create_intent` hands it to the engines.
+    pub cut_state: State,
 }
 
 impl std::fmt::Debug for Plan {
@@ -69,6 +73,7 @@ impl Plan {
             pocket_boundary,
             islands,
             safe_z,
+            cut_state: State::default(),
         }
     }
 
