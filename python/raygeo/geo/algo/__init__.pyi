@@ -43,6 +43,7 @@ from . import minkowski2d
 from . import narrow
 from . import nest2d
 from . import offset
+from . import offset_exact
 from . import ordering
 from . import overcut
 from . import polylabel
@@ -71,6 +72,7 @@ __all__ = [
     "narrow",
     "nest2d",
     "offset",
+    "offset_exact",
     "ordering",
     "overcut",
     "polylabel",
