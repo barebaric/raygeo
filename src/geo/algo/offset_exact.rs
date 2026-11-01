@@ -25,6 +25,7 @@
 
 use std::f64::consts::TAU;
 
+use crate::geo::algo::analysis::get_closed_spans;
 use crate::geo::geometry::Geometry;
 use crate::geo::shape::arc::{
     get_arc_chord_steps, get_arc_sweep, is_angle_between, normalize_angle,
@@ -203,10 +204,6 @@ impl Span {
         }
     }
 
-    fn is_finite(&self) -> bool {
-        self.start.is_finite() && self.end().is_finite()
-    }
-
     /// Where the two spans cross: `(parameter on self, parameter on other)`
     /// pairs, each within `[-PARAM_SLACK, 1 + PARAM_SLACK]`. Spans lying
     /// along each other (collinear lines, arcs of one circle) report nothing.
@@ -315,97 +312,6 @@ fn arc_parameter(a0: f64, sweep: f64, theta: f64) -> Option<f64> {
 /// A closed contour as spans.
 struct Contour {
     spans: Vec<Span>,
-}
-
-/// The closed subpaths of `geometry` as contours. Lines and arcs stay exact;
-/// other curves are followed as line chains within `tolerance`. Subpaths
-/// that are open, degenerate, or not finite are dropped.
-fn contours(geometry: &Geometry, tolerance: f64) -> Vec<Contour> {
-    let mut out = Vec::new();
-    let mut spans: Vec<Span> = Vec::new();
-    let mut pos = Point3D::ZERO;
-    let mut moved = false;
-    for command in geometry.data() {
-        if let Command::Move { end } = *command {
-            if let Some(contour) = finish_contour(std::mem::take(&mut spans)) {
-                out.push(contour);
-            }
-            pos = end;
-            moved = true;
-            continue;
-        }
-        if !moved {
-            continue;
-        }
-        push_span(&mut spans, command, pos, tolerance);
-        pos = command.end_point();
-        if spans.len() > MAX_PIECES {
-            return Vec::new();
-        }
-    }
-    if let Some(contour) = finish_contour(spans) {
-        out.push(contour);
-    }
-    out
-}
-
-/// Appends `command` as spans starting at `start`. Lines and arcs are kept
-/// exact; other curves become line chains within `tolerance`.
-fn push_span(
-    spans: &mut Vec<Span>,
-    command: &Command,
-    start: Point3D,
-    tolerance: f64,
-) {
-    match *command {
-        Command::Line { end } => {
-            if xy(start).distance(xy(end)) > MIN_PIECE {
-                spans.push(Span {
-                    start,
-                    command: Command::Line { end },
-                });
-            }
-        }
-        Command::Arc { .. } => {
-            if arc_parts(start, command).is_some() {
-                spans.push(Span {
-                    start,
-                    command: command.clone(),
-                });
-            }
-        }
-        Command::Bezier { .. } => {
-            let mut flat: Vec<(Point3D, Point3D)> = Vec::new();
-            command.linearize(start, tolerance, &mut flat);
-            for (a, b) in flat {
-                if xy(a).distance(xy(b)) > MIN_PIECE {
-                    spans.push(Span {
-                        start: a,
-                        command: Command::Line { end: b },
-                    });
-                }
-            }
-        }
-        Command::Move { .. } => {}
-    }
-}
-
-/// A closed subpath as a contour, or `None` when it is open, degenerate, or
-/// not finite.
-fn finish_contour(spans: Vec<Span>) -> Option<Contour> {
-    if spans.len() < 2 || !spans.iter().all(Span::is_finite) {
-        return None;
-    }
-    let first = spans.first()?;
-    let last = spans.last()?;
-    if xy(first.start).distance(xy(last.end())) > CLOSED_TOL {
-        return None;
-    }
-    let area: f64 = spans.iter().map(Span::area_term).sum();
-    if area.is_nan() || area.abs() <= 1e-9 {
-        return None;
-    }
-    Some(Contour { spans })
 }
 
 /// The boundary loops of one geometry, with the region on each loop's left:
@@ -777,15 +683,23 @@ pub fn offset_exact(
     if !offset.is_finite() || !tolerance.is_finite() || tolerance <= 0.0 {
         return Vec::new();
     }
-    let loops = contours(geometry, tolerance);
-    if loops.is_empty() {
+    let contours: Vec<Vec<(Point3D, Command)>> =
+        get_closed_spans(geometry, tolerance);
+    let total: usize = contours.iter().map(Vec::len).sum();
+    if contours.is_empty() || total > MAX_PIECES {
         return Vec::new();
     }
-    let total: usize = loops.iter().map(|c| c.spans.len()).sum();
-    if total > MAX_PIECES {
-        return Vec::new();
-    }
-    let boundary = Boundary { loops };
+    let boundary = Boundary {
+        loops: contours
+            .into_iter()
+            .map(|spans| Contour {
+                spans: spans
+                    .into_iter()
+                    .map(|(start, command)| Span { start, command })
+                    .collect(),
+            })
+            .collect(),
+    };
     // Positive grows the region; the core moves the boundary into the
     // region for a positive d.
     boundary
