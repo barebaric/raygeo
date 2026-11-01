@@ -404,9 +404,23 @@ fn emit_passage_step(
 ) -> Option<(Point, Point)> {
     match passage.class {
         PassageClass::Narrow => {
-            if let Some((start, end)) =
-                find_ramp_carrier(&passage.polygon, islands, tool_radius, 45.0)
-            {
+            // Room for the trochoid's lateral swing about the carrier: the
+            // loop radius the passage's own step-over produces.
+            let step_for_margin =
+                safe_toroidal_step_over(passage.min_width, tool_radius);
+            let swing = crate::geo::algo::trochoid::trochoid_lateral_swing(
+                tool_radius * 2.0,
+                step_for_margin / (tool_radius * 2.0),
+                30.0,
+                (step_for_margin * 0.3).max(0.05),
+            );
+            if let Some((start, end)) = find_ramp_carrier(
+                &passage.polygon,
+                islands,
+                tool_radius,
+                45.0,
+                swing,
+            ) {
                 let carrier_arr = [start, end];
                 let pw =
                     measure_passage_min_width(&passage.polygon, &carrier_arr);
