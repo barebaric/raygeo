@@ -9,6 +9,7 @@ from raygeo.geo.shape.arc import (
     does_arc_intersect_rect,
     get_arc_angles,
     get_arc_bounds,
+    get_arc_chord_steps,
     get_arc_closest_point,
     get_arc_direction,
     get_arc_midpoint,
@@ -896,3 +897,49 @@ class TestNormalizeAngleSigned:
     )
     def test_parametrized(self, angle, expected):
         assert normalize_angle_signed(angle) == pytest.approx(expected)
+
+
+class TestGetArcChordSteps:
+    """Chord counts that keep chords within a sagitta of an arc."""
+
+    def test_quarter_circle_within_sag(self):
+        # A quarter turn of radius 10 with sag 0.1: chord step angle
+        # 2*acos(1 - 0.01) ≈ 0.283 rad, so 6 chords cover π/2 ≈ 1.571.
+        n = get_arc_chord_steps(10.0, math.pi / 2, 0.1)
+        assert n == 6
+
+    def test_count_grows_as_sag_shrinks(self):
+        coarse = get_arc_chord_steps(10.0, math.pi, 1.0)
+        fine = get_arc_chord_steps(10.0, math.pi, 0.01)
+        assert fine > coarse
+
+    def test_count_grows_with_radius_for_fixed_sag(self):
+        # A larger radius curves more slowly, but the same sagitta buys a
+        # proportionally smaller step angle, so the count still grows.
+        small = get_arc_chord_steps(5.0, math.pi, 0.01)
+        large = get_arc_chord_steps(50.0, math.pi, 0.01)
+        assert large > small
+
+    def test_tiny_sweep_needs_one_chord(self):
+        assert get_arc_chord_steps(10.0, 1e-6, 0.1) == 1
+
+    def test_zero_sweep_needs_one_chord(self):
+        assert get_arc_chord_steps(10.0, 0.0, 0.1) == 1
+
+    def test_unusable_sag_falls_back_to_quarter_turns(self):
+        # sag >= radius (or sag <= 0) walks quarter turns: a full turn is 4.
+        assert get_arc_chord_steps(10.0, 2 * math.pi, 10.0) == 4
+        assert get_arc_chord_steps(10.0, 2 * math.pi, 0.0) == 4
+        assert get_arc_chord_steps(10.0, math.pi, -1.0) == 2
+
+    def test_chords_honour_the_sag(self):
+        # Whatever the count, the chord midpoint of each step stays within
+        # the requested sag of the arc.
+        for radius, sweep, sag in [(10.0, math.pi, 0.05), (3.0, 5.0, 0.2)]:
+            n = get_arc_chord_steps(radius, sweep, sag)
+            step = sweep / n
+            # Chord sagitta of one step.
+            chord_sag = radius * (1.0 - math.cos(abs(step) / 2.0))
+            assert chord_sag <= sag + 1e-12, (
+                f"step sag {chord_sag:.4f} exceeds {sag}"
+            )

@@ -17,6 +17,7 @@ __all__ = [
     "does_arc_intersect_rect",
     "get_arc_angles",
     "get_arc_bounds",
+    "get_arc_chord_steps",
     "get_arc_closest_point",
     "get_arc_direction",
     "get_arc_length",
@@ -80,6 +81,20 @@ def get_arc_bounds(start: types.Point, end: types.Point, center: types.Point, cl
     :param center: Arc center point (x, y).
     :param clockwise: Whether the arc is clockwise.
     :returns: Bounding rectangle as (x_min, y_min, x_max, y_max).
+    :complexity: O(1) time, O(1) space
+    """
+
+def get_arc_chord_steps(radius: float, sweep: float, sag: float) -> int:
+    r"""
+    Count the equal chords that keep a chord within `sag` of an arc.
+    
+    At least 1; a `sag` that is not a usable fraction of the radius
+    falls back to quarter-turn chords.
+    
+    :param radius: Arc radius.
+    :param sweep: Signed sweep angle in radians.
+    :param sag: Largest allowed distance between chord and arc.
+    :returns: The number of chords to walk the arc with.
     :complexity: O(1) time, O(1) space
     """
 

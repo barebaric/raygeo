@@ -16,10 +16,10 @@ use super::super::flex_point::{
 use super::super::types::{ArcClosestResult, Edge3D};
 use crate::geo::shape::arc::{
     does_arc_intersect_circle, does_arc_intersect_rect, get_arc_angles,
-    get_arc_bounds, get_arc_closest_point, get_arc_direction, get_arc_length,
-    get_arc_midpoint, get_arc_sweep, get_arc_through_point,
-    get_polyline_turn_sign, is_angle_between, is_arc_clockwise,
-    is_arc_inside_polygons, linearize_arc, normalize_angle,
+    get_arc_bounds, get_arc_chord_steps, get_arc_closest_point,
+    get_arc_direction, get_arc_length, get_arc_midpoint, get_arc_sweep,
+    get_arc_through_point, get_polyline_turn_sign, is_angle_between,
+    is_arc_clockwise, is_arc_inside_polygons, linearize_arc, normalize_angle,
     normalize_angle_signed,
 };
 use crate::geo::types::{Point, Point3D, Rect};
@@ -96,6 +96,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         linearize_arc_py,
         get_arc_length_py,
         get_arc_sweep_py,
+        get_arc_chord_steps_py,
         get_polyline_turn_sign_py,
     );
 
@@ -261,6 +262,28 @@ fn get_arc_length_py(
 #[pyfunction(name = "get_arc_sweep")]
 fn get_arc_sweep_py(start_angle: f64, end_angle: f64, clockwise: bool) -> f64 {
     get_arc_sweep(start_angle, end_angle, clockwise)
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    def get_arc_chord_steps(radius: float, sweep: float, sag: float) -> int:
+        """Count the equal chords that keep a chord within `sag` of an arc.
+
+        At least 1; a `sag` that is not a usable fraction of the radius
+        falls back to quarter-turn chords.
+
+        :param radius: Arc radius.
+        :param sweep: Signed sweep angle in radians.
+        :param sag: Largest allowed distance between chord and arc.
+        :returns: The number of chords to walk the arc with.
+        :complexity: O(1) time, O(1) space
+        """
+"#,
+    module = "raygeo.geo.shape.arc"
+)]
+#[pyfunction(name = "get_arc_chord_steps")]
+fn get_arc_chord_steps_py(radius: f64, sweep: f64, sag: f64) -> usize {
+    get_arc_chord_steps(radius, sweep, sag)
 }
 
 #[gen_stub_pyfunction(

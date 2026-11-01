@@ -35,10 +35,9 @@ shrinks it.
 | _Returns_    | `list[geo.Geometry]` | the offset closed loops, one geometry per loop.   |
 | _Complexity_ |                      | O(n^2) in the number of boundary pieces.          |
 
-![Exact offsets of a rectangle: growing rolls the corners on arcs, shrinking keeps the walls straight.](images/geo-algo-offset-exact-round-joins.png)
+![Exact offsets of a rounded rectangle: input arcs stay arcs, new corners roll on arcs.](images/geo-algo-offset-exact-round-joins.png)
 
-*Exact offsets of a rectangle: growing rolls the corners on arcs, shrinking keeps the walls
-straight.*
+*Exact offsets of a rounded rectangle: input arcs stay arcs, new corners roll on arcs.*
 
 ![Every closed subpath takes part: growing the region moves the island's boundary inwards.](images/geo-algo-offset-exact-island.png)
 

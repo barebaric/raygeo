@@ -69,6 +69,24 @@ pub fn get_arc_length(
     sweep.abs() * radius
 }
 
+/// How many equal chords walk an arc of `radius` sweeping `sweep` radians
+/// while each chord stays within `sag` of the arc. At least 1; a `sag` that
+/// is not a usable fraction of the radius falls back to quarter-turn chords.
+pub fn get_arc_chord_steps(radius: f64, sweep: f64, sag: f64) -> usize {
+    let step = if sag > 0.0 && sag < radius {
+        2.0 * (1.0 - sag / radius).acos()
+    } else {
+        std::f64::consts::FRAC_PI_2
+    };
+    let n =
+        (sweep.abs() / step.clamp(1e-3, std::f64::consts::FRAC_PI_2)).ceil();
+    if n.is_finite() {
+        (n as usize).clamp(1, 8192)
+    } else {
+        1
+    }
+}
+
 /// Normalizes an angle to the range [0, 2*PI).
 pub fn normalize_angle(angle: f64) -> f64 {
     ((angle % (2.0 * PI)) + 2.0 * PI) % (2.0 * PI)

@@ -7,25 +7,30 @@ from raygeo.geo.algo.offset_exact import offset_exact
 from tools.plot import plot_geometry
 
 
-def _rect(x0, y0, x1, y1, ccw=True):
+def _rounded_rect(x0, y0, x1, y1, r):
+    """A closed rounded rectangle: four lines joined by four corner arcs."""
     g = Geometry()
-    pts = (
-        [(x0, y0), (x1, y0), (x1, y1), (x0, y1)]
-        if ccw
-        else [(x0, y1), (x1, y1), (x1, y0), (x0, y0)]
-    )
-    g.move_to(*pts[0], 0)
-    for p in pts[1:]:
-        g.line_to(*p, 0)
-    g.close_path()
+    g.move_to(x0 + r, y0, 0)
+    g.line_to(x1 - r, y0, 0)
+    g.arc_to(x1, y0 + r, 0, r, False, 0)
+    g.line_to(x1, y1 - r, 0)
+    g.arc_to(x1 - r, y1, -r, 0, False, 0)
+    g.line_to(x0 + r, y1, 0)
+    g.arc_to(x0, y1 - r, 0, -r, False, 0)
+    g.line_to(x0, y0 + r, 0)
+    g.arc_to(x0 + r, y0, r, 0, False, 0)
     return g
 
 
-def _circle(r, cx=0.0, cy=0.0):
+def _stadium(cx, cy, half_len, r):
+    """A closed stadium (slot shape) with its semicircular ends, clockwise."""
     g = Geometry()
-    g.move_to(cx + r, cy, 0)
-    g.arc_to(cx - r, cy, -r, 0.0, False, 0)
-    g.arc_to(cx + r, cy, r, 0.0, False, 0)
+    g.move_to(cx - half_len, cy + r, 0)
+    g.line_to(cx + half_len, cy + r, 0)
+    g.arc_to(cx + half_len, cy - r, 0, -r, True, 0)
+    g.line_to(cx - half_len, cy - r, 0)
+    g.arc_to(cx - half_len, cy + r, 0, r, True, 0)
+    g.close_path()
     return g
 
 
@@ -33,13 +38,13 @@ def generate_round_joins():
     """Round joins."""
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 7))
 
-    rect = _rect(0, 0, 60, 40)
+    rect = _rounded_rect(0, 0, 60, 40, 10.0)
     grown = offset_exact(rect, 8.0, 0.1)
     plot_geometry(ax1, rect, color="black", linewidth=2, label="Boundary")
     plot_geometry(
         ax1, grown[0], color="steelblue", linewidth=2.5, label="offset +8"
     )
-    ax1.set_title("Growing: corners roll on exact arcs")
+    ax1.set_title("Growing: input arcs stay arcs, corners roll on arcs")
     ax1.set_aspect("equal")
     ax1.legend(fontsize=9)
     ax1.grid(True, alpha=0.3)
@@ -50,7 +55,7 @@ def generate_round_joins():
         plot_geometry(
             ax2, shrunk[0], color="tomato", linewidth=2.5, label="offset -8"
         )
-    ax2.set_title("Shrinking: walls stay lines, corners are trimmed")
+    ax2.set_title("Shrinking: walls stay lines and arcs, corners are trimmed")
     ax2.set_aspect("equal")
     ax2.legend(fontsize=9)
     ax2.grid(True, alpha=0.3)
@@ -61,8 +66,8 @@ def generate_round_joins():
 
 def generate_island():
     """Island."""
-    region = _rect(0, 0, 100, 70)
-    region.extend(_rect(35, 25, 65, 45, ccw=False))
+    region = _rounded_rect(0, 0, 100, 70, 10.0)
+    region.extend(_stadium(50, 35, 12.0, 8.0))
     grown = offset_exact(region, 6.0, 0.1)
 
     fig, ax = plt.subplots(figsize=(8, 7))
@@ -107,8 +112,8 @@ __images__ = [
     {
         "heading": "offset_exact",
         "caption": (
-            "Exact offsets of a rectangle: growing rolls the corners on "
-            "arcs, shrinking keeps the walls straight."
+            "Exact offsets of a rounded rectangle: input arcs stay arcs, "
+            "new corners roll on arcs."
         ),
         "function": generate_round_joins,
     },
