@@ -27,7 +27,9 @@ use crate::cnc::plan::entry::{self, EntryWorkplanOptions};
 use crate::cnc::plan::plan::{Plan, PlanStep};
 use crate::error::RaygeoResult;
 use crate::geo::algo::helix::HelixDirection;
-use crate::geo::shape::polygon::{get_polygon_bounds, get_polygon_centroid};
+use crate::geo::shape::polygon::{
+    get_polygon_bounds, get_polygon_centroid, is_point_inside_polygon,
+};
 use crate::geo::types::{Point, Point3D, Polygon};
 use crate::ops::assembly::adaptive::AdaptiveClearingSpec;
 use crate::ops::assembly::profile::{ProfileKind, ProfileSpec};
@@ -68,6 +70,25 @@ struct PassageEdge {
     passage_idx: usize,
     region_a: usize,
     region_b: usize,
+}
+
+/// The islands that lie inside `polygon`.
+///
+/// A region's polygon is the outer shell only — `shell_to_region` keeps the
+/// largest ring and drops the hole rings the polygon difference carved out —
+/// so every region-scoped step must carry the islands again. Without them the
+/// scoped step swaps the face's stock region for a hole-free boundary and
+/// machines straight through the island.
+fn islands_inside(polygon: &Polygon, islands: &[Polygon]) -> Vec<Polygon> {
+    islands
+        .iter()
+        .filter(|island| {
+            island
+                .first()
+                .is_some_and(|p| is_point_inside_polygon(*p, polygon))
+        })
+        .cloned()
+        .collect()
 }
 
 #[prof]
@@ -165,7 +186,10 @@ pub fn plan_clearing(
             // Set per-region boundary on entry steps so the seed is
             // created inside the region boundary.
             if matches!(via_class, None | Some(PassageClass::Unreachable)) {
-                let bnd = Some((region.polygon.clone(), Vec::new()));
+                let bnd = Some((
+                    region.polygon.clone(),
+                    islands_inside(&region.polygon, &islands),
+                ));
                 for es in &mut entry_steps {
                     es.region_boundary = bnd.clone();
                 }
@@ -208,7 +232,10 @@ pub fn plan_clearing(
                 cancel_check: None,
             }),
             region_boundary: if use_region_bnd {
-                Some((region.polygon.clone(), Vec::new()))
+                Some((
+                    region.polygon.clone(),
+                    islands_inside(&region.polygon, &islands),
+                ))
             } else {
                 None
             },
@@ -318,7 +345,10 @@ pub fn plan_clearing(
                         feed_reduction_factor: 0.5,
                         trace_path: None,
                     }),
-                    region_boundary: Some((reg.polygon.clone(), Vec::new())),
+                    region_boundary: Some((
+                        reg.polygon.clone(),
+                        islands_inside(&reg.polygon, &islands),
+                    )),
                 });
             }
         } else {
