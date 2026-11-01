@@ -10,10 +10,8 @@ use pyo3_stub_gen::derive::{
 };
 
 use crate::cnc::execution::intent;
-use crate::cnc::execution::specs::AggregateOutput;
 use crate::pipeline::cache::Cache;
 use crate::pipeline::completed::CompletedNode;
-use crate::pipeline::pipeline::Pipeline as CorePipeline;
 use crate::pipeline::request::NodeRequest;
 use crate::python::cnc::execution::converter::{
     completed_node_from_core, convert_node_request,
@@ -258,7 +256,14 @@ fn run_intent(
 
     let nodes = intent.nodes.lock().unwrap().drain(..).collect::<Vec<_>>();
 
-    let on_completed_cb = on_completed;
+    let on_completed = on_completed.map(|cb| {
+        move |node: CompletedNode| {
+            Python::attach(|py| {
+                let py_node = completed_node_from_core(py, node);
+                let _ = cb.call1(py, (py_node,));
+            });
+        }
+    });
     let on_batch = on_batch_progress.map(|cb| {
         Arc::new(move |frac: f64, msg: String| {
             Python::attach(|py| {
@@ -267,50 +272,28 @@ fn run_intent(
         }) as Arc<dyn Fn(f64, String) + Send + Sync + 'static>
     });
 
-    // Capture the aggregate node's Ops so we can return it.
-    let result_ops: Arc<Mutex<Option<crate::ops::Ops>>> =
-        Arc::new(Mutex::new(None));
-    let result_ops_capture = result_ops.clone();
-
-    py.detach(move || -> PyResult<()> {
-        let pipeline = match cache {
-            Some(c) => CorePipeline::with_cache(c),
-            None => CorePipeline::default(),
-        };
-        pipeline
-            .execute(
-                nodes,
-                move |node: CompletedNode| {
-                    // Capture the aggregate output.
-                    if let Some(ref output) = node.output {
-                        if let Some(agg) =
-                            output.downcast_ref::<AggregateOutput>()
-                        {
-                            *result_ops_capture.lock().unwrap() =
-                                Some(agg.ops.clone());
-                        }
-                    }
-                    if let Some(ref cb) = on_completed_cb {
-                        Python::attach(|py| {
-                            let py_node = completed_node_from_core(py, node);
-                            let _ = cb.call1(py, (py_node,));
-                        });
-                    }
-                },
-                on_batch,
+    // One execution semantics, shared with the Rust `run_plan`: a failing
+    // step fails the run. Cancellation surfaces as PipelineCancelled, any
+    // other failure as RuntimeError carrying the failing step's error.
+    let output = py
+        .detach(move || -> crate::error::RaygeoResult<
+            crate::cnc::execution::run::PlanOutput,
+        > {
+            crate::cnc::execution::run::execute_nodes(
+                nodes, on_completed, on_batch, cache,
             )
-            .map_err(|_| {
+        })
+        .map_err(|e| {
+            if matches!(e, crate::error::RaygeoError::Cancelled) {
                 crate::python::errors::PipelineCancelled::new_err(
                     "pipeline was cancelled",
                 )
-            })?;
-        Ok(())
-    })?;
+            } else {
+                PyRuntimeError::new_err(e.to_string())
+            }
+        })?;
 
-    let ops = result_ops.lock().unwrap().take().ok_or_else(|| {
-        PyRuntimeError::new_err("pipeline produced no aggregate output")
-    })?;
-    Py::new(py, PyOps { inner: ops })
+    Py::new(py, PyOps { inner: output.ops })
 }
 
 pub(crate) fn register(exec_mod: &Bound<'_, PyModule>) -> PyResult<()> {

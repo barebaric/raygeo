@@ -62,6 +62,9 @@ pub struct ClearingWorkplanOptions {
     pub area_tolerance: f64,
     pub max_deflection_deg: f64,
     pub finishing: bool,
+    /// Cut feed rate (mm/min) the plan's moves carry. `None` leaves the
+    /// cut state unset, for embedders that map feeds themselves.
+    pub feed_rate: Option<f64>,
 }
 
 /// A directed edge in the region graph.
@@ -431,6 +434,7 @@ pub fn plan_clearing(
     }
 
     let mut plan = Plan::new(boundary, islands, opts.safe_z);
+    plan.cut_state.feed_rate = opts.feed_rate.map(|f| f.round() as i32);
     plan.extend(steps);
     Ok(plan)
 }
