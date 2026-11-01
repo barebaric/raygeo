@@ -1,9 +1,15 @@
 /// Debug-logging macro: prints to stderr in dev builds, no-op in release.
+///
+/// Dev builds emit only when `RAYGEO_DEBUG=1`: the engine's step tracing is
+/// for debugging raygeo itself, and a downstream `cargo test` compiles with
+/// debug assertions on, where unconditional printing would flood its output.
 #[cfg(debug_assertions)]
 #[macro_export]
 macro_rules! dbg_log {
     ($($arg:tt)*) => {
-        eprintln!($($arg)*);
+        if $crate::log::debug_enabled() {
+            eprintln!($($arg)*);
+        }
     };
 }
 
@@ -20,4 +26,13 @@ macro_rules! dbg_log {
             }
         }
     };
+}
+
+/// Whether dev-build tracing is switched on (`RAYGEO_DEBUG=1`).
+#[cfg(debug_assertions)]
+pub fn debug_enabled() -> bool {
+    use std::sync::OnceLock;
+    static ENABLED: OnceLock<bool> = OnceLock::new();
+    *ENABLED
+        .get_or_init(|| std::env::var("RAYGEO_DEBUG").is_ok_and(|v| v == "1"))
 }
