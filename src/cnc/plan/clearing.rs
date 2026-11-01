@@ -247,16 +247,13 @@ pub fn plan_clearing(
 
         // Root / unreachable regions: scope to the region polygon so
         // the algorithm stays out of adjacent passages.
-        // Passage-reached regions: use the full pocket boundary with
-        // start_pos at the passage exit.  The already-cleared corridor
-        // is visible through the shared face and won't be re-cut.
-        // With a wall margin, passage-reached regions are scoped to the
-        // eroded pocket boundary as well, so their clearing keeps the
-        // margin; without one they run on the whole face, where the
-        // already-cleared corridor is visible and won't be re-cut.
+        // Passage-reached regions: run on the whole face with start_pos at
+        // the passage exit — high-speed continuation. The already-cleared
+        // corridor is visible through the shared face and won't be re-cut,
+        // and the connection was machined by the passage pass itself; the
+        // wall finishing profile brings these walls to size.
         let use_region_bnd =
-            matches!(via_class, None | Some(PassageClass::Unreachable))
-                || opts.wall_margin > 0.0;
+            matches!(via_class, None | Some(PassageClass::Unreachable));
 
         let start_pos_3d = match via_class {
             Some(PassageClass::Slot) | Some(PassageClass::Narrow) => {
