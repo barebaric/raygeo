@@ -12,7 +12,8 @@ extracting subpath vertices, computing subpath/geometry area, and
 determining path winding order.
 ";
 
-use super::super::flex_point::points_to_tuples;
+use super::super::flex_point::{point3d_to_tuple, points_to_tuples};
+use super::super::geometry::PyTypedCommand;
 use super::super::Geometry;
 use crate::geo::types::WindingOrder;
 use pyo3::prelude::*;
@@ -30,6 +31,7 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         get_subpath_area_py,
         get_area_py,
         get_path_winding_order_py,
+        get_closed_spans_py,
     );
 
     algo_mod.add_submodule(&m)?;
@@ -171,4 +173,56 @@ fn get_path_winding_order_py(
         Some(WindingOrder::CW) => "cw",
         None => "unknown",
     }
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import typing
+
+    import raygeo
+    import raygeo.geo
+
+    def get_closed_spans(
+        geometry: raygeo.geo.Geometry,
+        tolerance: float = 0.1,
+    ) -> list[list[tuple[tuple[float, float, float], typing.Any]]]:
+        """Split a geometry into its closed subpaths as exact spans.
+
+        Each subpath comes back as a list of ``(start point, command)``
+        spans. Lines and arcs stay exact; other curves are followed as
+        line chains within `tolerance`. Open, degenerate, and non-finite
+        subpaths are dropped, and the winding of each loop is kept as
+        drawn (counter-clockwise loops bound material, clockwise ones
+        holes).
+
+        :param geometry: geometry whose closed subpaths are extracted.
+        :param tolerance: line-chain tolerance for non-line-and-arc curves.
+        :returns: one span list per closed subpath.
+        :complexity: O(n) time, O(n) space
+        """
+"#,
+    module = "raygeo.geo.algo.analysis"
+)]
+#[pyfunction(name = "get_closed_spans")]
+#[pyo3(signature = (geometry, tolerance = 0.1))]
+#[allow(clippy::type_complexity)]
+fn get_closed_spans_py(
+    py: Python<'_>,
+    geometry: &Geometry,
+    tolerance: f64,
+) -> PyResult<Vec<Vec<((f64, f64, f64), Py<PyAny>)>>> {
+    crate::geo::algo::analysis::get_closed_spans(&geometry.inner, tolerance)
+        .into_iter()
+        .map(|spans| {
+            spans
+                .into_iter()
+                .map(|(start, command)| {
+                    Ok((
+                        point3d_to_tuple(start),
+                        PyTypedCommand::from(command).into_py_obj(py)?,
+                    ))
+                })
+                .collect()
+        })
+        .collect()
 }

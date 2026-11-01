@@ -103,7 +103,7 @@ pub struct PyBezier {
     pub control2: (f64, f64, f64),
 }
 
-enum PyTypedCommand {
+pub(crate) enum PyTypedCommand {
     Move(PyMove),
     Line(PyLine),
     Arc(PyArc),
@@ -142,7 +142,7 @@ impl From<CoreCommand> for PyTypedCommand {
 }
 
 impl PyTypedCommand {
-    fn into_py_obj(self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+    pub(crate) fn into_py_obj(self, py: Python<'_>) -> PyResult<Py<PyAny>> {
         Ok(match self {
             PyTypedCommand::Move(c) => Py::new(py, c)?.into_any(),
             PyTypedCommand::Line(c) => Py::new(py, c)?.into_any(),
