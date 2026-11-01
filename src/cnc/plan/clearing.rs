@@ -28,7 +28,8 @@ use crate::cnc::plan::plan::{Plan, PlanStep};
 use crate::error::RaygeoResult;
 use crate::geo::algo::helix::HelixDirection;
 use crate::geo::shape::polygon::{
-    get_polygon_bounds, get_polygon_centroid, is_point_inside_polygon,
+    get_polygon_area, get_polygon_bounds, get_polygon_centroid,
+    is_point_inside_polygon, offset_polygon, JoinStyle,
 };
 use crate::geo::types::{Point, Point3D, Polygon};
 use crate::ops::assembly::adaptive::AdaptiveClearingSpec;
@@ -361,9 +362,25 @@ pub fn plan_clearing(
                 }
                 PassageClass::Unreachable => None,
             };
+            // At a wall margin, the far region of a passage is planned
+            // like an unreachable region: the passage pass honours the
+            // margin, so the corridor's walls keep their margin skin and
+            // there is no margin-valid material to continue into at the
+            // exit — the far region gets its own entry inside the margin
+            // instead. Without a wall margin the region continues from
+            // the exit (high-speed continuation, see the loop body).
+            let (via_class, via_end) = if opts.wall_margin > 0.0
+                && matches!(
+                    passage.class,
+                    PassageClass::Narrow | PassageClass::Slot
+                ) {
+                (PassageClass::Unreachable, None)
+            } else {
+                (passage.class, via_end)
+            };
             queue.push_back(BfsItem {
                 region_idx: neighbor_idx,
-                via_class: Some(passage.class),
+                via_class: Some(via_class),
                 via_end,
             });
         }
@@ -443,6 +460,42 @@ struct BfsItem {
     via_end: Option<Point>,
 }
 
+#[prof]
+/// The slot pass along a passage. The carrier is fitted inside the
+/// passage eroded by `clearance_radius` (`tool_radius + wall_margin`),
+/// so the pass keeps the same clearance from the walls as every other
+/// step. A passage too narrow for the tool plus twice the wall margin
+/// yields no carrier and is left uncut: its material stays for a later
+/// pass or a smaller tool.
+fn slot_step(
+    steps: &mut Vec<PlanStep>,
+    passage: &narrow::NarrowRegion,
+    tool_radius: f64,
+    clearance_radius: f64,
+    target_z: f64,
+    face_id: &str,
+) -> Option<(Point, Point)> {
+    let entry_pt = get_polygon_centroid(&passage.polygon);
+    let carrier = find_slot_path(
+        &passage.polygon,
+        &passage.entry_edge_indices,
+        entry_pt,
+        clearance_radius,
+    )?;
+    let last = carrier[carrier.len() - 1];
+    let first = carrier[0];
+    steps.push(PlanStep {
+        face_id: face_id.to_string(),
+        spec: Arc::new(SlotSpec {
+            carrier,
+            tool_radius,
+            target_z,
+        }),
+        region_boundary: None,
+    });
+    Some((first, last))
+}
+
 #[allow(clippy::too_many_arguments)]
 #[prof]
 fn emit_passage_step(
@@ -458,26 +511,60 @@ fn emit_passage_step(
 ) -> Option<(Point, Point)> {
     match passage.class {
         PassageClass::Narrow => {
-            // Room for the trochoid's lateral swing about the carrier: the
-            // loop radius the passage's own step-over produces.
-            let step_for_margin =
-                safe_toroidal_step_over(passage.min_width, tool_radius);
+            // The neck is machined inside its margin-eroded polygon, so
+            // the trochoid's swing keeps the wall margin off the neck
+            // walls. Where the eroded neck cannot hold the swing, the
+            // slot pass runs on the same clearance; a neck that fits
+            // neither is left uncut and its material stays for a later
+            // pass or a smaller tool.
+            let neck = if clearance_radius > tool_radius {
+                let wall_margin = clearance_radius - tool_radius;
+                offset_polygon(&passage.polygon, -wall_margin, JoinStyle::Round)
+                    .into_iter()
+                    .max_by(|a, b| {
+                        let key = |ring: &Polygon| {
+                            (
+                                ring.first().is_some_and(|p| {
+                                    is_point_inside_polygon(
+                                        *p,
+                                        &passage.polygon,
+                                    )
+                                }),
+                                get_polygon_area(ring),
+                            )
+                        };
+                        let (ka, kb) = (key(a), key(b));
+                        ka.0.cmp(&kb.0).then(ka.1.total_cmp(&kb.1))
+                    })
+                    .filter(|ring| ring.len() >= 3)
+            } else {
+                Some(passage.polygon.clone())
+            };
+            let Some(neck) = neck else {
+                return slot_step(
+                    steps,
+                    passage,
+                    tool_radius,
+                    clearance_radius,
+                    target_z,
+                    face_id,
+                );
+            };
+            let neck_width = (passage.min_width
+                - 2.0 * (clearance_radius - tool_radius))
+                .max(0.05);
+            let step = safe_toroidal_step_over(neck_width, tool_radius);
             let swing = crate::geo::algo::trochoid::trochoid_lateral_swing(
                 tool_radius * 2.0,
-                step_for_margin / (tool_radius * 2.0),
+                step / (tool_radius * 2.0),
                 30.0,
-                (step_for_margin * 0.3).max(0.05),
+                (step * 0.3).max(0.05),
             );
-            if let Some((start, end)) = find_ramp_carrier(
-                &passage.polygon,
-                islands,
-                clearance_radius,
-                45.0,
-                swing,
-            ) {
+            if let Some((start, end)) =
+                find_ramp_carrier(&neck, islands, tool_radius, 45.0, swing)
+            {
                 let carrier_arr = [start, end];
-                let pw =
-                    measure_passage_min_width(&passage.polygon, &carrier_arr);
+                let pw = measure_passage_min_width(&neck, &carrier_arr);
                 let safe_step = safe_toroidal_step_over(pw, tool_radius);
 
                 let margin = 0.2;
@@ -506,33 +593,24 @@ fn emit_passage_step(
                 });
                 Some((start, end))
             } else {
-                None
+                slot_step(
+                    steps,
+                    passage,
+                    tool_radius,
+                    clearance_radius,
+                    target_z,
+                    face_id,
+                )
             }
         }
-        PassageClass::Slot => {
-            let entry_pt = get_polygon_centroid(&passage.polygon);
-            if let Some(carrier) = find_slot_path(
-                &passage.polygon,
-                &passage.entry_edge_indices,
-                entry_pt,
-                clearance_radius,
-            ) {
-                let last = carrier[carrier.len() - 1];
-                let first = carrier[0];
-                steps.push(PlanStep {
-                    face_id: face_id.to_string(),
-                    spec: Arc::new(SlotSpec {
-                        carrier: carrier.clone(),
-                        tool_radius,
-                        target_z,
-                    }),
-                    region_boundary: None,
-                });
-                Some((first, last))
-            } else {
-                None
-            }
-        }
+        PassageClass::Slot => slot_step(
+            steps,
+            passage,
+            tool_radius,
+            clearance_radius,
+            target_z,
+            face_id,
+        ),
         PassageClass::Unreachable => None,
     }
 }

@@ -144,7 +144,6 @@ def generate_clearing():
         target_z=-5.0,
         safe_z=2.0,
         area_tolerance=5.0,
-        wall_margin=0.5,
         finishing=True,
     )
 

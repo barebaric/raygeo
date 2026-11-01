@@ -203,3 +203,105 @@ def test_wall_margin_is_honoured_by_the_whole_plan():
             f"cut at {end} is {island:.3f} from the island (want 3.5)"
         )
     assert checked > 50, f"only {checked} cutting positions to check"
+
+
+def _two_room_dumbbell(corridor_w):
+    """Two rooms connected by a corridor of the given width."""
+    cy = 20 - corridor_w / 2
+    return [
+        (0, 0),
+        (30, 0),
+        (30, cy),
+        (50, cy),
+        (50, 0),
+        (80, 0),
+        (80, 40),
+        (50, 40),
+        (50, cy + corridor_w),
+        (30, cy + corridor_w),
+        (30, 40),
+        (0, 40),
+    ]
+
+
+def test_dead_end_slot_passage_is_cut_to_width():
+    """A dead-end corridor the slot pass is assigned (here: 6.2 mm wide for
+    a 6 mm tool), planned without a wall margin as this scenario is
+    designed, is cut to width: the slot carrier erodes by the plain tool
+    radius."""
+    cy = 20 - 6.2 / 2
+    boundary = [
+        (0, 0),
+        (30, 0),
+        (30, cy),
+        (50, cy),
+        (50, cy + 6.2),
+        (30, cy + 6.2),
+        (30, 40),
+        (0, 40),
+    ]
+    part = Part.from_polygons(boundary, [], (50.0, 40.0))
+    plan = plan_clearing(
+        part,
+        "",
+        tool_radius=3.0,
+        step_over=2.0,
+        target_z=-4.0,
+        safe_z=10.0,
+        finishing=True,
+    )
+    kinds = [s.kind for s in plan.steps]
+    assert "slot" in kinds, f"no slot step in {kinds}"
+    ops = run_intent(create_intent(plan, part, 0))
+    in_corridor = [
+        cmd["end"]
+        for cmd in ops.to_dict()["commands"]
+        if cmd["type"] in ("MOVE_TO", "LINE_TO")
+        and cmd["end"][2] < 0.0
+        and cmd["end"][0] > 30.5
+        and cy + 1.0 < cmd["end"][1] < cy + 6.2 - 1.0
+    ]
+    assert in_corridor, "the corridor is never entered"
+    for end in in_corridor:
+        wall = min(end[1] - cy, cy + 6.2 - end[1], 50.0 - end[0])
+        assert wall >= 3.0 - 0.02, (
+            f"corridor cut at {end} is {wall:.3f} from the wall"
+        )
+
+
+def test_passage_too_narrow_for_the_margin_is_left_uncut():
+    """A 6.2 mm corridor cannot hold a 6 mm tool plus a 0.5 mm margin on
+    both sides (tool + 2 x margin = 7 mm): the passage pass honours the
+    margin and cuts nothing in the corridor — the material stays for a
+    later pass or a smaller tool — while both rooms are still machined
+    inside the margin."""
+    bnd = _two_room_dumbbell(6.2)
+    part = Part.from_polygons(bnd, [], (80.0, 40.0))
+    plan = plan_clearing(
+        part,
+        "",
+        tool_radius=3.0,
+        step_over=2.0,
+        target_z=-3.0,
+        safe_z=10.0,
+        wall_margin=0.5,
+        finishing=True,
+    )
+    assert "slot" not in [s.kind for s in plan.steps]
+    ops = run_intent(create_intent(plan, part, 0))
+    in_left_room = in_far_room = 0
+    for cmd in ops.to_dict()["commands"]:
+        if cmd["type"] not in ("MOVE_TO", "LINE_TO"):
+            continue
+        end = cmd["end"]
+        if end[2] >= 0.0:
+            continue
+        assert not (30.0 < end[0] < 50.0), (
+            f"the margin-blocked corridor was cut at {end}"
+        )
+        if end[0] < 30.0:
+            in_left_room += 1
+        elif end[0] > 50.0:
+            in_far_room += 1
+    assert in_left_room > 0, "the entry room was never machined"
+    assert in_far_room > 0, "the far room was never machined"
