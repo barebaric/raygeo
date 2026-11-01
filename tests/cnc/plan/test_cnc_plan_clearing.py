@@ -107,22 +107,26 @@ def _clearance(p):
     return wall, (dx * dx + dy * dy) ** 0.5
 
 
-def test_region_scoped_steps_do_not_machine_the_island():
-    """Region-scoped steps (entries, adaptive clearing, finishing) used to
-    swap the face's stock region for a hole-free boundary, so a pocket with
-    an island was machined straight through it. The scopes carry the
-    islands now: nothing cuts inside the island."""
+def test_cutting_stays_a_tool_radius_inside_the_pocket():
+    """Every position the plan's steps cut below the surface stays a tool
+    radius from the walls and the island: entries, clearing and finishing
+    alike. A position on the wall means the tool cuts half of itself into
+    material it must not touch."""
     part, plan = _island_pocket()
     ops = run_intent(create_intent(plan, part, 0))
-    inside = 0
+    checked = 0
     for cmd in ops.to_dict()["commands"]:
         if cmd["type"] not in ("MOVE_TO", "LINE_TO"):
             continue
         end = cmd["end"]
         if end[2] >= 0.0:
             continue
-        # Strictly inside the island polygon (a margin in from its edge,
-        # so points merely near a wall are not counted).
-        if 15.1 < end[0] < 24.9 and 10.1 < end[1] < 19.9:
-            inside += 1
-    assert inside == 0, f"{inside} cutting positions inside the island"
+        checked += 1
+        wall, island = _clearance(end)
+        # Polygon offsets approximate corner arcs, so a couple of
+        # hundredths short of the radius is the offsetter's own tolerance.
+        assert wall >= 3.0 - 0.02, f"cut at {end} is {wall:.3f} from the wall"
+        assert island >= 3.0 - 0.02, (
+            f"cut at {end} is {island:.3f} from the island"
+        )
+    assert checked > 100, f"only {checked} cutting positions to check"

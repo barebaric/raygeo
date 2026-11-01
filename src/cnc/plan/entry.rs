@@ -99,6 +99,14 @@ pub fn plan_entry(
         &opts.islands,
         opts.tool_radius,
         45.0,
+        // The trochoid about the carrier swings `lateral_swing` to each
+        // side; keep the swing inside the tool-centre region.
+        crate::geo::algo::trochoid::trochoid_lateral_swing(
+            opts.tool_radius * 2.0,
+            opts.step_over / (opts.tool_radius * 2.0),
+            30.0,
+            (opts.step_over * 0.3).max(0.05),
+        ),
     ) {
         steps.push(PlanStep {
             face_id: face_id.to_string(),
@@ -115,11 +123,7 @@ pub fn plan_entry(
             region_boundary: None,
         });
     } else {
-        let (start, end) = ramp_segment_in_region(
-            region.entry_pt,
-            &region.polygon,
-            opts.tool_radius,
-        );
+        let ((start, end), amplitude) = ramp_entry(region, opts.tool_radius);
         steps.push(PlanStep {
             face_id: face_id.to_string(),
             spec: Arc::new(RampSpec {
@@ -129,13 +133,49 @@ pub fn plan_entry(
                 z_end: opts.target_z,
                 max_ramp_angle_deg: 45.0,
                 style: crate::geo::algo::ramp::RampStyle::ZigZag,
-                lateral_amplitude: opts.tool_radius * 0.8,
+                lateral_amplitude: amplitude,
             }),
             region_boundary: None,
         });
     }
 
     Ok(steps)
+}
+
+/// A zigzag ramp entry that stays inside the region: the carrier is the
+/// longest segment through the entry point in the tool-centre region, and
+/// the zigzag's lateral amplitude is clamped to the segment's clearance
+/// inside that region (clamping to a straight ramp when the region is too
+/// narrow to swing at all).
+fn ramp_entry(
+    region: &Region,
+    tool_radius: f64,
+) -> ((crate::geo::types::Point, crate::geo::types::Point), f64) {
+    use crate::geo::shape::polygon::{
+        get_signed_boundary_distance, offset_polygon, JoinStyle,
+    };
+
+    let (start, end) =
+        ramp_segment_in_region(region.entry_pt, &region.polygon, tool_radius);
+    let amplitude = tool_radius * 0.8;
+    // How far the segment stays inside the tool-centre region: the
+    // zigzag swings ±amplitude about it.
+    let eroded =
+        offset_polygon(&region.polygon, -tool_radius, JoinStyle::Miter);
+    let valid: &[Polygon] = if eroded.is_empty() {
+        std::slice::from_ref(&region.polygon)
+    } else {
+        &eroded
+    };
+    let mut d_min = f64::INFINITY;
+    for k in 0..=32 {
+        let t = k as f64 / 32.0;
+        let p = start.lerp(end, t);
+        let d = -get_signed_boundary_distance(p, valid);
+        d_min = d_min.min(d);
+    }
+    let amplitude = amplitude.min((d_min - 0.05).max(0.0));
+    ((start, end), amplitude)
 }
 
 /// Pick the longest axis-aligned line segment through `entry_pt` whose

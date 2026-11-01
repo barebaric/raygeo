@@ -110,16 +110,21 @@ pub fn find_ramp_carrier(
     islands: &[Polygon],
     tool_radius: f64,
     max_ramp_angle_deg: f64,
+    margin: f64,
 ) -> Option<(Point, Point)> {
-    // 1. Erode boundary by tool_radius.
-    let mut valid = offset_polygon(boundary, -tool_radius, JoinStyle::Miter);
+    // 1. Erode boundary by tool radius plus the motion's extra room: the
+    //    trochoid about the carrier swings laterally, so callers pass the
+    //    swing and the carrier is kept that far inside the region.
+    let mut valid =
+        offset_polygon(boundary, -(tool_radius + margin), JoinStyle::Miter);
     if valid.is_empty() {
         return None;
     }
 
-    // 2. Subtract dilated islands.
+    // 2. Subtract dilated islands (by the same total clearance).
     for island in islands {
-        let dilated = offset_polygon(island, tool_radius, JoinStyle::Miter);
+        let dilated =
+            offset_polygon(island, tool_radius + margin, JoinStyle::Miter);
         if dilated.is_empty() {
             continue;
         }
