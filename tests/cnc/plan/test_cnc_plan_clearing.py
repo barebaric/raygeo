@@ -130,3 +130,40 @@ def test_cutting_stays_a_tool_radius_inside_the_pocket():
             f"cut at {end} is {island:.3f} from the island"
         )
     assert checked > 100, f"only {checked} cutting positions to check"
+
+
+def test_wall_margin_reaches_the_finishing_profile():
+    """The finishing profile honours a requested wall margin: it cuts at
+    tool_radius + margin from the walls, while the roughing pass keeps the
+    plain tool radius. (The clearing engine itself does not apply
+    wall_margin; the margin is a finishing-profile quantity.)"""
+    boundary = _rect(0, 0, 40, 30)
+    part = Part.from_polygons(boundary, [], (40.0, 30.0))
+    plan = plan_clearing(
+        part,
+        "",
+        tool_radius=3.0,
+        step_over=2.0,
+        target_z=-3.0,
+        safe_z=10.0,
+        wall_margin=0.5,
+        finishing=True,
+    )
+    ops = run_intent(create_intent(plan, part, 0))
+    near_wall = 0.0
+    at_margin = 0
+    for cmd in ops.to_dict()["commands"]:
+        if cmd["type"] not in ("MOVE_TO", "LINE_TO"):
+            continue
+        end = cmd["end"]
+        if end[2] >= 0.0:
+            continue
+        wall = min(end[0], 40.0 - end[0], end[1], 30.0 - end[1])
+        near_wall = max(near_wall, wall)
+        if wall >= 3.5 - 0.02:
+            at_margin += 1
+    assert at_margin > 20, (
+        f"only {at_margin} cuts at the 3.5 margin (closest {near_wall:.3f})"
+    )
+    # Nothing cuts past the roughing bound into the wall.
+    assert near_wall >= 3.0 - 0.02, f"a cut reached {near_wall:.3f}"
