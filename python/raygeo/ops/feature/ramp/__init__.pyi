@@ -6,14 +6,15 @@ __all__ = [
     "find_ramp_carrier",
 ]
 
-def find_ramp_carrier(boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] | None = None, tool_radius: float = 3, max_ramp_angle_deg: float = 45) -> tuple[tuple[float, float], tuple[float, float]] | None:
+def find_ramp_carrier(boundary: collections.abc.Sequence[tuple[float, float]], islands: collections.abc.Sequence[collections.abc.Sequence[tuple[float, float]]] | None = None, tool_radius: float = 3, max_ramp_angle_deg: float = 45, margin: float = 0) -> tuple[tuple[float, float], tuple[float, float]] | None:
     r"""
     Find the longest straight carrier segment suitable for ramp entry.
     
     Returns a ``((x1, y1), (x2, y2))`` tuple representing the longest
     straight-line segment within the valid tool-centre region (boundary
-    eroded by ``tool_radius`` minus dilated islands) that is long enough
-    for a ramp descent of one pass at the given maximum ramp angle.
+    eroded by ``tool_radius + margin`` minus dilated islands) that is
+    long enough for a ramp descent of one pass at the given maximum
+    ramp angle.
     
     The returned segment is oriented so the start point has the smaller
     coordinate on the dominant axis.
@@ -22,6 +23,8 @@ def find_ramp_carrier(boundary: collections.abc.Sequence[tuple[float, float]], i
     :param islands: List of island polygons (optional).
     :param tool_radius: Tool radius in mm.
     :param max_ramp_angle_deg: Maximum ramp angle in degrees.
+    :param margin: Extra clearance for motion that swings about the
+        carrier, e.g. the lateral swing of a trochoidal entry.
     :returns: ``((x1, y1), (x2, y2))`` or ``None`` if no carrier found.
     """
 
