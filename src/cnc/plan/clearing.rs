@@ -72,6 +72,39 @@ struct PassageEdge {
     region_b: usize,
 }
 
+/// The region with the wall margin applied: the clearing engine insets by
+/// the tool radius from whatever boundary a step hands it, so handing it
+/// the margin-eroded boundary leaves the margin on the wall. The entry
+/// point picks which ring survives when the erosion splits the region.
+fn effective_region(region: &Region, wall_margin: f64) -> Option<Region> {
+    use crate::geo::shape::polygon::{
+        get_polygon_area, offset_polygon, JoinStyle,
+    };
+    let eroded =
+        offset_polygon(&region.polygon, -wall_margin, JoinStyle::Round);
+    let polygon = eroded
+        .into_iter()
+        .max_by(|a, b| {
+            let key = |ring: &Polygon| {
+                (
+                    ring.first().is_some_and(|p| {
+                        is_point_inside_polygon(*p, &region.polygon)
+                    }),
+                    get_polygon_area(ring),
+                )
+            };
+            let (ka, kb) = (key(a), key(b));
+            ka.0.cmp(&kb.0).then(ka.1.total_cmp(&kb.1))
+        })
+        .filter(|ring| ring.len() >= 3)?;
+    Some(Region {
+        polygon,
+        area: region.area,
+        entry_pt: region.entry_pt,
+        r_max: (region.r_max - wall_margin).max(0.0),
+    })
+}
+
 /// The islands that lie inside `polygon`.
 ///
 /// A region's polygon is the outer shell only — `shell_to_region` keeps the
@@ -177,12 +210,24 @@ pub fn plan_clearing(
         let via_end = item.via_end;
         let region = &regions[region_idx];
 
+        // The margin-eroded region the clearing steps see. The finishing
+        // profile applies the margin itself and keeps the raw region.
+        let region = if opts.wall_margin > 0.0 {
+            let Some(effective) = effective_region(region, opts.wall_margin)
+            else {
+                continue;
+            };
+            effective
+        } else {
+            region.clone()
+        };
+
         let needs_entry =
             matches!(via_class, None | Some(PassageClass::Unreachable));
 
         if needs_entry {
             let mut entry_steps =
-                entry::plan_entry(region, &entry_opts, &cur_face)?;
+                entry::plan_entry(&region, &entry_opts, &cur_face)?;
             // Set per-region boundary on entry steps so the seed is
             // created inside the region boundary.
             if matches!(via_class, None | Some(PassageClass::Unreachable)) {
@@ -202,8 +247,13 @@ pub fn plan_clearing(
         // Passage-reached regions: use the full pocket boundary with
         // start_pos at the passage exit.  The already-cleared corridor
         // is visible through the shared face and won't be re-cut.
+        // With a wall margin, passage-reached regions are scoped to the
+        // eroded pocket boundary as well, so their clearing keeps the
+        // margin; without one they run on the whole face, where the
+        // already-cleared corridor is visible and won't be re-cut.
         let use_region_bnd =
-            matches!(via_class, None | Some(PassageClass::Unreachable));
+            matches!(via_class, None | Some(PassageClass::Unreachable))
+                || opts.wall_margin > 0.0;
 
         let start_pos_3d = match via_class {
             Some(PassageClass::Slot) | Some(PassageClass::Narrow) => {
@@ -256,6 +306,7 @@ pub fn plan_clearing(
                 passage,
                 &islands,
                 opts.tool_radius,
+                opts.tool_radius + opts.wall_margin,
                 opts.target_z,
                 opts.safe_z,
                 Some(region.entry_pt),
@@ -290,6 +341,7 @@ pub fn plan_clearing(
                         passage,
                         &islands,
                         opts.tool_radius,
+                        opts.tool_radius + opts.wall_margin,
                         opts.target_z,
                         opts.safe_z,
                         None,
@@ -397,6 +449,7 @@ fn emit_passage_step(
     passage: &narrow::NarrowRegion,
     islands: &[Polygon],
     tool_radius: f64,
+    clearance_radius: f64,
     target_z: f64,
     safe_z: f64,
     dead_end_ref: Option<Point>,
@@ -417,7 +470,7 @@ fn emit_passage_step(
             if let Some((start, end)) = find_ramp_carrier(
                 &passage.polygon,
                 islands,
-                tool_radius,
+                clearance_radius,
                 45.0,
                 swing,
             ) {
@@ -461,7 +514,7 @@ fn emit_passage_step(
                 &passage.polygon,
                 &passage.entry_edge_indices,
                 entry_pt,
-                tool_radius,
+                clearance_radius,
             ) {
                 let last = carrier[carrier.len() - 1];
                 let first = carrier[0];

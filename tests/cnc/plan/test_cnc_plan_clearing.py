@@ -167,3 +167,39 @@ def test_wall_margin_reaches_the_finishing_profile():
     )
     # Nothing cuts past the roughing bound into the wall.
     assert near_wall >= 3.0 - 0.02, f"a cut reached {near_wall:.3f}"
+
+
+def test_wall_margin_is_honoured_by_the_whole_plan():
+    """AdaptiveClearingSpec.wall_margin means what the API promises: extra
+    clearance between the tool and the boundary, honoured by entries,
+    clearing, passages and finishing alike."""
+    boundary = _rect(0, 0, 40, 30)
+    island = [(15.0, 10.0), (25.0, 10.0), (25.0, 20.0), (15.0, 20.0)]
+    part = Part.from_polygons(boundary, [island], (40.0, 30.0))
+    plan = plan_clearing(
+        part,
+        "",
+        tool_radius=3.0,
+        step_over=2.0,
+        target_z=-3.0,
+        safe_z=10.0,
+        wall_margin=0.5,
+        finishing=True,
+    )
+    ops = run_intent(create_intent(plan, part, 0))
+    checked = 0
+    for cmd in ops.to_dict()["commands"]:
+        if cmd["type"] not in ("MOVE_TO", "LINE_TO"):
+            continue
+        end = cmd["end"]
+        if end[2] >= 0.0:
+            continue
+        checked += 1
+        wall, island = _clearance(end)
+        assert wall >= 3.5 - 0.02, (
+            f"cut at {end} is {wall:.3f} from the wall (want 3.5)"
+        )
+        assert island >= 3.5 - 0.02, (
+            f"cut at {end} is {island:.3f} from the island (want 3.5)"
+        )
+    assert checked > 50, f"only {checked} cutting positions to check"
