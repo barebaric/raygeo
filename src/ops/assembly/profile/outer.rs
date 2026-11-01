@@ -19,6 +19,23 @@ pub fn profile_outer(
     opts: &ProfileSpec,
     cut_state: &State,
 ) -> RaygeoResult<AssemblyMeta> {
+    let offset_dist = opts.tool_radius + opts.wall_margin + opts.stock_to_leave;
+    if opts.exact {
+        if let Some(geometry) = face.geometry.clone() {
+            // Grow the region by the offset distance; islands are ignored,
+            // like the polygon path below.
+            return super::exact::run_exact_loops(
+                face,
+                trace,
+                &geometry,
+                offset_dist,
+                opts,
+                cut_state,
+                true,
+            );
+        }
+        // No exact geometry on the face: fall through to the polygon path.
+    }
     let (boundary_opt, _islands) = face.extract_boundary();
     let boundary = boundary_opt.ok_or_else(|| {
         RaygeoError::DegenerateGeometry(
@@ -26,7 +43,6 @@ pub fn profile_outer(
         )
     })?;
 
-    let offset_dist = opts.tool_radius + opts.wall_margin + opts.stock_to_leave;
     let offset_polys = offset_polygon(&boundary, offset_dist, JoinStyle::Round);
     if offset_polys.is_empty() {
         return Err(RaygeoError::DegenerateGeometry(

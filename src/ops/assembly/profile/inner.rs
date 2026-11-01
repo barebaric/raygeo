@@ -25,6 +25,23 @@ pub fn profile_inner(
     opts: &ProfileSpec,
     cut_state: &State,
 ) -> RaygeoResult<AssemblyMeta> {
+    let offset_dist = opts.tool_radius + opts.wall_margin + opts.stock_to_leave;
+    if opts.exact {
+        if let Some(geometry) = face.geometry.clone() {
+            // Shrink the region by the offset distance; the exact
+            // offsetter keeps islands in mind on its own.
+            return super::exact::run_exact_loops(
+                face,
+                trace,
+                &geometry,
+                -offset_dist,
+                opts,
+                cut_state,
+                false,
+            );
+        }
+        // No exact geometry on the face: fall through to the polygon path.
+    }
     if face.stock_region.boundary.len() < 3 {
         let zero = Point3D::ZERO;
         return Ok(AssemblyMeta {
@@ -40,8 +57,6 @@ pub fn profile_inner(
     }
     let boundary = face.stock_region.boundary.clone();
     let islands = face.stock_region.islands.clone();
-
-    let offset_dist = opts.tool_radius + opts.wall_margin + opts.stock_to_leave;
 
     let grown_islands: Vec<Polygon> = islands
         .iter()

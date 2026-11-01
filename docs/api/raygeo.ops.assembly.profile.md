@@ -27,6 +27,14 @@ engagement_angle_threshold: float
 engagement_area_threshold: float
 ```
 
+### `exact`
+
+```python
+exact: bool
+```
+
+Follow the exact line-and-arc offset and emit arcs as arcs.
+
 ### `expansion_batch_size`
 
 ```python
@@ -131,6 +139,7 @@ profile_inner(
     cut_power: float = 0,
     start_pos: tuple[float, float] | None = None,
     cut_direction: str = 'ccw',
+    exact: bool = False,
     engagement_area_threshold: float = 0,
     engagement_angle_threshold: float = 3.141592653589793,
     trace_path: str | None = None,
@@ -157,6 +166,7 @@ so that the tool clears the material along the pocket walls and around each isla
 | `cut_power`                  | `float = 0`                              | Spindle power (0.0–1.0).                                                                                                      |
 | `start_pos`                  | `tuple[float, float] &#124; None = None` | Optional override start `(x, y)` (default: first boundary vertex).                                                            |
 | `cut_direction`              | `str = 'ccw'`                            | `"cw"` or `"ccw"` (default `"ccw"`).                                                                                          |
+| `exact`                      | `bool = False`                           | Follow the exact line-and-arc offset and emit arcs as arcs (default False: chord-follow a polygon offset).                    |
 | `engagement_area_threshold`  | `float = 0`                              | Overengagement area threshold (mm², 0 = auto).                                                                                |
 | `engagement_angle_threshold` | `float = 3.141592653589793`              | Overengagement angle threshold (rad, default π).                                                                              |
 | `trace_path`                 | `str &#124; None = None`                 | Optional path to write a binary trace file (default None).                                                                    |
@@ -182,6 +192,10 @@ so that the tool clears the material along the pocket walls and around each isla
 
 *Two-pass inner profiling: rough (orange) + finish (red) on same ClearedArea.*
 
+![profile_inner with exact=True on a circular boundary — the wall pass is emitted as true arcs.](images/ops-assembly-profile-profile-inner-circle-exact.png)
+
+*profile_inner with exact=True on a circular boundary — the wall pass is emitted as true arcs.*
+
 ### `profile_outer()`
 
 ```python
@@ -198,6 +212,7 @@ profile_outer(
     start_pos: tuple[float, float] | None = None,
     cut_direction: str = 'ccw',
     stock_to_leave: float = 0,
+    exact: bool = False,
     engagement_area_threshold: float = 0,
     engagement_angle_threshold: float = 3.141592653589793,
     trace_path: str | None = None,
@@ -224,6 +239,7 @@ an **AssemblyResult** with the profiling move sequence.
 | `start_pos`                  | `tuple[float, float] &#124; None = None` | Optional override start `(x, y)` (default: first boundary vertex).                                                |
 | `cut_direction`              | `str = 'ccw'`                            | `"cw"` or `"ccw"` (default `"ccw"`).                                                                              |
 | `stock_to_leave`             | `float = 0`                              | Stock left on wall for rough pass (mm, default 0.0).                                                              |
+| `exact`                      | `bool = False`                           | Follow the exact line-and-arc offset and emit arcs as arcs (default False: chord-follow a polygon offset).        |
 | `engagement_area_threshold`  | `float = 0`                              | Overengagement area threshold (mm², 0 = auto).                                                                    |
 | `engagement_angle_threshold` | `float = 3.141592653589793`              | Overengagement angle threshold (rad, default π).                                                                  |
 | `trace_path`                 | `str &#124; None = None`                 | Optional path to write a binary trace file (default None).                                                        |

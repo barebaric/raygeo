@@ -13,6 +13,7 @@ use crate::ops::types::CutDirection;
 use crate::ops::types::ToolPose;
 use crate::trace_types::MoveKind;
 
+use super::exact::ExactLoop;
 use super::trace_helpers as th;
 
 /// Find polygon vertices that lie strictly between `from` and `to` along
@@ -101,6 +102,22 @@ fn intermediate_vertices(
     verts
 }
 
+/// The polygon vertices crossed walking from `from` to `to`, in the
+/// walking direction: forward along the polygon, or its mirror backwards.
+fn polygon_vertices_between(
+    poly3d: &[Point3D],
+    from: &Point3D,
+    to: &Point3D,
+    forward: bool,
+) -> Vec<Point3D> {
+    if forward {
+        return intermediate_vertices(poly3d, from, to);
+    }
+    let mut verts = intermediate_vertices(poly3d, to, from);
+    verts.reverse();
+    verts
+}
+
 #[allow(dead_code)]
 pub(crate) struct ProfileCommon {
     pub step_length: f64,
@@ -143,11 +160,20 @@ pub(crate) fn run_profile(
         perimeter += (poly3d[next] - poly3d[i]).length();
     }
 
+    // CCW walks the polygon as stored (interior on the left, the climb
+    // side for a clockwise spindle); CW walks it backwards.
+    let forward = common.cut_direction == CutDirection::Ccw;
+
     // Compute heading from polygon tangent at start vertex
     let heading = {
         let normal_angle = get_polygon_heading_at(offset_poly, offset_poly[0]);
         // Tangent direction = outward normal + 90°
-        normal_angle + std::f64::consts::FRAC_PI_2
+        let tangent = normal_angle + std::f64::consts::FRAC_PI_2;
+        if forward {
+            tangent
+        } else {
+            tangent + std::f64::consts::PI
+        }
     };
 
     let start_pos = poly3d[0];
@@ -236,7 +262,7 @@ pub(crate) fn run_profile(
         let mut next = walk_along_polygon_3d(
             &poly3d,
             &current_3d,
-            true,
+            forward,
             common.step_length,
         );
 
@@ -277,7 +303,7 @@ pub(crate) fn run_profile(
                     next = walk_along_polygon_3d(
                         &poly3d,
                         &current_3d,
-                        true,
+                        forward,
                         effective_step,
                     );
                     if let Some(fr) = current_feed_rate {
@@ -337,8 +363,12 @@ pub(crate) fn run_profile(
 
         if dist_traveled >= perimeter - common.step_length * 0.5 {
             if !travel_skipped {
-                let verts =
-                    intermediate_vertices(&poly3d, &current_3d, &start_pos);
+                let verts = polygon_vertices_between(
+                    &poly3d,
+                    &current_3d,
+                    &start_pos,
+                    forward,
+                );
                 for v in &verts {
                     trace.line_to(v.x, v.y, common.target_z, None);
                 }
@@ -360,7 +390,8 @@ pub(crate) fn run_profile(
             break;
         }
         if !travel_skipped {
-            let verts = intermediate_vertices(&poly3d, &current_3d, &next);
+            let verts =
+                polygon_vertices_between(&poly3d, &current_3d, &next, forward);
             for v in &verts {
                 trace.line_to(v.x, v.y, common.target_z, None);
             }
@@ -381,6 +412,251 @@ pub(crate) fn run_profile(
             first_step = false;
         }
         current_3d = next;
+    }
+
+    trace.move_to(start_pos.x, start_pos.y, common.safe_z, None);
+    trace.exit(th::tool_snapshot(start_pos, heading, start_pos), None);
+
+    let end_pose = ToolPose {
+        pos: start_pos,
+        heading,
+    };
+    Ok(AssemblyMeta {
+        start: end_pose,
+        end: end_pose,
+    })
+}
+
+/// The exact counterpart of [`run_profile`]: walks an [`ExactLoop`] piece
+/// by piece — lines as lines, arcs as arcs — honouring the walking
+/// direction from `common.cut_direction` (CCW forward, CW backward). The
+/// step state machine is the polygon engine's: cancellation, feed
+/// reduction on over-engagement, travel skips, cleared-area expansion and
+/// the same meta. There is no drift correction: the pieces already lie on
+/// the exact offset.
+pub(crate) fn run_profile_exact(
+    face: &mut FaceState,
+    trace: &mut Tracelet,
+    loop_: &ExactLoop,
+    common: &ProfileCommon,
+    cut_state: &State,
+    target_polygon_idx: u32,
+) -> RaygeoResult<AssemblyMeta> {
+    let forward = common.cut_direction == CutDirection::Ccw;
+    let perimeter = loop_.perimeter();
+    let start_pos = loop_.start();
+    let heading = loop_.heading_at_start(forward);
+
+    trace.move_to(start_pos.x, start_pos.y, common.safe_z, None);
+    trace.move_to(start_pos.x, start_pos.y, common.target_z, None);
+    trace.apply_state(cut_state);
+
+    // Effective area threshold, as the polygon engine derives it.
+    let full_crescent =
+        std::f64::consts::PI * common.tool_radius * common.tool_radius
+            - 2.0
+                * common.tool_radius
+                * common.tool_radius
+                * ((common.step_length / (2.0 * common.tool_radius))
+                    .clamp(-1.0, 1.0)
+                    .acos())
+            + (common.step_length * 0.5)
+                * (4.0 * common.tool_radius * common.tool_radius
+                    - common.step_length * common.step_length)
+                    .max(0.0)
+                    .sqrt();
+    let area_threshold = if common.engagement_area_threshold > 0.0 {
+        common.engagement_area_threshold
+    } else {
+        full_crescent * 0.85
+    };
+    let angle_threshold = common.engagement_angle_threshold;
+
+    let original_feed_rate = cut_state.feed_rate;
+    let mut current_feed_rate = cut_state.feed_rate;
+    let mut feed_reduced = false;
+
+    let mut current = start_pos;
+    let (mut piece_idx, mut piece_t) = (0usize, 0.0f64);
+    let mut dist_traveled = 0.0;
+    let max_steps = (perimeter / common.step_length + 10.0) as usize;
+    let mut first_step = true;
+
+    trace.init(
+        th::tool_snapshot(start_pos, heading, start_pos),
+        Some(th::init_meta(target_polygon_idx)),
+    );
+
+    for _ in 0..max_steps {
+        // Cancellation check
+        if let Some(check) = common.cancel_check {
+            if check() {
+                trace.move_to(current.x, current.y, common.safe_z, None);
+                trace.exit(th::tool_snapshot(current, heading, current), None);
+                let end_pose = ToolPose {
+                    pos: current,
+                    heading,
+                };
+                return Ok(AssemblyMeta {
+                    start: ToolPose {
+                        pos: start_pos,
+                        heading,
+                    },
+                    end: end_pose,
+                });
+            }
+        }
+
+        // Restore feed after reduction
+        if feed_reduced {
+            if let Some(fr) = original_feed_rate {
+                trace.set_feed_rate(fr);
+                trace.move_event(
+                    MoveKind::Travel,
+                    th::tool_snapshot(current, heading, current),
+                    Some(th::feed_change_meta(
+                        current_feed_rate.unwrap_or(0),
+                        fr,
+                    )),
+                );
+                current_feed_rate = original_feed_rate;
+            }
+            feed_reduced = false;
+        }
+
+        let step = if forward {
+            common.step_length
+        } else {
+            -common.step_length
+        };
+        let (mut next_idx, mut next_t, _) =
+            loop_.advance(piece_idx, piece_t, step);
+        let mut next = loop_.point_at(next_idx, next_t);
+
+        // ── Engagement check + adaptive step/feed ──
+        let mut effective_step = common.step_length;
+        let mut reductions = 0u32;
+        let mut travel_skipped = false;
+        // Only meaningful for roughing over earlier passes, as in the
+        // polygon engine.
+        let check_engagement =
+            common.stock_to_leave > 0.0 && !face.cleared.is_empty();
+        if check_engagement {
+            loop {
+                let eng = face.cleared.get_point_engagement(
+                    Point::new(next.x, next.y),
+                    common.tool_radius,
+                );
+                if eng.area > area_threshold || eng.angle > angle_threshold {
+                    reductions += 1;
+                    if reductions >= 3 {
+                        // Travel-skip: lift, move, re-plunge, restore feed.
+                        trace.move_to(next.x, next.y, common.safe_z, None);
+                        trace.move_to(next.x, next.y, common.target_z, None);
+                        if let Some(fr) = original_feed_rate {
+                            trace.set_feed_rate(fr);
+                            current_feed_rate = original_feed_rate;
+                        }
+                        effective_step = common.step_length;
+                        travel_skipped = true;
+                        break;
+                    }
+                    effective_step *= 0.5;
+                    let step = if forward {
+                        effective_step
+                    } else {
+                        -effective_step
+                    };
+                    (next_idx, next_t, _) =
+                        loop_.advance(piece_idx, piece_t, step);
+                    next = loop_.point_at(next_idx, next_t);
+                    if let Some(fr) = current_feed_rate {
+                        let reduced = (fr as f64 * common.feed_reduction_factor)
+                            .max(1.0)
+                            as i32;
+                        trace.set_feed_rate(reduced);
+                        trace.move_event(
+                            MoveKind::Travel,
+                            th::tool_snapshot(next, heading, next),
+                            Some(th::feed_change_meta(fr, reduced)),
+                        );
+                        current_feed_rate = Some(reduced);
+                        feed_reduced = true;
+                    }
+                    continue;
+                }
+                break;
+            }
+        }
+
+        // The pieces lie on the exact offset; only measure the wall for
+        // the tracing meta.
+        let wall_distance = loop_.wall_distance(Point::new(next.x, next.y));
+        dist_traveled += effective_step;
+
+        // Expand the cleared area for this step, as the polygon engine does.
+        face.cleared.begin_batch();
+        face.cleared.expand_batched(
+            Point::new(current.x, current.y),
+            Point::new(next.x, next.y),
+            common.tool_radius,
+        );
+        face.cleared.commit_batch_local();
+        face.cleared
+            .compact_if_needed(&face.stock_region, common.tolerance);
+
+        if dist_traveled >= perimeter - common.step_length * 0.5 {
+            if !travel_skipped {
+                // Close the pass exactly back at the loop start.
+                loop_.emit_between(
+                    trace,
+                    (piece_idx, piece_t),
+                    (0, 0.0),
+                    forward,
+                    common.target_z,
+                );
+                trace.cut(
+                    th::tool_snapshot(start_pos, heading, current),
+                    Some(th::cut_meta(
+                        target_polygon_idx,
+                        dist_traveled,
+                        perimeter,
+                        wall_distance,
+                        current_feed_rate.unwrap_or(0),
+                        effective_step,
+                        reductions,
+                        first_step,
+                    )),
+                );
+            }
+            break;
+        }
+        if !travel_skipped {
+            loop_.emit_between(
+                trace,
+                (piece_idx, piece_t),
+                (next_idx, next_t),
+                forward,
+                common.target_z,
+            );
+            trace.cut(
+                th::tool_snapshot(next, heading, current),
+                Some(th::cut_meta(
+                    target_polygon_idx,
+                    dist_traveled,
+                    perimeter,
+                    wall_distance,
+                    current_feed_rate.unwrap_or(0),
+                    effective_step,
+                    reductions,
+                    first_step,
+                )),
+            );
+            first_step = false;
+        }
+        current = next;
+        piece_idx = next_idx;
+        piece_t = next_t;
     }
 
     trace.move_to(start_pos.x, start_pos.y, common.safe_z, None);

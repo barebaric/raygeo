@@ -37,6 +37,11 @@ pub struct ProfileSpec {
     pub cut_direction: CutDirection,
     pub start_pos: Option<Point3D>,
     pub tolerance: f64,
+    /// Walk the exact line-and-arc offset ([`crate::geo::algo::offset_exact`])
+    /// and emit arcs as arcs, instead of chord-following a polygon offset.
+    /// Falls back to the polygon path when the face carries no exact
+    /// geometry.
+    pub exact: bool,
     pub expansion_batch_size: usize,
     pub cancel_check: Option<fn() -> bool>,
     pub engagement_area_threshold: f64,
@@ -63,6 +68,7 @@ impl Default for ProfileSpec {
             cut_direction: CutDirection::Ccw,
             start_pos: None,
             tolerance: 0.1,
+            exact: false,
             expansion_batch_size: 20,
             cancel_check: None,
             engagement_area_threshold: 0.0,

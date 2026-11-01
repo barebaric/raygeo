@@ -9,6 +9,7 @@
 //! and islands are extracted internally by each function.
 
 mod engine;
+mod exact;
 mod inner;
 mod options;
 mod outer;

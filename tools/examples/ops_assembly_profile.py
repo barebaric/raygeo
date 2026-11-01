@@ -383,6 +383,31 @@ def generate_profile_inner_rough_then_finish():
     return fig
 
 
+def generate_profile_inner_circle_exact():
+    """profile_inner with exact=True on a circular boundary — the pass is
+    emitted as true arcs instead of chords."""
+    boundary = get_circle_polygon((0, 0), 30, 64)
+    part = Part.from_polygons(boundary, initial=[])
+    result = profile_inner(
+        part,
+        tool_radius=3.0,
+        step_over=1.5,
+        target_z=-5.0,
+        safe_z=2.0,
+        step_length=0.6,
+        wall_margin=0.0,
+        cut_feed_rate=1000,
+        cut_power=0.0,
+        exact=True,
+    )
+
+    fig, ax = plt.subplots(figsize=(8, 8))
+    plot_ops_2d(ax, result.ops, boundary=boundary)
+    ax.set_title("profile_inner with exact=True — arcs stay arcs")
+    fig.tight_layout()
+    return fig
+
+
 __images__ = [
     {
         "heading": "profile_outer",
@@ -455,5 +480,13 @@ __images__ = [
             "finish (red) on same ClearedArea."
         ),
         "function": generate_profile_inner_rough_then_finish,
+    },
+    {
+        "heading": "profile_inner",
+        "caption": (
+            "profile_inner with exact=True on a circular boundary — "
+            "the wall pass is emitted as true arcs."
+        ),
+        "function": generate_profile_inner_circle_exact,
     },
 ]
