@@ -212,3 +212,46 @@ def test_helix_z_end_exact():
     )
     assert approx_eq(pts[0][2], 10)
     assert approx_eq(pts[-1][2], -30)
+
+
+def test_helix_hostile_inputs_degrade_instead_of_hanging():
+    """Absurd inputs must not overflow or hang: an absurdly fine angular
+    step is capped at a fixed resolution, and non-finite values degrade
+    to a single step."""
+    coarse = generate_helix_3d(
+        center=(0, 0),
+        start_radius=10,
+        end_radius=10,
+        z_start=0,
+        z_end=-10,
+        pitch=5,
+        direction=HelixDirection.CCW,
+        angular_step=1e-300,
+    )
+    assert 1 <= len(coarse) <= 100_001
+    assert approx_eq(coarse[0][2], 0)
+    assert approx_eq(coarse[-1][2], -10)
+
+    huge_revolutions = generate_helix_3d(
+        center=(0, 0),
+        start_radius=10,
+        end_radius=10,
+        z_start=0,
+        z_end=-10,
+        pitch=1e-300,
+        direction=HelixDirection.CCW,
+        angular_step=0.2,
+    )
+    assert len(huge_revolutions) <= 100_001
+
+    non_finite = generate_helix_3d(
+        center=(0, 0),
+        start_radius=10,
+        end_radius=10,
+        z_start=0,
+        z_end=float("nan"),
+        pitch=5,
+        direction=HelixDirection.CCW,
+        angular_step=0.2,
+    )
+    assert non_finite == []
