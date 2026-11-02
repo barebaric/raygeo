@@ -172,6 +172,30 @@ so that the tool clears the material along the pocket walls and around each isla
 | `trace_path`                 | `str &#124; None = None`                 | Optional path to write a binary trace file (default None).                                                                    |
 | _Returns_                    | `ops.assembly.AssemblyResult`            | An **AssemblyResult** with the profiling path.                                                                                |
 
+![profile_inner on a square pocket with island — 2D: boundary, island, offset walks, cuts (turbo).](images/ops-assembly-profile-profile-inner-rect-with-square-island-2d.png)
+
+*profile_inner on a square pocket with island — 2D: boundary, island, offset walks, cuts (turbo).*
+
+![profile_inner with two accessible islands — nearest-neighbour order via turbo gradient.](images/ops-assembly-profile-profile-inner-rect-with-two-islands-2d.png)
+
+*profile_inner with two accessible islands — nearest-neighbour order via turbo gradient.*
+
+![profile_inner on an L-shaped pocket with island — 3D: cut path at cut_z, rapids at safe_z.](images/ops-assembly-profile-profile-inner-concave-with-island-3d.png)
+
+*profile_inner on an L-shaped pocket with island — 3D: cut path at cut_z, rapids at safe_z.*
+
+![profile_inner skips an island when the channel between island and wall is too narrow.](images/ops-assembly-profile-profile-inner-narrow-channel-skips-island.png)
+
+*profile_inner skips an island when the channel between island and wall is too narrow.*
+
+![Two-pass inner profiling: rough (orange) + finish (red) on same ClearedArea.](images/ops-assembly-profile-profile-inner-rough-then-finish.png)
+
+*Two-pass inner profiling: rough (orange) + finish (red) on same ClearedArea.*
+
+![profile_inner on a curve-true circular boundary — the wall pass is emitted as true arcs.](images/ops-assembly-profile-profile-inner-circle-exact.png)
+
+*profile_inner on a curve-true circular boundary — the wall pass is emitted as true arcs.*
+
 ### `profile_outer()`
 
 ```python
@@ -220,3 +244,20 @@ an **AssemblyResult** with the profiling move sequence.
 | `engagement_angle_threshold` | `float = 3.141592653589793`              | Overengagement angle threshold (rad, default π).                                                                  |
 | `trace_path`                 | `str &#124; None = None`                 | Optional path to write a binary trace file (default None).                                                        |
 | _Returns_                    | `ops.assembly.AssemblyResult`            | An **AssemblyResult** with the profiling path.                                                                    |
+
+![profile_outer on a rect pocket — 3D (left) and 2D top-down with offset tool-centre polygon (right).](images/ops-assembly-profile-profile-outer-rect.png)
+
+*profile_outer on a rect pocket — 3D (left) and 2D top-down with offset tool-centre polygon
+(right).*
+
+![profile_outer on a circular boundary — smooth walk around the offset circle.](images/ops-assembly-profile-profile-outer-circle.png)
+
+*profile_outer on a circular boundary — smooth walk around the offset circle.*
+
+![profile_outer on an L-shaped pocket with miter join at the concave corner.](images/ops-assembly-profile-profile-outer-concave-pocket.png)
+
+*profile_outer on an L-shaped pocket with miter join at the concave corner.*
+
+![Two-pass profiling: rough (with stock, orange) + finish (red) on the same ClearedArea.](images/ops-assembly-profile-profile-outer-rough-then-finish.png)
+
+*Two-pass profiling: rough (with stock, orange) + finish (red) on the same ClearedArea.*

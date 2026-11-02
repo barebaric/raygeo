@@ -2,6 +2,7 @@
 
 import matplotlib.pyplot as plt
 
+from raygeo.geo import Geometry
 from raygeo.geo.shape.polygon import (
     JoinStyle,
     get_circle_polygon,
@@ -384,10 +385,13 @@ def generate_profile_inner_rough_then_finish():
 
 
 def generate_profile_inner_circle_exact():
-    """profile_inner with exact=True on a circular boundary — the pass is
+    """profile_inner on a curve-true circular boundary — the pass is
     emitted as true arcs instead of chords."""
-    boundary = get_circle_polygon((0, 0), 30, 64)
-    part = Part.from_polygons(boundary, initial=[])
+    g = Geometry()
+    g.move_to(30, 0, 0)
+    g.arc_to(-30, 0, -30, 0, False, 0)
+    g.arc_to(30, 0, 30, 0, False, 0)
+    part = Part(geometry=g, size_mm=(80.0, 80.0))
     result = profile_inner(
         part,
         tool_radius=3.0,
@@ -398,12 +402,13 @@ def generate_profile_inner_circle_exact():
         wall_margin=0.0,
         cut_feed_rate=1000,
         cut_power=0.0,
-        exact=True,
     )
 
     fig, ax = plt.subplots(figsize=(8, 8))
+    circle_poly = g.to_polygons(0.05)[0]
+    boundary = [(p[0], p[1]) for p in circle_poly]
     plot_ops_2d(ax, result.ops, boundary=boundary)
-    ax.set_title("profile_inner with exact=True — arcs stay arcs")
+    ax.set_title("profile_inner on curve-true geometry — arcs stay arcs")
     fig.tight_layout()
     return fig
 
@@ -484,7 +489,7 @@ __images__ = [
     {
         "heading": "profile_inner",
         "caption": (
-            "profile_inner with exact=True on a circular boundary — "
+            "profile_inner on a curve-true circular boundary — "
             "the wall pass is emitted as true arcs."
         ),
         "function": generate_profile_inner_circle_exact,
