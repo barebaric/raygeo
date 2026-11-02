@@ -13,8 +13,10 @@ mod exact;
 mod inner;
 mod options;
 mod outer;
+mod ramp;
 mod trace_helpers;
 
 pub use inner::profile_inner;
 pub use options::{ProfileKind, ProfileSpec};
 pub use outer::profile_outer;
+pub use ramp::ProfileRampSpec;

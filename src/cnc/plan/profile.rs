@@ -1,21 +1,22 @@
 //! Profile plan builder.
 //!
-//! [`plan_profile`] takes a [`Part`] and options and produces a one-step
-//! [`Plan`] that profiles the face's boundary: the inset (inner) or grown
-//! (outer) offset, walked once at the target depth. It is the contour
-//! counterpart of [`plan_clearing`](super::clearing::plan_clearing) —
-//! clearing pockets, profiling walls — and its finishing steps are the
-//! same [`ProfileSpec`] this planner drives on its own.
+//! [`plan_profile`] takes a [`Part`] and options and produces a plan that
+//! profiles the face's boundary: the inset (inner) or grown (outer)
+//! offset, walked once at the target depth. It is the contour counterpart
+//! of [`plan_clearing`](super::clearing::plan_clearing) — clearing
+//! pockets, profiling walls — and drives the same [`ProfileSpec`] the
+//! clearing planner uses for its finishing passes.
 //!
-//! With `exact` the step follows the exact line-and-arc offset
-//! ([`crate::geo::algo::offset_exact`]) and emits arcs as arcs, provided
-//! the face carries curve-true geometry; polygon-only parts fall back to
-//! the chord path.
+//! With a `ramp_angle` the plan composes a
+//! [`ProfileRampSpec`] entry step before the profile pass: the tool ramps
+//! down along the same tool-center loop the pass will walk, so it enters
+//! the material gradually instead of plunging. Like the exact preference
+//! itself, the entry needs curve-true face geometry to derive the loop;
+//! polygon-only faces get no entry step. The profile pass's own descent
+//! then lands in the channel the ramp cut.
 //!
-//! The boundary and islands are read from the specified face; the step
-//! targets that same face. Like the clearing planner's finishing passes,
-//! no entry step is planned: the pass descends at its own pace and the
-//! embedder maps feeds.
+//! The boundary and islands are read from the specified face; the steps
+//! target that same face. Feeds ride the plan's cut state.
 
 use std::sync::Arc;
 
@@ -23,7 +24,9 @@ use prof_macros::prof;
 
 use crate::cnc::plan::plan::{Plan, PlanStep};
 use crate::error::{RaygeoError, RaygeoResult};
-use crate::ops::assembly::profile::{ProfileKind, ProfileSpec};
+use crate::ops::assembly::profile::{
+    ProfileKind, ProfileRampSpec, ProfileSpec,
+};
 use crate::ops::part::Part;
 use crate::ops::types::CutDirection;
 
@@ -39,6 +42,9 @@ pub struct ProfileWorkplanOptions {
     pub wall_margin: f64,
     pub stock_to_leave: f64,
     pub cut_direction: CutDirection,
+    /// Steepest entry descent along the profile loop (radians); 0 enters
+    /// with a straight plunge.
+    pub ramp_angle: f64,
     /// Boundary-following tolerance; also the flattening tolerance of the
     /// exact path's line chains.
     pub tolerance: f64,
@@ -49,7 +55,7 @@ pub struct ProfileWorkplanOptions {
     pub plunge_feed: Option<f64>,
 }
 
-/// Builds a one-step profile plan for one face of `part`.
+/// Builds a profile plan for one face of `part`.
 #[prof]
 pub fn plan_profile(
     part: &Part,
@@ -77,6 +83,25 @@ pub fn plan_profile(
         ));
     };
     let mut plan = Plan::new(boundary, islands, opts.safe_z);
+    // The ramp entry runs where the pass will walk, so it needs the same
+    // curve-true geometry the exact path derives the loop from.
+    if opts.ramp_angle > 0.0 && face.geometry.is_some() {
+        plan.steps.push(PlanStep {
+            face_id: face_id.to_string(),
+            spec: Arc::new(ProfileRampSpec {
+                kind: opts.side,
+                tool_radius: opts.tool_radius,
+                wall_margin: opts.wall_margin,
+                stock_to_leave: opts.stock_to_leave,
+                ramp_angle: opts.ramp_angle,
+                z_start: opts.safe_z,
+                z_end: opts.target_z,
+                cut_direction: opts.cut_direction,
+                tolerance: opts.tolerance,
+            }),
+            region_boundary: None,
+        });
+    }
     plan.steps.push(PlanStep {
         face_id: face_id.to_string(),
         spec: Arc::new(ProfileSpec {

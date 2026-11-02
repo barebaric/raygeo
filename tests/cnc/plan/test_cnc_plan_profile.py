@@ -34,6 +34,19 @@ def test_plan_has_one_profile_step():
     assert kinds == ["profile_inner"]
 
 
+def test_ramp_angle_prepends_an_entry_step():
+    _, plan = _plan(_rect(0, 0, 40, 30), ramp_angle_deg=30.0)
+    assert [s.kind for s in plan.steps] == ["profile_ramp", "profile_inner"]
+    params = plan.steps[0].spec_params()
+    assert params["ramp_angle"] == pytest.approx(math.radians(30.0))
+    assert params["z_start"] == plan.safe_z
+
+
+def test_zero_ramp_angle_keeps_the_single_step():
+    _, plan = _plan(_rect(0, 0, 40, 30), ramp_angle_deg=0.0)
+    assert [s.kind for s in plan.steps] == ["profile_inner"]
+
+
 def test_side_selects_outer_profile():
     _, plan = _plan(_rect(0, 0, 40, 30), side="outer")
     assert [s.kind for s in plan.steps] == ["profile_outer"]
@@ -112,3 +125,72 @@ def test_plunge_feed_precedes_the_descent():
     assert seq[descents[0] + 1] == ("SET_FEED_RATE", 1200.0), (
         "cut feed not restored after the plunge"
     )
+
+
+def test_ramp_entry_descends_along_the_loop():
+    """With a ramp angle, the tool enters by descending along the profile
+    loop — helical arc moves at the loop radius with gradually sinking z —
+    at the plunge feed, and the wall pass still cuts the full ring on the
+    exact offset."""
+    part = Part(geometry=_circle_geometry(30.0), size_mm=(80.0, 80.0))
+    plan = plan_profile(
+        part,
+        tool_radius=3.0,
+        ramp_angle_deg=30.0,
+        feed_rate=1200.0,
+        plunge_feed=400.0,
+    )
+    assert [s.kind for s in plan.steps] == ["profile_ramp", "profile_inner"]
+    ops = run_intent(create_intent(plan, part, 0))
+    cmds = ops.to_dict()["commands"]
+
+    # Ramp moves: cutting moves at heights strictly between the safe and
+    # target heights. They ride the loop radius, and at least one is a
+    # helical arc (the loop is a circle).
+    ramp_moves = [
+        c
+        for c in cmds
+        if c["type"] in ("LINE_TO", "ARC_TO") and -5.0 < c["end"][2] < 2.0
+    ]
+    assert ramp_moves, "no gradual-descent moves found"
+    for c in ramp_moves:
+        x, y, _ = c["end"]
+        assert math.hypot(x, y) == pytest.approx(27.0, abs=1e-6), (
+            f"ramp cut off the loop radius at {c['end']}"
+        )
+    assert any(c["type"] == "ARC_TO" for c in ramp_moves), (
+        "the ramp over the circular loop should emit helical arcs"
+    )
+
+    # The ramp runs at the plunge feed: a plunge-feed rate is set before
+    # the first ramp move and the cut feed comes back after the last one.
+    idx_by_id = {id(c): i for i, c in enumerate(cmds)}
+    first, last = idx_by_id[id(ramp_moves[0])], idx_by_id[id(ramp_moves[-1])]
+    rates_before = [
+        c["speed"] for c in cmds[:first] if c["type"] == "SET_FEED_RATE"
+    ]
+    rates_between = [
+        c["speed"]
+        for c in cmds[first : last + 1]
+        if c["type"] == "SET_FEED_RATE"
+    ]
+    assert 400 in rates_before + rates_between, (
+        "the ramp did not run at the plunge feed"
+    )
+    rates_after = [
+        c["speed"] for c in cmds[last + 1 :] if c["type"] == "SET_FEED_RATE"
+    ]
+    assert 1200 in rates_after, "cut feed not restored after the ramp"
+
+    # The wall pass still cuts the full ring on the exact offset.
+    ring = [
+        c
+        for c in cmds
+        if c["type"] in ("LINE_TO", "ARC_TO") and c["end"][2] == -5.0
+    ]
+    assert len(ring) > 10, "the wall pass did not cut the ring"
+    for c in ring:
+        radius = math.hypot(c["end"][0], c["end"][1])
+        assert radius == pytest.approx(27.0, abs=1e-6), (
+            f"ring cut at radius {radius}"
+        )
