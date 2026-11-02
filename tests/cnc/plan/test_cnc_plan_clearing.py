@@ -325,3 +325,61 @@ def test_step_over_above_the_tool_diameter_is_rejected():
         plan_clearing(part, "", tool_radius=3.0, step_over=7.0)
     # At exactly the diameter the passes still fully overlap.
     plan_clearing(part, "", tool_radius=3.0, step_over=6.0)
+
+
+def test_step_over_near_the_diameter_still_clears_the_floor():
+    """Step_overs close to the tool diameter leave a thin core in the
+    middle of the pocket that stalls the clearing wavefront; the resume
+    strategies used to run out of proposals and the plan was refused with
+    a resume error, stranding the core uncut. The core strategy resumes
+    on the spine of the uncleared remainder, so the floor is cut exactly
+    as at a plain step_over — apart from the corner fillets a round tool
+    leaves at a sharp inner corner."""
+    rect = [(0.0, 0.0), (40.0, 0.0), (40.0, 30.0), (0.0, 30.0)]
+    corners = [(0.0, 0.0), (40.0, 0.0), (40.0, 30.0), (0.0, 30.0)]
+    for step_over in (5.0, 6.0):
+        part = Part.from_polygons(rect, [], (0.0, 0.0))
+        plan = plan_clearing(
+            part,
+            "",
+            tool_radius=3.0,
+            step_over=step_over,
+            target_z=-4.0,
+            safe_z=10.0,
+            finishing=True,
+        )
+        ops = run_intent(create_intent(plan, part, 0))
+        cuts = [
+            cmd["end"][:2]
+            for cmd in ops.to_dict()["commands"]
+            if cmd["type"] in ("MOVE_TO", "LINE_TO") and cmd["end"][2] < 0.0
+        ]
+        assert len(cuts) > 100, "hardly any cutting positions"
+        # At step_over = diameter adjacent passes touch tangentially, so
+        # midway between them the floor is exactly one radius from the
+        # nearest pass — cleaned, but with no margin to spare. A ridge the
+        # failure used to strand is a full radius wide, far beyond that.
+        checked = 0
+        x = 0.25
+        while x < 40.0:
+            y = 0.25
+            while y < 30.0:
+                d = (
+                    min((px - x) ** 2 + (py - y) ** 2 for px, py in cuts)
+                    ** 0.5
+                )
+                checked += 1
+                if d <= 3.0 + 0.01:
+                    y += 0.5
+                    continue
+                corner = min(
+                    ((x - cx) ** 2 + (y - cy) ** 2) ** 0.5
+                    for cx, cy in corners
+                )
+                assert corner <= 3.0, (
+                    f"point ({x}, {y}) is {d:.3f} from the nearest cut "
+                    f"at step_over {step_over}"
+                )
+                y += 0.5
+            x += 0.5
+        assert checked > 4000, f"only {checked} floor points checked"

@@ -11,6 +11,7 @@
 
 mod chain;
 pub mod resume;
+mod resume_core;
 mod resume_envelope;
 mod resume_frontier;
 mod resume_island;
@@ -34,6 +35,7 @@ use crate::geo::algo::offset::compute_inset_region;
 use crate::geo::shape::arc::normalize_angle_signed;
 use crate::geo::shape::polygon::{
     get_polygon_area, get_polygon_centroid, get_polygon_signed_area,
+    get_polygons_group_intersection, offset_polygon, JoinStyle,
 };
 use crate::geo::types::{Point3D, Polygon};
 use crate::ops::assembly::result::AssemblyMeta;
@@ -851,10 +853,28 @@ pub fn adaptive_clearing(
         // stepper chases without making progress.
         let frag_total = face.cleared.total_area();
         if frag_total >= valid_total - opts.area_tolerance && {
-            let rem = face
-                .cleared
-                .actionable_remaining(&face.stock_region, step_length * 1.5);
-            rem < opts.area_tolerance
+            // Material counts as actionable when the tool centre can reach
+            // it at full depth: inside the valid tool-centre region and
+            // deeper than the leave-behind width. Slivers in the wall band
+            // (between the tool-centre region and the walls) are covered
+            // by the disk sweep or unreachable, and thin ridges are left
+            // for the finishing pass — counting them keeps the wavefront
+            // hunting sweep-approximation phantoms until it errors.
+            let remaining_polys = face.cleared.remaining(&face.stock_region);
+            let deep: Vec<Polygon> = remaining_polys
+                .iter()
+                .flat_map(|p| {
+                    offset_polygon(p, -step_length * 1.5, JoinStyle::Round)
+                })
+                .filter(|p| p.len() >= 3)
+                .collect();
+            let actionable: f64 =
+                get_polygons_group_intersection(&deep, &valid_tool_area)
+                    .iter()
+                    .filter(|p| p.len() >= 3)
+                    .map(get_polygon_area)
+                    .sum();
+            actionable < opts.area_tolerance
         } {
             dbg_log!(
                 "EXIT  reason=converged  step_count={}  resume_count={}  \
