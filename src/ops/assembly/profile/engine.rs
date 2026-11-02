@@ -1,10 +1,6 @@
 use crate::error::{RaygeoError, RaygeoResult};
 use crate::geo::algo::engagement::Engagement;
-use crate::geo::shape::polygon::{
-    get_polygon_heading_at, get_polygons_closest_point,
-};
-use crate::geo::shape::polygon3d::walk_along_polygon_3d;
-use crate::geo::types::{Point, Point3D, Polygon};
+use crate::geo::types::{Command, Point, Point3D, Polygon};
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::Tracelet;
 use crate::ops::part::FaceState;
@@ -13,92 +9,29 @@ use crate::ops::types::CutDirection;
 use crate::ops::types::ToolPose;
 use crate::trace_types::MoveKind;
 
+use super::exact::ExactLoop;
 use super::trace_helpers as th;
 
-/// Find polygon vertices that lie strictly between `from` and `to` along
-/// the forward (CCW) direction of `poly3d`.  Returns them in walk order.
-/// This ensures the engine emits explicit LINE_TO commands at corners so
-/// the toolpath has sharp miter joins instead of cutting across.
-fn intermediate_vertices(
-    poly3d: &[Point3D],
-    from: &Point3D,
-    to: &Point3D,
-) -> Vec<Point3D> {
-    let n = poly3d.len();
-    if n < 3 {
-        return Vec::new();
+/// A polygon as a closed loop of exact line pieces (lifted to `z`), so
+/// polygon offsets walk through the same engine as curve-true boundaries.
+pub(crate) fn loop_from_polygon(
+    offset_poly: &Polygon,
+    z: f64,
+) -> Option<ExactLoop> {
+    if offset_poly.len() < 3 {
+        return None;
     }
-    let find_seg = |p: &Point3D| -> Option<(usize, f64)> {
-        for i in 0..n {
-            let a = poly3d[i];
-            let b = poly3d[(i + 1) % n];
-            let ab = b - a;
-            let len_sq = ab.length_squared();
-            if len_sq < 1e-12 {
-                continue;
-            }
-            let ap = *p - a;
-            let t = (ap.dot(ab) / len_sq).clamp(0.0, 1.0);
-            let closest = a + ab * t;
-            if closest.distance_squared(*p) < 1e-10 {
-                return Some((i, t));
-            }
+    let mut spans: Vec<(Point3D, Command)> =
+        Vec::with_capacity(offset_poly.len());
+    let mut prev = Point3D::new(offset_poly[0].x, offset_poly[0].y, z);
+    for point in offset_poly.iter().skip(1).chain(offset_poly.iter().take(1)) {
+        let end = Point3D::new(point.x, point.y, z);
+        if prev.distance(end) > 1e-9 {
+            spans.push((prev, Command::Line { end }));
         }
-        None
-    };
-    let (mut from_seg, mut from_t) = match find_seg(from) {
-        Some(v) => v,
-        None => return Vec::new(),
-    };
-    let (to_seg, to_t) = match find_seg(to) {
-        Some(v) => v,
-        None => return Vec::new(),
-    };
-
-    // If `from` is at the far end of its segment (t ≈ 1), it's exactly at
-    // vertex (from_seg+1) — advance to the next segment with t=0 to avoid
-    // duplicating that vertex as an intermediate.
-    if from_t > 1.0 - 1e-9 {
-        from_seg = (from_seg + 1) % n;
-        from_t = 0.0;
+        prev = end;
     }
-
-    let mut verts = Vec::new();
-
-    if from_seg == to_seg {
-        if to_t > from_t + 1e-9 {
-            // Same segment, forward — no vertices crossed.
-            return verts;
-        }
-        // Wrapped around: cross ALL vertices from (from_seg+1)%n back to from_seg.
-        let mut idx = (from_seg + 1) % n;
-        for _ in 0..n {
-            verts.push(poly3d[idx]);
-            if idx == from_seg {
-                break;
-            }
-            idx = (idx + 1) % n;
-        }
-        return verts;
-    }
-
-    // Different segments: walk forward from (from_seg+1)%n to to_seg.
-    let mut idx = (from_seg + 1) % n;
-    for _ in 0..n {
-        if idx == to_seg {
-            break;
-        }
-        verts.push(poly3d[idx]);
-        idx = (idx + 1) % n;
-    }
-    // The vertex at to_seg is the start of the segment containing `to`.
-    // It's only worth pushing if `to` is past it (to_t > 0).  When the loop
-    // breaks immediately, from_seg+1 == to_seg, and poly3d[to_seg] would
-    // duplicate `from`; the t advancement above rules that out.
-    if to_t > 1e-9 {
-        verts.push(poly3d[to_seg]);
-    }
-    verts
+    ExactLoop::from_spans(spans)
 }
 
 #[allow(dead_code)]
@@ -117,44 +50,41 @@ pub(crate) struct ProfileCommon {
     pub stock_to_leave: f64,
 }
 
+/// Walks the offset boundary once at the target depth.
+///
+/// The boundary is an [`ExactLoop`] — a closed loop of line-and-arc pieces.
+/// Polygon offsets enter as all-line loops, curve-true offsets carry arcs,
+/// and the walk emits what the pieces are: chords along line pieces, arc
+/// moves along arc pieces, with explicit corner moves where pieces meet at
+/// an angle. CCW (`common.cut_direction`) walks the loop as stored —
+/// interior on the left, the climb side for a clockwise spindle — and CW
+/// walks it backwards.
+///
+/// The walk is parameterized on the boundary itself, so positions lie on it
+/// by construction and no drift correction is needed; the wall distance is
+/// measured only for the tracing meta.
 pub(crate) fn run_profile(
     face: &mut FaceState,
     trace: &mut Tracelet,
-    offset_poly: &Polygon,
+    loop_: &ExactLoop,
     common: &ProfileCommon,
     cut_state: &State,
     target_polygon_idx: u32,
 ) -> RaygeoResult<AssemblyMeta> {
-    if offset_poly.len() < 3 {
+    let forward = common.cut_direction == CutDirection::Ccw;
+    let perimeter = loop_.perimeter();
+    if perimeter.is_nan() || perimeter <= 1e-9 {
         return Err(RaygeoError::DegenerateGeometry(
-            "offset polygon too small".into(),
+            "offset boundary too small".into(),
         ));
     }
-
-    let poly3d: Vec<Point3D> = offset_poly
-        .iter()
-        .map(|p| Point3D::new(p.x, p.y, common.target_z))
-        .collect();
-
-    let n = poly3d.len();
-    let mut perimeter = 0.0;
-    for i in 0..n {
-        let next = (i + 1) % n;
-        perimeter += (poly3d[next] - poly3d[i]).length();
-    }
-
-    // Compute heading from polygon tangent at start vertex
-    let heading = {
-        let normal_angle = get_polygon_heading_at(offset_poly, offset_poly[0]);
-        // Tangent direction = outward normal + 90°
-        normal_angle + std::f64::consts::FRAC_PI_2
-    };
-
-    let start_pos = poly3d[0];
+    let start_pos = loop_.start();
+    let heading = loop_.heading_at_start(forward);
 
     trace.move_to(start_pos.x, start_pos.y, common.safe_z, None);
     trace.move_to(start_pos.x, start_pos.y, common.target_z, None);
     trace.apply_state(cut_state);
+
     // Effective area threshold
     let full_crescent =
         std::f64::consts::PI * common.tool_radius * common.tool_radius
@@ -180,13 +110,19 @@ pub(crate) fn run_profile(
     let mut current_feed_rate = cut_state.feed_rate;
     let mut feed_reduced = false;
 
-    let mut current_3d = start_pos;
+    let mut current = start_pos;
+    let (mut piece_idx, mut piece_t) = (0usize, 0.0f64);
     let mut dist_traveled = 0.0;
     let max_steps = (perimeter / common.step_length + 10.0) as usize;
     #[allow(unused_assignments)]
     #[allow(unused_assignments)]
     let mut _last_eng: Engagement = unsafe { std::mem::zeroed() };
     let mut first_step = true;
+    // Travel-skips in a row; a long run means the skip heuristic has
+    // deadlocked (the loop starts in open material), so it is switched
+    // off for the rest of the loop.
+    let mut consecutive_skips = 0u32;
+    let mut engagement_disabled = false;
 
     trace.init(
         th::tool_snapshot(start_pos, heading, start_pos),
@@ -197,13 +133,10 @@ pub(crate) fn run_profile(
         // Cancellation check
         if let Some(check) = common.cancel_check {
             if check() {
-                trace.move_to(current_3d.x, current_3d.y, common.safe_z, None);
-                trace.exit(
-                    th::tool_snapshot(current_3d, heading, current_3d),
-                    None,
-                );
+                trace.move_to(current.x, current.y, common.safe_z, None);
+                trace.exit(th::tool_snapshot(current, heading, current), None);
                 let end_pose = ToolPose {
-                    pos: current_3d,
+                    pos: current,
                     heading,
                 };
                 return Ok(AssemblyMeta {
@@ -222,7 +155,7 @@ pub(crate) fn run_profile(
                 trace.set_feed_rate(fr);
                 trace.move_event(
                     MoveKind::Travel,
-                    th::tool_snapshot(current_3d, heading, current_3d),
+                    th::tool_snapshot(current, heading, current),
                     Some(th::feed_change_meta(
                         current_feed_rate.unwrap_or(0),
                         fr,
@@ -233,12 +166,14 @@ pub(crate) fn run_profile(
             feed_reduced = false;
         }
 
-        let mut next = walk_along_polygon_3d(
-            &poly3d,
-            &current_3d,
-            true,
-            common.step_length,
-        );
+        let step = if forward {
+            common.step_length
+        } else {
+            -common.step_length
+        };
+        let (mut next_idx, mut next_t, _) =
+            loop_.advance(piece_idx, piece_t, step);
+        let mut next = loop_.point_at(next_idx, next_t);
 
         // ── Engagement check + adaptive step/feed ──
         let mut effective_step = common.step_length;
@@ -250,8 +185,9 @@ pub(crate) fn run_profile(
         // buried by design and the check would spuriously fire on every
         // step. Gate it on stock_to_leave > 0 (rough pass) AND the face.cleared
         // area already containing material from a prior pass.
-        let check_engagement =
-            common.stock_to_leave > 0.0 && !face.cleared.is_empty();
+        let check_engagement = !engagement_disabled
+            && common.stock_to_leave > 0.0
+            && !face.cleared.is_empty();
         if check_engagement {
             loop {
                 let eng = face.cleared.get_point_engagement(
@@ -260,7 +196,7 @@ pub(crate) fn run_profile(
                 );
                 if eng.area > area_threshold || eng.angle > angle_threshold {
                     reductions += 1;
-                    if reductions >= 3 {
+                    if reductions >= 3 && consecutive_skips < 3 {
                         // Travel-skip: lift, move, re-plunge, restore feed.
                         _last_eng = eng;
                         trace.move_to(next.x, next.y, common.safe_z, None);
@@ -271,15 +207,42 @@ pub(crate) fn run_profile(
                         }
                         effective_step = common.step_length;
                         travel_skipped = true;
+                        consecutive_skips += 1;
+                        break;
+                    }
+                    if reductions >= 3 {
+                        // Skipping deadlocks here — every step reads as a
+                        // fresh full bite (the loop starts in open
+                        // material), and the skipped stretches anchor the
+                        // frontier so it stays that way. Cut the rest of
+                        // the loop as planned, at the full feed.
+                        engagement_disabled = true;
+                        if let Some(fr) = original_feed_rate {
+                            trace.set_feed_rate(fr);
+                            current_feed_rate = original_feed_rate;
+                        }
+                        feed_reduced = false;
+                        effective_step = common.step_length;
+                        let step = if forward {
+                            effective_step
+                        } else {
+                            -effective_step
+                        };
+                        (next_idx, next_t, _) =
+                            loop_.advance(piece_idx, piece_t, step);
+                        next = loop_.point_at(next_idx, next_t);
+                        _last_eng = eng;
                         break;
                     }
                     effective_step *= 0.5;
-                    next = walk_along_polygon_3d(
-                        &poly3d,
-                        &current_3d,
-                        true,
-                        effective_step,
-                    );
+                    let step = if forward {
+                        effective_step
+                    } else {
+                        -effective_step
+                    };
+                    (next_idx, next_t, _) =
+                        loop_.advance(piece_idx, piece_t, step);
+                    next = loop_.point_at(next_idx, next_t);
                     if let Some(fr) = current_feed_rate {
                         let reduced = (fr as f64 * common.feed_reduction_factor)
                             .max(1.0)
@@ -300,35 +263,15 @@ pub(crate) fn run_profile(
             }
         }
 
-        // ── Drift correction ──
-        let wall_distance = if let Some((_idx, _t, closest, dist_sq)) =
-            get_polygons_closest_point(
-                std::slice::from_ref(offset_poly),
-                Point::new(next.x, next.y),
-            ) {
-            let dist = dist_sq.sqrt();
-            let dx = next.x - closest.x;
-            let dy = next.y - closest.y;
-            if dist > common.tolerance {
-                let nudge = 0.5;
-                let corrected = Point::new(
-                    closest.x + dx * (1.0 - nudge),
-                    closest.y + dy * (1.0 - nudge),
-                );
-                next = Point3D::new(corrected.x, corrected.y, common.target_z);
-            }
-            dist
-        } else {
-            0.0
-        };
+        let wall_distance = loop_.wall_distance(Point::new(next.x, next.y));
         dist_traveled += effective_step;
 
         // Expand the face.cleared area for this step BEFORE the next engagement
         // check so the swept path is reflected in the face.cleared fragments.
         face.cleared.begin_batch();
         face.cleared.expand_batched(
-            crate::geo::types::Point::new(current_3d.x, current_3d.y),
-            crate::geo::types::Point::new(next.x, next.y),
+            Point::new(current.x, current.y),
+            Point::new(next.x, next.y),
             common.tool_radius,
         );
         face.cleared.commit_batch_local();
@@ -337,14 +280,16 @@ pub(crate) fn run_profile(
 
         if dist_traveled >= perimeter - common.step_length * 0.5 {
             if !travel_skipped {
-                let verts =
-                    intermediate_vertices(&poly3d, &current_3d, &start_pos);
-                for v in &verts {
-                    trace.line_to(v.x, v.y, common.target_z, None);
-                }
-                trace.line_to(start_pos.x, start_pos.y, common.target_z, None);
+                // Close the pass exactly back at the loop start.
+                loop_.emit_between(
+                    trace,
+                    (piece_idx, piece_t),
+                    (0, 0.0),
+                    forward,
+                    common.target_z,
+                );
                 trace.cut(
-                    th::tool_snapshot(start_pos, heading, current_3d),
+                    th::tool_snapshot(start_pos, heading, current),
                     Some(th::cut_meta(
                         target_polygon_idx,
                         dist_traveled,
@@ -360,13 +305,15 @@ pub(crate) fn run_profile(
             break;
         }
         if !travel_skipped {
-            let verts = intermediate_vertices(&poly3d, &current_3d, &next);
-            for v in &verts {
-                trace.line_to(v.x, v.y, common.target_z, None);
-            }
-            trace.line_to(next.x, next.y, common.target_z, None);
+            loop_.emit_between(
+                trace,
+                (piece_idx, piece_t),
+                (next_idx, next_t),
+                forward,
+                common.target_z,
+            );
             trace.cut(
-                th::tool_snapshot(next, heading, current_3d),
+                th::tool_snapshot(next, heading, current),
                 Some(th::cut_meta(
                     target_polygon_idx,
                     dist_traveled,
@@ -379,8 +326,11 @@ pub(crate) fn run_profile(
                 )),
             );
             first_step = false;
+            consecutive_skips = 0;
         }
-        current_3d = next;
+        current = next;
+        piece_idx = next_idx;
+        piece_t = next_t;
     }
 
     trace.move_to(start_pos.x, start_pos.y, common.safe_z, None);

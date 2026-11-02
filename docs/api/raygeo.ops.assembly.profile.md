@@ -182,6 +182,10 @@ so that the tool clears the material along the pocket walls and around each isla
 
 *Two-pass inner profiling: rough (orange) + finish (red) on same ClearedArea.*
 
+![profile_inner on a curve-true circular boundary — the wall pass is emitted as true arcs.](images/ops-assembly-profile-profile-inner-circle-exact.png)
+
+*profile_inner on a curve-true circular boundary — the wall pass is emitted as true arcs.*
+
 ### `profile_outer()`
 
 ```python
