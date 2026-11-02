@@ -9,6 +9,7 @@ to derive its own executable steps.  They are never executed directly.
 
 pub(crate) mod clearing;
 pub(crate) mod entry;
+pub(crate) mod profile;
 
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
@@ -207,6 +208,7 @@ pub(crate) fn register(parent: &Bound<'_, PyModule>) -> PyResult<()> {
     plan_mod.add_class::<PyPlanStep>()?;
     clearing::register(&plan_mod)?;
     entry::register(&plan_mod)?;
+    profile::register(&plan_mod)?;
     parent.add_submodule(&plan_mod)?;
 
     let sys_modules = py.import("sys")?.getattr("modules")?;
