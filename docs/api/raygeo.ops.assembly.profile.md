@@ -134,6 +134,7 @@ profile_inner(
     engagement_area_threshold: float = 0,
     engagement_angle_threshold: float = 3.141592653589793,
     trace_path: str | None = None,
+    plunge_feed_rate: int | None = None,
 ) -> ops.assembly.AssemblyResult
 ```
 
@@ -160,6 +161,7 @@ so that the tool clears the material along the pocket walls and around each isla
 | `engagement_area_threshold`  | `float = 0`                              | Overengagement area threshold (mm², 0 = auto).                                                                                |
 | `engagement_angle_threshold` | `float = 3.141592653589793`              | Overengagement angle threshold (rad, default π).                                                                              |
 | `trace_path`                 | `str &#124; None = None`                 | Optional path to write a binary trace file (default None).                                                                    |
+| `plunge_feed_rate`           | `int &#124; None = None`                 | Vertical plunge feed in mm/min for the descent into material (default None: cut feed).                                        |
 | _Returns_                    | `ops.assembly.AssemblyResult`            | An **AssemblyResult** with the profiling path.                                                                                |
 
 ![profile_inner on a square pocket with island — 2D: boundary, island, offset walks, cuts (turbo).](images/ops-assembly-profile-profile-inner-rect-with-square-island-2d.png)
@@ -205,6 +207,7 @@ profile_outer(
     engagement_area_threshold: float = 0,
     engagement_angle_threshold: float = 3.141592653589793,
     trace_path: str | None = None,
+    plunge_feed_rate: int | None = None,
 ) -> ops.assembly.AssemblyResult
 ```
 
@@ -231,6 +234,7 @@ an **AssemblyResult** with the profiling move sequence.
 | `engagement_area_threshold`  | `float = 0`                              | Overengagement area threshold (mm², 0 = auto).                                                                    |
 | `engagement_angle_threshold` | `float = 3.141592653589793`              | Overengagement angle threshold (rad, default π).                                                                  |
 | `trace_path`                 | `str &#124; None = None`                 | Optional path to write a binary trace file (default None).                                                        |
+| `plunge_feed_rate`           | `int &#124; None = None`                 | Vertical plunge feed in mm/min for the descent into material (default None: cut feed).                            |
 | _Returns_                    | `ops.assembly.AssemblyResult`            | An **AssemblyResult** with the profiling path.                                                                    |
 
 ![profile_outer on a rect pocket — 3D (left) and 2D top-down with offset tool-centre polygon (right).](images/ops-assembly-profile-profile-outer-rect.png)

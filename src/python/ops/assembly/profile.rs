@@ -200,6 +200,7 @@ impl PyProfileSpec {
         engagement_area_threshold: float = 0.0,
         engagement_angle_threshold: float = 3.141592653589793,
         trace_path: str | None = None,
+        plunge_feed_rate: int | None = None,
     ) -> raygeo.ops.assembly.AssemblyResult:
         """Profile the outer boundary of a pocket.
 
@@ -336,6 +337,7 @@ fn profile_outer_py(
         engagement_area_threshold: float = 0.0,
         engagement_angle_threshold: float = 3.141592653589793,
         trace_path: str | None = None,
+        plunge_feed_rate: int | None = None,
     ) -> raygeo.ops.assembly.AssemblyResult:
         """Profile the inner boundary of a pocket, around islands.
 
