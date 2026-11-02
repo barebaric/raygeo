@@ -11,6 +11,7 @@ use crate::geo::algo::topology::{
     get_valid_contours_data, split_into_contours,
 };
 use crate::geo::geometry::Geometry;
+use crate::geo::shape::arc::get_arc_sweep;
 use crate::geo::shape::polygon::is_point_inside_polygon;
 use crate::geo::types::{Command, Point, Point3D, Polygon, WindingOrder};
 
@@ -304,4 +305,126 @@ fn container_intersects_content(
         &content.data,
         true,
     )
+}
+
+/// A closed subpath as exact `(start point, command)` spans.
+///
+/// Lines and arcs stay exact; other curves are followed as line chains
+/// within `tolerance`. Subpaths that are open, degenerate, or not finite
+/// are dropped. Winding is kept as drawn: counter-clockwise loops bound
+/// material, clockwise ones bound holes.
+pub fn get_closed_spans(
+    geometry: &Geometry,
+    tolerance: f64,
+) -> Vec<Vec<(Point3D, Command)>> {
+    const MIN_PIECE: f64 = 1e-9;
+    /// How far apart consecutive pieces of a contour may start and end.
+    const CLOSED_TOL: f64 = 1e-6;
+
+    if !(tolerance.is_finite() && tolerance > 0.0) {
+        return Vec::new();
+    }
+    let xy = |p: Point3D| Point::new(p.x, p.y);
+    let mut out = Vec::new();
+    let mut spans: Vec<(Point3D, Command)> = Vec::new();
+    let mut pos = Point3D::ZERO;
+    let mut moved = false;
+    for command in geometry.data() {
+        if let Command::Move { end } = *command {
+            if let Some(contour) = finish(&mut spans) {
+                out.push(contour);
+            }
+            pos = end;
+            moved = true;
+            continue;
+        }
+        if !moved {
+            continue;
+        }
+        match *command {
+            Command::Line { end } => {
+                if Point::new(pos.x, pos.y).distance(Point::new(end.x, end.y))
+                    > MIN_PIECE
+                {
+                    spans.push((pos, command.clone()));
+                }
+            }
+            Command::Arc {
+                end,
+                center_offset,
+                normal,
+            } => {
+                let off = Point::new(center_offset.x, center_offset.y);
+                let here = Point::new(pos.x, pos.y);
+                let c = here + off;
+                let r = off.length();
+                let clockwise = normal.z < 0.0;
+                let sweep =
+                    if here.distance(Point::new(end.x, end.y)) <= MIN_PIECE {
+                        // The command closes its own circle.
+                        if clockwise {
+                            -std::f64::consts::TAU
+                        } else {
+                            std::f64::consts::TAU
+                        }
+                    } else {
+                        get_arc_sweep(
+                            (here - c).y.atan2((here - c).x),
+                            (Point::new(end.x, end.y) - c)
+                                .y
+                                .atan2((Point::new(end.x, end.y) - c).x),
+                            clockwise,
+                        )
+                    };
+                if r > MIN_PIECE && sweep.abs() > 1e-9 {
+                    spans.push((pos, command.clone()));
+                }
+            }
+            Command::Bezier { .. } => {
+                let mut flat: Vec<(Point3D, Point3D)> = Vec::new();
+                command.linearize(pos, tolerance, &mut flat);
+                for (a, b) in flat {
+                    if xy(a).distance(xy(b)) > MIN_PIECE {
+                        spans.push((a, Command::Line { end: b }));
+                    }
+                }
+            }
+            Command::Move { .. } => {}
+        }
+        pos = command.end_point();
+    }
+    if let Some(contour) = finish(&mut spans) {
+        out.push(contour);
+    }
+    return out;
+
+    /// Drops the spans unless they form a finite closed loop enclosing area.
+    fn finish(
+        spans: &mut Vec<(Point3D, Command)>,
+    ) -> Option<Vec<(Point3D, Command)>> {
+        let spans = std::mem::take(spans);
+        if spans.len() < 2
+            || !spans
+                .iter()
+                .all(|(s, c)| s.is_finite() && c.end_point().is_finite())
+        {
+            return None;
+        }
+        let first = spans.first()?.0;
+        let last = spans.last()?.1.end_point();
+        if Point::new(first.x, first.y).distance(Point::new(last.x, last.y))
+            > CLOSED_TOL
+        {
+            return None;
+        }
+        // The subpath reader treats the first command as its MOVE.
+        let mut data: Vec<Command> = Vec::with_capacity(spans.len() + 1);
+        data.push(Command::Move { end: spans[0].0 });
+        data.extend(spans.iter().map(|(_, c)| c.clone()));
+        let area = get_subpath_area_from_array(&data, 0);
+        if area.is_nan() || area.abs() <= 1e-9 {
+            return None;
+        }
+        Some(spans)
+    }
 }

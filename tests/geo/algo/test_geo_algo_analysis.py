@@ -5,6 +5,7 @@ import pytest
 from raygeo.geo import Geometry
 from raygeo.geo.algo.analysis import (
     get_area,
+    get_closed_spans,
     get_path_winding_order,
     get_subpath_area,
     get_subpath_vertices,
@@ -531,3 +532,98 @@ def test_get_path_winding_order_open():
     geo.move_to(0, 0)
     geo.line_to(10, 0)
     assert get_path_winding_order(geo, 0) == "unknown"
+
+
+def _rect_geometry(x0, y0, x1, y1, z=0.0):
+    g = Geometry()
+    g.move_to(x0, y0, z)
+    g.line_to(x1, y0, z)
+    g.line_to(x1, y1, z)
+    g.line_to(x0, y1, z)
+    g.close_path()
+    return g
+
+
+class TestGetClosedSpans:
+    """Splitting a geometry into exact closed subpath spans."""
+
+    def test_rectangle_becomes_four_exact_line_spans(self):
+        loops = get_closed_spans(_rect_geometry(0, 0, 40, 30))
+        assert len(loops) == 1
+        spans = loops[0]
+        assert len(spans) == 4
+        # Every span is a Line command (kind "Line") and the chain closes.
+        assert all(
+            kind == "Line" for _, cmd in spans for kind in [type(cmd).__name__]
+        )
+        assert spans[0][0] == (0.0, 0.0, 0.0)
+        assert type(spans[-1][1]).__name__ == "Line"
+        assert spans[-1][1].end == (0.0, 0.0, 0.0)
+
+    def test_arcs_stay_arcs(self):
+        g = Geometry()
+        g.move_to(10, 0, 0)
+        g.arc_to(-10, 0, -10, 0, False, 0)
+        g.arc_to(10, 0, 10, 0, False, 0)
+        loops = get_closed_spans(g)
+        assert len(loops) == 1
+        assert [type(cmd).__name__ for _, cmd in loops[0]] == ["Arc", "Arc"]
+        # Radius is preserved exactly through the center offsets.
+        for _, cmd in loops[0]:
+            assert math.hypot(*cmd.center_offset[:2]) == pytest.approx(10.0)
+
+    def test_open_subpaths_are_dropped(self):
+        g = Geometry()
+        g.move_to(0, 0, 0)
+        g.line_to(10, 0, 0)
+        g.line_to(10, 10, 0)  # open
+        assert get_closed_spans(g) == []
+        closed = _rect_geometry(0, 0, 10, 10)
+        g.extend(closed)
+        loops = get_closed_spans(g)
+        assert len(loops) == 1
+        assert type(loops[0][0][1]).__name__ == "Line"
+
+    def test_bezier_is_flattened_to_lines_within_tolerance(self):
+        g = Geometry()
+        g.move_to(0, 0, 0)
+        g.bezier_to(40, 30, 50, 0, 50, 30)
+        g.line_to(0, 30, 0)
+        g.close_path()
+        loops = get_closed_spans(g, 0.05)
+        assert len(loops) == 1
+        kinds = [type(cmd).__name__ for _, cmd in loops[0]]
+        assert "Bezier" not in kinds
+        assert kinds.count("Line") > 8
+
+    def test_winding_is_kept_as_drawn(self):
+        ccw = get_closed_spans(_rect_geometry(0, 0, 10, 10))
+        cw = get_closed_spans(
+            Geometry.reverse_contour(_rect_geometry(0, 0, 10, 10))
+        )
+        assert len(ccw) == 1 and len(cw) == 1
+        # Both loops start at the same corner (reverse keeps the start
+        # point); the traversal direction shows in the first span's end.
+        assert ccw[0][0][1].end == (10.0, 0.0, 0.0)
+        assert cw[0][0][1].end == (0.0, 10.0, 0.0)
+
+    def test_z_is_carried_through(self):
+        loops = get_closed_spans(_rect_geometry(0, 0, 40, 30, z=7.5))
+        assert loops[0][0][0] == (0.0, 0.0, 7.5)
+        for _, cmd in loops[0]:
+            assert cmd.end[2] == pytest.approx(7.5)
+
+    def test_multiple_closed_subpaths(self):
+        g = _rect_geometry(0, 0, 10, 10)
+        g.extend(Geometry.reverse_contour(_rect_geometry(20, 20, 30, 30)))
+        loops = get_closed_spans(g)
+        assert len(loops) == 2
+
+    def test_invalid_tolerance_returns_empty(self):
+        assert get_closed_spans(_rect_geometry(0, 0, 10, 10), 0.0) == []
+        assert (
+            get_closed_spans(_rect_geometry(0, 0, 10, 10), float("nan")) == []
+        )
+
+    def test_empty_geometry(self):
+        assert get_closed_spans(Geometry()) == []

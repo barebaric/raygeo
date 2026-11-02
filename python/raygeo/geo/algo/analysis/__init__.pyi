@@ -9,10 +9,13 @@ determining path winding order.
 """
 
 import collections.abc
+import raygeo
 from raygeo import geo
 from raygeo.geo import types
+import typing
 __all__ = [
     "get_area",
+    "get_closed_spans",
     "get_path_winding_order",
     "get_subpath_area",
     "get_subpath_vertices",
@@ -28,6 +31,23 @@ def get_area(geometry: geo.Geometry) -> float:
     :param geometry: Geometry to compute area from.
     :returns: Total unsigned area.
     :complexity: O(n) time, O(1) space
+    """
+
+def get_closed_spans(geometry: raygeo.geo.Geometry, tolerance: float = 0.1) -> list[list[tuple[tuple[float, float, float], typing.Any]]]:
+    r"""
+    Split a geometry into its closed subpaths as exact spans.
+    
+    Each subpath comes back as a list of ``(start point, command)``
+    spans. Lines and arcs stay exact; other curves are followed as
+    line chains within `tolerance`. Open, degenerate, and non-finite
+    subpaths are dropped, and the winding of each loop is kept as
+    drawn (counter-clockwise loops bound material, clockwise ones
+    holes).
+    
+    :param geometry: geometry whose closed subpaths are extracted.
+    :param tolerance: line-chain tolerance for non-line-and-arc curves.
+    :returns: one span list per closed subpath.
+    :complexity: O(n) time, O(n) space
     """
 
 def get_path_winding_order(geometry: geo.Geometry, start_cmd_index: int) -> str:

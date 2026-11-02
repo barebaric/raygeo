@@ -26,6 +26,29 @@ Sums all subpaths (outer + inner). Returns 0 for empty or open geometry.
 | _Returns_    | `float`        | Total unsigned area.           |
 | _Complexity_ |                | O(n) time, O(1) space          |
 
+### `get_closed_spans()`
+
+```python
+get_closed_spans(
+    geometry: geo.Geometry,
+    tolerance: float = 0.1,
+) -> list[list[tuple[tuple[float, float, float], Any]]]
+```
+
+Split a geometry into its closed subpaths as exact spans.
+
+Each subpath comes back as a list of `(start point, command)` spans. Lines and arcs stay exact;
+other curves are followed as line chains within `tolerance`. Open, degenerate, and non-finite
+subpaths are dropped, and the winding of each loop is kept as drawn (counter-clockwise loops bound
+material, clockwise ones holes).
+
+| Parameter    | Type                                                 | Description                                       |
+| ------------ | ---------------------------------------------------- | ------------------------------------------------- |
+| `geometry`   | `geo.Geometry`                                       | geometry whose closed subpaths are extracted.     |
+| `tolerance`  | `float = 0.1`                                        | line-chain tolerance for non-line-and-arc curves. |
+| _Returns_    | `list[list[tuple[tuple[float, float, float], Any]]]` | one span list per closed subpath.                 |
+| _Complexity_ |                                                      | O(n) time, O(n) space                             |
+
 ### `get_path_winding_order()`
 
 ```python
