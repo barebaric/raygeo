@@ -47,11 +47,6 @@ class ProfileSpec:
     @property
     def tolerance(self) -> builtins.float: ...
     @property
-    def exact(self) -> builtins.bool:
-        r"""
-        Follow the exact line-and-arc offset and emit arcs as arcs.
-        """
-    @property
     def expansion_batch_size(self) -> builtins.int: ...
     @property
     def engagement_area_threshold(self) -> builtins.float: ...
@@ -68,9 +63,9 @@ class ProfileSpec:
         Optional path to write a binary trace file.
         """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __new__(cls, kind: builtins.str = 'inner', tool_radius: builtins.float = 3.0, step_over: builtins.float = 1.5, step_length: builtins.float = 0.6, target_z: builtins.float = -5.0, safe_z: builtins.float = 2.0, wall_margin: builtins.float = 0.0, stock_to_leave: builtins.float = 0.0, cut_direction: builtins.str = 'ccw', start_pos: typing.Optional[tuple[builtins.float, builtins.float]] = None, tolerance: builtins.float = 0.1, exact: builtins.bool = False, expansion_batch_size: builtins.int = 20, engagement_area_threshold: builtins.float = 0.0, engagement_angle_threshold: builtins.float = 3.141592653589793, feed_reduction_factor: builtins.float = 0.5, trace_path: typing.Optional[builtins.str] = None) -> ProfileSpec: ...
+    def __new__(cls, kind: builtins.str = 'inner', tool_radius: builtins.float = 3.0, step_over: builtins.float = 1.5, step_length: builtins.float = 0.6, target_z: builtins.float = -5.0, safe_z: builtins.float = 2.0, wall_margin: builtins.float = 0.0, stock_to_leave: builtins.float = 0.0, cut_direction: builtins.str = 'ccw', start_pos: typing.Optional[tuple[builtins.float, builtins.float]] = None, tolerance: builtins.float = 0.1, expansion_batch_size: builtins.int = 20, engagement_area_threshold: builtins.float = 0.0, engagement_angle_threshold: builtins.float = 3.141592653589793, feed_reduction_factor: builtins.float = 0.5, trace_path: typing.Optional[builtins.str] = None) -> ProfileSpec: ...
 
-def profile_inner(part: raygeo.ops.part.Part, tool_radius: float = 3, step_over: float = 1.5, step_length: float = 0.6, target_z: float = -5, safe_z: float = 2, wall_margin: float = 0, stock_to_leave: float = 0, cut_feed_rate: int = 1000, cut_power: float = 0, start_pos: tuple[float, float] | None = None, cut_direction: str = 'ccw', exact: bool = False, engagement_area_threshold: float = 0, engagement_angle_threshold: float = 3.141592653589793, trace_path: str | None = None) -> raygeo.ops.assembly.AssemblyResult:
+def profile_inner(part: raygeo.ops.part.Part, tool_radius: float = 3, step_over: float = 1.5, step_length: float = 0.6, target_z: float = -5, safe_z: float = 2, wall_margin: float = 0, stock_to_leave: float = 0, cut_feed_rate: int = 1000, cut_power: float = 0, start_pos: tuple[float, float] | None = None, cut_direction: str = 'ccw', engagement_area_threshold: float = 0, engagement_angle_threshold: float = 3.141592653589793, trace_path: str | None = None) -> raygeo.ops.assembly.AssemblyResult:
     r"""
     Profile the inner boundary of a pocket, around islands.
     
@@ -94,15 +89,13 @@ def profile_inner(part: raygeo.ops.part.Part, tool_radius: float = 3, step_over:
     :param cut_power: Spindle power (0.0–1.0).
     :param start_pos: Optional override start ``(x, y)`` (default: first boundary vertex).
     :param cut_direction: ``"cw"`` or ``"ccw"`` (default ``"ccw"``).
-    :param exact: Follow the exact line-and-arc offset and emit arcs as
-                  arcs (default False: chord-follow a polygon offset).
     :param engagement_area_threshold: Overengagement area threshold (mm², 0 = auto).
     :param engagement_angle_threshold: Overengagement angle threshold (rad, default π).
     :param trace_path: Optional path to write a binary trace file (default None).
     :returns: An :class:`AssemblyResult` with the profiling path.
     """
 
-def profile_outer(part: raygeo.ops.part.Part, tool_radius: float, step_over: float, step_length: float, target_z: float, safe_z: float, wall_margin: float, cut_feed_rate: int, cut_power: float, start_pos: tuple[float, float] | None = None, cut_direction: str = 'ccw', stock_to_leave: float = 0, exact: bool = False, engagement_area_threshold: float = 0, engagement_angle_threshold: float = 3.141592653589793, trace_path: str | None = None) -> raygeo.ops.assembly.AssemblyResult:
+def profile_outer(part: raygeo.ops.part.Part, tool_radius: float, step_over: float, step_length: float, target_z: float, safe_z: float, wall_margin: float, cut_feed_rate: int, cut_power: float, start_pos: tuple[float, float] | None = None, cut_direction: str = 'ccw', stock_to_leave: float = 0, engagement_area_threshold: float = 0, engagement_angle_threshold: float = 3.141592653589793, trace_path: str | None = None) -> raygeo.ops.assembly.AssemblyResult:
     r"""
     Profile the outer boundary of a pocket.
     
@@ -126,8 +119,6 @@ def profile_outer(part: raygeo.ops.part.Part, tool_radius: float, step_over: flo
     :param start_pos: Optional override start ``(x, y)`` (default: first boundary vertex).
     :param cut_direction: ``"cw"`` or ``"ccw"`` (default ``"ccw"``).
     :param stock_to_leave: Stock left on wall for rough pass (mm, default 0.0).
-    :param exact: Follow the exact line-and-arc offset and emit arcs as
-                  arcs (default False: chord-follow a polygon offset).
     :param engagement_area_threshold: Overengagement area threshold (mm², 0 = auto).
     :param engagement_angle_threshold: Overengagement angle threshold (rad, default π).
     :param trace_path: Optional path to write a binary trace file (default None).
