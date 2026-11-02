@@ -108,6 +108,7 @@ impl PyPlanStep {
             d.set_item("safe_z", p.safe_z)?;
             d.set_item("wall_margin", p.wall_margin)?;
             d.set_item("stock_to_leave", p.stock_to_leave)?;
+            d.set_item("cut_direction", format!("{:?}", p.cut_direction))?;
         }
 
         Ok(d)

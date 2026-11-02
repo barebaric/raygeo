@@ -2,6 +2,7 @@
 
 import matplotlib.pyplot as plt
 
+from raygeo.geo import Geometry
 from raygeo.geo.shape.polygon import (
     JoinStyle,
     get_circle_polygon,
@@ -383,6 +384,35 @@ def generate_profile_inner_rough_then_finish():
     return fig
 
 
+def generate_profile_inner_circle_exact():
+    """profile_inner on a curve-true circular boundary — the pass is
+    emitted as true arcs instead of chords."""
+    g = Geometry()
+    g.move_to(30, 0, 0)
+    g.arc_to(-30, 0, -30, 0, False, 0)
+    g.arc_to(30, 0, 30, 0, False, 0)
+    part = Part(geometry=g, size_mm=(80.0, 80.0))
+    result = profile_inner(
+        part,
+        tool_radius=3.0,
+        step_over=1.5,
+        target_z=-5.0,
+        safe_z=2.0,
+        step_length=0.6,
+        wall_margin=0.0,
+        cut_feed_rate=1000,
+        cut_power=0.0,
+    )
+
+    fig, ax = plt.subplots(figsize=(8, 8))
+    circle_poly = g.to_polygons(0.05)[0]
+    boundary = [(p[0], p[1]) for p in circle_poly]
+    plot_ops_2d(ax, result.ops, boundary=boundary)
+    ax.set_title("profile_inner on curve-true geometry — arcs stay arcs")
+    fig.tight_layout()
+    return fig
+
+
 __images__ = [
     {
         "heading": "profile_outer",
@@ -455,5 +485,13 @@ __images__ = [
             "finish (red) on same ClearedArea."
         ),
         "function": generate_profile_inner_rough_then_finish,
+    },
+    {
+        "heading": "profile_inner",
+        "caption": (
+            "profile_inner on a curve-true circular boundary — "
+            "the wall pass is emitted as true arcs."
+        ),
+        "function": generate_profile_inner_circle_exact,
     },
 ]

@@ -84,13 +84,25 @@ impl Assembler for ProfileSpec {
         if ctx.callbacks.is_cancelled() {
             return Err("cancelled".to_string());
         }
+        // Region scoping is polygonal, so a scoped step profiles the
+        // polygon path; an unscoped step with curve-true face geometry
+        // prefers the exact offset.
+        let prefer_exact = ctx.region_boundary.is_none();
         let meta = match self.kind {
-            ProfileKind::Inner => {
-                super::profile_inner(ctx.face, ctx.trace, self, ctx.state)
-            }
-            ProfileKind::Outer => {
-                super::profile_outer(ctx.face, ctx.trace, self, ctx.state)
-            }
+            ProfileKind::Inner => super::profile_inner(
+                ctx.face,
+                ctx.trace,
+                self,
+                ctx.state,
+                prefer_exact,
+            ),
+            ProfileKind::Outer => super::profile_outer(
+                ctx.face,
+                ctx.trace,
+                self,
+                ctx.state,
+                prefer_exact,
+            ),
         }
         .map_err(|e| e.to_string())?;
         let fragments = ctx.face.cleared.fragments().to_vec();

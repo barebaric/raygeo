@@ -118,6 +118,24 @@ impl Tracelet {
         self.maybe_flush();
     }
 
+    /// Cuts a circular arc to `(x, y, z)` about the center offset
+    /// `(i, j)` from the current position.
+    #[allow(clippy::too_many_arguments)]
+    pub fn arc_to(
+        &mut self,
+        x: f64,
+        y: f64,
+        i: f64,
+        j: f64,
+        clockwise: bool,
+        z: f64,
+        extra: Option<Vec<(Axis, f64)>>,
+    ) {
+        self.ops.arc_to(x, y, i, j, clockwise, z, extra);
+        self.pos = Point3D::new(x, y, z);
+        self.maybe_flush();
+    }
+
     pub fn apply_state(&mut self, state: &State) {
         self.ops.apply_state(state);
     }

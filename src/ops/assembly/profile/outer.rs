@@ -1,8 +1,8 @@
 use crate::error::{RaygeoError, RaygeoResult};
-use crate::geo::shape::polygon::{
-    get_polygon_heading_at, offset_polygon, JoinStyle,
+use crate::geo::shape::polygon::{offset_polygon, JoinStyle};
+use crate::ops::assembly::profile::engine::{
+    loop_from_polygon, run_profile, ProfileCommon,
 };
-use crate::ops::assembly::profile::engine::{run_profile, ProfileCommon};
 use crate::ops::assembly::profile::ProfileSpec;
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::Tracelet;
@@ -13,12 +13,36 @@ use super::trace_helpers as th;
 
 /// Profile the outer boundary of a pocket, extracting geometry from
 /// `face`.
+///
+/// With `prefer_exact` and curve-true geometry on the face, the boundary
+/// comes from the exact offsetter and arcs are emitted as arcs. The exact
+/// attempt falls back to the polygon path when it yields nothing
+/// machinable.
 pub fn profile_outer(
     face: &mut FaceState,
     trace: &mut Tracelet,
     opts: &ProfileSpec,
     cut_state: &State,
+    prefer_exact: bool,
 ) -> RaygeoResult<AssemblyMeta> {
+    let offset_dist = opts.tool_radius + opts.wall_margin + opts.stock_to_leave;
+    if prefer_exact {
+        if let Some(geometry) = face.geometry.clone() {
+            // Grow the region by the offset distance; islands are ignored,
+            // like the polygon path below. Nothing machinable falls back.
+            if let Some(meta) = super::exact::run_exact_loops(
+                face,
+                trace,
+                &geometry,
+                offset_dist,
+                opts,
+                cut_state,
+                true,
+            )? {
+                return Ok(meta);
+            }
+        }
+    }
     let (boundary_opt, _islands) = face.extract_boundary();
     let boundary = boundary_opt.ok_or_else(|| {
         RaygeoError::DegenerateGeometry(
@@ -26,7 +50,6 @@ pub fn profile_outer(
         )
     })?;
 
-    let offset_dist = opts.tool_radius + opts.wall_margin + opts.stock_to_leave;
     let offset_polys = offset_polygon(&boundary, offset_dist, JoinStyle::Round);
     if offset_polys.is_empty() {
         return Err(RaygeoError::DegenerateGeometry(
@@ -47,11 +70,13 @@ pub fn profile_outer(
         feed_reduction_factor: opts.feed_reduction_factor,
         stock_to_leave: opts.stock_to_leave,
     };
-    let _heading = get_polygon_heading_at(&offset_polys[0], offset_polys[0][0])
-        + std::f64::consts::FRAC_PI_2;
 
     let walk_order: Vec<u32> = (0..offset_polys.len() as u32).collect();
     trace.set_attrs(th::build_attrs(&offset_polys, &walk_order));
 
-    run_profile(face, trace, &offset_polys[0], &common, cut_state, 0)
+    let outer_loop = loop_from_polygon(&offset_polys[0], opts.target_z)
+        .ok_or_else(|| {
+            RaygeoError::DegenerateGeometry("offset polygon too small".into())
+        })?;
+    run_profile(face, trace, &outer_loop, &common, cut_state, 0)
 }

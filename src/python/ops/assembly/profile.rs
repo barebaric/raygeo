@@ -302,7 +302,8 @@ fn profile_outer_py(
 
     let mut trace = Tracelet::new();
     let face = part.inner.face_mut("");
-    let meta = profile::profile_outer(face, &mut trace, &opts, &cut_state)?;
+    let meta =
+        profile::profile_outer(face, &mut trace, &opts, &cut_state, true)?;
     let events = trace.drain();
     let attrs = trace.attrs().cloned();
     let ops = trace.into_ops();
@@ -431,7 +432,8 @@ fn profile_inner_py(
 
     let mut trace = Tracelet::new();
     let face = part.inner.face_mut("");
-    let meta = profile::profile_inner(face, &mut trace, &opts, &cut_state)?;
+    let meta =
+        profile::profile_inner(face, &mut trace, &opts, &cut_state, true)?;
     let events = trace.drain();
     let attrs = trace.attrs().cloned();
     let ops = trace.into_ops();

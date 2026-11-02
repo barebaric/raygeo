@@ -75,10 +75,10 @@ def test_profile_outer_walks_and_returns_to_start():
     assert dist <= 1.0, (
         f"walk did not return to start: {first_cut} vs {last_cut}, dist={dist}"
     )
-    # All commands are motion commands (MoveTo, LineTo) or state commands
-    # (SetFeedRate, SetPower) that apply_state emits.
-
-    allowed_names = {"MOVE_TO", "LINE_TO", "SET_FEED_RATE", "SET_POWER"}
+    # All commands are motion commands (MoveTo, LineTo, ArcTo — the exact
+    # path rolls convex corners on arcs) or state commands (SetFeedRate,
+    # SetPower) that apply_state emits.
+    allowed_names = {"MOVE_TO", "LINE_TO", "ARC_TO", "SET_FEED_RATE", "SET_POWER"}
     for i in range(ops.len()):
         ct = ops.command_type(i)
         assert ct.name in allowed_names, f"unexpected cmd {ct} at {i}"
