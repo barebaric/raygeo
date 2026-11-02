@@ -38,6 +38,9 @@ pub enum HeadCoolantMode {
 pub struct State {
     pub power: f64,
     pub feed_rate: Option<i32>,
+    /// Feed for vertical plunges into material; when `None`, cutting
+    /// systems fall back to [`Self::feed_rate`].
+    pub plunge_feed: Option<i32>,
     pub rapid_rate: Option<i32>,
     pub active_head_uid: Option<String>,
     pub frequency: Option<i32>,

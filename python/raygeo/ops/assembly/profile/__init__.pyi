@@ -92,6 +92,9 @@ def profile_inner(part: raygeo.ops.part.Part, tool_radius: float = 3, step_over:
     :param engagement_area_threshold: Overengagement area threshold (mm², 0 = auto).
     :param engagement_angle_threshold: Overengagement angle threshold (rad, default π).
     :param trace_path: Optional path to write a binary trace file (default None).
+    :param plunge_feed_rate: Vertical plunge feed in mm/min for the
+                             descent into material (default None: cut
+                             feed).
     :returns: An :class:`AssemblyResult` with the profiling path.
     """
 
@@ -122,6 +125,9 @@ def profile_outer(part: raygeo.ops.part.Part, tool_radius: float, step_over: flo
     :param engagement_area_threshold: Overengagement area threshold (mm², 0 = auto).
     :param engagement_angle_threshold: Overengagement angle threshold (rad, default π).
     :param trace_path: Optional path to write a binary trace file (default None).
+    :param plunge_feed_rate: Vertical plunge feed in mm/min for the
+                             descent into material (default None: cut
+                             feed).
     :returns: An :class:`AssemblyResult` with the profiling path.
     """
 

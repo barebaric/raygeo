@@ -226,6 +226,9 @@ impl PyProfileSpec {
         :param engagement_area_threshold: Overengagement area threshold (mm², 0 = auto).
         :param engagement_angle_threshold: Overengagement angle threshold (rad, default π).
         :param trace_path: Optional path to write a binary trace file (default None).
+        :param plunge_feed_rate: Vertical plunge feed in mm/min for the
+                                 descent into material (default None: cut
+                                 feed).
         :returns: An :class:`AssemblyResult` with the profiling path.
         """
     "#,
@@ -248,6 +251,7 @@ impl PyProfileSpec {
     engagement_area_threshold = 0.0,
     engagement_angle_threshold = std::f64::consts::PI,
     trace_path = None,
+    plunge_feed_rate = None,
 ))]
 #[allow(clippy::too_many_arguments)]
 fn profile_outer_py(
@@ -266,6 +270,7 @@ fn profile_outer_py(
     engagement_area_threshold: f64,
     engagement_angle_threshold: f64,
     trace_path: Option<String>,
+    plunge_feed_rate: Option<i32>,
 ) -> PyResult<PyAssemblyResult> {
     use std::path::PathBuf;
 
@@ -297,6 +302,7 @@ fn profile_outer_py(
     let cut_state = State {
         power: cut_power,
         feed_rate: Some(cut_feed_rate),
+        plunge_feed: plunge_feed_rate,
         ..Default::default()
     };
 
@@ -356,6 +362,9 @@ fn profile_outer_py(
         :param engagement_area_threshold: Overengagement area threshold (mm², 0 = auto).
         :param engagement_angle_threshold: Overengagement angle threshold (rad, default π).
         :param trace_path: Optional path to write a binary trace file (default None).
+        :param plunge_feed_rate: Vertical plunge feed in mm/min for the
+                                 descent into material (default None: cut
+                                 feed).
         :returns: An :class:`AssemblyResult` with the profiling path.
         """
     "#,
@@ -378,6 +387,7 @@ fn profile_outer_py(
     engagement_area_threshold = 0.0,
     engagement_angle_threshold = std::f64::consts::PI,
     trace_path = None,
+    plunge_feed_rate = None,
 ))]
 #[allow(clippy::too_many_arguments)]
 fn profile_inner_py(
@@ -396,6 +406,7 @@ fn profile_inner_py(
     engagement_area_threshold: f64,
     engagement_angle_threshold: f64,
     trace_path: Option<String>,
+    plunge_feed_rate: Option<i32>,
 ) -> PyResult<PyAssemblyResult> {
     use std::path::PathBuf;
 
@@ -427,6 +438,7 @@ fn profile_inner_py(
     let cut_state = State {
         power: cut_power,
         feed_rate: Some(cut_feed_rate),
+        plunge_feed: plunge_feed_rate,
         ..Default::default()
     };
 

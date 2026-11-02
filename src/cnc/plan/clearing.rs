@@ -66,6 +66,9 @@ pub struct ClearingWorkplanOptions {
     /// Cut feed rate (mm/min) the plan's moves carry. `None` leaves the
     /// cut state unset, for embedders that map feeds themselves.
     pub feed_rate: Option<f64>,
+    /// Vertical plunge feed (mm/min) for descents into material; `None`
+    /// falls back to the cut feed.
+    pub plunge_feed: Option<f64>,
 }
 
 /// A directed edge in the region graph.
@@ -478,6 +481,7 @@ pub fn plan_clearing(
 
     let mut plan = Plan::new(boundary, islands, opts.safe_z);
     plan.cut_state.feed_rate = opts.feed_rate.map(|f| f.round() as i32);
+    plan.cut_state.plunge_feed = opts.plunge_feed.map(|f| f.round() as i32);
     plan.extend(steps);
     Ok(plan)
 }

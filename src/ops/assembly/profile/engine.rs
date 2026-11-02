@@ -82,8 +82,19 @@ pub(crate) fn run_profile(
     let heading = loop_.heading_at_start(forward);
 
     trace.move_to(start_pos.x, start_pos.y, common.safe_z, None);
-    trace.move_to(start_pos.x, start_pos.y, common.target_z, None);
+    // Descend at the plunge feed (falling back to the cut feed) instead of
+    // rapiding into full depth.
     trace.apply_state(cut_state);
+    let plunge_feed = cut_state.plunge_feed.or(cut_state.feed_rate);
+    if plunge_feed != cut_state.feed_rate {
+        trace.set_feed_rate(plunge_feed.unwrap_or(0));
+    }
+    trace.line_to(start_pos.x, start_pos.y, common.target_z, None);
+    if plunge_feed != cut_state.feed_rate {
+        if let Some(fr) = cut_state.feed_rate {
+            trace.set_feed_rate(fr);
+        }
+    }
 
     // Effective area threshold
     let full_crescent =
