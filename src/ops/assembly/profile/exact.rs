@@ -1,14 +1,13 @@
-//! Exact profile passes over line-and-arc boundaries.
+//! Exact boundaries for the profile pass.
 //!
-//! The polygon engine in [`super::engine`] walks chord approximations of
-//! the offset boundary. This module is the exact counterpart: the offset
-//! boundary comes from [`crate::geo::algo::offset_exact`] as closed loops
-//! of lines and arcs, the pass follows those pieces as they are, and arcs
-//! are emitted as arcs rather than chords. Walls come out on the exact
-//! offset (within the offsetter's own guarantees), and
-//! [`crate::ops::types::CutDirection`] picks the walking direction: CCW
-//! keeps the wall on the left (climb with a clockwise spindle), CW the
-//! right.
+//! [`super::engine::run_profile`] walks one boundary representation: a
+//! closed loop of line-and-arc pieces. This module supplies the
+//! curve-true variant of that boundary — offset by
+//! [`crate::geo::algo::offset_exact`] instead of a polygon offsetter —
+//! and runs the pass over it, so arcs are emitted as arcs and walls land
+//! on the exact offset. [`run_exact_loops`] reports `None` when the exact
+//! offsetter produces nothing machinable, and the caller falls back to
+//! the polygon path.
 
 use std::f64::consts::FRAC_PI_2;
 
@@ -18,7 +17,7 @@ use crate::geo::algo::analysis::{
 };
 use crate::geo::algo::offset_exact::offset_exact;
 use crate::geo::types::{Command, Point, Point3D, WindingOrder};
-use crate::ops::assembly::profile::engine::{run_profile_exact, ProfileCommon};
+use crate::ops::assembly::profile::engine::{run_profile, ProfileCommon};
 use crate::ops::assembly::profile::trace_helpers as th;
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::Tracelet;
@@ -282,8 +281,10 @@ impl ExactLoop {
 }
 
 /// Builds the exact tool-center loops for one side and runs them, outer
-/// pieces first. `offset` is the region grow for [`crate::ops::assembly::profile::ProfileKind::Outer`]
-/// and the shrink for the inner profile.
+/// pieces first. `offset` is the region grow for the outer profile and the
+/// shrink for the inner profile. `Ok(None)` means the exact offsetter
+/// produced nothing machinable and the caller should fall back to the
+/// polygon path.
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn run_exact_loops(
     face: &mut FaceState,
@@ -293,20 +294,10 @@ pub(crate) fn run_exact_loops(
     opts: &super::ProfileSpec,
     cut_state: &State,
     keep_outer_only: bool,
-) -> RaygeoResult<AssemblyMeta> {
-    let zero_pose = || AssemblyMeta {
-        start: ToolPose {
-            pos: Point3D::ZERO,
-            heading: 0.0,
-        },
-        end: ToolPose {
-            pos: Point3D::ZERO,
-            heading: 0.0,
-        },
-    };
+) -> RaygeoResult<Option<AssemblyMeta>> {
     let loops_geo = offset_exact(geometry, offset, opts.tolerance);
     if loops_geo.is_empty() {
-        return Ok(zero_pose());
+        return Ok(None);
     }
     let tolerance = opts.tolerance.max(1e-6);
     let mut loops: Vec<(ExactLoop, f64)> = Vec::new();
@@ -322,7 +313,7 @@ pub(crate) fn run_exact_loops(
         }
     }
     if loops.is_empty() && islands.is_empty() {
-        return Ok(zero_pose());
+        return Ok(None);
     }
     // Outer pieces largest first; islands follow nearest to where the pass
     // before them ended, like the polygon engine walks its grown islands.
@@ -393,7 +384,7 @@ pub(crate) fn run_exact_loops(
     };
     let mut idx = 0u32;
     for (lp, _) in &loops {
-        let meta = run_profile_exact(face, trace, lp, &common, cut_state, idx)?;
+        let meta = run_profile(face, trace, lp, &common, cut_state, idx)?;
         if start_pose.is_none() {
             start_pose = Some(meta.start);
         }
@@ -415,8 +406,7 @@ pub(crate) fn run_exact_loops(
                 .map(|(i, _)| i)
                 .unwrap_or(0);
             let (lp, _) = remaining.remove(nearest);
-            let meta =
-                run_profile_exact(face, trace, &lp, &common, cut_state, idx)?;
+            let meta = run_profile(face, trace, &lp, &common, cut_state, idx)?;
             if start_pose.is_none() {
                 start_pose = Some(meta.start);
             }
@@ -425,10 +415,10 @@ pub(crate) fn run_exact_loops(
         }
     }
     match start_pose {
-        Some(start) => Ok(AssemblyMeta {
+        Some(start) => Ok(Some(AssemblyMeta {
             start,
             end: end_pose,
-        }),
-        None => Ok(zero_pose()),
+        })),
+        None => Ok(None),
     }
 }

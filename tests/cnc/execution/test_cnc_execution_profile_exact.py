@@ -1,14 +1,19 @@
-"""Tests for the exact line-and-arc profile pass.
+"""Tests for profile passes over curve-true geometry.
 
-Verifies that a ``ProfileSpec`` with ``exact=True``:
+Verifies that a ``ProfileSpec`` over a part built from a ``Geometry``
+follows the exact line-and-arc offset:
 
-* follows the exact line-and-arc offset of the face geometry and emits
-  arcs as ``ARC_TO`` moves (the polygon path only emits lines),
-* keeps the tool on the exact offset — a circle of radius R profiled
+* arcs are emitted as ``ARC_TO`` moves (parts without curve-true
+  geometry take the polygon path and only emit lines),
+* the tool stays on the exact offset — a circle of radius R profiled
   with tool radius r cuts on a circle of radius R − r,
-* honours ``cut_direction`` (the arc rotation flips with the direction),
-* honours islands when exact, and
-* leaves the default (``exact=False``) polygon path untouched.
+* ``cut_direction`` is honoured (the arc rotation flips with the
+  direction),
+* islands are honoured, and
+* the exact attempt falls back to the polygon path when it yields
+  nothing machinable. Region-scoped steps always take the polygon
+  path (scopes are polygonal); the clearing workplan exercises that
+  combination in its own suite.
 """
 
 import math
@@ -86,9 +91,9 @@ def _clear_cache():
     clear_cache()
 
 
-def test_exact_inner_profile_emits_arcs_on_a_circle():
+def test_inner_profile_emits_arcs_on_a_circle():
     part = Part(geometry=_circle_geometry(10.0), size_mm=(30.0, 30.0))
-    cmds = _profile_ops(part, kind="inner", exact=True)
+    cmds = _profile_ops(part, kind="inner")
     kinds = [c["type"] for c in cmds]
     assert "ARC_TO" in kinds, f"no arcs emitted: {sorted(set(kinds))}"
     # The tool centre rides the exact offset: a circle of radius 7.
@@ -105,8 +110,12 @@ def test_exact_inner_profile_emits_arcs_on_a_circle():
     assert checked > 10, f"only {checked} cutting moves to check"
 
 
-def test_polygon_path_stays_line_only():
-    part = Part(geometry=_circle_geometry(10.0), size_mm=(30.0, 30.0))
+def test_polygon_only_parts_stay_line_only():
+    part = Part.from_polygons(
+        [(0.0, 0.0), (40.0, 0.0), (40.0, 30.0), (0.0, 30.0)],
+        [],
+        (60.0, 50.0),
+    )
     cmds = _profile_ops(part, kind="inner")
     kinds = [c["type"] for c in cmds]
     assert "ARC_TO" not in kinds, "the polygon path should not emit arcs"
@@ -119,7 +128,6 @@ def test_cut_direction_flips_the_arc_rotation():
         for c in _profile_ops(
             Part(geometry=_circle_geometry(10.0), size_mm=(30.0, 30.0)),
             kind="inner",
-            exact=True,
         )
         if c["type"] == "ARC_TO"
     ]
@@ -128,7 +136,6 @@ def test_cut_direction_flips_the_arc_rotation():
         for c in _profile_ops(
             Part(geometry=_circle_geometry(10.0), size_mm=(30.0, 30.0)),
             kind="inner",
-            exact=True,
             cut_direction="cw",
         )
         if c["type"] == "ARC_TO"
@@ -143,11 +150,11 @@ def test_cut_direction_flips_the_arc_rotation():
     ]
 
 
-def test_exact_profile_honours_the_island():
+def test_profile_honours_the_island():
     region = _rounded_rect_geometry(0, 0, 100, 70, 10.0)
     region.extend(_stadium_geometry(50, 35, 12.0, 8.0))
     part = Part(geometry=region, size_mm=(120.0, 90.0))
-    cmds = _profile_ops(part, kind="inner", exact=True)
+    cmds = _profile_ops(part, kind="inner")
 
     def clearance(x, y):
         # Distance to the outer wall (min side of the 100x70 rectangle; the
@@ -171,9 +178,9 @@ def test_exact_profile_honours_the_island():
     assert checked > 50, f"only {checked} cutting moves to check"
 
 
-def test_exact_outer_profile_grows_outward():
+def test_outer_profile_grows_outward():
     part = Part(geometry=_circle_geometry(10.0), size_mm=(30.0, 30.0))
-    cmds = _profile_ops(part, kind="outer", exact=True)
+    cmds = _profile_ops(part, kind="outer")
     arcs = [c for c in cmds if c["type"] == "ARC_TO"]
     assert arcs, "no arcs emitted"
     for c in arcs:
@@ -183,12 +190,11 @@ def test_exact_outer_profile_grows_outward():
         )
 
 
-def test_exact_falls_back_to_polygons_without_face_geometry():
-    # from_polygons parts carry no exact geometry: the spec must not fail.
-    part = Part.from_polygons(
-        [(0.0, 0.0), (40.0, 0.0), (40.0, 30.0), (0.0, 30.0)],
-        [],
-        (60.0, 50.0),
-    )
-    cmds = _profile_ops(part, kind="inner", exact=True)
-    assert any(c["type"] in ("LINE_TO", "ARC_TO") for c in cmds)
+def test_pocket_too_small_for_the_tool_machines_nothing():
+    """An inset that vanishes (r2 pocket, r3 tool) leaves no machinable
+    loops: the pass must come out empty rather than cut into the wall."""
+    part = Part(geometry=_circle_geometry(2.0), size_mm=(30.0, 30.0))
+    cmds = _profile_ops(part, kind="inner")
+    kinds = [c["type"] for c in cmds]
+    assert "ARC_TO" not in kinds
+    assert "LINE_TO" not in kinds

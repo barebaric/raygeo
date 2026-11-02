@@ -70,9 +70,6 @@ pub struct PyProfileSpec {
     pub start_pos: Option<(f64, f64)>,
     #[pyo3(get)]
     pub tolerance: f64,
-    /// Follow the exact line-and-arc offset and emit arcs as arcs.
-    #[pyo3(get)]
-    pub exact: bool,
     #[pyo3(get)]
     pub expansion_batch_size: usize,
     #[pyo3(get)]
@@ -111,7 +108,6 @@ impl PyProfileSpec {
                 .start_pos
                 .map(|(x, y)| Point3D::new(x, y, self.target_z)),
             tolerance: self.tolerance,
-            exact: self.exact,
             expansion_batch_size: self.expansion_batch_size,
             cancel_check: None,
             engagement_area_threshold: self.engagement_area_threshold,
@@ -138,7 +134,6 @@ impl PyProfileSpec {
         cut_direction = "ccw",
         start_pos = None,
         tolerance = 0.1,
-        exact = false,
         expansion_batch_size = 20,
         engagement_area_threshold = 0.0,
         engagement_angle_threshold = std::f64::consts::PI,
@@ -158,7 +153,6 @@ impl PyProfileSpec {
         cut_direction: &str,
         start_pos: Option<(f64, f64)>,
         tolerance: f64,
-        exact: bool,
         expansion_batch_size: usize,
         engagement_area_threshold: f64,
         engagement_angle_threshold: f64,
@@ -177,7 +171,6 @@ impl PyProfileSpec {
             cut_direction: cut_direction.to_string(),
             start_pos,
             tolerance,
-            exact,
             expansion_batch_size,
             engagement_area_threshold,
             engagement_angle_threshold,
@@ -204,7 +197,6 @@ impl PyProfileSpec {
         start_pos: tuple[float, float] | None = None,
         cut_direction: str = "ccw",
         stock_to_leave: float = 0.0,
-        exact: bool = False,
         engagement_area_threshold: float = 0.0,
         engagement_angle_threshold: float = 3.141592653589793,
         trace_path: str | None = None,
@@ -231,8 +223,6 @@ impl PyProfileSpec {
         :param start_pos: Optional override start ``(x, y)`` (default: first boundary vertex).
         :param cut_direction: ``"cw"`` or ``"ccw"`` (default ``"ccw"``).
         :param stock_to_leave: Stock left on wall for rough pass (mm, default 0.0).
-        :param exact: Follow the exact line-and-arc offset and emit arcs as
-                      arcs (default False: chord-follow a polygon offset).
         :param engagement_area_threshold: Overengagement area threshold (mm², 0 = auto).
         :param engagement_angle_threshold: Overengagement angle threshold (rad, default π).
         :param trace_path: Optional path to write a binary trace file (default None).
@@ -255,7 +245,6 @@ impl PyProfileSpec {
     start_pos = None,
     cut_direction = "ccw",
     stock_to_leave = 0.0,
-    exact = false,
     engagement_area_threshold = 0.0,
     engagement_angle_threshold = std::f64::consts::PI,
     trace_path = None,
@@ -274,7 +263,6 @@ fn profile_outer_py(
     start_pos: Option<(f64, f64)>,
     cut_direction: &str,
     stock_to_leave: f64,
-    exact: bool,
     engagement_area_threshold: f64,
     engagement_angle_threshold: f64,
     trace_path: Option<String>,
@@ -298,7 +286,6 @@ fn profile_outer_py(
         cut_direction: cd,
         start_pos: start_pos.map(|(x, y)| Point3D::new(x, y, target_z)),
         tolerance: 0.1,
-        exact,
         expansion_batch_size: 20,
         cancel_check: Some(check_cancel),
         engagement_area_threshold,
@@ -315,7 +302,8 @@ fn profile_outer_py(
 
     let mut trace = Tracelet::new();
     let face = part.inner.face_mut("");
-    let meta = profile::profile_outer(face, &mut trace, &opts, &cut_state)?;
+    let meta =
+        profile::profile_outer(face, &mut trace, &opts, &cut_state, true)?;
     let events = trace.drain();
     let attrs = trace.attrs().cloned();
     let ops = trace.into_ops();
@@ -339,7 +327,6 @@ fn profile_outer_py(
         cut_power: float = 0.0,
         start_pos: tuple[float, float] | None = None,
         cut_direction: str = "ccw",
-        exact: bool = False,
         engagement_area_threshold: float = 0.0,
         engagement_angle_threshold: float = 3.141592653589793,
         trace_path: str | None = None,
@@ -366,8 +353,6 @@ fn profile_outer_py(
         :param cut_power: Spindle power (0.0–1.0).
         :param start_pos: Optional override start ``(x, y)`` (default: first boundary vertex).
         :param cut_direction: ``"cw"`` or ``"ccw"`` (default ``"ccw"``).
-        :param exact: Follow the exact line-and-arc offset and emit arcs as
-                      arcs (default False: chord-follow a polygon offset).
         :param engagement_area_threshold: Overengagement area threshold (mm², 0 = auto).
         :param engagement_angle_threshold: Overengagement angle threshold (rad, default π).
         :param trace_path: Optional path to write a binary trace file (default None).
@@ -390,7 +375,6 @@ fn profile_outer_py(
     cut_power = 0.0,
     start_pos = None,
     cut_direction = "ccw",
-    exact = false,
     engagement_area_threshold = 0.0,
     engagement_angle_threshold = std::f64::consts::PI,
     trace_path = None,
@@ -409,7 +393,6 @@ fn profile_inner_py(
     cut_power: f64,
     start_pos: Option<(f64, f64)>,
     cut_direction: &str,
-    exact: bool,
     engagement_area_threshold: f64,
     engagement_angle_threshold: f64,
     trace_path: Option<String>,
@@ -433,7 +416,6 @@ fn profile_inner_py(
         cut_direction: cd,
         start_pos: start_pos.map(|(x, y)| Point3D::new(x, y, target_z)),
         tolerance: 0.1,
-        exact,
         expansion_batch_size: 20,
         cancel_check: Some(check_cancel),
         engagement_area_threshold,
@@ -450,7 +432,8 @@ fn profile_inner_py(
 
     let mut trace = Tracelet::new();
     let face = part.inner.face_mut("");
-    let meta = profile::profile_inner(face, &mut trace, &opts, &cut_state)?;
+    let meta =
+        profile::profile_inner(face, &mut trace, &opts, &cut_state, true)?;
     let events = trace.drain();
     let attrs = trace.attrs().cloned();
     let ops = trace.into_ops();

@@ -37,11 +37,6 @@ pub struct ProfileSpec {
     pub cut_direction: CutDirection,
     pub start_pos: Option<Point3D>,
     pub tolerance: f64,
-    /// Walk the exact line-and-arc offset ([`crate::geo::algo::offset_exact`])
-    /// and emit arcs as arcs, instead of chord-following a polygon offset.
-    /// Falls back to the polygon path when the face carries no exact
-    /// geometry.
-    pub exact: bool,
     pub expansion_batch_size: usize,
     pub cancel_check: Option<fn() -> bool>,
     pub engagement_area_threshold: f64,
@@ -68,7 +63,6 @@ impl Default for ProfileSpec {
             cut_direction: CutDirection::Ccw,
             start_pos: None,
             tolerance: 0.1,
-            exact: false,
             expansion_batch_size: 20,
             cancel_check: None,
             engagement_area_threshold: 0.0,
@@ -90,13 +84,25 @@ impl Assembler for ProfileSpec {
         if ctx.callbacks.is_cancelled() {
             return Err("cancelled".to_string());
         }
+        // Region scoping is polygonal, so a scoped step profiles the
+        // polygon path; an unscoped step with curve-true face geometry
+        // prefers the exact offset.
+        let prefer_exact = ctx.region_boundary.is_none();
         let meta = match self.kind {
-            ProfileKind::Inner => {
-                super::profile_inner(ctx.face, ctx.trace, self, ctx.state)
-            }
-            ProfileKind::Outer => {
-                super::profile_outer(ctx.face, ctx.trace, self, ctx.state)
-            }
+            ProfileKind::Inner => super::profile_inner(
+                ctx.face,
+                ctx.trace,
+                self,
+                ctx.state,
+                prefer_exact,
+            ),
+            ProfileKind::Outer => super::profile_outer(
+                ctx.face,
+                ctx.trace,
+                self,
+                ctx.state,
+                prefer_exact,
+            ),
         }
         .map_err(|e| e.to_string())?;
         let fragments = ctx.face.cleared.fragments().to_vec();

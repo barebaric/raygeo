@@ -1,10 +1,13 @@
+use crate::error::RaygeoError;
 use crate::error::RaygeoResult;
 use crate::geo::shape::polygon::{
     get_polygon_area, get_polygon_centroid, get_polygon_heading_at,
     get_polygons_group_difference, is_point_in_polygon, offset_polygon,
     JoinStyle,
 };
-use crate::ops::assembly::profile::engine::{run_profile, ProfileCommon};
+use crate::ops::assembly::profile::engine::{
+    loop_from_polygon, run_profile, ProfileCommon,
+};
 use crate::ops::assembly::profile::ProfileSpec;
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::Tracelet;
@@ -19,18 +22,26 @@ use glam::Vec3Swizzles;
 /// Profile the inner boundary of a pocket, extracting geometry from
 /// the face's [`StockRegion`](crate::ops::part::StockRegion) (which
 /// may be swapped per-step to scope the profile to a sub-region).
+///
+/// With `prefer_exact` and curve-true geometry on the face, the boundary
+/// comes from the exact offsetter and arcs are emitted as arcs; region
+/// scoping is polygonal, so scoped steps profile polygons. The exact
+/// attempt falls back to the polygon path when it yields nothing
+/// machinable.
 pub fn profile_inner(
     face: &mut FaceState,
     trace: &mut Tracelet,
     opts: &ProfileSpec,
     cut_state: &State,
+    prefer_exact: bool,
 ) -> RaygeoResult<AssemblyMeta> {
     let offset_dist = opts.tool_radius + opts.wall_margin + opts.stock_to_leave;
-    if opts.exact {
+    if prefer_exact {
         if let Some(geometry) = face.geometry.clone() {
             // Shrink the region by the offset distance; the exact
-            // offsetter keeps islands in mind on its own.
-            return super::exact::run_exact_loops(
+            // offsetter keeps islands in mind on its own. Nothing
+            // machinable falls back to the polygon path below.
+            if let Some(meta) = super::exact::run_exact_loops(
                 face,
                 trace,
                 &geometry,
@@ -38,9 +49,10 @@ pub fn profile_inner(
                 opts,
                 cut_state,
                 false,
-            );
+            )? {
+                return Ok(meta);
+            }
         }
-        // No exact geometry on the face: fall through to the polygon path.
     }
     if face.stock_region.boundary.len() < 3 {
         let zero = Point3D::ZERO;
@@ -136,8 +148,12 @@ pub fn profile_inner(
 
     trace.set_attrs(th::build_attrs(&all_offset_polys, &walk_order));
 
+    let outer_loop =
+        loop_from_polygon(outer_poly, opts.target_z).ok_or_else(|| {
+            RaygeoError::DegenerateGeometry("offset polygon too small".into())
+        })?;
     let outer_meta =
-        run_profile(face, trace, outer_poly, &common, cut_state, 0)?;
+        run_profile(face, trace, &outer_loop, &common, cut_state, 0)?;
     let start_pose = outer_meta.start;
     let mut end_pose = outer_meta.end;
 
@@ -161,10 +177,17 @@ pub fn profile_inner(
 
             let idx = remaining.remove(nearest_idx);
             let island_idx = 1 + idx as u32;
+            let island_loop =
+                loop_from_polygon(&grown_islands[idx], opts.target_z)
+                    .ok_or_else(|| {
+                        RaygeoError::DegenerateGeometry(
+                            "offset polygon too small".into(),
+                        )
+                    })?;
             let island_meta = run_profile(
                 face,
                 trace,
-                &grown_islands[idx],
+                &island_loop,
                 &common,
                 cut_state,
                 island_idx,
