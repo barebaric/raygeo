@@ -34,8 +34,9 @@ use crate::geo::algo::offset::compute_inset_region;
 use crate::geo::shape::arc::normalize_angle_signed;
 use crate::geo::shape::polygon::{
     get_polygon_area, get_polygon_centroid, get_polygon_signed_area,
+    is_point_in_polygon,
 };
-use crate::geo::types::{Point3D, Polygon};
+use crate::geo::types::{Point, Point3D, Polygon};
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::Tracelet;
 use crate::ops::cut::stepper::step;
@@ -682,7 +683,12 @@ pub fn adaptive_clearing(
         });
     }
 
-    let advance = opts.step_over;
+    let mut advance = opts.step_over;
+    // Floor for the advance: the wavefront retries with a narrower step
+    // before the core pass takes over, but never below a quarter of the
+    // tool radius (below that the passes stop making progress).
+    let advance_floor = opts.tool_radius * 0.25;
+    let mut advance_retries = 0u32;
     let step_length = opts.step_length;
 
     let max_def = opts.max_deflection_deg.to_radians();
@@ -797,7 +803,7 @@ pub fn adaptive_clearing(
     let mut resume_blacklist: Vec<Point3D> = Vec::new();
 
     // Options constructed once and reused for all step calls in the loop.
-    let step_opts = StepperOptions {
+    let mut step_opts = StepperOptions {
         target_area_pd,
         step_length,
         radius: opts.tool_radius,
@@ -814,6 +820,9 @@ pub fn adaptive_clearing(
     let mut resume_candidate_pts = resume::ResumeCandidatePoints::default();
 
     let mut iter: usize = 0;
+    // Set when the wavefront stalls for good on the remaining core; the
+    // core-clearing pass after the loop finishes what it could not.
+    let mut wavefront_stuck = false;
     for _ in 0..MAX_TOTAL_STEPS {
         iter += 1;
 
@@ -997,16 +1006,50 @@ pub fn adaptive_clearing(
                 valid_total,
             )? {
                 StallResult::Applied => continue,
-                StallResult::Exit => break,
-                StallResult::Failed { all_blacklisted } => {
-                    if all_blacklisted {
+                stall @ (StallResult::Exit | StallResult::Failed { .. }) => {
+                    let all_blacklisted = matches!(
+                        stall,
+                        StallResult::Failed {
+                            all_blacklisted: true,
+                            ..
+                        }
+                    );
+                    // The wavefront stalled or ran out of engagement where
+                    // the remaining core is thinner than the advance.
+                    // Narrower steps engage less, so retry with a narrower
+                    // advance while actionable material is left; hand the
+                    // core to the medial-axis pass once the advance bottoms
+                    // out or nothing actionable remains.
+                    let actionable = face.cleared.actionable_remaining(
+                        &face.stock_region,
+                        step_length * 1.5,
+                    );
+                    let can_shrink = advance_retries < 3
+                        && advance * 0.8 >= advance_floor
+                        && actionable > opts.area_tolerance;
+                    if all_blacklisted && !can_shrink {
                         return Err(RaygeoError::RoutingError(
                             "all resume candidates failed routing".into(),
                         ));
                     }
-                    return Err(RaygeoError::ResumePointNotFound(
-                        "all resume strategies failed".into(),
-                    ));
+                    if !can_shrink {
+                        wavefront_stuck = true;
+                        break;
+                    }
+                    advance *= 0.8;
+                    advance_retries += 1;
+                    resume_blacklist.clear();
+                    step_opts.target_area_pd = target_area_per_distance(
+                        opts.tool_radius,
+                        advance,
+                        step_length,
+                    );
+                    stuck_detector = stuck::StuckDetector::new(
+                        step_opts.target_area_pd,
+                        step_length,
+                        face.cleared.total_area(),
+                    );
+                    continue;
                 }
             }
         }
@@ -1072,6 +1115,47 @@ pub fn adaptive_clearing(
         face.cleared.commit_batch_local();
     }
 
+    // ── Core clearing: machine the ridge the wavefront could not ──
+    // When the remaining core is thinner than the advance, the wavefront
+    // stalls or converges around it. The tool can still machine that core
+    // by following the medial axis, whose nodes are pruned to tool
+    // clearance, so the walk cannot gouge.
+    let Some(mat_ref) = mat.as_ref() else {
+        // No medial axis: the wavefront's own exit stands.
+        th::emit_exit(
+            trace,
+            &tool,
+            prev_pos,
+            &face.cleared,
+            &face.stock_region,
+            &resume_reasons,
+            &resume_details,
+            &route_details,
+            last_resume_point,
+            &resume_candidate_pts,
+            &hug_tracker,
+        );
+        return Ok(AssemblyMeta {
+            start: ToolPose {
+                pos: start_pos,
+                heading: start_heading,
+            },
+            end: ToolPose {
+                pos: tool.pos,
+                heading: tool.heading,
+            },
+        });
+    };
+    clear_core(
+        face,
+        trace,
+        mat_ref,
+        &mut tool,
+        opts,
+        &mut prev_pos,
+        &mut steps_since_batch,
+    );
+
     th::emit_exit(
         trace,
         &tool,
@@ -1096,6 +1180,197 @@ pub fn adaptive_clearing(
             heading: tool.heading,
         },
     })
+}
+
+/// Clears the remaining core along the medial axis.
+///
+/// After the wavefront stalls or converges, the uncleared remainder is
+/// usually a ridge thinner than the advance but reachable by the tool:
+/// the medial axis (pruned to tool clearance) runs down its middle, so a
+/// walk along it machines the core without gouging. A mat edge belongs to
+/// the core when its midpoint is uncleared — the wavefront may have cleared
+/// the junctions at either end while the ridge between them stands. Walks
+/// every connected run of core edges, largest first, routing between runs
+/// through cleared territory, and expands the cleared area along the way.
+#[allow(clippy::too_many_arguments)]
+#[prof]
+fn clear_core(
+    face: &mut FaceState,
+    trace: &mut Tracelet,
+    mat: &MedialAxis,
+    tool: &mut Tool,
+    opts: &AdaptiveClearingSpec,
+    prev_pos: &mut Point3D,
+    steps_since_batch: &mut usize,
+) {
+    face.cleared.commit_batch_local();
+    *steps_since_batch = 0;
+
+    let remaining = face.cleared.remaining(&face.stock_region);
+    let remaining_area: f64 = remaining.iter().map(get_polygon_area).sum();
+    if remaining_area <= 1e-6 {
+        return;
+    }
+    let cleared_mask = mat.build_cleared_mask(&remaining);
+
+    // The core: mat edges whose midpoint is uncleared and whose ends keep
+    // tool clearance (the mat is pruned to tool clearance; the check only
+    // guards the degenerate case).
+    let node_ok = |i: usize| mat.nodes[i].clearance >= opts.tool_radius - 1e-9;
+    let core_edges: Vec<(usize, usize)> = mat
+        .edges
+        .iter()
+        .filter(|&&(a, b)| {
+            node_ok(a) && node_ok(b) && {
+                let mid = Point::new(
+                    (mat.nodes[a].point.x + mat.nodes[b].point.x) * 0.5,
+                    (mat.nodes[a].point.y + mat.nodes[b].point.y) * 0.5,
+                );
+                !remaining.iter().any(|poly| is_point_in_polygon(mid, poly))
+            }
+        })
+        .copied()
+        .collect();
+    if core_edges.is_empty() {
+        return;
+    }
+
+    // Components of core edges sharing an endpoint, largest first.
+    let mut edge_component: Vec<i32> = vec![-1; core_edges.len()];
+    let mut components: Vec<Vec<usize>> = Vec::new();
+    for start in 0..core_edges.len() {
+        if edge_component[start] >= 0 {
+            continue;
+        }
+        let id = components.len() as i32;
+        let mut stack = vec![start];
+        edge_component[start] = id;
+        let mut edges = Vec::new();
+        while let Some(e) = stack.pop() {
+            edges.push(e);
+            let (a, b) = core_edges[e];
+            for (f, g) in core_edges.iter().copied().enumerate() {
+                if edge_component[f] < 0
+                    && (g.0 == a || g.1 == a || g.0 == b || g.1 == b)
+                {
+                    edge_component[f] = id;
+                    stack.push(f);
+                }
+            }
+        }
+        components.push(edges);
+    }
+    components.sort_by(|a, b| b.len().cmp(&a.len()));
+
+    for edges in &components {
+        // Entry: the core-edge endpoint nearest the tool.
+        let entry = edges
+            .iter()
+            .flat_map(|&e| {
+                let (a, b) = core_edges[e];
+                [a, b]
+            })
+            .min_by(|&a, &b| {
+                let da = (mat.nodes[a].point.x - tool.pos.x)
+                    .hypot(mat.nodes[a].point.y - tool.pos.y);
+                let db = (mat.nodes[b].point.x - tool.pos.x)
+                    .hypot(mat.nodes[b].point.y - tool.pos.y);
+                da.total_cmp(&db)
+            })
+            .unwrap();
+        let entry_pos = Point3D::new(
+            mat.nodes[entry].point.x,
+            mat.nodes[entry].point.y,
+            opts.target_z,
+        );
+        if tool.pos.distance(entry_pos) > 1e-9 {
+            if let Err(RaygeoError::RoutingError(_)) =
+                resume::emit_resume_travel(
+                    trace,
+                    &face.cleared,
+                    Some(mat),
+                    tool.pos,
+                    entry_pos,
+                    face,
+                    opts,
+                    None,
+                )
+            {
+                continue; // no route through cleared territory — skip this run
+            }
+            *prev_pos = entry_pos;
+            tool.pos = entry_pos;
+        }
+
+        // Walk the component as a tree over visited nodes (the mat can
+        // carry cycles; without a visited set the walk would re-explore
+        // every path). Each node is machined once; moving between
+        // branches re-walks the shared spine, which is harmless.
+        let mut adj: std::collections::BTreeMap<usize, Vec<usize>> =
+            std::collections::BTreeMap::new();
+        for &e in edges {
+            let (a, b) = core_edges[e];
+            adj.entry(a).or_default().push(b);
+            adj.entry(b).or_default().push(a);
+        }
+        let mut visited: std::collections::BTreeSet<usize> =
+            std::collections::BTreeSet::new();
+        let mut parent: std::collections::BTreeMap<usize, usize> =
+            std::collections::BTreeMap::new();
+        let mut order: Vec<usize> = Vec::new();
+        let mut stack = vec![entry];
+        visited.insert(entry);
+        while let Some(u) = stack.pop() {
+            order.push(u);
+            for &v in adj.get(&u).into_iter().flatten() {
+                if visited.insert(v) {
+                    parent.insert(v, u);
+                    stack.push(v);
+                }
+            }
+        }
+        // Emit: walk down the tree in discovery order, returning along the
+        // parent chain whenever the next branch hangs off an ancestor.
+        face.cleared.begin_batch();
+        let mut at = entry;
+        for &next in &order {
+            if next == at {
+                continue;
+            }
+            // Climb from `at` to the nearest common ancestor of `at` and
+            // `next`, then descend to `next`.
+            let mut chain = Vec::new();
+            let mut cur = next;
+            while cur != at && !chain.is_empty() || cur != at {
+                chain.push(cur);
+                match parent.get(&cur) {
+                    Some(&p) if p != cur => cur = p,
+                    _ => break,
+                }
+                if cur == at {
+                    break;
+                }
+            }
+            for &n in chain.iter().rev() {
+                let n_pos = Point3D::new(
+                    mat.nodes[n].point.x,
+                    mat.nodes[n].point.y,
+                    opts.target_z,
+                );
+                trace.line_to(n_pos.x, n_pos.y, n_pos.z, None);
+                face.cleared.expand_batched(
+                    crate::geo::types::Point::new(prev_pos.x, prev_pos.y),
+                    crate::geo::types::Point::new(n_pos.x, n_pos.y),
+                    opts.tool_radius,
+                );
+                *prev_pos = n_pos;
+                tool.pos = n_pos;
+                at = n;
+            }
+        }
+        face.cleared.commit_batch_local();
+        *steps_since_batch = 0;
+    }
 }
 
 // ── Initial pose ─────────────────────────────────────────────────────

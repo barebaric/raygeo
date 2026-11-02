@@ -325,3 +325,62 @@ def test_step_over_above_the_tool_diameter_is_rejected():
         plan_clearing(part, "", tool_radius=3.0, step_over=7.0)
     # At exactly the diameter the passes still fully overlap.
     plan_clearing(part, "", tool_radius=3.0, step_over=6.0)
+
+
+def test_wide_stepovers_clear_to_the_middle():
+    """Passes up to a full tool diameter apart still leave no ridge down
+    the middle: the wavefront narrows its advance over the remaining core
+    and the core pass walks the medial axis."""
+    import math
+
+    from raygeo.ops.part import Part as P
+
+    boundary = _rect(0.0, 0.0, 40.0, 30.0)
+    for step_over in (4.0, 5.0, 6.0):
+        part = P.from_polygons(boundary, [], (60.0, 50.0))
+        plan = plan_clearing(
+            part,
+            "",
+            tool_radius=3.0,
+            step_over=step_over,
+            target_z=-2.0,
+            safe_z=10.0,
+            finishing=True,
+        )
+        ops = run_intent(create_intent(plan, part, 0))
+        pts = []
+        prev = None
+        for c in ops.to_dict()["commands"]:
+            if c["type"] in ("LINE_TO", "ARC_TO") and c["end"][2] < -1.999999:
+                if prev is not None:
+                    n = max(
+                        1,
+                        int(
+                            math.hypot(
+                                c["end"][0] - prev[0], c["end"][1] - prev[1]
+                            )
+                            / 0.2
+                        ),
+                    )
+                    for k in range(n + 1):
+                        t = k / n
+                        pts.append(
+                            (
+                                prev[0] + (c["end"][0] - prev[0]) * t,
+                                prev[1] + (c["end"][1] - prev[1]) * t,
+                            )
+                        )
+                prev = c["end"]
+            elif c["type"] == "MOVE_TO" and c["end"][2] < -1.999999:
+                prev = c["end"]
+        assert len(pts) > 100, f"step {step_over}: too few cutting points"
+        worst = 0.0
+        for i in range(0, 69):
+            for j in range(0, 49):
+                q = (3.0 + i * 0.5, 3.0 + j * 0.5)
+                d = min(math.hypot(q[0] - p[0], q[1] - p[1]) for p in pts)
+                worst = max(worst, d)
+        assert worst <= 3.0, (
+            f"step {step_over}: the middle is {worst:.3f} from the nearest "
+            "pass (tool radius 3.0)"
+        )

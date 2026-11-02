@@ -44,8 +44,16 @@ pub fn generate_helix_3d(opts: &HelixOptions) -> Vec<Point3D> {
         HelixDirection::Ccw => 1.0,
     };
 
-    let n_steps = (total_angle / opts.angular_step).ceil() as usize;
-    let n_steps = n_steps.max(1);
+    // Hostile input (a huge descent, a near-zero pitch or step) would ask
+    // for an unbounded number of points: cap it rather than overflow.
+    // 100k points is already far beyond any useful helix (~2.4 MB).
+    const MAX_STEPS: f64 = 100_000.0;
+    let n_steps = (total_angle / opts.angular_step).ceil();
+    let n_steps = if n_steps.is_finite() {
+        (n_steps.min(MAX_STEPS) as usize).max(1)
+    } else {
+        1
+    };
 
     let mut points = Vec::with_capacity(n_steps + 1);
     for i in 0..=n_steps {
