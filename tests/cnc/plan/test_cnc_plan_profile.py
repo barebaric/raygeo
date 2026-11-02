@@ -90,3 +90,25 @@ def test_feed_rate_flows_into_the_run():
     ]
     assert feeds, "no feed rate emitted"
     assert feeds[0]["speed"] == 1200
+
+
+def test_plunge_feed_precedes_the_descent():
+    """The descent into material runs at the plunge feed; the ring cuts at
+    the cut feed afterwards."""
+    part = Part.from_polygons(_rect(0, 0, 40, 30), [], (60.0, 50.0))
+    plan = plan_profile(part, feed_rate=1200.0, plunge_feed=400.0)
+    ops = run_intent(create_intent(plan, part, 0))
+    seq = [
+        (c["type"], c.get("speed"))
+        for c in ops.to_dict()["commands"]
+        if c["type"] in ("SET_FEED_RATE", "LINE_TO")
+    ]
+    descents = [
+        i
+        for i, (t, speed) in enumerate(seq)
+        if t == "LINE_TO" and i > 0 and seq[i - 1] == ("SET_FEED_RATE", 400.0)
+    ]
+    assert descents, f"no plunge-fed descent in {seq}"
+    assert seq[descents[0] + 1] == ("SET_FEED_RATE", 1200.0), (
+        "cut feed not restored after the plunge"
+    )

@@ -30,6 +30,7 @@ plan_clearing(
     max_deflection_deg: float = 30.0,
     finishing: bool = False,
     feed_rate: Optional[float] = None,
+    plunge_feed: Optional[float] = None,
 ) -> plan.Plan
 ```
 
@@ -51,6 +52,7 @@ plan_clearing(
 | `max_deflection_deg` | `float = 30.0`           |             |
 | `finishing`          | `bool = False`           |             |
 | `feed_rate`          | `Optional[float] = None` |             |
+| `plunge_feed`        | `Optional[float] = None` |             |
 | _Returns_            | `plan.Plan`              |             |
 
 ![Clearing workplan: narrow passage (ToroidalClear), slot (Slot), dual-entry dumbbell (Unreachable).](images/cnc-plan-clearing-clearing.png)

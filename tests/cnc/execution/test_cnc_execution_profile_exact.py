@@ -24,7 +24,7 @@ from conftest import collect_completions, compute_result
 from raygeo.cnc.execution.specs import ComputePayload
 from raygeo.geo import Geometry
 from raygeo.ops.assembly import Assembler
-from raygeo.ops.assembly.profile import ProfileSpec
+from raygeo.ops.assembly.profile import ProfileSpec, profile_inner
 from raygeo.ops.part import Part
 from raygeo.pipeline.execute import clear_cache
 from raygeo.pipeline.request import NodeRequest
@@ -204,6 +204,51 @@ def test_rough_pass_cuts_the_island_ring_instead_of_skipping_it():
     assert ring_travels < ring_cuts // 2, (
         f"the rough island ring is mostly travel: {ring_travels} travels"
     )
+
+
+def test_descent_runs_at_the_plunge_feed():
+    """The descent into material is a feed move at the plunge feed, and
+    cutting resumes at the cut feed afterwards."""
+    part = Part(geometry=_circle_geometry(10.0), size_mm=(30.0, 30.0))
+    result = profile_inner(
+        part,
+        tool_radius=3.0,
+        step_over=1.5,
+        target_z=-5.0,
+        safe_z=2.0,
+        step_length=0.6,
+        cut_feed_rate=1000,
+        cut_power=0.0,
+        plunge_feed_rate=300,
+    )
+    cmds = result.ops.to_dict()["commands"]
+    rates = [c["speed"] for c in cmds if c["type"] == "SET_FEED_RATE"]
+    assert 300 in rates, f"plunge feed missing from {rates}"
+    assert 1000 in rates, f"cut feed missing from {rates}"
+    # The descent is a feed move straight down from the safe height to the
+    # target depth, at the plunge feed, before any cutting arc.
+    moving = [c for c in cmds if c["type"] in ("MOVE_TO", "LINE_TO", "ARC_TO")]
+    descents = [
+        (prev, c)
+        for prev, c in zip(moving, moving[1:])
+        if c["type"] == "LINE_TO"
+        and c["end"][2] == -5.0
+        and prev["end"][2] == 2.0
+    ]
+    assert descents, "no vertical feed descent found"
+    first_descent_index = cmds.index(descents[0][1])
+    before = [
+        c["speed"]
+        for c in cmds[:first_descent_index]
+        if c["type"] == "SET_FEED_RATE"
+    ]
+    assert before[-1] == 300, f"descent not at plunge feed: {before}"
+    after = [
+        c["speed"]
+        for c in cmds[first_descent_index:]
+        if c["type"] == "SET_FEED_RATE"
+    ]
+    assert 1000 in after, f"cut feed not restored: {after}"
 
 
 def test_outer_profile_grows_outward():

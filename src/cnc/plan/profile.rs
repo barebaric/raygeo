@@ -44,6 +44,9 @@ pub struct ProfileWorkplanOptions {
     pub tolerance: f64,
     /// Cut feed (mm/min); `None` leaves the plan's cut state unset.
     pub feed_rate: Option<f64>,
+    /// Vertical plunge feed (mm/min) for descents into material; `None`
+    /// falls back to the cut feed.
+    pub plunge_feed: Option<f64>,
 }
 
 /// Builds a one-step profile plan for one face of `part`.
@@ -98,5 +101,6 @@ pub fn plan_profile(
         region_boundary: None,
     });
     plan.cut_state.feed_rate = opts.feed_rate.map(|f| f.round() as i32);
+    plan.cut_state.plunge_feed = opts.plunge_feed.map(|f| f.round() as i32);
     Ok(plan)
 }

@@ -235,7 +235,7 @@ pub struct PyState(pub State);
 impl PyState {
     #[allow(clippy::too_many_arguments)]
     #[new]
-    #[pyo3(signature = (power=0.0, feed_rate=None, rapid_rate=None, active_head_uid=None, frequency=None, pulse_width=None, dwell_ms=None, spindle_rpm=None, coolant=None, air_assist=None, head_coolant=None, power_mode=None))]
+    #[pyo3(signature = (power=0.0, feed_rate=None, rapid_rate=None, active_head_uid=None, frequency=None, pulse_width=None, dwell_ms=None, spindle_rpm=None, coolant=None, air_assist=None, head_coolant=None, power_mode=None, plunge_feed=None))]
     fn new(
         power: f64,
         feed_rate: Option<i32>,
@@ -249,10 +249,12 @@ impl PyState {
         air_assist: Option<Bound<'_, PyAirAssistMode>>,
         head_coolant: Option<Bound<'_, PyHeadCoolantMode>>,
         power_mode: Option<Bound<'_, PyPowerMode>>,
+        plunge_feed: Option<i32>,
     ) -> Self {
         PyState(State {
             power,
             feed_rate,
+            plunge_feed,
             rapid_rate,
             active_head_uid,
             frequency,

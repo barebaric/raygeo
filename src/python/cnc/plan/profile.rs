@@ -93,6 +93,7 @@ pub(crate) fn register(plan_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     cut_direction = "ccw",
     tolerance = 0.1,
     feed_rate = None,
+    plunge_feed = None,
 ))]
 pub fn plan_profile_py(
     part: &Bound<'_, PyPart>,
@@ -108,6 +109,7 @@ pub fn plan_profile_py(
     cut_direction: &str,
     tolerance: f64,
     feed_rate: Option<f64>,
+    plunge_feed: Option<f64>,
 ) -> PyResult<Py<super::PyPlan>> {
     let kind = match side {
         "outer" => ProfileKind::Outer,
@@ -129,6 +131,7 @@ pub fn plan_profile_py(
         cut_direction: cd,
         tolerance,
         feed_rate,
+        plunge_feed,
     };
     let plan = profile::plan_profile(&part.borrow().inner, face_id, &opts)?;
     Py::new(part.py(), super::PyPlan { inner: plan })
