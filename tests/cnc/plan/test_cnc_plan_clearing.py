@@ -1,5 +1,7 @@
 """Tests for plan_clearing in cnc/plan/clearing."""
 
+import pytest
+
 from raygeo.cnc.execution.intent import create_intent, run_intent
 from raygeo.cnc.plan.clearing import plan_clearing
 from raygeo.ops.part import Part
@@ -310,3 +312,16 @@ def test_passage_too_narrow_for_the_margin_is_left_uncut():
             in_far_room += 1
     assert in_left_room > 0, "the entry room was never machined"
     assert in_far_room > 0, "the far room was never machined"
+
+
+def test_step_over_above_the_tool_diameter_is_rejected():
+    """Passes farther apart than the tool diameter leave uncut ridges."""
+    part = Part.from_polygons(
+        [(0.0, 0.0), (40.0, 0.0), (40.0, 30.0), (0.0, 30.0)],
+        [],
+        (60.0, 50.0),
+    )
+    with pytest.raises(RuntimeError, match="step_over"):
+        plan_clearing(part, "", tool_radius=3.0, step_over=7.0)
+    # At exactly the diameter the passes still fully overlap.
+    plan_clearing(part, "", tool_radius=3.0, step_over=6.0)

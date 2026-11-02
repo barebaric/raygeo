@@ -134,6 +134,17 @@ pub fn plan_clearing(
     face_id: &str,
     opts: &ClearingWorkplanOptions,
 ) -> RaygeoResult<Plan> {
+    // Passes farther apart than the tool diameter leave uncut ridges
+    // between them.
+    if opts.step_over <= 0.0 || opts.step_over > 2.0 * opts.tool_radius {
+        return Err(crate::error::RaygeoError::DegenerateGeometry(
+            format!(
+                "step_over must be above 0 and at most the tool diameter ({}), got {}",
+                2.0 * opts.tool_radius,
+                opts.step_over
+            ),
+        ));
+    }
     // Read boundary + islands from the specified face.
     let primary = part.face(face_id).ok_or_else(|| {
         crate::error::RaygeoError::InternalError(format!(
