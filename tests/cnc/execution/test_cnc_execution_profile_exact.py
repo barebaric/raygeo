@@ -263,6 +263,29 @@ def test_outer_profile_grows_outward():
         )
 
 
+def test_wall_pass_cuts_the_ring_once_not_twice():
+    """The profile pass walks the offset ring once: its cut length is one
+    perimeter plus the closing move, not two rings (a closing emission
+    that walked the loop the long way around doubled every pass)."""
+    part = Part(geometry=_circle_geometry(10.0), size_mm=(30.0, 30.0))
+    cmds = _profile_ops(part, kind="inner")
+    cutting = [
+        c
+        for c in cmds
+        if c["type"] in ("LINE_TO", "ARC_TO") and c["end"][2] < 0.0
+    ]
+    length = 0.0
+    prev = None
+    for c in cutting:
+        if prev is not None:
+            length += math.hypot(c["end"][0] - prev[0], c["end"][1] - prev[1])
+        prev = c["end"]
+    expected = 2.0 * math.pi * 7.0
+    assert length == pytest.approx(expected, abs=3.0), (
+        f"the pass cut {length:.1f} mm, expected one ring of {expected:.1f}"
+    )
+
+
 def test_pocket_too_small_for_the_tool_machines_nothing():
     """An inset that vanishes (r2 pocket, r3 tool) leaves no machinable
     loops: the pass must come out empty rather than cut into the wall."""
