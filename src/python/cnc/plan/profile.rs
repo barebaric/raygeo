@@ -61,7 +61,8 @@ pub(crate) fn register(plan_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         :param face_id: face to profile ("" is the default face).
         :param side: ``"inner"`` or ``"outer"``.
         :param tool_radius: tool radius (mm).
-        :param step_over: radial step-over between passes (mm).
+        :param step_over: radial step-over between passes (mm); at most
+                          the tool diameter.
         :param step_length: forward step length (mm).
         :param target_z: cutting depth (mm).
         :param safe_z: safe rapid height (mm).

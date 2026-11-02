@@ -53,6 +53,15 @@ pub fn plan_profile(
     face_id: &str,
     opts: &ProfileWorkplanOptions,
 ) -> RaygeoResult<Plan> {
+    // Kept for workplan parity with clearing; a single profile pass does
+    // not step over, but a nonsense value is still rejected.
+    if opts.step_over <= 0.0 || opts.step_over > 2.0 * opts.tool_radius {
+        return Err(RaygeoError::DegenerateGeometry(format!(
+            "step_over must be above 0 and at most the tool diameter ({}), got {}",
+            2.0 * opts.tool_radius,
+            opts.step_over
+        )));
+    }
     let Some(face) = part.face(face_id) else {
         return Err(RaygeoError::DegenerateGeometry(format!(
             "the part has no face {face_id:?}"

@@ -47,6 +47,14 @@ def test_cut_direction_reaches_the_step_params():
     assert plan.steps[0].spec_params()["cut_direction"] == "Cw"
 
 
+def test_step_over_above_the_tool_diameter_is_rejected():
+    part = Part.from_polygons(_rect(0, 0, 40, 30), [], (60.0, 50.0))
+    with pytest.raises(RuntimeError, match="step_over"):
+        plan_profile(part, tool_radius=3.0, step_over=7.0)
+    # At exactly the diameter the passes still fully overlap.
+    plan_profile(part, tool_radius=3.0, step_over=6.0)
+
+
 def test_missing_face_is_rejected():
     part = Part.from_polygons(_rect(0, 0, 40, 30), [], (60.0, 50.0))
     with pytest.raises(RuntimeError, match="no face"):

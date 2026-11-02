@@ -41,7 +41,7 @@ emitted as arcs; polygon-only parts take the chord path.
 | `face_id`        | `str = ''`               | face to profile ("" is the default face).                            |
 | `side`           | `str = 'inner'`          | `"inner"` or `"outer"`.                                              |
 | `tool_radius`    | `float = 3`              | tool radius (mm).                                                    |
-| `step_over`      | `float = 2`              | radial step-over between passes (mm).                                |
+| `step_over`      | `float = 2`              | radial step-over between passes (mm); at most the tool diameter.     |
 | `step_length`    | `float = 0.6`            | forward step length (mm).                                            |
 | `target_z`       | `float = -5`             | cutting depth (mm).                                                  |
 | `safe_z`         | `float = 2`              | safe rapid height (mm).                                              |
