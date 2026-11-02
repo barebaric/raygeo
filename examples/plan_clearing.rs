@@ -41,6 +41,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         max_deflection_deg: 30.0,
         finishing: true,
         feed_rate: Some(900.0),
+        plunge_feed: Some(300.0),
     };
     let plan = plan_clearing(&part, "", &options)
         .map_err(|e| format!("planning failed: {e}"))?;
