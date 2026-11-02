@@ -107,6 +107,19 @@ def test_two_disjoint_solids_offset_separately():
     assert len(loops) == 2, f"expected two loops, got {len(loops)}"
 
 
+def test_island_wound_the_wrong_way_still_shrinks():
+    """Embedders hand islands wound either way; containment nesting, not
+    winding, decides material from hole."""
+    region = rect(0, 0, 100, 100)
+    region.extend(rect(40, 40, 60, 60, ccw=True))  # same winding as the outer
+    loops = offset_exact(region, 5.0, 0.1)
+    assert len(loops) == 2, (
+        f"expected outer and island loops, got {len(loops)}"
+    )
+    boxes = sorted(bbox(lp) for lp in loops)
+    assert boxes[1] == pytest.approx((45.0, 45.0, 55.0, 55.0), abs=1e-9)
+
+
 def test_slot_grows_shut_as_one_loop():
     """Growing a U-shaped boundary until its slot closes trims the offset to
     one simple loop instead of a self-overlapping one."""
