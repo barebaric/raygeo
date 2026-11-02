@@ -286,6 +286,29 @@ def test_wall_pass_cuts_the_ring_once_not_twice():
     )
 
 
+def test_backward_walk_cuts_the_ring_once_not_twice():
+    """A clockwise wall pass walks the loop backwards; the walk must cover
+    exactly one perimeter (a sign error in the backward piece crossing made
+    every boundary over-run, overshooting the start by millimetres)."""
+    part = Part(geometry=_circle_geometry(10.0), size_mm=(30.0, 30.0))
+    cmds = _profile_ops(part, kind="inner", cut_direction="cw")
+    cutting = [
+        c
+        for c in cmds
+        if c["type"] in ("LINE_TO", "ARC_TO") and c["end"][2] < 0.0
+    ]
+    length = 0.0
+    prev = None
+    for c in cutting:
+        if prev is not None:
+            length += math.hypot(c["end"][0] - prev[0], c["end"][1] - prev[1])
+        prev = c["end"]
+    expected = 2.0 * math.pi * 7.0
+    assert length == pytest.approx(expected, abs=3.0), (
+        f"the cw pass cut {length:.1f} mm, expected one ring of {expected:.1f}"
+    )
+
+
 def test_pocket_too_small_for_the_tool_machines_nothing():
     """An inset that vanishes (r2 pocket, r3 tool) leaves no machinable
     loops: the pass must come out empty rather than cut into the wall."""
