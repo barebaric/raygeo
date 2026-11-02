@@ -160,7 +160,9 @@ impl ExactLoop {
                 idx = (idx + 1) % n;
                 t = 0.0;
             } else {
-                remaining -= t * len;
+                // Walking backward: the piece consumes t * len of the walk,
+                // so the remainder moves toward zero.
+                remaining += t * len;
                 idx = (idx + n - 1) % n;
                 t = 1.0;
             }

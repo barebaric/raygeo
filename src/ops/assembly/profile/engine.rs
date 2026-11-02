@@ -291,14 +291,11 @@ pub(crate) fn run_profile(
 
         if dist_traveled >= perimeter - common.step_length * 0.5 {
             if !travel_skipped {
-                // Close the pass exactly back at the loop start.
-                loop_.emit_between(
-                    trace,
-                    (piece_idx, piece_t),
-                    (0, 0.0),
-                    forward,
-                    common.target_z,
-                );
+                // Close the pass with a straight move back at the loop
+                // start: the walk stops within half a step of the start,
+                // so the straight move is short. Walking the loop around
+                // again would cut the whole pass twice.
+                trace.line_to(start_pos.x, start_pos.y, common.target_z, None);
                 trace.cut(
                     th::tool_snapshot(start_pos, heading, current),
                     Some(th::cut_meta(
