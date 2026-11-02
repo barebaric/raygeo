@@ -669,12 +669,13 @@ fn loop_geometry(pieces: &[Span]) -> Geometry {
 /// The boundaries of `geometry` moved by `offset` (positive: outwards, so
 /// the region grows; negative: into it), as closed loops of lines and arcs.
 ///
-/// Every closed subpath of the geometry takes part: counter-clockwise loops
-/// as material, clockwise ones as holes, whatever the nesting. Lines and
-/// arcs stay exact; other curves are followed as line chains within
-/// `tolerance`. Open subpaths are ignored. Degenerate input, a non-finite or
-/// zero `offset`, or more pieces than the module's internal limits return an
-/// empty result.
+/// Every closed subpath of the geometry takes part. Which side is material
+/// follows the containment nesting — a loop inside another bounds a hole —
+/// with windings normalized to match, so callers may hand loops wound
+/// either way. Lines and arcs stay exact; other curves are followed as line
+/// chains within `tolerance`. Open subpaths are ignored. Degenerate input, a
+/// non-finite or zero `offset`, or more pieces than the module's internal
+/// limits return an empty result.
 pub fn offset_exact(
     geometry: &Geometry,
     offset: f64,
@@ -683,8 +684,18 @@ pub fn offset_exact(
     if !offset.is_finite() || !tolerance.is_finite() || tolerance <= 0.0 {
         return Vec::new();
     }
-    let contours: Vec<Vec<(Point3D, Command)>> =
-        get_closed_spans(geometry, tolerance);
+    // Winding alone does not tell material from hole: embedders hand islands
+    // wound either way. Nesting depth does, so normalize by containment.
+    let contours_geo =
+        crate::geo::algo::topology::split_into_contours(geometry);
+    let normalized = {
+        let refs: Vec<&Geometry> = contours_geo.iter().collect();
+        crate::geo::algo::topology::normalize_winding_orders(&refs)
+    };
+    let mut contours: Vec<Vec<(Point3D, Command)>> = Vec::new();
+    for contour in &normalized {
+        contours.extend(get_closed_spans(contour, tolerance));
+    }
     let total: usize = contours.iter().map(Vec::len).sum();
     if contours.is_empty() || total > MAX_PIECES {
         return Vec::new();
