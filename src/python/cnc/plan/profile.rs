@@ -47,15 +47,22 @@ pub(crate) fn register(plan_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         wall_margin: float = 0.0,
         stock_to_leave: float = 0.0,
         cut_direction: str = "ccw",
+        ramp_angle_deg: float = 0.0,
         tolerance: float = 0.1,
         feed_rate: typing.Optional[float] = None,
+        plunge_feed: typing.Optional[float] = None,
     ) -> raygeo.cnc.plan.Plan:
-        """Build a one-step plan that profiles a face boundary.
+        """Build a plan that profiles a face boundary.
         The step walks the inset boundary (side "inner", the pocket side)
         or the grown boundary (side "outer", around the part) once at the
         target depth, honouring islands on the inner side. Curve-true
         face geometry is followed exactly, with arcs emitted as arcs;
         polygon-only parts take the chord path.
+
+        With `ramp_angle_deg` above 0 and curve-true face geometry, the
+        plan prepends a ramp-entry step that descends along the profile
+        loop at that angle, so the tool enters the material gradually
+        instead of plunging.
 
         :param part: part whose face is profiled.
         :param face_id: face to profile ("" is the default face).
@@ -70,9 +77,13 @@ pub(crate) fn register(plan_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         :param stock_to_leave: stock left on the wall (mm).
         :param cut_direction: ``"ccw"`` (wall on the left, climb for a
                               clockwise spindle) or ``"cw"``.
+        :param ramp_angle_deg: steepest entry descent along the loop
+                               (degrees); 0 plunges straight down.
         :param tolerance: boundary-following tolerance (mm).
         :param feed_rate: cut feed (mm/min); None leaves the plan's cut
                           state unset.
+        :param plunge_feed: vertical plunge feed (mm/min); None falls
+                            back to the cut feed.
         :returns: the profile plan.
         """
 "#,
@@ -91,6 +102,7 @@ pub(crate) fn register(plan_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     wall_margin = 0.0,
     stock_to_leave = 0.0,
     cut_direction = "ccw",
+    ramp_angle_deg = 0.0,
     tolerance = 0.1,
     feed_rate = None,
     plunge_feed = None,
@@ -107,6 +119,7 @@ pub fn plan_profile_py(
     wall_margin: f64,
     stock_to_leave: f64,
     cut_direction: &str,
+    ramp_angle_deg: f64,
     tolerance: f64,
     feed_rate: Option<f64>,
     plunge_feed: Option<f64>,
@@ -129,6 +142,7 @@ pub fn plan_profile_py(
         wall_margin,
         stock_to_leave,
         cut_direction: cd,
+        ramp_angle: ramp_angle_deg.to_radians(),
         tolerance,
         feed_rate,
         plunge_feed,

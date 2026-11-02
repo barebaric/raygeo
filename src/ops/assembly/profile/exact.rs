@@ -279,6 +279,143 @@ impl ExactLoop {
             self.emit_partial(trace, idx, 1.0, 0.0, false, z);
         }
     }
+
+    /// The number of pieces in the loop.
+    pub(crate) fn piece_count(&self) -> usize {
+        self.spans.len()
+    }
+
+    /// The loop's pieces with their start points, in walk order.
+    pub(crate) fn spans(&self) -> &[(Point3D, Command)] {
+        &self.spans
+    }
+
+    /// The exact length of piece `idx`.
+    pub(crate) fn piece_length(&self, idx: usize) -> f64 {
+        self.lengths[idx]
+    }
+
+    /// Emits a whole piece in the walking direction, ending at height
+    /// `z_end` — an arc piece becomes a helical arc move. The start
+    /// height is wherever the previous move left the tool.
+    pub(crate) fn emit_piece_to_z(
+        &self,
+        trace: &mut Tracelet,
+        idx: usize,
+        forward: bool,
+        z_end: f64,
+    ) {
+        let (_, command) = &self.spans[idx];
+        let (from, to) = if forward {
+            (self.point_at(idx, 0.0), self.point_at(idx, 1.0))
+        } else {
+            (self.point_at(idx, 1.0), self.point_at(idx, 0.0))
+        };
+        if (Point::new(from.x, from.y)).distance(Point::new(to.x, to.y))
+            <= JOINT_TOL
+        {
+            return;
+        }
+        match command {
+            Command::Line { .. } => trace.line_to(to.x, to.y, z_end, None),
+            Command::Arc { .. } => {
+                let Some((c, _, cw)) = self.arc_parts(idx) else {
+                    return;
+                };
+                // Walking a piece backwards flips its rotation.
+                let clockwise = if forward { cw } else { !cw };
+                trace.arc_to(
+                    to.x,
+                    to.y,
+                    c.x - from.x,
+                    c.y - from.y,
+                    clockwise,
+                    z_end,
+                    None,
+                );
+            }
+            _ => {}
+        }
+    }
+
+    /// Emits `laps` full rounds of the loop while the height sinks from
+    /// `z_from` to `z_to`, ending back at the loop start at `z_to`. The
+    /// walk direction matches the caller's, so the ramp blends into the
+    /// pass that follows.
+    pub(crate) fn emit_ramp(
+        &self,
+        trace: &mut Tracelet,
+        laps: usize,
+        z_from: f64,
+        z_to: f64,
+        forward: bool,
+    ) {
+        let n = self.piece_count();
+        let total = laps as f64 * self.perimeter;
+        if total.is_nan() || total <= 0.0 {
+            return;
+        }
+        let order: Vec<usize> = if forward {
+            (0..n).collect()
+        } else {
+            (0..n).rev().collect()
+        };
+        let drop = z_from - z_to;
+        let mut done = 0.0f64;
+        for _ in 0..laps {
+            for &idx in &order {
+                let len = self.piece_length(idx);
+                done += len;
+                let z_end = if done >= total - 1e-9 {
+                    z_to
+                } else {
+                    z_from - drop * (done / total)
+                };
+                self.emit_piece_to_z(trace, idx, forward, z_end);
+            }
+        }
+    }
+}
+
+/// The classified exact offset loops: counter-clockwise material loops
+/// (largest first) and clockwise island loops.
+pub(crate) type LoopClassification =
+    (Vec<(ExactLoop, f64)>, Vec<(ExactLoop, f64)>);
+
+/// Classifies the exact offset loops of `geometry`: counter-clockwise
+/// material loops (largest first) and, unless `keep_outer_only`, clockwise
+/// island loops. `Ok(None)` means the exact offsetter produced nothing
+/// machinable and the caller should fall back to the polygon path.
+pub(crate) fn classify_loops(
+    geometry: &crate::geo::geometry::Geometry,
+    offset: f64,
+    tolerance: f64,
+    keep_outer_only: bool,
+) -> Option<LoopClassification> {
+    let loops_geo = offset_exact(geometry, offset, tolerance);
+    if loops_geo.is_empty() {
+        return None;
+    }
+    let tolerance = tolerance.max(1e-6);
+    let mut loops: Vec<(ExactLoop, f64)> = Vec::new();
+    let mut islands: Vec<(ExactLoop, f64)> = Vec::new();
+    for geo in &loops_geo {
+        for (lp, winding) in ExactLoop::from_geometry(geo, tolerance) {
+            let area = lp.perimeter();
+            if winding == WindingOrder::CCW {
+                loops.push((lp, area));
+            } else if !keep_outer_only {
+                islands.push((lp, area));
+            }
+        }
+    }
+    if loops.is_empty() && islands.is_empty() {
+        return None;
+    }
+    // Outer pieces largest first; islands follow nearest to where the pass
+    // before them ended, like the polygon engine walks its grown islands.
+    loops.sort_by(|a, b| b.1.total_cmp(&a.1));
+    Some((loops, islands))
 }
 
 /// Builds the exact tool-center loops for one side and runs them, outer
@@ -296,34 +433,17 @@ pub(crate) fn run_exact_loops(
     cut_state: &State,
     keep_outer_only: bool,
 ) -> RaygeoResult<Option<AssemblyMeta>> {
-    let loops_geo = offset_exact(geometry, offset, opts.tolerance);
-    if loops_geo.is_empty() {
-        return Ok(None);
-    }
-    let tolerance = opts.tolerance.max(1e-6);
-    let mut loops: Vec<(ExactLoop, f64)> = Vec::new();
-    let mut islands: Vec<(ExactLoop, f64)> = Vec::new();
-    for geo in &loops_geo {
-        for (lp, winding) in ExactLoop::from_geometry(geo, tolerance) {
-            let area = lp.perimeter();
-            if winding == WindingOrder::CCW {
-                loops.push((lp, area));
-            } else if !keep_outer_only {
-                islands.push((lp, area));
-            }
-        }
-    }
-    if loops.is_empty() && islands.is_empty() {
-        return Ok(None);
-    }
-    // Outer pieces largest first; islands follow nearest to where the pass
-    // before them ended, like the polygon engine walks its grown islands.
     // Like the polygon path, the pass covers one region — the largest.
     // Smaller counter-clockwise loops are separate material regions the
     // pass does not cover (declared islands that fall outside the pocket
     // normalize to this shape), and are dropped.
-    loops.sort_by(|a, b| b.1.total_cmp(&a.1));
+    let Some((mut loops, islands)) =
+        classify_loops(geometry, offset, opts.tolerance, keep_outer_only)
+    else {
+        return Ok(None);
+    };
     loops.truncate(1);
+    let tolerance = opts.tolerance.max(1e-6);
 
     let common = ProfileCommon {
         step_length: opts.step_length,
@@ -346,7 +466,12 @@ pub(crate) fn run_exact_loops(
         .chain(islands.iter())
         .flat_map(|(lp, _)| {
             let mut g = crate::geo::geometry::Geometry::new();
-            for (_, command) in &lp.spans {
+            let mut first = true;
+            for (start, command) in &lp.spans {
+                if first {
+                    g.move_to(start.x, start.y, start.z);
+                    first = false;
+                }
                 match command {
                     Command::Move { end } => {
                         g.move_to(end.x, end.y, end.z);

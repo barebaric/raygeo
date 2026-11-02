@@ -110,6 +110,18 @@ impl PyPlanStep {
             d.set_item("wall_margin", p.wall_margin)?;
             d.set_item("stock_to_leave", p.stock_to_leave)?;
             d.set_item("cut_direction", format!("{:?}", p.cut_direction))?;
+        } else if let Some(r) = spec
+            .as_any()
+            .downcast_ref::<crate::ops::assembly::profile::ProfileRampSpec>()
+        {
+            d.set_item("kind_name", "profile_ramp")?;
+            d.set_item("tool_radius", r.tool_radius)?;
+            d.set_item("wall_margin", r.wall_margin)?;
+            d.set_item("stock_to_leave", r.stock_to_leave)?;
+            d.set_item("ramp_angle", r.ramp_angle)?;
+            d.set_item("z_start", r.z_start)?;
+            d.set_item("z_end", r.z_end)?;
+            d.set_item("cut_direction", format!("{:?}", r.cut_direction))?;
         }
 
         Ok(d)

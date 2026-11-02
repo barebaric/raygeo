@@ -14,14 +14,19 @@ __all__ = [
     "plan_profile",
 ]
 
-def plan_profile(part: raygeo.ops.part.Part, face_id: str = '', side: str = 'inner', tool_radius: float = 3, step_over: float = 2, step_length: float = 0.6, target_z: float = -5, safe_z: float = 2, wall_margin: float = 0, stock_to_leave: float = 0, cut_direction: str = 'ccw', tolerance: float = 0.1, feed_rate: typing.Optional[float] = None) -> raygeo.cnc.plan.Plan:
+def plan_profile(part: raygeo.ops.part.Part, face_id: str = '', side: str = 'inner', tool_radius: float = 3, step_over: float = 2, step_length: float = 0.6, target_z: float = -5, safe_z: float = 2, wall_margin: float = 0, stock_to_leave: float = 0, cut_direction: str = 'ccw', ramp_angle_deg: float = 0, tolerance: float = 0.1, feed_rate: typing.Optional[float] = None, plunge_feed: typing.Optional[float] = None) -> raygeo.cnc.plan.Plan:
     r"""
-    Build a one-step plan that profiles a face boundary.
+    Build a plan that profiles a face boundary.
     The step walks the inset boundary (side "inner", the pocket side)
     or the grown boundary (side "outer", around the part) once at the
     target depth, honouring islands on the inner side. Curve-true
     face geometry is followed exactly, with arcs emitted as arcs;
     polygon-only parts take the chord path.
+    
+    With `ramp_angle_deg` above 0 and curve-true face geometry, the
+    plan prepends a ramp-entry step that descends along the profile
+    loop at that angle, so the tool enters the material gradually
+    instead of plunging.
     
     :param part: part whose face is profiled.
     :param face_id: face to profile ("" is the default face).
@@ -36,9 +41,13 @@ def plan_profile(part: raygeo.ops.part.Part, face_id: str = '', side: str = 'inn
     :param stock_to_leave: stock left on the wall (mm).
     :param cut_direction: ``"ccw"`` (wall on the left, climb for a
                           clockwise spindle) or ``"cw"``.
+    :param ramp_angle_deg: steepest entry descent along the loop
+                           (degrees); 0 plunges straight down.
     :param tolerance: boundary-following tolerance (mm).
     :param feed_rate: cut feed (mm/min); None leaves the plan's cut
                       state unset.
+    :param plunge_feed: vertical plunge feed (mm/min); None falls
+                        back to the cut feed.
     :returns: the profile plan.
     """
 
