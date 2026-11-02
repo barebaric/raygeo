@@ -202,15 +202,16 @@ def test_island_inside_one_region_is_attributed_to_that_region():
     assert right_cuts, "no cutting moves landed in the bare lobe"
 
 
-def test_region_stall_emits_warning_but_face_completes():
-    """An aggressively-parametrised clear over a small-lobe dumbbell
-    stalls the stepper inside each lobe — the same behaviour that,
-    pre-region-split, would have surfaced as a hard ``FaceFailed``
-    error and aborted the whole compute.  Through the new per-region
-    path each stall becomes a ``RegionFailed`` warning while the
-    partial cutting moves already emitted are preserved, so the face
-    as a whole completes successfully (``error is None``) with ops
-    still present.
+def test_aggressive_params_clear_the_wide_regions_without_stalling():
+    """An aggressively-parametrised clear over the small-lobe dumbbell
+    used to stall the stepper inside each wide region: the wavefront
+    stopped on a thin uncleared core, no resume strategy found a
+    proposal, and the region was recovered as a ``RegionFailed`` warning
+    with the lobe centres left standing.  The core resume strategy
+    proposes the spine of that uncleared remainder, so the same params
+    now clear both wide regions completely — no warning, no stranded
+    core.  (With this tool the narrow neck is a barrier: the tool cuts
+    the two bands it separates, as designed.)
     """
     loop = _dumbbell(lobe=40.0, neck=6.0, span=60.0)
     part = Part.from_polygons(loop, size_mm=(160.0, 50.0))
@@ -219,19 +220,33 @@ def test_region_stall_emits_warning_but_face_completes():
 
     assert node.error is None, node.error
     assert node.output is not None
-    assert node.output.ops.len() > 0, (
-        "expected partial cutting moves even after region stalls"
-    )
+    assert node.output.ops.len() > 0
 
     region_failures = [
         w
         for w in node.output.warnings
         if w.kind == AssemblyWarningKind.REGION_FAILED
     ]
-    assert len(region_failures) >= 1, (
-        "expected at least one RegionFailed warning under aggressive params"
-    )
-    for w in region_failures:
-        assert w.region is not None
-        assert w.face_id == ""
-        assert w.detail
+    assert not region_failures, [w.detail for w in region_failures]
+
+    cuts = list(_cut_endpoints(node))
+    top = [p for p in cuts if p[1] > 3.0]
+    bottom = [p for p in cuts if p[1] < -3.0]
+    assert top, "the upper wide region was never machined"
+    assert bottom, "the lower wide region was never machined"
+
+    # The wavefront must not strand a core: every point a tool-radius
+    # inside the upper band is within a tool radius of a cut.  The band
+    # spans y in [3, 20], so tool centres legitimately fill y in
+    # [8, 15]; probe that whole reachable strip.
+    for y0, y1 in ((8.5, 14.5), (-14.5, -8.5)):
+        x = -44.0
+        while x <= 44.0:
+            y = y0
+            while y <= y1:
+                d = min((p[0] - x) ** 2 + (p[1] - y) ** 2 for p in cuts) ** 0.5
+                assert d <= 5.0 - 0.02, (
+                    f"point ({x}, {y}) is {d:.3f} from the nearest cut"
+                )
+                y += 0.5
+            x += 0.5
