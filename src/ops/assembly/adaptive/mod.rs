@@ -146,6 +146,14 @@ impl crate::ops::assembly::Assembler for AdaptiveClearingSpec {
         // stock region for the region boundary.  Clear exactly that
         // region — no internal splitting.
         if ctx.region_boundary.is_some() {
+            // An entry step normally seeds the cleared area with the
+            // floor footprint it machined. When none did (e.g. a
+            // degenerate entry path), seed from the region's largest
+            // inscribed circle instead of silently skipping the whole
+            // pass.
+            if ctx.face.cleared.is_empty() {
+                ctx.face.seed_from_largest_circle(self.tool_radius);
+            }
             let meta = adaptive_clearing(ctx.face, ctx.trace, self, ctx.state)
                 .map_err(|e| e.to_string())?;
             let fragments = ctx.face.cleared.fragments().to_vec();

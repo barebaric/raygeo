@@ -26,6 +26,7 @@ plan_entry(
     safe_margin: float = 1.0,
     angular_step: float = 0.1,
     max_entry_angle_deg: float = 0.0,
+    wall_margin: float = 0.0,
 ) -> list[plan.PlanStep]
 ```
 
@@ -43,6 +44,7 @@ plan_entry(
 | `safe_margin`         | `float = 1.0`                                              |             |
 | `angular_step`        | `float = 0.1`                                              |             |
 | `max_entry_angle_deg` | `float = 0.0`                                              |             |
+| `wall_margin`         | `float = 0.0`                                              |             |
 | _Returns_             | `list[plan.PlanStep]`                                      |             |
 
 ![Entry workplan: rectangle (Helix+FlatSpiral), H-shape (ToroidalClear), cup (RampEntry).](images/cnc-plan-entry-entry.png)

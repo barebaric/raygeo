@@ -49,6 +49,10 @@ pub struct PyRampSpec {
     pub style: String,
     #[pyo3(get)]
     pub lateral_amplitude: f64,
+    /// Tool radius used to seed the cleared area with the swath the
+    /// ramp machined at floor level.
+    #[pyo3(get)]
+    pub tool_radius: f64,
 }
 
 impl PyRampSpec {
@@ -65,12 +69,14 @@ impl PyRampSpec {
             max_ramp_angle_deg: self.max_ramp_angle_deg,
             style,
             lateral_amplitude: self.lateral_amplitude,
+            tool_radius: self.tool_radius,
         }
     }
 }
 
 #[gen_stub_pymethods]
 #[pyo3::pymethods]
+#[allow(clippy::too_many_arguments)]
 impl PyRampSpec {
     #[new]
     #[pyo3(signature = (
@@ -81,6 +87,7 @@ impl PyRampSpec {
         max_ramp_angle_deg = 45.0,
         style = "zigzag",
         lateral_amplitude = 2.0,
+        tool_radius = 3.0,
     ))]
     fn new(
         start: (f64, f64),
@@ -90,6 +97,7 @@ impl PyRampSpec {
         max_ramp_angle_deg: f64,
         style: &str,
         lateral_amplitude: f64,
+        tool_radius: f64,
     ) -> Self {
         PyRampSpec {
             start,
@@ -99,6 +107,7 @@ impl PyRampSpec {
             max_ramp_angle_deg,
             style: style.to_string(),
             lateral_amplitude,
+            tool_radius,
         }
     }
 }
@@ -116,6 +125,7 @@ impl PyRampSpec {
         max_ramp_angle_deg: float = 45.0,
         style: str = "zigzag",
         lateral_amplitude: float = 2.0,
+        tool_radius: float = 3.0,
         state: raygeo.ops.state.State | None = None,
     ) -> raygeo.ops.assembly.AssemblyResult:
         """Generate a ramp entry path.
@@ -130,6 +140,7 @@ impl PyRampSpec {
         :param max_ramp_angle_deg: Maximum ramp angle in degrees (default 45).
         :param style: ``"linear"`` or ``"zigzag"`` (default ``"zigzag"``).
         :param lateral_amplitude: Lateral oscillation amplitude for zigzag (default 2.0).
+        :param tool_radius: Tool radius used to seed the cleared area (default 3.0).
         :param state: Optional machine state to apply before the path.
         :returns: An :class:`AssemblyResult` with the ramp path.
         """
@@ -146,6 +157,7 @@ impl PyRampSpec {
     max_ramp_angle_deg = 45.0,
     style = "zigzag",
     lateral_amplitude = 2.0,
+    tool_radius = 3.0,
     state = None,
 ))]
 #[allow(clippy::too_many_arguments)]
@@ -158,6 +170,7 @@ fn generate_ramp_py(
     max_ramp_angle_deg: f64,
     style: &str,
     lateral_amplitude: f64,
+    tool_radius: f64,
     state: Option<Bound<'_, PyState>>,
 ) -> PyResult<PyAssemblyResult> {
     let ramp_style = match style.to_lowercase().as_str() {
@@ -178,6 +191,7 @@ fn generate_ramp_py(
         max_ramp_angle_deg,
         style: ramp_style,
         lateral_amplitude,
+        tool_radius,
     };
 
     let mut trace = Tracelet::new();

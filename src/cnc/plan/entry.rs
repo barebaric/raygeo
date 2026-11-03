@@ -35,6 +35,11 @@ pub struct EntryWorkplanOptions {
     pub plunge_pitch: f64,
     pub safe_margin: f64,
     pub angular_step: f64,
+    /// Extra clearance the entries must keep from the islands. The region
+    /// polygon arrives eroded by the wall margin (walls carry it), but the
+    /// islands are raw — the ramp fallback buffers them by
+    /// `tool_radius + wall_margin` so no entry cut sneaks past the margin.
+    pub wall_margin: f64,
     /// Steepest descent the entry may make, in degrees. `<= 0` keeps the
     /// planner's historical behaviour: the helix descends `plunge_pitch`
     /// per revolution and the ramp entries cap at 45°. A positive angle
@@ -92,15 +97,23 @@ pub fn plan_entry(
 
         let spiral_max_r = (region.r_max - opts.tool_radius - opts.safe_margin)
             .max(helix_r + 0.01);
-        let radial_dist = spiral_max_r - helix_r;
-        if radial_dist > 0.0 && opts.step_over > 0.0 {
-            let revolutions = radial_dist / opts.step_over;
+        if spiral_max_r > 0.0 && opts.step_over > 0.0 {
+            let revolutions = spiral_max_r / opts.step_over;
+            // The spiral starts at the center, not at the helix radius:
+            // the helix machines the floor only along the final arc of
+            // its last revolution (the descent above the floor leaves a
+            // film over the rest of the seed disk), so a spiral that
+            // starts at the helix radius would strand the crescent
+            // between the seed disk and its first outward turn. From the
+            // center out, the spiral's swept band covers the whole seed
+            // disk the helix claims, and the cleared-area model stays
+            // honest.
             steps.push(PlanStep {
                 face_id: face_id.to_string(),
                 spec: Arc::new(SpiralSpec {
                     center: region.entry_pt,
                     z: opts.target_z,
-                    start_radius: helix_r,
+                    start_radius: 0.0,
                     end_radius: spiral_max_r,
                     revolutions,
                     direction: HelixDirection::Cw,
@@ -139,7 +152,12 @@ pub fn plan_entry(
             region_boundary: None,
         });
     } else {
-        let ((start, end), amplitude) = ramp_entry(region, opts.tool_radius);
+        let ((start, end), amplitude) = ramp_entry(
+            region,
+            &opts.islands,
+            opts.tool_radius,
+            opts.tool_radius + opts.wall_margin,
+        );
         steps.push(PlanStep {
             face_id: face_id.to_string(),
             spec: Arc::new(RampSpec {
@@ -150,6 +168,7 @@ pub fn plan_entry(
                 max_ramp_angle_deg: entry_angle_cap(opts),
                 style: crate::geo::algo::ramp::RampStyle::ZigZag,
                 lateral_amplitude: amplitude,
+                tool_radius: opts.tool_radius,
             }),
             region_boundary: None,
         });
@@ -173,56 +192,99 @@ fn entry_angle_cap(opts: &EntryWorkplanOptions) -> f64 {
 /// the zigzag's lateral amplitude is clamped to the segment's clearance
 /// inside that region (clamping to a straight ramp when the region is too
 /// narrow to swing at all).
+///
+/// `island_clearance` is the distance the carrier and its swing keep from
+/// the islands — the tool radius plus the wall margin, since the islands
+/// arrive raw while the region polygon already carries the margin.
+#[allow(clippy::too_many_arguments)]
 fn ramp_entry(
     region: &Region,
+    islands: &[Polygon],
     tool_radius: f64,
+    island_clearance: f64,
 ) -> ((crate::geo::types::Point, crate::geo::types::Point), f64) {
-    use crate::geo::shape::polygon::{
-        get_signed_boundary_distance, offset_polygon, JoinStyle,
-    };
+    use crate::geo::shape::polygon::get_signed_boundary_distance;
 
-    let (start, end) =
-        ramp_segment_in_region(region.entry_pt, &region.polygon, tool_radius);
+    let (start, end) = ramp_segment_in_region(
+        region.entry_pt,
+        &region.polygon,
+        islands,
+        tool_radius,
+        island_clearance,
+    );
     let amplitude = tool_radius * 0.8;
     // How far the segment stays inside the tool-centre region: the
-    // zigzag swings ±amplitude about it.
-    let eroded =
-        offset_polygon(&region.polygon, -tool_radius, JoinStyle::Miter);
-    let valid: &[Polygon] = if eroded.is_empty() {
-        std::slice::from_ref(&region.polygon)
-    } else {
-        &eroded
-    };
+    // zigzag swings ±amplitude about it. Interior samples only — the
+    // clipped segment's endpoints sit on the boundary where the
+    // clearance is 0, which would clamp the amplitude to a straight
+    // ramp even when the whole interior has room to swing.
+    let valid = tool_centre_region(
+        &region.polygon,
+        islands,
+        tool_radius,
+        island_clearance,
+    );
     let mut d_min = f64::INFINITY;
-    for k in 0..=32 {
+    for k in 1..32 {
         let t = k as f64 / 32.0;
         let p = start.lerp(end, t);
-        let d = -get_signed_boundary_distance(p, valid);
+        let d = -get_signed_boundary_distance(p, &valid);
         d_min = d_min.min(d);
     }
     let amplitude = amplitude.min((d_min - 0.05).max(0.0));
     ((start, end), amplitude)
 }
 
+/// The area the tool centre may travel: `region` eroded by `tool_radius`
+/// minus the islands buffered by `island_clearance`. Without the buffered
+/// islands a carrier through the region's shell would machine straight
+/// through an island the shell does not carry.
+fn tool_centre_region(
+    region: &Polygon,
+    islands: &[Polygon],
+    tool_radius: f64,
+    island_clearance: f64,
+) -> Vec<Polygon> {
+    use crate::geo::shape::polygon::{
+        get_polygons_group_difference, offset_polygon, JoinStyle,
+    };
+
+    let eroded = offset_polygon(region, -tool_radius, JoinStyle::Miter);
+    let mut valid = if eroded.is_empty() {
+        vec![region.clone()]
+    } else {
+        eroded
+    };
+    if !islands.is_empty() {
+        let buffered: Vec<Polygon> = islands
+            .iter()
+            .flat_map(|isl| {
+                offset_polygon(isl, island_clearance, JoinStyle::Round)
+            })
+            .filter(|ring| ring.len() >= 3)
+            .collect();
+        if !buffered.is_empty() {
+            valid = get_polygons_group_difference(&valid, &buffered);
+        }
+    }
+    valid
+}
+
 /// Pick the longest axis-aligned line segment through `entry_pt` whose
-/// tool disc stays entirely inside `region`. Tries both X and Y sweeps
-/// against the **eroded** region (region eroded by `tool_radius` so the
-/// tool disc centred anywhere on the line fits inside the original
-/// region). Picks the longest inside sub-segment. Falls back to the
-/// AABB-spanning line if erosion yields nothing.
+/// tool disc stays entirely inside `region` and clear of the islands.
+/// Tries both X and Y sweeps against the **tool-centre region** (region
+/// eroded by `tool_radius`, islands buffered by `island_clearance`).
+/// Picks the longest inside sub-segment. Falls back to the AABB-spanning
+/// line if erosion yields nothing.
 fn ramp_segment_in_region(
     entry_pt: crate::geo::types::Point,
     region: &Polygon,
+    islands: &[Polygon],
     tool_radius: f64,
+    island_clearance: f64,
 ) -> (crate::geo::types::Point, crate::geo::types::Point) {
-    use crate::geo::shape::polygon::{offset_polygon, JoinStyle};
-
-    let eroded = offset_polygon(region, -tool_radius, JoinStyle::Miter);
-    let valid: &[Polygon] = if eroded.is_empty() {
-        std::slice::from_ref(region)
-    } else {
-        &eroded
-    };
+    let valid =
+        tool_centre_region(region, islands, tool_radius, island_clearance);
 
     let bbox = crate::geo::shape::polygon::get_polygon_bounds(region);
 
@@ -244,7 +306,7 @@ fn ramp_segment_in_region(
     for (p1, p2) in &candidates {
         let clipped =
             crate::geo::algo::clipping::clip_line_segment_with_polygons_2d(
-                *p1, *p2, valid,
+                *p1, *p2, &valid,
             );
         for (a, b) in clipped {
             let len = (b.x - a.x).hypot(b.y - a.y);
