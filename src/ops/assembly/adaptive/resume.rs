@@ -24,6 +24,7 @@ use crate::ops::cut::StepStatus;
 use crate::ops::cut::StepperOptions;
 use crate::ops::part::ClearedArea;
 use crate::ops::part::FaceState;
+use crate::ops::state::State;
 use crate::ops::types::CutDirection;
 use crate::ops::types::ToolPose;
 use crate::trace_types::{MoveKind, ToolSnapshot};
@@ -528,6 +529,7 @@ pub fn emit_resume_travel(
     to: Point3D,
     face: &FaceState,
     opts: &AdaptiveClearingSpec,
+    cut_state: &State,
     out_route_details: Option<&mut [u8; 4]>,
 ) -> RaygeoResult<routing::RouteSource> {
     let (_boundary, islands) = face.extract_boundary();
@@ -581,9 +583,24 @@ pub fn emit_resume_travel(
         // Record each route waypoint as both an ops command (for the actual
         // machine path) and a travel trace event (so the inspector can
         // render the correct path instead of a straight line from/to).
+        // A vertical descent carries the plunge feed when the plan has
+        // one: it re-enters material, so it goes out as a cutting move.
+        let plunge_feed = cut_state.plunge_feed.or(cut_state.feed_rate);
         let mut prev = from;
         for pt in &path[1..] {
-            trace.move_to(pt.x, pt.y, pt.z, None);
+            let plunges = plunge_feed.is_some()
+                && (pt.x - prev.x).abs() <= 1e-12
+                && (pt.y - prev.y).abs() <= 1e-12
+                && pt.z < prev.z - 1e-12;
+            if plunges {
+                trace.set_feed_rate(plunge_feed.unwrap_or(0));
+                trace.line_to(pt.x, pt.y, pt.z, None);
+                if let Some(fr) = cut_state.feed_rate {
+                    trace.set_feed_rate(fr);
+                }
+            } else {
+                trace.move_to(pt.x, pt.y, pt.z, None);
+            }
             let dx = pt.x - prev.x;
             let dy = pt.y - prev.y;
             let heading = if dx.abs() > 1e-12 || dy.abs() > 1e-12 {
@@ -592,7 +609,11 @@ pub fn emit_resume_travel(
                 0.0
             };
             trace.move_event(
-                MoveKind::Travel,
+                if plunges {
+                    MoveKind::Cut
+                } else {
+                    MoveKind::Travel
+                },
                 ToolSnapshot {
                     pos_x: pt.x,
                     pos_y: pt.y,

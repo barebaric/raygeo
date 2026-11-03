@@ -93,7 +93,13 @@ impl OpsAggregate {
         ))
     }
 
-    fn emit_link(ops: &mut Ops, from: Point3D, to: Point3D, safe_z: f64) {
+    fn emit_link(
+        ops: &mut Ops,
+        from: Point3D,
+        to: Point3D,
+        safe_z: f64,
+        plunge_feed: Option<i32>,
+    ) {
         let entry_z = to.z;
         // Retract
         ops.move_to(from.x, from.y, safe_z, None);
@@ -101,9 +107,18 @@ impl OpsAggregate {
         if (to.x - from.x).abs() > 1e-12 || (to.y - from.y).abs() > 1e-12 {
             ops.move_to(to.x, to.y, safe_z, None);
         }
-        // Plunge
+        // Plunge — a descent into a lower entry Z re-enters material,
+        // so it goes out as a cutting move at the plunge feed when the
+        // caller has one. The next input's engine re-applies its own
+        // cut state, so the feed does not need restoring here.
         if (entry_z - safe_z).abs() > 1e-12 {
-            ops.move_to(to.x, to.y, entry_z, None);
+            match plunge_feed {
+                Some(feed) => {
+                    ops.set_feed_rate(feed);
+                    ops.line_to(to.x, to.y, entry_z, None);
+                }
+                None => ops.move_to(to.x, to.y, entry_z, None),
+            }
         }
     }
 
@@ -128,9 +143,19 @@ impl OpsAggregate {
 
             // Emit link before this input (skip first)
             if let Some(pe) = prev_end_world {
-                if let LinkMode::Sequential { safe_z } = &group.link_mode {
+                if let LinkMode::Sequential {
+                    safe_z,
+                    plunge_feed,
+                } = &group.link_mode
+                {
                     if let Some((start_world, _)) = world_positions {
-                        Self::emit_link(ops, pe, start_world, *safe_z);
+                        Self::emit_link(
+                            ops,
+                            pe,
+                            start_world,
+                            *safe_z,
+                            *plunge_feed,
+                        );
                     }
                 }
             }
@@ -147,7 +172,7 @@ impl OpsAggregate {
 
         // Final lift after last input
         if let Some(pe) = prev_end_world {
-            if let LinkMode::Sequential { safe_z } = &group.link_mode {
+            if let LinkMode::Sequential { safe_z, .. } = &group.link_mode {
                 if pe.z < *safe_z - 1e-12 {
                     ops.move_to(pe.x, pe.y, *safe_z, None);
                 }

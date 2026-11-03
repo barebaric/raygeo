@@ -340,18 +340,27 @@ class LinkMode:
         Safe Z height for retract/lift moves (only meaningful when
         ``tag == "sequential"``).
         """
+    @property
+    def plunge_feed(self) -> typing.Optional[builtins.int]:
+        r"""
+        Plunge feed (mm/min) for the link's descent into a lower entry
+        Z (only meaningful when ``tag == "sequential"``); ``None``
+        keeps the descent a rapid travel.
+        """
     @classmethod
     def none(cls) -> LinkMode:
         r"""
         Create a ``LinkMode`` with no inter-input linking.
         """
     @classmethod
-    def sequential(cls, safe_z: builtins.float) -> LinkMode:
+    def sequential(cls, safe_z: builtins.float, plunge_feed: typing.Optional[builtins.int] = None) -> LinkMode:
         r"""
         Create a ``LinkMode`` that emits travel moves (retract →
         XY travel → plunge) between consecutive inputs.
         
         :param safe_z: Z height for retract and final lift.
+        :param plunge_feed: Plunge feed (mm/min) for the descent into a
+          lower entry Z; ``None`` keeps it a rapid travel.
         """
 
 @typing.final

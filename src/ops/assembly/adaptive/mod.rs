@@ -64,6 +64,23 @@ const MAX_TOTAL_STEPS: usize = 100_000;
 
 // ── Spec ────────────────────────────────────────────────────────────
 
+/// How travels between passes are routed.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum TravelMode {
+    /// The router may travel through already-cleared area at cut
+    /// height (direct, frontier and medial-axis strategies) and only
+    /// retracts to `safe_z` when no cleared route exists. Fastest —
+    /// but the emitted path alone does not show why a below-retract
+    /// travel is safe.
+    #[default]
+    ClearedArea,
+    /// Every travel retracts to `safe_z`, crosses at that height and
+    /// re-enters at the plunge feed: the shape a consumer that cannot
+    /// judge cleared area (a path-only verifier, a G-code readback)
+    /// can check from the path alone.
+    SafeZ,
+}
+
 /// Spec for the adaptive-clearing assembler.
 ///
 /// Carries every parameter the adaptive-clearing orchestrator needs
@@ -85,6 +102,8 @@ pub struct AdaptiveClearingSpec {
     /// Constrains the stepper's deflection range and tells resume
     /// strategies which way the frontier winds.
     pub cut_direction: CutDirection,
+    /// How travels between passes are routed (see [`TravelMode`]).
+    pub travel_mode: TravelMode,
     /// Initial tool position.  When `None`, the starting position is
     /// auto-detected from the cleared-area frontier.
     pub start_pos: Option<Point3D>,
@@ -120,6 +139,7 @@ impl Default for AdaptiveClearingSpec {
             wall_margin: 0.0,
             area_tolerance: 1.0,
             cut_direction: CutDirection::Ccw,
+            travel_mode: TravelMode::ClearedArea,
             start_pos: None,
             start_heading: None,
             expansion_batch_size: 20,
@@ -421,6 +441,7 @@ fn handle_stall(
     advance: f64,
     step_length: f64,
     mat: Option<&MedialAxis>,
+    cut_state: &State,
     valid_total: f64,
 ) -> RaygeoResult<StallResult> {
     // Stall path: commit batch + clear blacklist (stuck already did).
@@ -514,6 +535,7 @@ fn handle_stall(
             rp.pos,
             &*s.face,
             opts,
+            cut_state,
             Some(s.route_details),
         ) {
             Ok(route_source) => {
@@ -766,7 +788,19 @@ pub fn adaptive_clearing(
     // ── 4. Continuous spiral: step → expand → repeat ─────────────
 
     trace.apply_state(cut_state);
-    trace.move_to(tool.pos.x, tool.pos.y, opts.target_z, None);
+    // The entry descent cuts down to the floor at the plunge feed when
+    // the plan carries one; without feeds it stays a travel move, for
+    // embedders that map feeds themselves.
+    let plunge_feed = cut_state.plunge_feed.or(cut_state.feed_rate);
+    if plunge_feed.is_some() && opts.target_z < tool.pos.z - 1e-12 {
+        trace.set_feed_rate(plunge_feed.unwrap_or(0));
+        trace.line_to(tool.pos.x, tool.pos.y, opts.target_z, None);
+        if let Some(fr) = cut_state.feed_rate {
+            trace.set_feed_rate(fr);
+        }
+    } else {
+        trace.move_to(tool.pos.x, tool.pos.y, opts.target_z, None);
+    }
 
     let mut prev_pos = tool.pos;
     let mut steps_since_batch: usize = 0;
@@ -1023,6 +1057,7 @@ pub fn adaptive_clearing(
                 advance,
                 step_length,
                 mat.as_ref(),
+                cut_state,
                 valid_total,
             )? {
                 StallResult::Applied => continue,

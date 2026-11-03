@@ -120,6 +120,14 @@ target_z: float
 tool_radius: float
 ```
 
+### `travel_mode`
+
+```python
+travel_mode: str
+```
+
+`"cleared_area"` or `"safe_z"`: how travels are routed.
+
 ### `wall_margin`
 
 ```python
@@ -176,6 +184,7 @@ plan_clearing(
     plunge_feed: Optional[float] = None,
     max_entry_angle_deg: float = 0.0,
     cut_direction: str = 'ccw',
+    travel_mode: str = 'cleared_area',
 ) -> plan.Plan
 ```
 
@@ -200,6 +209,7 @@ plan_clearing(
 | `plunge_feed`         | `Optional[float] = None` |             |
 | `max_entry_angle_deg` | `float = 0.0`            |             |
 | `cut_direction`       | `str = 'ccw'`            |             |
+| `travel_mode`         | `str = 'cleared_area'`   |             |
 | _Returns_             | `plan.Plan`              |             |
 
 ![Clearing workplan: narrow passage (ToroidalClear), slot (Slot), dual-entry dumbbell (Unreachable).](images/cnc-plan-clearing-clearing.png)

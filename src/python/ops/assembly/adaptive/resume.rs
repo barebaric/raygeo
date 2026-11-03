@@ -10,6 +10,7 @@ use crate::ops::assembly::adaptive::AdaptiveClearingSpec;
 use crate::ops::assembly::Tracelet;
 use crate::ops::cut::StepperOptions;
 use crate::ops::part::ClearedArea;
+use crate::ops::state::State;
 use crate::ops::types::CutDirection;
 use crate::ops::types::ToolPose;
 use crate::python::geo::algo::medial_axis::PyMedialAxis;
@@ -70,6 +71,8 @@ pub(crate) fn register(adaptive_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     cleared = None,
     from_pt = (0.0, 0.0, 0.0),
     axis = None,
+    cut_feed_rate = None,
+    plunge_feed_rate = None,
 ))]
 #[allow(clippy::too_many_arguments)]
 fn emit_resume_travel_py(
@@ -81,11 +84,18 @@ fn emit_resume_travel_py(
     cleared: Option<&PyClearedArea>,
     from_pt: (f64, f64, f64),
     axis: Option<&PyMedialAxis>,
+    cut_feed_rate: Option<i32>,
+    plunge_feed_rate: Option<i32>,
 ) -> PyResult<()> {
     let opts = AdaptiveClearingSpec {
         tool_radius: radius,
         step_over: 1.5,
         target_z: cut_z,
+        ..Default::default()
+    };
+    let cut_state = State {
+        feed_rate: cut_feed_rate,
+        plunge_feed: plunge_feed_rate,
         ..Default::default()
     };
     let ca: &ClearedArea = if let Some(c) = cleared {
@@ -106,6 +116,7 @@ fn emit_resume_travel_py(
             pyo3::exceptions::PyValueError::new_err("no default face")
         })?,
         &opts,
+        &cut_state,
         None,
     )?;
     ops.inner = trace.into_ops();
@@ -177,6 +188,8 @@ fn emit_resume_travel_py(
     cut_direction = "ccw",
     segment_start = (0.0, 0.0, 0.0),
     segment_heading = 0.0,
+    cut_feed_rate = None,
+    plunge_feed_rate = None,
 ))]
 #[allow(clippy::too_many_arguments)]
 fn try_resume_py(
@@ -194,6 +207,8 @@ fn try_resume_py(
     cut_direction: &str,
     segment_start: (f64, f64, f64),
     segment_heading: f64,
+    cut_feed_rate: Option<i32>,
+    plunge_feed_rate: Option<i32>,
 ) -> PyResult<bool> {
     let mat = axis.map(|a| &a.inner);
     let vta: Vec<Polygon> = valid_tool_area
@@ -211,6 +226,11 @@ fn try_resume_py(
         target_z: cut_z,
         max_deflection_deg,
         cut_direction: cd,
+        ..Default::default()
+    };
+    let cut_state = State {
+        feed_rate: cut_feed_rate,
+        plunge_feed: plunge_feed_rate,
         ..Default::default()
     };
     let advance = step_over;
@@ -275,6 +295,7 @@ fn try_resume_py(
             rp.pos,
             face,
             &opts,
+            &cut_state,
             None,
         )?;
         ops.inner = trace.into_ops();

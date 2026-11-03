@@ -91,6 +91,14 @@ trace_path: Optional[str]
 
 Optional path to write a binary trace file.
 
+### `travel_mode`
+
+```python
+travel_mode: str
+```
+
+`"cleared_area"` or `"safe_z"`.
+
 ### `wall_margin`
 
 ```python
@@ -127,6 +135,7 @@ adaptive_clearing(
     expansion_batch_size: int = 20,
     profile: bool = False,
     cut_direction: str = 'ccw',
+    travel_mode: str = 'cleared_area',
     trace_path: str | None = None,
     on_progress: Callable[[dict], None] | None = None,
     batch_size: int = 128,
@@ -141,28 +150,29 @@ solver to generate a continuous spiral toolpath from the seed clearing to the po
 The caller is responsible for populating the part's cleared area with the entry polygons before
 calling this method, and prepending the entry Ops to the result.
 
-| Parameter              | Type                                        | Description                                                                                                                       |
-| ---------------------- | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `part`                 | `ops.part.Part`                             | The part whose `cleared` field tracks accumulated workpiece state and whose geometry defines the pocket boundary and islands.     |
-| `tool_radius`          | `float = 3`                                 | Tool radius in mm (default 3.0).                                                                                                  |
-| `step_over`            | `float = 1.5`                               | Step-over distance (default 1.5).                                                                                                 |
-| `step_length`          | `float = 0.6`                               | Forward step length in mm (default 0.6).                                                                                          |
-| `target_z`             | `float = -5`                                | Cutting Z height (default -5.0).                                                                                                  |
-| `safe_z`               | `float = 2`                                 | Retract Z height for travel (default 2.0).                                                                                        |
-| `max_deflection_deg`   | `float = 30`                                | Maximum steering deflection per step in degrees (default 30).                                                                     |
-| `wall_margin`          | `float = 0`                                 | Extra clearance between tool and boundary (default 0.0).                                                                          |
-| `area_tolerance`       | `float = 1`                                 | Stop when remaining uncut area drops below this threshold (default 1.0).                                                          |
-| `cut_feed_rate`        | `int = 1200`                                | Feed rate for cutting moves (default 1200).                                                                                       |
-| `cut_power`            | `float = 1`                                 | Laser power for cutting moves (0.0-1.0, default 1.0).                                                                             |
-| `start_pos`            | `tuple[float, float] &#124; None = None`    | Initial tool position (x, y). When None, auto-detected from the cleared-area frontier.                                            |
-| `start_heading`        | `float &#124; None = None`                  | Initial tool heading in radians. When None, auto-detected as the CCW tangent at start_pos.                                        |
-| `expansion_batch_size` | `int = 20`                                  | Batch cleared-area expansions every N steps (default 20). Larger values improve performance but may slightly reduce path quality. |
-| `profile`              | `bool = False`                              | Print a profiling report to stdout (default False).                                                                               |
-| `cut_direction`        | `str = 'ccw'`                               | Rotational direction of all cutting moves. `"cw"` or `"ccw"` (default `"ccw"`).                                                   |
-| `trace_path`           | `str &#124; None = None`                    | When set, write a per-step binary trace file for the Python inspector (debug builds only).                                        |
-| `on_progress`          | `Callable[[dict], None] &#124; None = None` | Optional callback receiving progress dicts.                                                                                       |
-| `batch_size`           | `int = 128`                                 | Ops batch size for on_progress (default 128).                                                                                     |
-| _Returns_              | `ops.assembly.AssemblyResult`               | Ops with cutting commands (entry not included).                                                                                   |
+| Parameter              | Type                                        | Description                                                                                                                           |
+| ---------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `part`                 | `ops.part.Part`                             | The part whose `cleared` field tracks accumulated workpiece state and whose geometry defines the pocket boundary and islands.         |
+| `tool_radius`          | `float = 3`                                 | Tool radius in mm (default 3.0).                                                                                                      |
+| `step_over`            | `float = 1.5`                               | Step-over distance (default 1.5).                                                                                                     |
+| `step_length`          | `float = 0.6`                               | Forward step length in mm (default 0.6).                                                                                              |
+| `target_z`             | `float = -5`                                | Cutting Z height (default -5.0).                                                                                                      |
+| `safe_z`               | `float = 2`                                 | Retract Z height for travel (default 2.0).                                                                                            |
+| `max_deflection_deg`   | `float = 30`                                | Maximum steering deflection per step in degrees (default 30).                                                                         |
+| `wall_margin`          | `float = 0`                                 | Extra clearance between tool and boundary (default 0.0).                                                                              |
+| `area_tolerance`       | `float = 1`                                 | Stop when remaining uncut area drops below this threshold (default 1.0).                                                              |
+| `cut_feed_rate`        | `int = 1200`                                | Feed rate for cutting moves (default 1200).                                                                                           |
+| `cut_power`            | `float = 1`                                 | Laser power for cutting moves (0.0-1.0, default 1.0).                                                                                 |
+| `start_pos`            | `tuple[float, float] &#124; None = None`    | Initial tool position (x, y). When None, auto-detected from the cleared-area frontier.                                                |
+| `start_heading`        | `float &#124; None = None`                  | Initial tool heading in radians. When None, auto-detected as the CCW tangent at start_pos.                                            |
+| `expansion_batch_size` | `int = 20`                                  | Batch cleared-area expansions every N steps (default 20). Larger values improve performance but may slightly reduce path quality.     |
+| `profile`              | `bool = False`                              | Print a profiling report to stdout (default False).                                                                                   |
+| `cut_direction`        | `str = 'ccw'`                               | Rotational direction of all cutting moves.                                                                                            |
+| `travel_mode`          | `str = 'cleared_area'`                      | `"cleared_area"` (skims across cleared floor) or `"safe_z"` (every travel retracts to `safe_z`). `"cw"` or `"ccw"` (default `"ccw"`). |
+| `trace_path`           | `str &#124; None = None`                    | When set, write a per-step binary trace file for the Python inspector (debug builds only).                                            |
+| `on_progress`          | `Callable[[dict], None] &#124; None = None` | Optional callback receiving progress dicts.                                                                                           |
+| `batch_size`           | `int = 128`                                 | Ops batch size for on_progress (default 128).                                                                                         |
+| _Returns_              | `ops.assembly.AssemblyResult`               | Ops with cutting commands (entry not included).                                                                                       |
 
 ![Circle-seed clearing in a square pocket with central island: seed, toolpath, and remaining.](images/ops-assembly-adaptive-adaptive-clearing-centre-island.png)
 

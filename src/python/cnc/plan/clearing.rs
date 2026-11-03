@@ -76,6 +76,9 @@ pub struct PyClearingWorkplanOptions {
     /// ``"cw"`` or ``"ccw"``: how passes walk their loops.
     #[pyo3(get)]
     pub cut_direction: String,
+    /// ``"cleared_area"`` or ``"safe_z"``: how travels are routed.
+    #[pyo3(get)]
+    pub travel_mode: String,
     /// Cut feed rate (mm/min) the plan's moves carry; ``None`` leaves
     /// the cut state unset, for embedders that map feeds themselves.
     #[pyo3(get)]
@@ -108,6 +111,10 @@ impl PyClearingWorkplanOptions {
             finishing: self.finishing,
             max_entry_angle_deg: self.max_entry_angle_deg,
             cut_direction: cd,
+            travel_mode: match self.travel_mode.as_str() {
+                "safe_z" => crate::ops::assembly::adaptive::TravelMode::SafeZ,
+                _ => crate::ops::assembly::adaptive::TravelMode::ClearedArea,
+            },
             feed_rate: self.feed_rate,
             plunge_feed: self.plunge_feed,
         }
@@ -132,6 +139,14 @@ impl PyClearingWorkplanOptions {
             cut_direction: match opts.cut_direction {
                 CutDirection::Cw => "cw".to_string(),
                 CutDirection::Ccw => "ccw".to_string(),
+            },
+            travel_mode: match opts.travel_mode {
+                crate::ops::assembly::adaptive::TravelMode::SafeZ => {
+                    "safe_z".to_string()
+                }
+                crate::ops::assembly::adaptive::TravelMode::ClearedArea => {
+                    "cleared_area".to_string()
+                }
             },
             feed_rate: opts.feed_rate,
             plunge_feed: opts.plunge_feed,
@@ -178,6 +193,7 @@ impl PyClearingWorkplanOptions {
         finishing = false,
         max_entry_angle_deg = 0.0,
         cut_direction = "ccw",
+        travel_mode = "cleared_area",
         feed_rate = None,
         plunge_feed = None,
     ))]
@@ -197,6 +213,7 @@ impl PyClearingWorkplanOptions {
         finishing: bool,
         max_entry_angle_deg: f64,
         cut_direction: &str,
+        travel_mode: &str,
         feed_rate: Option<f64>,
         plunge_feed: Option<f64>,
     ) -> Self {
@@ -216,6 +233,7 @@ impl PyClearingWorkplanOptions {
             finishing,
             max_entry_angle_deg,
             cut_direction: cut_direction.to_string(),
+            travel_mode: travel_mode.to_string(),
             feed_rate,
             plunge_feed,
         }
@@ -275,6 +293,7 @@ impl PyClearingWorkplanOptions {
     plunge_feed = None,
     max_entry_angle_deg = 0.0,
     cut_direction = "ccw",
+    travel_mode = "cleared_area",
 ))]
 pub fn plan_clearing_py(
     part: &Bound<'_, PyPart>,
@@ -296,10 +315,15 @@ pub fn plan_clearing_py(
     plunge_feed: Option<f64>,
     max_entry_angle_deg: f64,
     cut_direction: &str,
+    travel_mode: &str,
 ) -> PyResult<Py<super::PyPlan>> {
     let cd = match cut_direction.to_ascii_lowercase().as_str() {
         "cw" => CutDirection::Cw,
         _ => CutDirection::Ccw,
+    };
+    let tm = match travel_mode.to_ascii_lowercase().as_str() {
+        "safe_z" => crate::ops::assembly::adaptive::TravelMode::SafeZ,
+        _ => crate::ops::assembly::adaptive::TravelMode::ClearedArea,
     };
     let opts = ClearingWorkplanOptions {
         tool_radius,
@@ -315,10 +339,11 @@ pub fn plan_clearing_py(
         area_tolerance,
         max_deflection_deg,
         finishing,
+        max_entry_angle_deg,
         cut_direction: cd,
+        travel_mode: tm,
         feed_rate,
         plunge_feed,
-        max_entry_angle_deg,
     };
 
     let plan = clearing::plan_clearing(&part.borrow().inner, face_id, &opts)?;

@@ -44,7 +44,13 @@ pub enum LinkMode {
     None,
     /// Emit travel links between consecutive inputs, retracting to
     /// `safe_z` between moves and lifting to `safe_z` after the last.
-    Sequential { safe_z: f64 },
+    /// The link's descent into a lower entry Z is a cutting move at
+    /// `plunge_feed` when set; `None` keeps it a rapid travel, for
+    /// embedders that map feeds themselves.
+    Sequential {
+        safe_z: f64,
+        plunge_feed: Option<i32>,
+    },
 }
 
 #[derive(Debug, Clone)]

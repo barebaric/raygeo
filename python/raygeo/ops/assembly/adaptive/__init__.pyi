@@ -46,6 +46,11 @@ class AdaptiveClearingSpec:
         ``"cw"`` or ``"ccw"``.
         """
     @property
+    def travel_mode(self) -> builtins.str:
+        r"""
+        ``"cleared_area"`` or ``"safe_z"``.
+        """
+    @property
     def start_pos(self) -> typing.Optional[tuple[builtins.float, builtins.float]]:
         r"""
         Optional override start ``(x, y)``.
@@ -62,7 +67,7 @@ class AdaptiveClearingSpec:
     @property
     def tolerance(self) -> builtins.float: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __new__(cls, tool_radius: builtins.float = 3.0, step_over: builtins.float = 1.5, step_length: builtins.float = 0.6, target_z: builtins.float = -5.0, safe_z: builtins.float = 2.0, max_deflection_deg: builtins.float = 30.0, wall_margin: builtins.float = 0.0, area_tolerance: builtins.float = 1.0, cut_direction: builtins.str = 'ccw', start_pos: typing.Optional[tuple[builtins.float, builtins.float]] = None, start_heading: typing.Optional[builtins.float] = None, expansion_batch_size: builtins.int = 20, trace_path: typing.Optional[builtins.str] = None, tolerance: builtins.float = 0.1) -> AdaptiveClearingSpec: ...
+    def __new__(cls, tool_radius: builtins.float = 3.0, step_over: builtins.float = 1.5, step_length: builtins.float = 0.6, target_z: builtins.float = -5.0, safe_z: builtins.float = 2.0, max_deflection_deg: builtins.float = 30.0, wall_margin: builtins.float = 0.0, area_tolerance: builtins.float = 1.0, cut_direction: builtins.str = 'ccw', travel_mode: builtins.str = 'cleared_area', start_pos: typing.Optional[tuple[builtins.float, builtins.float]] = None, start_heading: typing.Optional[builtins.float] = None, expansion_batch_size: builtins.int = 20, trace_path: typing.Optional[builtins.str] = None, tolerance: builtins.float = 0.1) -> AdaptiveClearingSpec: ...
 
 class ResumePointNotFoundError(builtins.RuntimeError):
     r"""
@@ -76,7 +81,7 @@ class RoutingError(builtins.RuntimeError):
     """
     ...
 
-def adaptive_clearing(part: raygeo.ops.part.Part, tool_radius: float = 3, step_over: float = 1.5, step_length: float = 0.6, target_z: float = -5, safe_z: float = 2, max_deflection_deg: float = 30, wall_margin: float = 0, area_tolerance: float = 1, cut_feed_rate: int = 1200, cut_power: float = 1, start_pos: tuple[float, float] | None = None, start_heading: float | None = None, expansion_batch_size: int = 20, profile: bool = False, cut_direction: str = 'ccw', trace_path: str | None = None, on_progress: collections.abc.Callable[[dict], None] | None = None, batch_size: int = 128) -> raygeo.ops.assembly.AssemblyResult:
+def adaptive_clearing(part: raygeo.ops.part.Part, tool_radius: float = 3, step_over: float = 1.5, step_length: float = 0.6, target_z: float = -5, safe_z: float = 2, max_deflection_deg: float = 30, wall_margin: float = 0, area_tolerance: float = 1, cut_feed_rate: int = 1200, cut_power: float = 1, start_pos: tuple[float, float] | None = None, start_heading: float | None = None, expansion_batch_size: int = 20, profile: bool = False, cut_direction: str = 'ccw', travel_mode: str = 'cleared_area', trace_path: str | None = None, on_progress: collections.abc.Callable[[dict], None] | None = None, batch_size: int = 128) -> raygeo.ops.assembly.AssemblyResult:
     r"""
     Run forward-stepping adaptive clearing.
     
@@ -114,6 +119,8 @@ def adaptive_clearing(part: raygeo.ops.part.Part, tool_radius: float = 3, step_o
                                  reduce path quality.
     :param profile: Print a profiling report to stdout (default False).
     :param cut_direction: Rotational direction of all cutting moves.
+    :param travel_mode: ``"cleared_area"`` (skims across cleared
+         floor) or ``"safe_z"`` (every travel retracts to ``safe_z``).
                           ``"cw"`` or ``"ccw"`` (default ``"ccw"``).
     :param trace_path: When set, write a per-step binary trace file for
                        the Python inspector (debug builds only).
