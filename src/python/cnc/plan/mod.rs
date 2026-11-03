@@ -90,6 +90,11 @@ impl PyPlanStep {
             d.set_item("carrier", carrier)?;
             d.set_item("tool_radius", sl.tool_radius)?;
             d.set_item("target_z", sl.target_z)?;
+        } else if let Some(e) = spec.as_any().downcast_ref::<crate::ops::assembly::erosion::ErosionSpec>() {
+            d.set_item("tool_radius", e.tool_radius)?;
+            d.set_item("target_z", e.target_z)?;
+            d.set_item("safe_z", e.safe_z)?;
+            d.set_item("area_tolerance", e.area_tolerance)?;
         } else if let Some(a) = spec.as_any().downcast_ref::<crate::ops::assembly::adaptive::AdaptiveClearingSpec>() {
             d.set_item("tool_radius", a.tool_radius)?;
             d.set_item("step_over", a.step_over)?;

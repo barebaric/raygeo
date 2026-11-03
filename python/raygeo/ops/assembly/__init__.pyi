@@ -23,6 +23,7 @@ import typing
 from . import adaptive
 from . import contour
 from . import custom
+from . import erosion
 from . import frame
 from . import helix
 from . import material_test_grid
@@ -43,6 +44,7 @@ __all__ = [
     "adaptive",
     "contour",
     "custom",
+    "erosion",
     "frame",
     "helix",
     "material_test_grid",

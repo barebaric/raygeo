@@ -33,6 +33,7 @@ use crate::geo::shape::polygon::{
 };
 use crate::geo::types::{Point, Point3D, Polygon};
 use crate::ops::assembly::adaptive::AdaptiveClearingSpec;
+use crate::ops::assembly::erosion::ErosionSpec;
 use crate::ops::assembly::profile::{
     ProfileKind, ProfileRampSpec, ProfileSpec,
 };
@@ -311,6 +312,19 @@ pub fn plan_clearing(
             _ => None,
         };
 
+        let region_boundary = if use_region_bnd {
+            Some((
+                region.polygon.clone(),
+                islands_inside_with_margin(
+                    &region.polygon,
+                    &islands,
+                    opts.wall_margin,
+                ),
+            ))
+        } else {
+            None
+        };
+
         steps.push(PlanStep {
             face_id: cur_face.clone(),
             spec: Arc::new(AdaptiveClearingSpec {
@@ -330,18 +344,26 @@ pub fn plan_clearing(
                 tolerance: 0.01,
                 cancel_check: None,
             }),
-            region_boundary: if use_region_bnd {
-                Some((
-                    region.polygon.clone(),
-                    islands_inside_with_margin(
-                        &region.polygon,
-                        &islands,
-                        opts.wall_margin,
-                    ),
-                ))
-            } else {
-                None
-            },
+            region_boundary: region_boundary.clone(),
+        });
+
+        // Slot-style erosion of the thin residual the clearing pass's
+        // convergence gate forgives: the discriminator insets the
+        // remaining material by the step scale, so sub-step-scale
+        // clumps — the slivers a high step-over strands between passes
+        // — read as converged and stand uncut. The erosion step
+        // re-examines the accumulated cleared area at execution time,
+        // slots every actionable clump inside the tool-centre envelope,
+        // and emits nothing when the pass converged cleanly.
+        steps.push(PlanStep {
+            face_id: cur_face.clone(),
+            spec: Arc::new(ErosionSpec {
+                tool_radius: opts.tool_radius,
+                target_z: opts.target_z,
+                safe_z: opts.safe_z,
+                area_tolerance: opts.area_tolerance,
+            }),
+            region_boundary,
         });
 
         for (p_idx, passage) in passages.iter().enumerate() {
