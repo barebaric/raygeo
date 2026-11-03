@@ -1,5 +1,7 @@
 """Tests for plan_clearing in cnc/plan/clearing."""
 
+import math
+
 import pytest
 
 from raygeo.cnc.execution.intent import create_intent, run_intent
@@ -27,6 +29,98 @@ def _dumbbell():
 def _plan(boundary, **kwargs):
     part = Part.from_polygons(boundary, [], (0.0, 0.0))
     return plan_clearing(part, "", **kwargs)
+
+
+def _circle(cx, cy, r, n=64):
+    return [
+        (
+            cx + r * math.cos(2 * math.pi * i / n),
+            cy + r * math.sin(2 * math.pi * i / n),
+        )
+        for i in range(n)
+    ]
+
+
+def _floor_segments(ops, target_z):
+    """The floor-level cutting segments as ((x0, y0), (x1, y1)) pairs."""
+    segments = []
+    prev = None
+    for cmd in ops.to_dict()["commands"]:
+        if cmd["type"] not in ("MOVE_TO", "LINE_TO"):
+            continue
+        end = cmd["end"]
+        cur = (end[0], end[1]) if end[2] <= target_z + 0.01 else None
+        if prev is not None and cur is not None:
+            segments.append((prev, cur))
+        prev = cur
+    return segments
+
+
+def _dist_seg(pt, seg):
+    (ax, ay), (bx, by) = seg
+    dx, dy = bx - ax, by - ay
+    l2 = dx * dx + dy * dy
+    if l2 == 0.0:
+        return math.hypot(pt[0] - ax, pt[1] - ay)
+    t = ((pt[0] - ax) * dx + (pt[1] - ay) * dy) / l2
+    t = max(0.0, min(1.0, t))
+    return math.hypot(pt[0] - (ax + t * dx), pt[1] - (ay + t * dy))
+
+
+def _point_in_polygon(pt, poly):
+    x, y = pt
+    inside = False
+    n = len(poly)
+    for i in range(n):
+        ax, ay = poly[i]
+        bx, by = poly[(i + 1) % n]
+        if (ay > y) != (by > y):
+            xint = ax + (y - ay) * (bx - ax) / (by - ay)
+            if x < xint:
+                inside = not inside
+    return inside
+
+
+def _boundary_dist(pt, poly):
+    return min(
+        _dist_seg(pt, (poly[i], poly[(i + 1) % len(poly)]))
+        for i in range(len(poly))
+    )
+
+
+def _uncut_area(boundary, islands, segments, tool_radius, grid=0.5):
+    """Grid-probe the machinable floor (boundary eroded by the tool
+    radius, islands buffered by the tool radius) and return the total
+    area of the points farther than tool_radius + 0.05 from every
+    floor-level cut segment."""
+    xs = [p[0] for p in boundary]
+    ys = [p[1] for p in boundary]
+
+    def machinable(pt):
+        if not _point_in_polygon(pt, boundary):
+            return False
+        if _boundary_dist(pt, boundary) < tool_radius - 1e-6:
+            return False
+        for island in islands:
+            if _point_in_polygon(pt, island) and (
+                _boundary_dist(pt, island) <= tool_radius + 1e-6
+            ):
+                return False
+        return True
+
+    reach = tool_radius + 0.05
+    uncut = 0.0
+    x = min(xs) + tool_radius
+    while x <= max(xs) - tool_radius:
+        y = min(ys) + tool_radius
+        while y <= max(ys) - tool_radius:
+            if machinable((x, y)):
+                d = min(_dist_seg((x, y), seg) for seg in segments)
+                if d > reach:
+                    uncut += grid * grid
+            y += grid
+        x += grid
+    return uncut
 
 
 def test_plan_clearing_returns_plan():
@@ -383,3 +477,125 @@ def test_step_over_near_the_diameter_still_clears_the_floor():
                 y += 0.5
             x += 0.5
         assert checked > 4000, f"only {checked} floor points checked"
+
+
+def test_entry_spiral_covers_the_seed_disk_at_high_step_over():
+    """Issue #99: the entry helix machines the floor only along the final
+    arc of its descent, and an outward spiral that started at the helix
+    radius left the crescent between the seed disk and the first spiral
+    turn standing — the convergence discriminator's step-scaled inset
+    erased it, and the pass completed silently with uncut floor inside
+    the entry. The spiral now starts at the center and physically
+    machines the whole seed disk, so the floor around the entry stays
+    covered up to the full step-over the planner accepts."""
+    rect = _rect(0, 0, 40, 30)
+    span = 5.0
+    reach = 3.05
+    grid = 0.25
+    for step_over in (4.0, 5.0, 6.0):
+        part = Part.from_polygons(rect, [], (0.0, 0.0))
+        plan = plan_clearing(
+            part,
+            "",
+            tool_radius=3.0,
+            step_over=step_over,
+            target_z=-2.0,
+            safe_z=10.0,
+            finishing=True,
+        )
+        spirals = [s for s in plan.steps if s.kind == "spiral"]
+        assert spirals, "expected a spiral entry"
+        for step in spirals:
+            assert step.spec_params()["start_radius"] == 0.0, (
+                "the spiral entry must start at the center, or the floor "
+                "between the seed disk and the first turn stays uncut"
+            )
+        ops = run_intent(create_intent(plan, part, 0))
+        segments = _floor_segments(ops, -2.0)
+        cx, cy = spirals[0].spec_params()["center"]
+        # Segments whose sweep can reach the probe box: bbox overlapping
+        # the box inflated by the reach.
+        near = [
+            seg
+            for seg in segments
+            if max(seg[0][0], seg[1][0]) >= cx - span - reach
+            and min(seg[0][0], seg[1][0]) <= cx + span + reach
+            and max(seg[0][1], seg[1][1]) >= cy - span - reach
+            and min(seg[0][1], seg[1][1]) <= cy + span + reach
+        ]
+        assert len(near) > 20, "no cutting moves near the entry"
+        x = cx - span
+        while x <= cx + span:
+            y = cy - span
+            while y <= cy + span:
+                d = min(_dist_seg((x, y), seg) for seg in near)
+                assert d <= reach, (
+                    f"floor point ({x:.2f}, {y:.2f}) is {d:.3f} from the "
+                    f"nearest cut at step_over {step_over}: the entry left "
+                    "uncut material inside the seed disk region"
+                )
+                y += grid
+            x += grid
+
+
+def test_two_room_pocket_with_ramp_entry_clears_the_floor():
+    """Issue #99, two-room repro: a region whose inscribed circle is too
+    small for a helix entry fell back to the straight-ramp entry, whose
+    cleared-area seed was swept with the zigzag amplitude — 0.0 for a
+    clamped straight ramp — so the cleared area stayed empty, the
+    adaptive pass silently skipped, and only the ramp line and the wall
+    profile were machined, leaving ~35% of the machinable floor standing
+    (and driving the ramp straight through the island, since the
+    fallback carrier ignored the islands). The ramp now seeds the
+    floor-level tail of its path at tool width, its carrier keeps clear
+    of the islands, and the adaptive pass runs to the far room."""
+    rooms = [
+        (0.0, 0.0),
+        (30.0, 0.0),
+        (30.0, 8.0),
+        (60.0, 8.0),
+        (60.0, 26.0),
+        (30.0, 26.0),
+        (30.0, 40.0),
+        (0.0, 40.0),
+    ]
+    island = _circle(15.0, 20.0, 4.0)
+    part = Part.from_polygons(rooms, [island], (0.0, 0.0))
+    plan = plan_clearing(
+        part,
+        "",
+        tool_radius=3.0,
+        step_over=5.5,
+        target_z=-2.0,
+        safe_z=10.0,
+        finishing=True,
+    )
+    ops = run_intent(create_intent(plan, part, 0))
+    segments = _floor_segments(ops, -2.0)
+    assert len(segments) > 800, (
+        f"only {len(segments)} floor segments: the adaptive pass did not "
+        "run after the ramp entry"
+    )
+    # Every floor cut keeps the tool out of the island.
+    for seg in segments:
+        for pt in seg:
+            d = _boundary_dist(pt, island)
+            assert d >= 3.0 - 0.05, (
+                f"cut at ({pt[0]:.2f}, {pt[1]:.2f}) is {d:.3f} from the "
+                "island (want >= 3.0)"
+            )
+    # The wavefront machined beyond the ramp swath: far room off the
+    # ramp line, and the far corners of the entry room.
+    for px, py in ((45.0, 12.0), (7.5, 7.5), (15.0, 32.0)):
+        d = min(_dist_seg((px, py), seg) for seg in segments)
+        assert d <= 3.05, (
+            f"floor at ({px}, {py}) is {d:.3f} from the nearest cut"
+        )
+    # Whole-floor probe: the machinable floor is covered except for the
+    # sub-millimetre slivers a ~92% step-over strands between passes
+    # (previously ~372 mm^2 stood uncut when the pass silently skipped).
+    uncut = _uncut_area(rooms, [island], segments, 3.0, grid=0.5)
+    assert uncut <= 12.0, (
+        f"{uncut:.1f} mm^2 of the machinable floor is farther than the "
+        "tool radius from every cut"
+    )
