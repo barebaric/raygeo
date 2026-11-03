@@ -13,6 +13,7 @@ use pyo3_stub_gen::derive::{
 };
 
 use crate::cnc::plan::clearing::{self, ClearingWorkplanOptions};
+use crate::ops::types::CutDirection;
 use crate::python::ops::part::part::PyPart;
 
 pub(crate) fn register(plan_mod: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -72,6 +73,9 @@ pub struct PyClearingWorkplanOptions {
     /// historical entry behaviour.
     #[pyo3(get)]
     pub max_entry_angle_deg: f64,
+    /// ``"cw"`` or ``"ccw"``: how passes walk their loops.
+    #[pyo3(get)]
+    pub cut_direction: String,
     /// Cut feed rate (mm/min) the plan's moves carry; ``None`` leaves
     /// the cut state unset, for embedders that map feeds themselves.
     #[pyo3(get)]
@@ -84,6 +88,10 @@ pub struct PyClearingWorkplanOptions {
 
 impl PyClearingWorkplanOptions {
     pub fn into_core(self) -> ClearingWorkplanOptions {
+        let cd = match self.cut_direction.as_str() {
+            "cw" => CutDirection::Cw,
+            _ => CutDirection::Ccw,
+        };
         ClearingWorkplanOptions {
             tool_radius: self.tool_radius,
             step_over: self.step_over,
@@ -99,6 +107,7 @@ impl PyClearingWorkplanOptions {
             max_deflection_deg: self.max_deflection_deg,
             finishing: self.finishing,
             max_entry_angle_deg: self.max_entry_angle_deg,
+            cut_direction: cd,
             feed_rate: self.feed_rate,
             plunge_feed: self.plunge_feed,
         }
@@ -120,6 +129,10 @@ impl PyClearingWorkplanOptions {
             max_deflection_deg: opts.max_deflection_deg,
             finishing: opts.finishing,
             max_entry_angle_deg: opts.max_entry_angle_deg,
+            cut_direction: match opts.cut_direction {
+                CutDirection::Cw => "cw".to_string(),
+                CutDirection::Ccw => "ccw".to_string(),
+            },
             feed_rate: opts.feed_rate,
             plunge_feed: opts.plunge_feed,
         }
@@ -144,6 +157,7 @@ impl PyClearingWorkplanOptions {
     ///                             direction (degrees).
     /// :param finishing: Add the finishing wall profile.
     /// :param max_entry_angle_deg: Steepest entry descent (degrees).
+    /// :param cut_direction: ``"cw"`` or ``"ccw"`` (default ``"ccw"``).
     /// :param feed_rate: Cut feed rate (mm/min).
     /// :param plunge_feed: Vertical plunge feed (mm/min).
     #[new]
@@ -163,6 +177,7 @@ impl PyClearingWorkplanOptions {
         max_deflection_deg = 30.0,
         finishing = false,
         max_entry_angle_deg = 0.0,
+        cut_direction = "ccw",
         feed_rate = None,
         plunge_feed = None,
     ))]
@@ -181,6 +196,7 @@ impl PyClearingWorkplanOptions {
         max_deflection_deg: f64,
         finishing: bool,
         max_entry_angle_deg: f64,
+        cut_direction: &str,
         feed_rate: Option<f64>,
         plunge_feed: Option<f64>,
     ) -> Self {
@@ -199,6 +215,7 @@ impl PyClearingWorkplanOptions {
             max_deflection_deg,
             finishing,
             max_entry_angle_deg,
+            cut_direction: cut_direction.to_string(),
             feed_rate,
             plunge_feed,
         }
@@ -257,6 +274,7 @@ impl PyClearingWorkplanOptions {
     feed_rate = None,
     plunge_feed = None,
     max_entry_angle_deg = 0.0,
+    cut_direction = "ccw",
 ))]
 pub fn plan_clearing_py(
     part: &Bound<'_, PyPart>,
@@ -277,7 +295,12 @@ pub fn plan_clearing_py(
     feed_rate: Option<f64>,
     plunge_feed: Option<f64>,
     max_entry_angle_deg: f64,
+    cut_direction: &str,
 ) -> PyResult<Py<super::PyPlan>> {
+    let cd = match cut_direction.to_ascii_lowercase().as_str() {
+        "cw" => CutDirection::Cw,
+        _ => CutDirection::Ccw,
+    };
     let opts = ClearingWorkplanOptions {
         tool_radius,
         step_over,
@@ -292,6 +315,7 @@ pub fn plan_clearing_py(
         area_tolerance,
         max_deflection_deg,
         finishing,
+        cut_direction: cd,
         feed_rate,
         plunge_feed,
         max_entry_angle_deg,
