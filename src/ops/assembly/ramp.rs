@@ -6,8 +6,10 @@ use crate::error::RaygeoResult;
 use crate::geo::algo::ramp::{
     generate_ramp_3d, RampOptions as GeoRampOptions, RampStyle,
 };
-use crate::geo::shape::polygon::get_segment_swept_polygon;
-use crate::geo::types::{Point, Point3D};
+use crate::geo::shape::polygon::{
+    get_circle_polygon, get_polyline_swept_polygon,
+};
+use crate::geo::types::{Point, Point3D, Polygon};
 use crate::ops::assembly::result::AssemblyMeta;
 use crate::ops::assembly::trace_utils as tu;
 use crate::ops::assembly::tracelet::write_polyline;
@@ -26,6 +28,9 @@ pub struct RampSpec {
     pub max_ramp_angle_deg: f64,
     pub style: RampStyle,
     pub lateral_amplitude: f64,
+    /// Tool radius, used to seed the cleared area with the swath the
+    /// ramp actually machined at floor level.
+    pub tool_radius: f64,
 }
 
 impl Assembler for RampSpec {
@@ -99,8 +104,26 @@ pub fn generate_ramp(
         }
     };
 
-    let cleared_polygons =
-        get_segment_swept_polygon(opts.start, opts.end, opts.lateral_amplitude);
+    // Seed the cleared area with the swath the ramp actually machined at
+    // floor level: the tail of the path sitting at (or within the film
+    // tolerance of) `z_end`, swept with the tool radius. The descent
+    // above the floor only opened a sloped trench — counting it as
+    // cleared would make the cleared-area model claim material the
+    // wavefront then never re-machines.
+    const FLOOR_FILM_TOL: f64 = 0.05;
+    let mut floor_tail: Vec<Point> = Vec::new();
+    for p in path.iter().rev() {
+        if p.z > opts.z_end + FLOOR_FILM_TOL {
+            break;
+        }
+        floor_tail.push(Point::new(p.x, p.y));
+    }
+    floor_tail.reverse();
+    let cleared_polygons: Vec<Polygon> = match floor_tail.len() {
+        0 => vec![],
+        1 => vec![get_circle_polygon(floor_tail[0], opts.tool_radius, 32)],
+        _ => get_polyline_swept_polygon(&floor_tail, opts.tool_radius),
+    };
 
     write_polyline(trace, &path, true, Some(cut_state));
     face.cleared.cut(&cleared_polygons);

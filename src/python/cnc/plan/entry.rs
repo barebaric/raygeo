@@ -42,6 +42,7 @@ pub(crate) fn register(plan_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     safe_margin = 1.0,
     angular_step = 0.1,
     max_entry_angle_deg = 0.0,
+    wall_margin = 0.0,
 ))]
 fn plan_entry_py(
     py: Python<'_>,
@@ -57,6 +58,7 @@ fn plan_entry_py(
     safe_margin: f64,
     angular_step: f64,
     max_entry_angle_deg: f64,
+    wall_margin: f64,
 ) -> PyResult<Vec<Py<super::PyPlanStep>>> {
     let polygon: Vec<Point> = region_polygon
         .into_iter()
@@ -84,6 +86,7 @@ fn plan_entry_py(
         plunge_pitch,
         safe_margin,
         angular_step,
+        wall_margin,
         max_entry_angle_deg,
     };
 

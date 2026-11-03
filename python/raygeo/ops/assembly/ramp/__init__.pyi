@@ -31,10 +31,16 @@ class RampSpec:
         """
     @property
     def lateral_amplitude(self) -> builtins.float: ...
+    @property
+    def tool_radius(self) -> builtins.float:
+        r"""
+        Tool radius used to seed the cleared area with the swath the
+        ramp machined at floor level.
+        """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __new__(cls, start: tuple[builtins.float, builtins.float], end: tuple[builtins.float, builtins.float], z_start: builtins.float, z_end: builtins.float, max_ramp_angle_deg: builtins.float = 45.0, style: builtins.str = 'zigzag', lateral_amplitude: builtins.float = 2.0) -> RampSpec: ...
+    def __new__(cls, start: tuple[builtins.float, builtins.float], end: tuple[builtins.float, builtins.float], z_start: builtins.float, z_end: builtins.float, max_ramp_angle_deg: builtins.float = 45.0, style: builtins.str = 'zigzag', lateral_amplitude: builtins.float = 2.0, tool_radius: builtins.float = 3.0) -> RampSpec: ...
 
-def generate_ramp(part: raygeo.ops.part.Part, start: tuple[float, float], end: tuple[float, float], z_start: float, z_end: float, max_ramp_angle_deg: float = 45, style: str = 'zigzag', lateral_amplitude: float = 2, state: raygeo.ops.state.State | None = None) -> raygeo.ops.assembly.AssemblyResult:
+def generate_ramp(part: raygeo.ops.part.Part, start: tuple[float, float], end: tuple[float, float], z_start: float, z_end: float, max_ramp_angle_deg: float = 45, style: str = 'zigzag', lateral_amplitude: float = 2, tool_radius: float = 3, state: raygeo.ops.state.State | None = None) -> raygeo.ops.assembly.AssemblyResult:
     r"""
     Generate a ramp entry path.
     
@@ -48,6 +54,7 @@ def generate_ramp(part: raygeo.ops.part.Part, start: tuple[float, float], end: t
     :param max_ramp_angle_deg: Maximum ramp angle in degrees (default 45).
     :param style: ``"linear"`` or ``"zigzag"`` (default ``"zigzag"``).
     :param lateral_amplitude: Lateral oscillation amplitude for zigzag (default 2.0).
+    :param tool_radius: Tool radius used to seed the cleared area (default 3.0).
     :param state: Optional machine state to apply before the path.
     :returns: An :class:`AssemblyResult` with the ramp path.
     """

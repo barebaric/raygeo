@@ -137,6 +137,26 @@ fn islands_inside(polygon: &Polygon, islands: &[Polygon]) -> Vec<Polygon> {
         .collect()
 }
 
+/// The islands inside `polygon`, buffered by `wall_margin`.
+///
+/// The clearing engine insets the boundary by the tool radius but takes the
+/// islands as given, so the islands a margin-scoped step sees must already
+/// carry the margin: the boundary arrives eroded by `wall_margin` (walls)
+/// while raw islands would leave the tool only `tool_radius` clear of them.
+fn islands_inside_with_margin(
+    polygon: &Polygon,
+    islands: &[Polygon],
+    wall_margin: f64,
+) -> Vec<Polygon> {
+    islands_inside(polygon, islands)
+        .iter()
+        .flat_map(|island| {
+            offset_polygon(island, wall_margin, JoinStyle::Round)
+        })
+        .filter(|ring| ring.len() >= 3)
+        .collect()
+}
+
 #[prof]
 pub fn plan_clearing(
     part: &Part,
@@ -219,6 +239,7 @@ pub fn plan_clearing(
         plunge_pitch: opts.plunge_pitch,
         safe_margin: opts.safe_margin,
         angular_step: opts.angular_step,
+        wall_margin: opts.wall_margin,
         max_entry_angle_deg: opts.max_entry_angle_deg,
     };
 
@@ -312,7 +333,11 @@ pub fn plan_clearing(
             region_boundary: if use_region_bnd {
                 Some((
                     region.polygon.clone(),
-                    islands_inside(&region.polygon, &islands),
+                    islands_inside_with_margin(
+                        &region.polygon,
+                        &islands,
+                        opts.wall_margin,
+                    ),
                 ))
             } else {
                 None
