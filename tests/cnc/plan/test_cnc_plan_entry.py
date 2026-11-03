@@ -206,9 +206,9 @@ def test_entry_angle_caps_the_ramp_entries():
     for steps, expected in ((steep, 45.0), (gentle, 3.0)):
         for s in steps:
             if s.kind in ("toroidal_clear", "ramp"):
-                assert s.spec_params()["max_ramp_angle_deg"] == expected, (
-                    f"{s.kind}: cap {s.spec_params['max_ramp_angle_deg']}"
-                    f", expected {expected}"
+                cap = s.spec_params()["max_ramp_angle_deg"]
+                assert cap == expected, (
+                    f"{s.kind}: cap {cap}, expected {expected}"
                 )
 
 
