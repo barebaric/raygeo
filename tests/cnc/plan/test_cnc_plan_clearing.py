@@ -151,6 +151,19 @@ def test_plan_clearing_with_finishing():
     assert "profile_inner" in kinds
 
 
+def test_finishing_profile_carries_planner_tuning():
+    """The finishing wall pass is built from the canonical constructor:
+    its engagement gates are the planner's values."""
+    boundary = _rect(-20, -20, 40, 40)
+    plan = _plan(boundary, tool_radius=3.0, step_over=2.0, finishing=True)
+    profiles = [s for s in plan.steps if s.kind == "profile_inner"]
+    assert profiles, "finishing adds a profile step"
+    params = profiles[-1].spec_params()
+    assert params["engagement_area_threshold"] == pytest.approx(1.0)
+    assert params["engagement_angle_threshold"] == pytest.approx(30.0)
+    assert params["feed_reduction_factor"] == pytest.approx(0.5)
+
+
 def test_plan_clearing_without_finishing():
     boundary = _rect(-20, -20, 40, 40)
     plan = _plan(boundary, tool_radius=3.0, finishing=False)

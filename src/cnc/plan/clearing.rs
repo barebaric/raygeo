@@ -77,6 +77,43 @@ pub struct ClearingWorkplanOptions {
     pub plunge_feed: Option<f64>,
 }
 
+impl ClearingWorkplanOptions {
+    /// Options carrying the planner's canonical scales for
+    /// `tool_radius`: a fifth-of-a-radius step length, a
+    /// fifth-of-a-radius safe margin, a plunge pitch of a third of the
+    /// radius, and the planner's angular and area tuning (0.1 rad
+    /// angular steps, a 1.0 mm² area tolerance, 30° max deflection).
+    /// The fields a caller must shape per operation — `step_over`,
+    /// `wall_margin`, `stock_to_leave`, `finishing`, the
+    /// `max_entry_angle_deg` cap and the feeds — keep their neutral
+    /// defaults; set them on the returned value.
+    pub fn for_tool(
+        tool_radius: f64,
+        step_over: f64,
+        target_z: f64,
+        safe_z: f64,
+    ) -> Self {
+        Self {
+            tool_radius,
+            step_over,
+            step_length: tool_radius * 0.2,
+            target_z,
+            safe_z,
+            wall_margin: 0.0,
+            safe_margin: tool_radius * 0.2,
+            stock_to_leave: 0.0,
+            plunge_pitch: tool_radius * 0.3,
+            angular_step: 0.1,
+            area_tolerance: 1.0,
+            max_deflection_deg: 30.0,
+            finishing: false,
+            max_entry_angle_deg: 0.0,
+            feed_rate: None,
+            plunge_feed: None,
+        }
+    }
+}
+
 /// A directed edge in the region graph.
 #[derive(Clone)]
 struct PassageEdge {
@@ -455,43 +492,44 @@ pub fn plan_clearing(
         .len()
             > 1;
 
-        let profile_step = |region_boundary| PlanStep {
-            face_id: cur_face.clone(),
-            spec: Arc::new(ProfileSpec {
-                kind: ProfileKind::Inner,
-                tool_radius: opts.tool_radius,
-                step_over: opts.step_over,
-                step_length: opts.step_length,
-                target_z: opts.target_z,
-                safe_z: opts.safe_z,
-                wall_margin: opts.wall_margin,
-                stock_to_leave: opts.stock_to_leave,
-                cut_direction: crate::ops::types::CutDirection::Ccw,
-                start_pos: None,
-                tolerance: 0.05,
-                expansion_batch_size: 20,
-                cancel_check: None,
-                engagement_area_threshold: 1.0,
-                engagement_angle_threshold: 30.0,
-                feed_reduction_factor: 0.5,
-                trace_path: None,
-            }),
-            region_boundary,
+        // The finishing specs come from the canonical constructors: only
+        // the operation-shaped fields (step-over, step length, margins,
+        // stock, tolerance) ride on the options; the tuning scales are
+        // the constructors'.
+        let profile_step = |region_boundary| {
+            let mut spec = ProfileSpec::for_tool(
+                ProfileKind::Inner,
+                opts.tool_radius,
+                opts.target_z,
+                opts.safe_z,
+            );
+            spec.step_over = opts.step_over;
+            spec.step_length = opts.step_length;
+            spec.wall_margin = opts.wall_margin;
+            spec.stock_to_leave = opts.stock_to_leave;
+            spec.tolerance = 0.05;
+            PlanStep {
+                face_id: cur_face.clone(),
+                spec: Arc::new(spec),
+                region_boundary,
+            }
         };
-        let ramp_step = |region_boundary| PlanStep {
-            face_id: cur_face.clone(),
-            spec: Arc::new(ProfileRampSpec {
-                kind: ProfileKind::Inner,
-                tool_radius: opts.tool_radius,
-                wall_margin: opts.wall_margin,
-                stock_to_leave: opts.stock_to_leave,
-                ramp_angle: opts.max_entry_angle_deg.to_radians(),
-                z_start: opts.safe_z,
-                z_end: opts.target_z,
-                cut_direction: crate::ops::types::CutDirection::Ccw,
-                tolerance: 0.05,
-            }),
-            region_boundary,
+        let ramp_step = |region_boundary| {
+            let mut spec = ProfileRampSpec::for_tool(
+                ProfileKind::Inner,
+                opts.tool_radius,
+                opts.max_entry_angle_deg.to_radians(),
+                opts.safe_z,
+                opts.target_z,
+            );
+            spec.wall_margin = opts.wall_margin;
+            spec.stock_to_leave = opts.stock_to_leave;
+            spec.tolerance = 0.05;
+            PlanStep {
+                face_id: cur_face.clone(),
+                spec: Arc::new(spec),
+                region_boundary,
+            }
         };
         if has_unreachable || inset_splits {
             for reg in &regions {
