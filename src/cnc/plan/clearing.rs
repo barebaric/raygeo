@@ -46,6 +46,7 @@ use crate::ops::feature::slot_path::{
     find_slot_path, measure_passage_min_width,
 };
 use crate::ops::part::Part;
+use crate::ops::types::CutDirection;
 
 /// Options for [`plan_clearing`].
 ///
@@ -66,6 +67,11 @@ pub struct ClearingWorkplanOptions {
     pub area_tolerance: f64,
     pub max_deflection_deg: f64,
     pub finishing: bool,
+    /// How passes walk their loops: CCW walks a loop as stored, CW
+    /// walks it backwards. The adaptive passes, the finishing wall
+    /// profile and its ramp all follow this direction; the historical
+    /// behaviour was CCW everywhere.
+    pub cut_direction: CutDirection,
     /// Steepest entry descent in degrees; `<= 0` keeps the planner's
     /// historical entry behaviour (see
     /// [`EntryWorkplanOptions::max_entry_angle_deg`]).
@@ -109,6 +115,7 @@ impl ClearingWorkplanOptions {
             max_deflection_deg: 30.0,
             finishing: false,
             max_entry_angle_deg: 0.0,
+            cut_direction: CutDirection::Ccw,
             feed_rate: None,
             plunge_feed: None,
         }
@@ -373,7 +380,7 @@ pub fn plan_clearing(
                 max_deflection_deg: opts.max_deflection_deg,
                 wall_margin: opts.wall_margin,
                 area_tolerance: opts.area_tolerance,
-                cut_direction: crate::ops::types::CutDirection::Ccw,
+                cut_direction: opts.cut_direction,
                 start_pos: start_pos_3d,
                 start_heading: None,
                 expansion_batch_size: 20,
@@ -516,8 +523,8 @@ pub fn plan_clearing(
 
         // The finishing specs come from the canonical constructors: only
         // the operation-shaped fields (step-over, step length, margins,
-        // stock, tolerance) ride on the options; the tuning scales are
-        // the constructors'.
+        // stock, tolerance, direction) ride on the options; the tuning
+        // scales are the constructors'.
         let profile_step = |region_boundary| {
             let mut spec = ProfileSpec::for_tool(
                 ProfileKind::Inner,
@@ -530,6 +537,7 @@ pub fn plan_clearing(
             spec.wall_margin = opts.wall_margin;
             spec.stock_to_leave = opts.stock_to_leave;
             spec.tolerance = 0.05;
+            spec.cut_direction = opts.cut_direction;
             PlanStep {
                 face_id: cur_face.clone(),
                 spec: Arc::new(spec),
@@ -547,6 +555,7 @@ pub fn plan_clearing(
             spec.wall_margin = opts.wall_margin;
             spec.stock_to_leave = opts.stock_to_leave;
             spec.tolerance = 0.05;
+            spec.cut_direction = opts.cut_direction;
             PlanStep {
                 face_id: cur_face.clone(),
                 spec: Arc::new(spec),

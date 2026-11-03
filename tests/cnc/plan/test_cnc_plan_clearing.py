@@ -190,6 +190,7 @@ def test_for_tool_constructors_carry_the_planner_scales():
     assert ramp.tolerance == pytest.approx(0.1)
 
     opts = ClearingWorkplanOptions.for_tool(3.0, 2.0, -4.0, 5.0)
+    assert opts.cut_direction == "ccw"
     assert opts.step_length == pytest.approx(0.6)
     assert opts.safe_margin == pytest.approx(0.6)
     assert opts.plunge_pitch == pytest.approx(0.9)
@@ -197,6 +198,47 @@ def test_for_tool_constructors_carry_the_planner_scales():
     assert opts.max_deflection_deg == pytest.approx(30.0)
     assert opts.feed_rate is None
     assert opts.plunge_feed is None
+
+
+def test_cut_direction_reaches_the_adaptive_passes():
+    """A requested cut direction is pinned on every clearing step."""
+    boundary = _rect(-20, -20, 40, 40)
+    plan = _plan(boundary, tool_radius=3.0, cut_direction="cw")
+    adaptive = [s for s in plan.steps if s.kind == "adaptive_clearing"]
+    assert adaptive, "clearing plans adaptive passes"
+    assert all(s.spec_params()["cut_direction"] == "Cw" for s in adaptive)
+
+
+def test_cut_direction_reaches_the_finishing_specs():
+    """The finishing wall profile and its ramp follow the direction too."""
+    boundary = _rect(-20, -20, 40, 40)
+    plan = _plan(
+        boundary,
+        tool_radius=3.0,
+        finishing=True,
+        max_entry_angle_deg=10.0,
+        cut_direction="cw",
+    )
+    for kind in ("profile_inner", "profile_ramp"):
+        steps = [s for s in plan.steps if s.kind == kind]
+        assert steps, f"no {kind} step in {[s.kind for s in plan.steps]}"
+        assert all(s.spec_params()["cut_direction"] == "Cw" for s in steps)
+
+
+def test_cut_direction_defaults_to_ccw():
+    """Without the knob the plans stay CCW, as they always were."""
+    boundary = _rect(-20, -20, 40, 40)
+    plan = _plan(
+        boundary,
+        tool_radius=3.0,
+        finishing=True,
+        max_entry_angle_deg=10.0,
+    )
+    assert plan.steps, "the plan has steps"
+    for s in plan.steps:
+        params = s.spec_params()
+        if "cut_direction" in params:
+            assert params["cut_direction"] == "Ccw"
 
 
 def test_plan_clearing_without_finishing():

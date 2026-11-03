@@ -27,6 +27,14 @@ angular_step: float
 area_tolerance: float
 ```
 
+### `cut_direction`
+
+```python
+cut_direction: str
+```
+
+`"cw"` or `"ccw"`: how passes walk their loops.
+
 ### `feed_rate`
 
 ```python
@@ -167,6 +175,7 @@ plan_clearing(
     feed_rate: Optional[float] = None,
     plunge_feed: Optional[float] = None,
     max_entry_angle_deg: float = 0.0,
+    cut_direction: str = 'ccw',
 ) -> plan.Plan
 ```
 
@@ -190,6 +199,7 @@ plan_clearing(
 | `feed_rate`           | `Optional[float] = None` |             |
 | `plunge_feed`         | `Optional[float] = None` |             |
 | `max_entry_angle_deg` | `float = 0.0`            |             |
+| `cut_direction`       | `str = 'ccw'`            |             |
 | _Returns_             | `plan.Plan`              |             |
 
 ![Clearing workplan: narrow passage (ToroidalClear), slot (Slot), dual-entry dumbbell (Unreachable).](images/cnc-plan-clearing-clearing.png)

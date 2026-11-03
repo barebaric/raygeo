@@ -105,6 +105,7 @@ impl PyPlanStep {
             d.set_item("wall_margin", a.wall_margin)?;
             d.set_item("area_tolerance", a.area_tolerance)?;
             d.set_item("angular_step", a.tolerance)?;
+            d.set_item("cut_direction", format!("{:?}", a.cut_direction))?;
         } else if let Some(p) = spec.as_any().downcast_ref::<crate::ops::assembly::profile::ProfileSpec>() {
             d.set_item("kind_name", format!("{:?}", p.kind))?;
             d.set_item("tool_radius", p.tool_radius)?;
