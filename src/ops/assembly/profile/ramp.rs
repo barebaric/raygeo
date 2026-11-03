@@ -47,6 +47,32 @@ pub struct ProfileRampSpec {
     pub tolerance: f64,
 }
 
+impl ProfileRampSpec {
+    /// A ramp spec with the neutral defaults for the per-operation
+    /// fields; set `wall_margin`, `stock_to_leave`, `cut_direction` and
+    /// `tolerance` on the returned value to match the
+    /// [`ProfileSpec`](super::ProfileSpec) it leads into.
+    pub fn for_tool(
+        kind: ProfileKind,
+        tool_radius: f64,
+        ramp_angle: f64,
+        z_start: f64,
+        z_end: f64,
+    ) -> Self {
+        Self {
+            kind,
+            tool_radius,
+            wall_margin: 0.0,
+            stock_to_leave: 0.0,
+            ramp_angle,
+            z_start,
+            z_end,
+            cut_direction: CutDirection::Ccw,
+            tolerance: 0.1,
+        }
+    }
+}
+
 impl Assembler for ProfileRampSpec {
     fn assemble(&self, ctx: &mut AssembleCtx) -> Result<AssemblyMeta, String> {
         ctx.callbacks.report_progress(0.0, "profile_ramp: assemble");

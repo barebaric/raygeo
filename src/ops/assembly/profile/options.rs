@@ -73,6 +73,44 @@ impl Default for ProfileSpec {
     }
 }
 
+impl ProfileSpec {
+    /// A spec carrying the planner's canonical tuning for `tool_radius`:
+    /// a radius-wide step-over, a fifth-of-a-radius step length, the
+    /// clearing planner's engagement gates (a 1.0 mm² area gate, and a
+    /// 30-rad angle gate that never trips, so feed reduction is
+    /// area-driven) and its 0.5 feed-reduction factor. The fields a
+    /// caller must shape per operation — `wall_margin`,
+    /// `stock_to_leave`, `cut_direction`, `tolerance`, `start_pos`,
+    /// `cancel_check`, `trace_path` — keep their neutral defaults; set
+    /// them on the returned value.
+    pub fn for_tool(
+        kind: ProfileKind,
+        tool_radius: f64,
+        target_z: f64,
+        safe_z: f64,
+    ) -> Self {
+        Self {
+            kind,
+            tool_radius,
+            step_over: tool_radius,
+            step_length: tool_radius * 0.2,
+            target_z,
+            safe_z,
+            wall_margin: 0.0,
+            stock_to_leave: 0.0,
+            cut_direction: CutDirection::Ccw,
+            start_pos: None,
+            tolerance: 0.1,
+            expansion_batch_size: 20,
+            cancel_check: None,
+            engagement_area_threshold: 1.0,
+            engagement_angle_threshold: 30.0,
+            feed_reduction_factor: 0.5,
+            trace_path: None,
+        }
+    }
+}
+
 impl Assembler for ProfileSpec {
     fn assemble(&self, ctx: &mut AssembleCtx) -> Result<AssemblyMeta, String> {
         let label = match self.kind {

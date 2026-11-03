@@ -4,7 +4,9 @@ use pyo3_stub_gen::derive::{
 };
 
 use crate::geo::types::Point3D;
-use crate::ops::assembly::profile::{self, ProfileKind, ProfileSpec};
+use crate::ops::assembly::profile::{
+    self, ProfileKind, ProfileRampSpec, ProfileSpec,
+};
 use crate::ops::assembly::Tracelet;
 use crate::ops::state::State;
 use crate::ops::types::CutDirection;
@@ -26,6 +28,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(pyo3::wrap_pyfunction!(profile_outer_py, m.clone())?)?;
     m.add_function(pyo3::wrap_pyfunction!(profile_inner_py, m.clone())?)?;
     m.add_class::<PyProfileSpec>()?;
+    m.add_class::<PyProfileRampSpec>()?;
     assembly_mod.add_submodule(&m)?;
 
     let sys_modules = py.import("sys")?.getattr("modules")?;
@@ -116,6 +119,36 @@ impl PyProfileSpec {
             trace_path: self.trace_path.map(std::path::PathBuf::from),
         }
     }
+
+    pub fn from_core(spec: &ProfileSpec) -> Self {
+        PyProfileSpec {
+            kind: match spec.kind {
+                ProfileKind::Outer => "outer".to_string(),
+                ProfileKind::Inner => "inner".to_string(),
+            },
+            tool_radius: spec.tool_radius,
+            step_over: spec.step_over,
+            step_length: spec.step_length,
+            target_z: spec.target_z,
+            safe_z: spec.safe_z,
+            wall_margin: spec.wall_margin,
+            stock_to_leave: spec.stock_to_leave,
+            cut_direction: match spec.cut_direction {
+                CutDirection::Cw => "cw".to_string(),
+                CutDirection::Ccw => "ccw".to_string(),
+            },
+            start_pos: spec.start_pos.map(|p| (p.x, p.y)),
+            tolerance: spec.tolerance,
+            expansion_batch_size: spec.expansion_batch_size,
+            engagement_area_threshold: spec.engagement_area_threshold,
+            engagement_angle_threshold: spec.engagement_angle_threshold,
+            feed_reduction_factor: spec.feed_reduction_factor,
+            trace_path: spec
+                .trace_path
+                .as_ref()
+                .map(|p| p.to_string_lossy().into_owned()),
+        }
+    }
 }
 
 #[gen_stub_pymethods]
@@ -177,6 +210,39 @@ impl PyProfileSpec {
             feed_reduction_factor,
             trace_path,
         }
+    }
+
+    /// A spec carrying the planner's canonical tuning for
+    /// ``tool_radius``: a radius-wide step-over, a fifth-of-a-radius
+    /// step length, the clearing planner's engagement gates (a 1.0 mm²
+    /// area gate, and a 30-rad angle gate that never trips, so feed
+    /// reduction is area-driven) and its 0.5 feed-reduction factor.
+    /// The per-operation fields keep their neutral defaults; set
+    /// ``wall_margin``, ``stock_to_leave``, ``cut_direction``,
+    /// ``tolerance``, ``start_pos`` and ``trace_path`` on the result.
+    ///
+    /// :param kind: ``"inner"`` or ``"outer"``.
+    /// :param tool_radius: Tool radius in mm.
+    /// :param target_z: Cutting depth (Z).
+    /// :param safe_z: Safe (rapid) Z height.
+    #[staticmethod]
+    #[pyo3(name = "for_tool")]
+    fn for_tool(
+        kind: &str,
+        tool_radius: f64,
+        target_z: f64,
+        safe_z: f64,
+    ) -> Self {
+        let kind = match kind.to_ascii_lowercase().as_str() {
+            "outer" => ProfileKind::Outer,
+            _ => ProfileKind::Inner,
+        };
+        Self::from_core(&ProfileSpec::for_tool(
+            kind,
+            tool_radius,
+            target_z,
+            safe_z,
+        ))
     }
 }
 
@@ -452,4 +518,168 @@ fn profile_inner_py(
     let attrs = trace.attrs().cloned();
     let ops = trace.into_ops();
     Ok(PyAssemblyResult::from_parts(ops, meta, attrs, events))
+}
+
+/// Parameters for the profile ramp-entry assembler: it descends along
+/// the same loop the profile pass walks, so the tool enters the
+/// material gradually and the wall is never nicked by a vertical bore.
+#[gen_stub_pyclass]
+#[pyclass(
+    module = "raygeo.ops.assembly.profile",
+    name = "ProfileRampSpec",
+    frozen,
+    eq,
+    from_py_object
+)]
+#[derive(Clone, PartialEq)]
+pub struct PyProfileRampSpec {
+    /// ``"inner"`` or ``"outer"``.
+    #[pyo3(get)]
+    pub kind: String,
+    #[pyo3(get)]
+    pub tool_radius: f64,
+    #[pyo3(get)]
+    pub wall_margin: f64,
+    #[pyo3(get)]
+    pub stock_to_leave: f64,
+    /// Steepest descent along the loop (radians).
+    #[pyo3(get)]
+    pub ramp_angle: f64,
+    #[pyo3(get)]
+    pub z_start: f64,
+    #[pyo3(get)]
+    pub z_end: f64,
+    /// ``"cw"`` or ``"ccw"``.
+    #[pyo3(get)]
+    pub cut_direction: String,
+    /// Boundary-following tolerance of the loop derivation.
+    #[pyo3(get)]
+    pub tolerance: f64,
+}
+
+impl PyProfileRampSpec {
+    pub fn into_core(self) -> ProfileRampSpec {
+        let kind = match self.kind.as_str() {
+            "outer" => ProfileKind::Outer,
+            _ => ProfileKind::Inner,
+        };
+        let cd = match self.cut_direction.as_str() {
+            "cw" => CutDirection::Cw,
+            _ => CutDirection::Ccw,
+        };
+        ProfileRampSpec {
+            kind,
+            tool_radius: self.tool_radius,
+            wall_margin: self.wall_margin,
+            stock_to_leave: self.stock_to_leave,
+            ramp_angle: self.ramp_angle,
+            z_start: self.z_start,
+            z_end: self.z_end,
+            cut_direction: cd,
+            tolerance: self.tolerance,
+        }
+    }
+
+    pub fn from_core(spec: &ProfileRampSpec) -> Self {
+        PyProfileRampSpec {
+            kind: match spec.kind {
+                ProfileKind::Outer => "outer".to_string(),
+                ProfileKind::Inner => "inner".to_string(),
+            },
+            tool_radius: spec.tool_radius,
+            wall_margin: spec.wall_margin,
+            stock_to_leave: spec.stock_to_leave,
+            ramp_angle: spec.ramp_angle,
+            z_start: spec.z_start,
+            z_end: spec.z_end,
+            cut_direction: match spec.cut_direction {
+                CutDirection::Cw => "cw".to_string(),
+                CutDirection::Ccw => "ccw".to_string(),
+            },
+            tolerance: spec.tolerance,
+        }
+    }
+}
+
+#[gen_stub_pymethods]
+#[pyo3::pymethods]
+impl PyProfileRampSpec {
+    /// :param kind: ``"inner"`` or ``"outer"``.
+    /// :param tool_radius: Tool radius in mm.
+    /// :param wall_margin: Extra distance to keep from the wall (mm).
+    /// :param stock_to_leave: Stock left on the walls (mm).
+    /// :param ramp_angle: Steepest descent along the loop (radians).
+    /// :param z_start: Height the ramp descends from.
+    /// :param z_end: Depth the ramp descends to.
+    /// :param cut_direction: ``"cw"`` or ``"ccw"`` (default ``"ccw"``).
+    /// :param tolerance: Boundary-following tolerance of the loop
+    ///                    derivation (mm).
+    #[new]
+    #[allow(clippy::too_many_arguments)]
+    #[pyo3(signature = (
+        kind = "inner",
+        tool_radius = 3.0,
+        wall_margin = 0.0,
+        stock_to_leave = 0.0,
+        ramp_angle = 0.0,
+        z_start = 2.0,
+        z_end = -5.0,
+        cut_direction = "ccw",
+        tolerance = 0.1,
+    ))]
+    fn new(
+        kind: &str,
+        tool_radius: f64,
+        wall_margin: f64,
+        stock_to_leave: f64,
+        ramp_angle: f64,
+        z_start: f64,
+        z_end: f64,
+        cut_direction: &str,
+        tolerance: f64,
+    ) -> Self {
+        PyProfileRampSpec {
+            kind: kind.to_string(),
+            tool_radius,
+            wall_margin,
+            stock_to_leave,
+            ramp_angle,
+            z_start,
+            z_end,
+            cut_direction: cut_direction.to_string(),
+            tolerance,
+        }
+    }
+
+    /// A ramp spec with the neutral defaults for the per-operation
+    /// fields; set ``wall_margin``, ``stock_to_leave``,
+    /// ``cut_direction`` and ``tolerance`` on the result to match the
+    /// ``ProfileSpec`` it leads into.
+    ///
+    /// :param kind: ``"inner"`` or ``"outer"``.
+    /// :param tool_radius: Tool radius in mm.
+    /// :param ramp_angle: Steepest descent along the loop (radians).
+    /// :param z_start: Height the ramp descends from.
+    /// :param z_end: Depth the ramp descends to.
+    #[staticmethod]
+    #[pyo3(name = "for_tool")]
+    fn for_tool(
+        kind: &str,
+        tool_radius: f64,
+        ramp_angle: f64,
+        z_start: f64,
+        z_end: f64,
+    ) -> Self {
+        let kind = match kind.to_ascii_lowercase().as_str() {
+            "outer" => ProfileKind::Outer,
+            _ => ProfileKind::Inner,
+        };
+        Self::from_core(&ProfileRampSpec::for_tool(
+            kind,
+            tool_radius,
+            ramp_angle,
+            z_start,
+            z_end,
+        ))
+    }
 }

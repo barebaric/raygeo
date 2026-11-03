@@ -115,6 +115,16 @@ impl PyPlanStep {
             d.set_item("wall_margin", p.wall_margin)?;
             d.set_item("stock_to_leave", p.stock_to_leave)?;
             d.set_item("cut_direction", format!("{:?}", p.cut_direction))?;
+            d.set_item("tolerance", p.tolerance)?;
+            d.set_item(
+                "engagement_area_threshold",
+                p.engagement_area_threshold,
+            )?;
+            d.set_item(
+                "engagement_angle_threshold",
+                p.engagement_angle_threshold,
+            )?;
+            d.set_item("feed_reduction_factor", p.feed_reduction_factor)?;
         } else if let Some(r) = spec
             .as_any()
             .downcast_ref::<crate::ops::assembly::profile::ProfileRampSpec>()
