@@ -615,6 +615,7 @@ impl PyProfileRampSpec {
     /// :param tolerance: Boundary-following tolerance of the loop
     ///                    derivation (mm).
     #[new]
+    #[allow(clippy::too_many_arguments)]
     #[pyo3(signature = (
         kind = "inner",
         tool_radius = 3.0,

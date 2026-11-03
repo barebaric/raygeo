@@ -147,6 +147,7 @@ impl PyClearingWorkplanOptions {
     /// :param feed_rate: Cut feed rate (mm/min).
     /// :param plunge_feed: Vertical plunge feed (mm/min).
     #[new]
+    #[allow(clippy::too_many_arguments)]
     #[pyo3(signature = (
         tool_radius = 3.0,
         step_over = 2.0,
