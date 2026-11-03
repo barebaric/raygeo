@@ -190,3 +190,41 @@ def test_spiral_angular_step_controls_resolution():
         angular_step=0.1,
     )
     assert len(coarse) < len(fine)
+
+
+def test_spiral_hostile_inputs_degrade_instead_of_hanging():
+    """Absurd inputs must not overflow or hang: an absurdly fine angular
+    step is capped at a fixed resolution, and non-finite or degenerate
+    values return no spiral."""
+    coarse = generate_spiral_3d(
+        center=(0, 0),
+        z=0,
+        start_radius=2,
+        end_radius=10,
+        revolutions=1000.0,
+        direction=HelixDirection.CCW,
+        angular_step=1e-300,
+    )
+    assert 1 <= len(coarse) <= 100_001
+
+    non_finite = generate_spiral_3d(
+        center=(0, 0),
+        z=0,
+        start_radius=2,
+        end_radius=10,
+        revolutions=float("nan"),
+        direction=HelixDirection.CCW,
+        angular_step=0.2,
+    )
+    assert non_finite == []
+
+    flat = generate_spiral_3d(
+        center=(0, 0),
+        z=0,
+        start_radius=5,
+        end_radius=5,
+        revolutions=3.0,
+        direction=HelixDirection.CCW,
+        angular_step=0.2,
+    )
+    assert flat == []

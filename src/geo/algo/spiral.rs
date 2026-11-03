@@ -21,11 +21,21 @@ pub struct SpiralOptions {
 /// Z, sweeping linearly from `start_radius` to `end_radius`.
 ///
 /// Returns an empty vec when `start_radius == end_radius`,
-/// `revolutions <= 0`, or `angular_step <= 0`.
+/// `revolutions <= 0`, or `angular_step <= 0`. Hostile input degrades to
+/// no spiral or a capped resolution, never to overflow or non-finite
+/// points.
 pub fn generate_spiral_3d(opts: &SpiralOptions) -> Vec<Point3D> {
-    if (opts.start_radius - opts.end_radius).abs() < 1e-12
+    // The finite checks make NaN fail the guards too, which a plain
+    // `<= 0.0` comparison would let through.
+    if !opts.revolutions.is_finite()
         || opts.revolutions <= 0.0
+        || !opts.angular_step.is_finite()
         || opts.angular_step <= 0.0
+        || !opts.start_radius.is_finite()
+        || !opts.end_radius.is_finite()
+        || !opts.center.x.is_finite()
+        || !opts.center.y.is_finite()
+        || (opts.start_radius - opts.end_radius).abs() < 1e-12
     {
         return vec![];
     }
@@ -35,8 +45,11 @@ pub fn generate_spiral_3d(opts: &SpiralOptions) -> Vec<Point3D> {
         HelixDirection::Cw => -1.0,
         HelixDirection::Ccw => 1.0,
     };
-    let n_steps = (total_angle / opts.angular_step).ceil() as usize;
-    let n_steps = n_steps.max(1);
+    // An absurdly fine angular step is capped at a fixed resolution
+    // instead of asking for an absurd number of points.
+    const MAX_STEPS: f64 = 100_000.0;
+    let n_steps = (total_angle / opts.angular_step).ceil();
+    let n_steps = n_steps.clamp(1.0, MAX_STEPS) as usize;
 
     let mut points = Vec::with_capacity(n_steps + 1);
     for i in 0..=n_steps {
