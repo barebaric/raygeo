@@ -4,7 +4,7 @@ import pytest
 
 from raygeo.ops import Ops
 from raygeo.ops.state import AirAssistMode, CoolantMode, PowerMode
-from raygeo.ops.types import CommandCategory, CommandType
+from raygeo.ops.types import CommandCategory, CommandType, SectionType
 
 
 def _make_seg(start, end):
@@ -1319,6 +1319,128 @@ def _rect_b():
         (45, 5, 0),
         [(30, 5, 0), (25, 5, 0), (25, 20, 0), (45, 20, 0)],
     )
+
+
+def _square_section(ops, x, y, size=1.0, uid="wp"):
+    ops.ops_section_start(SectionType.VECTOR_OUTLINE, uid)
+    ops.move_to(x, y)
+    ops.line_to(x + size, y)
+    ops.line_to(x + size, y + size)
+    ops.line_to(x, y + size)
+    ops.line_to(x, y)
+    ops.ops_section_end(SectionType.VECTOR_OUTLINE)
+
+
+def _section_starts(ops):
+    return [
+        tuple(ops.endpoint(i)[:2])
+        for i in range(ops.len())
+        if ops.command_type(i) == CommandType.MOVE_TO
+    ]
+
+
+class TestOptimizeSectionOrder:
+    def test_single_shape_sections_are_reordered(self):
+        ops = Ops()
+        for x in (0.0, 100.0, 10.0, 110.0, 20.0, 120.0):
+            _square_section(ops, x, 0.0)
+        before = _travel_distance(ops)
+
+        ops.optimize_travel()
+
+        assert _travel_distance(ops) < before
+        assert [x for x, _ in _section_starts(ops)] == [
+            0.0,
+            10.0,
+            20.0,
+            100.0,
+            110.0,
+            120.0,
+        ]
+
+    def test_sections_stay_whole(self):
+        ops = Ops()
+        for x in (0.0, 100.0, 10.0):
+            _square_section(ops, x, 0.0)
+
+        ops.optimize_travel()
+
+        kinds = [ops.command_type(i) for i in range(ops.len())]
+        expected = [
+            CommandType.OPS_SECTION_START,
+            CommandType.MOVE_TO,
+            CommandType.LINE_TO,
+            CommandType.LINE_TO,
+            CommandType.LINE_TO,
+            CommandType.LINE_TO,
+            CommandType.OPS_SECTION_END,
+        ]
+        assert [k for k in kinds if k in expected] == expected * 3
+
+    def test_first_section_stays_first_when_nothing_is_nested(self):
+        ops = Ops()
+        for x in (50.0, 0.0, 100.0):
+            _square_section(ops, x, 0.0)
+
+        ops.optimize_travel()
+
+        assert _section_starts(ops)[0][0] == 50.0
+
+    def test_enclosed_section_goes_before_the_one_around_it(self):
+        ops = Ops()
+        _square_section(ops, 0.0, 0.0, size=100.0)
+        _square_section(ops, 40.0, 40.0, size=10.0)
+        _square_section(ops, 200.0, 0.0)
+
+        ops.optimize_travel()
+
+        starts = _section_starts(ops)
+        assert starts.index((40.0, 40.0)) < starts.index((0.0, 0.0))
+
+    def test_nesting_holds_when_travel_favours_the_outer_first(self):
+        ops = Ops()
+        _square_section(ops, 300.0, 0.0)
+        _square_section(ops, 301.0, 2.0, size=200.0)
+        _square_section(ops, 400.0, 100.0, size=10.0)
+        _square_section(ops, 420.0, 120.0, size=5.0)
+
+        ops.optimize_travel()
+
+        starts = _section_starts(ops)
+        outer = starts.index((301.0, 2.0))
+        assert starts.index((400.0, 100.0)) < outer
+        assert starts.index((420.0, 120.0)) < outer
+
+    def test_identical_sections_are_all_kept(self):
+        ops = Ops()
+        for _ in range(3):
+            _square_section(ops, 5.0, 5.0)
+
+        ops.optimize_travel()
+
+        assert _section_starts(ops) == [(5.0, 5.0)] * 3
+
+    def test_sections_of_different_uids_do_not_mix(self):
+        ops = Ops()
+        _square_section(ops, 0.0, 0.0, uid="a")
+        _square_section(ops, 100.0, 0.0, uid="a")
+        _square_section(ops, 10.0, 0.0, uid="b")
+
+        ops.optimize_travel()
+
+        assert [x for x, _ in _section_starts(ops)] == [0.0, 100.0, 10.0]
+
+    def test_other_markers_separate_runs(self):
+        ops = Ops()
+        _square_section(ops, 0.0, 0.0)
+        _square_section(ops, 100.0, 0.0)
+        ops.state_block_start("labels")
+        ops.state_block_end()
+        _square_section(ops, 10.0, 0.0)
+
+        ops.optimize_travel()
+
+        assert [x for x, _ in _section_starts(ops)] == [0.0, 100.0, 10.0]
 
 
 class TestCutPlanner:

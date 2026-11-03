@@ -8,14 +8,15 @@ use std::collections::HashSet;
 use rstar::{PointDistance, RTree, RTreeObject, AABB};
 
 use super::link::{find_pass_entry, find_pass_exit};
-use crate::geo::types::Point3D;
+use crate::geo::types::{Point3D, Rect};
 use crate::ops::callbacks::Callbacks;
 use crate::ops::container::Ops;
-use crate::ops::enums::{CommandCategory, CommandType};
+use crate::ops::enums::{CommandCategory, CommandType, SectionType};
 use crate::ops::state::State;
 use crate::ops::transform::{Phase, TransformCtx, Transformer};
-use crate::ops::types::{MoveCmd, OpCategory};
+use crate::ops::types::{MarkerCmd, MoveCmd, OpCategory};
 
+const SECTION_ORDER_UNIT_LIMIT: usize = 10000;
 const TWO_OPT_SEGMENT_THRESHOLD: usize = 1000;
 const TWO_OPT_COMMAND_LIMIT: usize = 10000;
 const TWO_OPT_MAX_ITER: usize = 10;
@@ -1243,6 +1244,282 @@ fn reassemble_workpieces(ops: &mut Ops, ordered_metas: &[WorkpieceMeta]) {
     }
 }
 
+/// A vector outline section treated as one unit when ordering sections.
+struct SectionUnit {
+    /// Indices into the long segments, from start to end marker.
+    first: usize,
+    last: usize,
+    entry: Point3D,
+    exit: Point3D,
+    rect: Rect,
+}
+
+fn outline_section_uid(seg: &Ops) -> Option<Option<&str>> {
+    match &seg.commands.first()?.category {
+        OpCategory::Marker(MarkerCmd::OpsSectionStart {
+            section_type: SectionType::VectorOutline,
+            workpiece_uid,
+            ..
+        }) => Some(workpiece_uid.as_deref()),
+        _ => None,
+    }
+}
+
+fn is_outline_section_end(seg: &Ops) -> bool {
+    matches!(
+        seg.commands.first().map(|node| &node.category),
+        Some(OpCategory::Marker(MarkerCmd::OpsSectionEnd {
+            section_type: SectionType::VectorOutline,
+            ..
+        }))
+    )
+}
+
+fn merge_rects(a: Rect, b: Rect) -> Rect {
+    Rect::new(
+        a.min.x.min(b.min.x),
+        a.min.y.min(b.min.y),
+        a.max.x.max(b.max.x),
+        a.max.y.max(b.max.y),
+    )
+}
+
+/// Reads the section starting at *first*. Sections with raster runs,
+/// nested markers or nothing to cut are not units and stay in place.
+fn read_section_unit(
+    long_segments: &[Ops],
+    processed: &std::collections::HashMap<usize, Vec<Ops>>,
+    first: usize,
+) -> Option<SectionUnit> {
+    let mut ends: Option<(Point3D, Point3D)> = None;
+    let mut rect: Option<Rect> = None;
+
+    for (i, seg) in long_segments.iter().enumerate().skip(first + 1) {
+        if seg.is_marker(0) {
+            if !is_outline_section_end(seg) {
+                return None;
+            }
+            let (entry, exit) = ends?;
+            return Some(SectionUnit {
+                first,
+                last: i,
+                entry,
+                exit,
+                rect: rect?,
+            });
+        }
+        for part in processed.get(&i)? {
+            if part.is_empty() {
+                continue;
+            }
+            let entry = ends.map_or(part.endpoint(0), |(entry, _)| entry);
+            ends = Some((entry, part.endpoint(part.len() - 1)));
+            if let Some(part_rect) = part.rect(false) {
+                rect =
+                    Some(rect.map_or(part_rect, |r| merge_rects(r, part_rect)));
+            }
+        }
+    }
+    None
+}
+
+fn read_adjacent_section_units(
+    long_segments: &[Ops],
+    processed: &std::collections::HashMap<usize, Vec<Ops>>,
+    first: usize,
+) -> Vec<SectionUnit> {
+    let mut units = Vec::new();
+    let Some(uid) = outline_section_uid(&long_segments[first]) else {
+        return units;
+    };
+    let mut next = first;
+    while next < long_segments.len()
+        && outline_section_uid(&long_segments[next]) == Some(uid)
+    {
+        let Some(unit) = read_section_unit(long_segments, processed, next)
+        else {
+            break;
+        };
+        next = unit.last + 1;
+        units.push(unit);
+    }
+    units
+}
+
+/// True when *inner* lies within *outer* and is smaller, so that equal
+/// boxes never require each other to go first.
+fn rect_encloses(outer: &Rect, inner: &Rect) -> bool {
+    let area = |r: &Rect| (r.max.x - r.min.x) * (r.max.y - r.min.y);
+    inner.min.x >= outer.min.x
+        && inner.min.y >= outer.min.y
+        && inner.max.x <= outer.max.x
+        && inner.max.y <= outer.max.y
+        && area(inner) < area(outer)
+}
+
+fn section_predecessors(units: &[SectionUnit]) -> Vec<Vec<usize>> {
+    units
+        .iter()
+        .map(|outer| {
+            units
+                .iter()
+                .enumerate()
+                .filter(|(_, inner)| rect_encloses(&outer.rect, &inner.rect))
+                .map(|(i, _)| i)
+                .collect()
+        })
+        .collect()
+}
+
+fn nearest_section_route(
+    units: &[SectionUnit],
+    predecessors: &[Vec<usize>],
+) -> Vec<usize> {
+    let n = units.len();
+    let mut placed = vec![false; n];
+    let mut route: Vec<usize> = Vec::with_capacity(n);
+
+    while route.len() < n {
+        let ready = (0..n).filter(|&u| {
+            !placed[u] && predecessors[u].iter().all(|&p| placed[p])
+        });
+        let next = match route.last() {
+            None => ready.min(),
+            Some(&last) => ready.min_by(|&a, &b| {
+                let from = units[last].exit;
+                dist_xy(from, units[a].entry)
+                    .total_cmp(&dist_xy(from, units[b].entry))
+            }),
+        };
+        let Some(next) = next else { break };
+        placed[next] = true;
+        route.push(next);
+    }
+    route
+}
+
+fn section_route_travel(units: &[SectionUnit], route: &[usize]) -> f64 {
+    route
+        .windows(2)
+        .map(|w| dist_xy(units[w[0]].exit, units[w[1]].entry))
+        .sum()
+}
+
+/// A stretch of the route can be reversed only if none of its sections
+/// has to go before another one in the same stretch.
+fn can_reverse_sections(
+    stretch: &[usize],
+    predecessors: &[Vec<usize>],
+) -> bool {
+    stretch
+        .iter()
+        .all(|u| !predecessors[*u].iter().any(|p| stretch.contains(p)))
+}
+
+/// Cheap filter for a 2-opt move: compares only the two joins it
+/// replaces.
+fn joins_shorten_route(
+    route: &[usize],
+    units: &[SectionUnit],
+    i: usize,
+    j: usize,
+) -> bool {
+    let a_exit = units[route[i]].exit;
+    let b = &units[route[i + 1]];
+    let e = &units[route[j]];
+    let mut current = dist_xy(a_exit, b.entry);
+    let mut new = dist_xy(a_exit, e.entry);
+    if let Some(&f) = route.get(j + 1) {
+        current += dist_xy(e.exit, units[f].entry);
+        new += dist_xy(b.exit, units[f].entry);
+    }
+    new < current
+}
+
+/// 2-opt over whole sections. Sections are never flipped, so a move is
+/// accepted only if the exact travel of the changed stretch drops.
+fn two_opt_sections(
+    route: &mut [usize],
+    units: &[SectionUnit],
+    predecessors: &[Vec<usize>],
+    callbacks: &dyn Callbacks,
+) {
+    let n = route.len();
+    if !(3..=TWO_OPT_SEGMENT_THRESHOLD).contains(&n) {
+        return;
+    }
+
+    let mut iter_count = 0;
+    let mut improved = true;
+    while improved && iter_count < TWO_OPT_MAX_ITER {
+        if callbacks.is_cancelled() {
+            return;
+        }
+        improved = false;
+        for i in 0..n - 2 {
+            for j in i + 2..n {
+                if !joins_shorten_route(route, units, i, j) {
+                    continue;
+                }
+                let end = (j + 1).min(n - 1);
+                let before = section_route_travel(units, &route[i..=end]);
+                route[i + 1..=j].reverse();
+                let after = section_route_travel(units, &route[i..=end]);
+                if after < before
+                    && can_reverse_sections(&route[i + 1..=j], predecessors)
+                {
+                    improved = true;
+                } else {
+                    route[i + 1..=j].reverse();
+                }
+            }
+        }
+        iter_count += 1;
+    }
+}
+
+fn order_section_units(
+    units: &[SectionUnit],
+    callbacks: &dyn Callbacks,
+) -> Vec<usize> {
+    if units.len() < 2 || units.len() > SECTION_ORDER_UNIT_LIMIT {
+        return (0..units.len()).collect();
+    }
+    let predecessors = section_predecessors(units);
+    let mut route = nearest_section_route(units, &predecessors);
+    two_opt_sections(&mut route, units, &predecessors, callbacks);
+    route
+}
+
+/// Returns the order to emit the long segments in. Adjacent vector
+/// outline sections of one workpiece are moved as whole units to cut
+/// travel, because each one usually holds a single face, which the
+/// per-segment optimization cannot reorder. A section whose bounding
+/// box lies inside another's goes first, which keeps inner shapes ahead
+/// of their surrounding section. This only compares bounding boxes of
+/// adjacent sections with the same uid.
+fn section_emit_order(
+    long_segments: &[Ops],
+    processed: &std::collections::HashMap<usize, Vec<Ops>>,
+    callbacks: &dyn Callbacks,
+) -> Vec<usize> {
+    let mut order = Vec::with_capacity(long_segments.len());
+    let mut i = 0;
+    while i < long_segments.len() {
+        let units = read_adjacent_section_units(long_segments, processed, i);
+        let Some(last_unit) = units.last() else {
+            order.push(i);
+            i += 1;
+            continue;
+        };
+        i = last_unit.last + 1;
+        for u in order_section_units(&units, callbacks) {
+            order.extend(units[u].first..=units[u].last);
+        }
+    }
+    order
+}
+
 fn optimize_segments(
     ops: &mut Ops,
     allow_flip: bool,
@@ -1363,9 +1640,13 @@ fn optimize_segments(
 
     report_progress(callbacks, 0.9, "Reassembling optimized paths...");
 
+    let emit_order =
+        section_emit_order(&long_segments, &processed_results, callbacks);
+
     ops.clear();
     let mut prev = State::default();
-    for (i, seg) in long_segments.iter().enumerate() {
+    for i in emit_order {
+        let seg = &long_segments[i];
         if let Some(runs) = scanline_units.get(&i) {
             emit_scanline_runs(ops, seg, runs, &mut prev);
             continue;
