@@ -5,7 +5,11 @@ import math
 import pytest
 
 from raygeo.cnc.execution.intent import create_intent, run_intent
-from raygeo.cnc.plan.clearing import plan_clearing
+from raygeo.cnc.plan.clearing import (
+    ClearingWorkplanOptions,
+    plan_clearing,
+)
+from raygeo.ops.assembly.profile import ProfileRampSpec, ProfileSpec
 from raygeo.ops.part import Part
 
 
@@ -162,6 +166,37 @@ def test_finishing_profile_carries_planner_tuning():
     assert params["engagement_area_threshold"] == pytest.approx(1.0)
     assert params["engagement_angle_threshold"] == pytest.approx(30.0)
     assert params["feed_reduction_factor"] == pytest.approx(0.5)
+
+
+def test_for_tool_constructors_carry_the_planner_scales():
+    """The mirrored for_tool constructors embed the planner's tuning:
+    scales derived from the tool radius, not flat copies."""
+    spec = ProfileSpec.for_tool("inner", 3.0, -4.0, 2.0)
+    assert spec.tool_radius == pytest.approx(3.0)
+    assert spec.step_over == pytest.approx(3.0)
+    assert spec.step_length == pytest.approx(0.6)
+    assert spec.engagement_area_threshold == pytest.approx(1.0)
+    assert spec.engagement_angle_threshold == pytest.approx(30.0)
+    assert spec.feed_reduction_factor == pytest.approx(0.5)
+    assert spec.target_z == pytest.approx(-4.0)
+    assert spec.safe_z == pytest.approx(2.0)
+
+    ramp = ProfileRampSpec.for_tool(
+        "inner", 3.0, math.radians(10.0), 2.0, -4.0
+    )
+    assert ramp.tool_radius == pytest.approx(3.0)
+    assert ramp.ramp_angle == pytest.approx(math.radians(10.0))
+    assert ramp.cut_direction == "ccw"
+    assert ramp.tolerance == pytest.approx(0.1)
+
+    opts = ClearingWorkplanOptions.for_tool(3.0, 2.0, -4.0, 5.0)
+    assert opts.step_length == pytest.approx(0.6)
+    assert opts.safe_margin == pytest.approx(0.6)
+    assert opts.plunge_pitch == pytest.approx(0.9)
+    assert opts.angular_step == pytest.approx(0.1)
+    assert opts.max_deflection_deg == pytest.approx(30.0)
+    assert opts.feed_rate is None
+    assert opts.plunge_feed is None
 
 
 def test_plan_clearing_without_finishing():

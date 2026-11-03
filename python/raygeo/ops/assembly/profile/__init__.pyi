@@ -5,10 +5,77 @@ import builtins
 import raygeo
 import typing
 __all__ = [
+    "ProfileRampSpec",
     "ProfileSpec",
     "profile_inner",
     "profile_outer",
 ]
+
+@typing.final
+class ProfileRampSpec:
+    r"""
+    Parameters for the profile ramp-entry assembler: it descends along
+    the same loop the profile pass walks, so the tool enters the
+    material gradually and the wall is never nicked by a vertical bore.
+    """
+    @property
+    def kind(self) -> builtins.str:
+        r"""
+        ``"inner"`` or ``"outer"``.
+        """
+    @property
+    def tool_radius(self) -> builtins.float: ...
+    @property
+    def wall_margin(self) -> builtins.float: ...
+    @property
+    def stock_to_leave(self) -> builtins.float: ...
+    @property
+    def ramp_angle(self) -> builtins.float:
+        r"""
+        Steepest descent along the loop (radians).
+        """
+    @property
+    def z_start(self) -> builtins.float: ...
+    @property
+    def z_end(self) -> builtins.float: ...
+    @property
+    def cut_direction(self) -> builtins.str:
+        r"""
+        ``"cw"`` or ``"ccw"``.
+        """
+    @property
+    def tolerance(self) -> builtins.float:
+        r"""
+        Boundary-following tolerance of the loop derivation.
+        """
+    def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
+    def __new__(cls, kind: builtins.str = 'inner', tool_radius: builtins.float = 3.0, wall_margin: builtins.float = 0.0, stock_to_leave: builtins.float = 0.0, ramp_angle: builtins.float = 0.0, z_start: builtins.float = 2.0, z_end: builtins.float = -5.0, cut_direction: builtins.str = 'ccw', tolerance: builtins.float = 0.1) -> ProfileRampSpec:
+        r"""
+        :param kind: ``"inner"`` or ``"outer"``.
+        :param tool_radius: Tool radius in mm.
+        :param wall_margin: Extra distance to keep from the wall (mm).
+        :param stock_to_leave: Stock left on the walls (mm).
+        :param ramp_angle: Steepest descent along the loop (radians).
+        :param z_start: Height the ramp descends from.
+        :param z_end: Depth the ramp descends to.
+        :param cut_direction: ``"cw"`` or ``"ccw"`` (default ``"ccw"``).
+        :param tolerance: Boundary-following tolerance of the loop
+                           derivation (mm).
+        """
+    @staticmethod
+    def for_tool(kind: builtins.str, tool_radius: builtins.float, ramp_angle: builtins.float, z_start: builtins.float, z_end: builtins.float) -> ProfileRampSpec:
+        r"""
+        A ramp spec with the neutral defaults for the per-operation
+        fields; set ``wall_margin``, ``stock_to_leave``,
+        ``cut_direction`` and ``tolerance`` on the result to match the
+        ``ProfileSpec`` it leads into.
+        
+        :param kind: ``"inner"`` or ``"outer"``.
+        :param tool_radius: Tool radius in mm.
+        :param ramp_angle: Steepest descent along the loop (radians).
+        :param z_start: Height the ramp descends from.
+        :param z_end: Depth the ramp descends to.
+        """
 
 @typing.final
 class ProfileSpec:
@@ -64,6 +131,23 @@ class ProfileSpec:
         """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __new__(cls, kind: builtins.str = 'inner', tool_radius: builtins.float = 3.0, step_over: builtins.float = 1.5, step_length: builtins.float = 0.6, target_z: builtins.float = -5.0, safe_z: builtins.float = 2.0, wall_margin: builtins.float = 0.0, stock_to_leave: builtins.float = 0.0, cut_direction: builtins.str = 'ccw', start_pos: typing.Optional[tuple[builtins.float, builtins.float]] = None, tolerance: builtins.float = 0.1, expansion_batch_size: builtins.int = 20, engagement_area_threshold: builtins.float = 0.0, engagement_angle_threshold: builtins.float = 3.141592653589793, feed_reduction_factor: builtins.float = 0.5, trace_path: typing.Optional[builtins.str] = None) -> ProfileSpec: ...
+    @staticmethod
+    def for_tool(kind: builtins.str, tool_radius: builtins.float, target_z: builtins.float, safe_z: builtins.float) -> ProfileSpec:
+        r"""
+        A spec carrying the planner's canonical tuning for
+        ``tool_radius``: a radius-wide step-over, a fifth-of-a-radius
+        step length, the clearing planner's engagement gates (a 1.0 mm²
+        area gate, and a 30-rad angle gate that never trips, so feed
+        reduction is area-driven) and its 0.5 feed-reduction factor.
+        The per-operation fields keep their neutral defaults; set
+        ``wall_margin``, ``stock_to_leave``, ``cut_direction``,
+        ``tolerance``, ``start_pos`` and ``trace_path`` on the result.
+        
+        :param kind: ``"inner"`` or ``"outer"``.
+        :param tool_radius: Tool radius in mm.
+        :param target_z: Cutting depth (Z).
+        :param safe_z: Safe (rapid) Z height.
+        """
 
 def profile_inner(part: raygeo.ops.part.Part, tool_radius: float = 3, step_over: float = 1.5, step_length: float = 0.6, target_z: float = -5, safe_z: float = 2, wall_margin: float = 0, stock_to_leave: float = 0, cut_feed_rate: int = 1000, cut_power: float = 0, start_pos: tuple[float, float] | None = None, cut_direction: str = 'ccw', engagement_area_threshold: float = 0, engagement_angle_threshold: float = 3.141592653589793, trace_path: str | None = None, plunge_feed_rate: int | None = None) -> raygeo.ops.assembly.AssemblyResult:
     r"""

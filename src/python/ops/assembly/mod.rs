@@ -52,6 +52,7 @@ use crate::python::ops::assembly::custom::PyCustomSpec;
 use crate::python::ops::assembly::frame::PyFrameSpec;
 use crate::python::ops::assembly::helix::PyHelixSpec;
 use crate::python::ops::assembly::material_test_grid::PyMaterialTestGridSpec;
+use crate::python::ops::assembly::profile::PyProfileRampSpec;
 use crate::python::ops::assembly::profile::PyProfileSpec;
 use crate::python::ops::assembly::ramp::PyRampSpec;
 use crate::python::ops::assembly::raster::PyRasterSpec;
@@ -104,6 +105,9 @@ pub fn extract_assembler(
         return Ok(Box::new(s.into_core()));
     }
     if let Ok(s) = ob.extract::<PyProfileSpec>() {
+        return Ok(Box::new(s.into_core()));
+    }
+    if let Ok(s) = ob.extract::<PyProfileRampSpec>() {
         return Ok(Box::new(s.into_core()));
     }
     if let Ok(s) = ob.extract::<PyFrameSpec>() {

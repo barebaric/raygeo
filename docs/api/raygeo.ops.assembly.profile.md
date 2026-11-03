@@ -3,6 +3,98 @@ title: raygeo.ops.assembly.profile
 sidebar_label: raygeo.ops.assembly.profile
 ---
 
+## ProfileRampSpec
+
+Parameters for the profile ramp-entry assembler: it descends along the same loop the profile pass
+walks, so the tool enters the material gradually and the wall is never nicked by a vertical bore.
+
+### `cut_direction`
+
+```python
+cut_direction: str
+```
+
+`"cw"` or `"ccw"`.
+
+### `kind`
+
+```python
+kind: str
+```
+
+`"inner"` or `"outer"`.
+
+### `ramp_angle`
+
+```python
+ramp_angle: float
+```
+
+Steepest descent along the loop (radians).
+
+### `stock_to_leave`
+
+```python
+stock_to_leave: float
+```
+
+### `tolerance`
+
+```python
+tolerance: float
+```
+
+Boundary-following tolerance of the loop derivation.
+
+### `tool_radius`
+
+```python
+tool_radius: float
+```
+
+### `wall_margin`
+
+```python
+wall_margin: float
+```
+
+### `z_end`
+
+```python
+z_end: float
+```
+
+### `z_start`
+
+```python
+z_start: float
+```
+
+### `for_tool()`
+
+```python
+for_tool(
+    kind: str,
+    tool_radius: float,
+    ramp_angle: float,
+    z_start: float,
+    z_end: float,
+) -> ProfileRampSpec
+```
+
+A ramp spec with the neutral defaults for the per-operation fields; set `wall_margin`,
+`stock_to_leave`, `cut_direction` and `tolerance` on the result to match the `ProfileSpec` it leads
+into.
+
+| Parameter     | Type              | Description                                |
+| ------------- | ----------------- | ------------------------------------------ |
+| `kind`        | `str`             | `"inner"` or `"outer"`.                    |
+| `tool_radius` | `float`           | Tool radius in mm.                         |
+| `ramp_angle`  | `float`           | Steepest descent along the loop (radians). |
+| `z_start`     | `float`           | Height the ramp descends from.             |
+| `z_end`       | `float`           | Depth the ramp descends to.                |
+| _Returns_     | `ProfileRampSpec` |                                            |
+
 ## ProfileSpec
 
 Parameters for the adaptive-profile assembler.
@@ -112,6 +204,31 @@ Optional path to write a binary trace file.
 ```python
 wall_margin: float
 ```
+
+### `for_tool()`
+
+```python
+for_tool(
+    kind: str,
+    tool_radius: float,
+    target_z: float,
+    safe_z: float,
+) -> ProfileSpec
+```
+
+A spec carrying the planner's canonical tuning for `tool_radius`: a radius-wide step-over, a
+fifth-of-a-radius step length, the clearing planner's engagement gates (a 1.0 mm² area gate, and a
+30-rad angle gate that never trips, so feed reduction is area-driven) and its 0.5 feed-reduction
+factor. The per-operation fields keep their neutral defaults; set `wall_margin`, `stock_to_leave`,
+`cut_direction`, `tolerance`, `start_pos` and `trace_path` on the result.
+
+| Parameter     | Type          | Description             |
+| ------------- | ------------- | ----------------------- |
+| `kind`        | `str`         | `"inner"` or `"outer"`. |
+| `tool_radius` | `float`       | Tool radius in mm.      |
+| `target_z`    | `float`       | Cutting depth (Z).      |
+| `safe_z`      | `float`       | Safe (rapid) Z height.  |
+| _Returns_     | `ProfileSpec` |                         |
 
 ## Functions
 

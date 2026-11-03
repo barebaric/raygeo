@@ -12,8 +12,101 @@ from raygeo.cnc import plan
 from raygeo.ops import part
 import typing
 __all__ = [
+    "ClearingWorkplanOptions",
     "plan_clearing",
 ]
+
+@typing.final
+class ClearingWorkplanOptions:
+    r"""
+    The tool and machining parameters :func:`plan_clearing` plans from.
+    
+    The pocket boundary and islands are read from the ``Part`` — this
+    class carries only the tool and machining parameters.
+    """
+    @property
+    def tool_radius(self) -> builtins.float: ...
+    @property
+    def step_over(self) -> builtins.float: ...
+    @property
+    def step_length(self) -> builtins.float: ...
+    @property
+    def target_z(self) -> builtins.float: ...
+    @property
+    def safe_z(self) -> builtins.float: ...
+    @property
+    def wall_margin(self) -> builtins.float: ...
+    @property
+    def safe_margin(self) -> builtins.float: ...
+    @property
+    def stock_to_leave(self) -> builtins.float: ...
+    @property
+    def plunge_pitch(self) -> builtins.float: ...
+    @property
+    def angular_step(self) -> builtins.float: ...
+    @property
+    def area_tolerance(self) -> builtins.float: ...
+    @property
+    def max_deflection_deg(self) -> builtins.float: ...
+    @property
+    def finishing(self) -> builtins.bool: ...
+    @property
+    def max_entry_angle_deg(self) -> builtins.float:
+        r"""
+        Steepest entry descent in degrees; ``<= 0`` keeps the planner's
+        historical entry behaviour.
+        """
+    @property
+    def feed_rate(self) -> typing.Optional[builtins.float]:
+        r"""
+        Cut feed rate (mm/min) the plan's moves carry; ``None`` leaves
+        the cut state unset, for embedders that map feeds themselves.
+        """
+    @property
+    def plunge_feed(self) -> typing.Optional[builtins.float]:
+        r"""
+        Vertical plunge feed (mm/min) for descents into material;
+        ``None`` falls back to the cut feed.
+        """
+    def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
+    def __new__(cls, tool_radius: builtins.float = 3.0, step_over: builtins.float = 2.0, step_length: builtins.float = 0.6, target_z: builtins.float = -5.0, safe_z: builtins.float = 2.0, wall_margin: builtins.float = 0.0, safe_margin: builtins.float = 1.0, stock_to_leave: builtins.float = 0.0, plunge_pitch: builtins.float = 1.0, angular_step: builtins.float = 0.1, area_tolerance: builtins.float = 1.0, max_deflection_deg: builtins.float = 30.0, finishing: builtins.bool = False, max_entry_angle_deg: builtins.float = 0.0, feed_rate: typing.Optional[builtins.float] = None, plunge_feed: typing.Optional[builtins.float] = None) -> ClearingWorkplanOptions:
+        r"""
+        :param tool_radius: Tool radius in mm.
+        :param step_over: Radial step-over between passes (mm).
+        :param step_length: Forward step length in mm.
+        :param target_z: Cutting depth (Z).
+        :param safe_z: Safe (rapid) Z height.
+        :param wall_margin: Extra distance to keep from the walls (mm).
+        :param safe_margin: Safety margin around entries (mm).
+        :param stock_to_leave: Stock left on the walls (mm).
+        :param plunge_pitch: Drop per turn on helical entries (mm).
+        :param angular_step: Step per helix turn (radians).
+        :param area_tolerance: Smallest area worth clearing (mm²).
+        :param max_deflection_deg: Steepest deflection from the cut
+                                    direction (degrees).
+        :param finishing: Add the finishing wall profile.
+        :param max_entry_angle_deg: Steepest entry descent (degrees).
+        :param feed_rate: Cut feed rate (mm/min).
+        :param plunge_feed: Vertical plunge feed (mm/min).
+        """
+    @staticmethod
+    def for_tool(tool_radius: builtins.float, step_over: builtins.float, target_z: builtins.float, safe_z: builtins.float) -> ClearingWorkplanOptions:
+        r"""
+        Options carrying the planner's canonical scales for
+        ``tool_radius``: a fifth-of-a-radius step length, a
+        fifth-of-a-radius safe margin, a plunge pitch of a third of the
+        radius, and the planner's angular and area tuning (0.1 rad
+        angular steps, a 1.0 mm² area tolerance, 30° max deflection).
+        The per-operation fields keep their neutral defaults; set
+        ``step_over``, ``wall_margin``, ``stock_to_leave``,
+        ``finishing``, ``max_entry_angle_deg`` and the feeds on the
+        result.
+        
+        :param tool_radius: Tool radius in mm.
+        :param step_over: Radial step-over between passes (mm).
+        :param target_z: Cutting depth (Z).
+        :param safe_z: Safe (rapid) Z height.
+        """
 
 def plan_clearing(part: part.Part, face_id: builtins.str = '', tool_radius: builtins.float = 3.0, step_over: builtins.float = 2.0, step_length: builtins.float = 0.6, target_z: builtins.float = -5.0, safe_z: builtins.float = 2.0, wall_margin: builtins.float = 0.0, safe_margin: builtins.float = 1.0, stock_to_leave: builtins.float = 0.0, plunge_pitch: builtins.float = 1.0, angular_step: builtins.float = 0.1, area_tolerance: builtins.float = 1.0, max_deflection_deg: builtins.float = 30.0, finishing: builtins.bool = False, feed_rate: typing.Optional[builtins.float] = None, plunge_feed: typing.Optional[builtins.float] = None, max_entry_angle_deg: builtins.float = 0.0) -> plan.Plan: ...
 
