@@ -16,6 +16,7 @@ mod resume_envelope;
 mod resume_frontier;
 mod resume_island;
 mod resume_mat;
+mod resume_rest;
 mod resume_segment;
 mod resume_wall_hug;
 pub mod routing;

@@ -39,6 +39,7 @@ pub use super::resume_island::ResumeIsland;
 pub use super::resume_mat::{
     find_all_mat_crossings, mat_resume_from_crossing, ResumeMat,
 };
+pub use super::resume_rest::ResumeRest;
 pub use super::resume_segment::ResumeSegment;
 pub use super::resume_wall_hug::ResumeWallHug;
 
@@ -656,6 +657,9 @@ pub enum ResumeSource {
     ResumeEnvelope = 6,
     /// Propose the spine of the uncleared core along the medial axis.
     ResumeCore = 7,
+    /// Propose a point inside the remaining material itself (rest
+    /// machining of remainders narrower than the tool).
+    ResumeRest = 8,
 }
 
 // ── ResumeContext ───────────────────────────────────────────────────
@@ -706,7 +710,7 @@ pub trait ResumeStrategy {
 /// Per-strategy outcome codes emitted via [`try_resume`].
 /// Index 0-5 match the priority order (WallHug, Segment, Mat,
 /// Frontier, Envelope, Island).
-pub type ResumeReasons = [u8; 7];
+pub type ResumeReasons = [u8; 8];
 
 /// Reason codes for resume-strategy outcomes stored in trace records.
 /// 0 = not tried, 1 = find_next returned None (no candidate),
@@ -716,7 +720,7 @@ pub const REASON_NO_CANDIDATE: u8 = 1;
 pub const REASON_BLACKLISTED: u8 = 2;
 
 /// Detail codes for resume-strategy failure, stored in a parallel
-/// `[u8; 7]` next to the reason codes.  Each byte gives context for
+/// `[u8; 8]` next to the reason codes.  Each byte gives context for
 /// *why* the strategy returned `None`.
 ///
 /// Values are shared across strategies — meaning depends on which
@@ -756,7 +760,7 @@ pub(super) fn require_fragments<'a>(
 /// Index 0-5 match the strategy priority order (WallHug, Segment,
 /// Mat, Frontier, Envelope, Island).  `None` if the strategy did not
 /// produce a candidate.
-pub type ResumeCandidatePoints = [Option<Point3D>; 7];
+pub type ResumeCandidatePoints = [Option<Point3D>; 8];
 
 /// Try each strategy in priority order.  Returns the winning strategy
 /// and the tool pose to apply.  When no strategy succeeds, `reasons`
@@ -799,12 +803,12 @@ pub fn try_resume(
     }
 
     let sq_tol = (ctx.step_length * 0.25).powi(2);
-    *candidate_pts = [None; 7];
+    *candidate_pts = [None; 8];
 
     // Try each strategy in priority order.  Each strategy decides for
     // itself whether it is responsible (e.g. WallHug returns None when
     // there is no stored wall-hug pose).
-    let mut chain: StrategyChain<&dyn ResumeStrategy, ResumeSource, 7> =
+    let mut chain: StrategyChain<&dyn ResumeStrategy, ResumeSource, 8> =
         StrategyChain::new([
             (&ResumeWallHug, ResumeSource::ResumeWallHug),
             (&ResumeSegment, ResumeSource::ResumeSegment),
@@ -813,6 +817,7 @@ pub fn try_resume(
             (&ResumeFrontier, ResumeSource::ResumeFrontier),
             (&ResumeEnvelope, ResumeSource::ResumeEnvelope),
             (&ResumeIsland, ResumeSource::ResumeIsland),
+            (&ResumeRest, ResumeSource::ResumeRest),
         ]);
 
     let result = chain.run(
