@@ -69,7 +69,9 @@ pub fn plan_entry(
         // A positive entry angle turns the requested slope into the
         // pitch: one revolution drops pitch = tan(angle) · 2πr.
         let pitch = if opts.max_entry_angle_deg > 0.0 {
-            opts.max_entry_angle_deg.to_radians().tan() * std::f64::consts::TAU * helix_r
+            opts.max_entry_angle_deg.to_radians().tan()
+                * std::f64::consts::TAU
+                * helix_r
         } else {
             opts.plunge_pitch
         };

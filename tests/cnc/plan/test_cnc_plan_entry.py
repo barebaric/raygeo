@@ -195,7 +195,7 @@ def test_entry_angle_caps_the_ramp_entries():
     entries; without it the planner keeps its historical 45-degree
     cap."""
     boundary = _rect(0, 0, 40, 30)
-    # A 10 mm tool leaves r_max below two diameters, which selects a ramp entry.
+    # A 10 mm tool leaves r_max below two diameters: a ramp entry.
     kwargs = dict(tool_radius=5.0, step_over=5.0, safe_z=2.0, target_z=-5.0)
     steep = _build_entry(boundary, **kwargs)
     gentle = _build_entry(boundary, max_entry_angle_deg=3.0, **kwargs)

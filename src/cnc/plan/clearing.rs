@@ -33,7 +33,9 @@ use crate::geo::shape::polygon::{
 };
 use crate::geo::types::{Point, Point3D, Polygon};
 use crate::ops::assembly::adaptive::AdaptiveClearingSpec;
-use crate::ops::assembly::profile::{ProfileKind, ProfileRampSpec, ProfileSpec};
+use crate::ops::assembly::profile::{
+    ProfileKind, ProfileRampSpec, ProfileSpec,
+};
 use crate::ops::assembly::slot::SlotSpec;
 use crate::ops::assembly::toroid::ToroidalClearSpec;
 use crate::ops::feature::narrow::{self, NarrowAnalysisOptions, PassageClass};
