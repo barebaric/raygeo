@@ -14,5 +14,5 @@ __all__ = [
     "plan_entry",
 ]
 
-def plan_entry(region_polygon: typing.Sequence[tuple[builtins.float, builtins.float]], entry_point: tuple[builtins.float, builtins.float], r_max: builtins.float, islands: typing.Optional[typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]] = None, tool_radius: builtins.float = 3.0, step_over: builtins.float = 2.0, safe_z: builtins.float = 2.0, target_z: builtins.float = -5.0, plunge_pitch: builtins.float = 1.0, safe_margin: builtins.float = 1.0, angular_step: builtins.float = 0.1) -> builtins.list[plan.PlanStep]: ...
+def plan_entry(region_polygon: typing.Sequence[tuple[builtins.float, builtins.float]], entry_point: tuple[builtins.float, builtins.float], r_max: builtins.float, islands: typing.Optional[typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]] = None, tool_radius: builtins.float = 3.0, step_over: builtins.float = 2.0, safe_z: builtins.float = 2.0, target_z: builtins.float = -5.0, plunge_pitch: builtins.float = 1.0, safe_margin: builtins.float = 1.0, angular_step: builtins.float = 0.1, max_entry_angle_deg: builtins.float = 0.0) -> builtins.list[plan.PlanStep]: ...
 

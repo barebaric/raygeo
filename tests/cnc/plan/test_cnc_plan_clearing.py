@@ -1,5 +1,7 @@
 """Tests for plan_clearing in cnc/plan/clearing."""
 
+import math
+
 import pytest
 
 from raygeo.cnc.execution.intent import create_intent, run_intent
@@ -383,3 +385,40 @@ def test_step_over_near_the_diameter_still_clears_the_floor():
                 y += 0.5
             x += 0.5
         assert checked > 4000, f"only {checked} floor points checked"
+
+
+def test_entry_angle_bounds_the_entry_descent():
+    """A positive max_entry_angle_deg bounds how steeply the entry
+    descends into material, whichever entry strategy the region's shape
+    selects."""
+    part = Part.from_polygons(
+        [(0.0, 0.0), (40.0, 0.0), (40.0, 30.0), (0.0, 30.0)],
+        [],
+        (60.0, 50.0),
+    )
+    plan = plan_clearing(
+        part,
+        "",
+        tool_radius=3.0,
+        step_over=5.0,
+        target_z=-4.0,
+        safe_z=10.0,
+        max_entry_angle_deg=3.0,
+    )
+    ops = run_intent(create_intent(plan, part, 0))
+    steepest = 0.0
+    cmds = ops.to_dict()["commands"]
+    for prev, cmd in zip(cmds, cmds[1:]):
+        if cmd["type"] != "LINE_TO":
+            continue
+        a, b = prev["end"], cmd["end"]
+        if b[2] >= a[2] - 1e-9 or b[2] > 0.0:
+            continue
+        run = ((b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2) ** 0.5
+        if run <= 1e-9:
+            continue
+        steepest = max(steepest, math.atan2(a[2] - b[2], run))
+    assert steepest > 0.0, "the plan never descends into material"
+    assert steepest <= math.radians(3.2), (
+        f"steepest entry descent {math.degrees(steepest):.2f} deg"
+    )

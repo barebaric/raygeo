@@ -46,6 +46,7 @@ pub(crate) fn register(plan_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     finishing = false,
     feed_rate = None,
     plunge_feed = None,
+    max_entry_angle_deg = 0.0,
 ))]
 pub fn plan_clearing_py(
     part: &Bound<'_, PyPart>,
@@ -65,6 +66,7 @@ pub fn plan_clearing_py(
     finishing: bool,
     feed_rate: Option<f64>,
     plunge_feed: Option<f64>,
+    max_entry_angle_deg: f64,
 ) -> PyResult<Py<super::PyPlan>> {
     let opts = ClearingWorkplanOptions {
         tool_radius,
@@ -82,6 +84,7 @@ pub fn plan_clearing_py(
         finishing,
         feed_rate,
         plunge_feed,
+        max_entry_angle_deg,
     };
 
     let plan = clearing::plan_clearing(&part.borrow().inner, face_id, &opts)?;
