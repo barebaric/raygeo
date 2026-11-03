@@ -35,6 +35,13 @@ pub struct EntryWorkplanOptions {
     pub plunge_pitch: f64,
     pub safe_margin: f64,
     pub angular_step: f64,
+    /// Steepest descent the entry may make, in degrees. `<= 0` keeps the
+    /// planner's historical behaviour: the helix descends `plunge_pitch`
+    /// per revolution and the ramp entries cap at 45°. A positive angle
+    /// derives the helix pitch from it and caps both ramp entries at it,
+    /// so a caller can ask for gentle lead-ins regardless of which
+    /// strategy a region's shape selects.
+    pub max_entry_angle_deg: f64,
 }
 
 /// Plan entry steps for a single wide [`Region`].
@@ -59,6 +66,15 @@ pub fn plan_entry(
 
     if region.r_max >= 2.0 * tool_diameter {
         let helix_r = (opts.tool_radius * 0.8).min(region.r_max * 0.5);
+        // A positive entry angle turns the requested slope into the
+        // pitch: one revolution drops pitch = tan(angle) · 2πr.
+        let pitch = if opts.max_entry_angle_deg > 0.0 {
+            opts.max_entry_angle_deg.to_radians().tan()
+                * std::f64::consts::TAU
+                * helix_r
+        } else {
+            opts.plunge_pitch
+        };
 
         steps.push(PlanStep {
             face_id: face_id.to_string(),
@@ -67,7 +83,7 @@ pub fn plan_entry(
                 start_radius: helix_r,
                 z_start: opts.safe_z,
                 z_end: opts.target_z,
-                pitch: opts.plunge_pitch,
+                pitch,
                 direction: HelixDirection::Cw,
                 angular_step: opts.angular_step,
             }),
@@ -98,7 +114,7 @@ pub fn plan_entry(
         &region.polygon,
         &opts.islands,
         opts.tool_radius,
-        45.0,
+        entry_angle_cap(opts),
         // The trochoid about the carrier swings `lateral_swing` to each
         // side; keep the swing inside the tool-centre region.
         crate::geo::algo::trochoid::trochoid_lateral_swing(
@@ -116,7 +132,7 @@ pub fn plan_entry(
                 target_z: opts.target_z,
                 tool_radius: opts.tool_radius,
                 step_over: opts.step_over,
-                max_ramp_angle_deg: 45.0,
+                max_ramp_angle_deg: entry_angle_cap(opts),
                 direction: HelixDirection::Cw,
                 angular_step: opts.angular_step,
             }),
@@ -131,7 +147,7 @@ pub fn plan_entry(
                 end,
                 z_start: opts.safe_z,
                 z_end: opts.target_z,
-                max_ramp_angle_deg: 45.0,
+                max_ramp_angle_deg: entry_angle_cap(opts),
                 style: crate::geo::algo::ramp::RampStyle::ZigZag,
                 lateral_amplitude: amplitude,
             }),
@@ -140,6 +156,16 @@ pub fn plan_entry(
     }
 
     Ok(steps)
+}
+
+/// The descent cap the ramp entries honour: the caller's entry angle
+/// when one was requested, the planner's historical 45° otherwise.
+fn entry_angle_cap(opts: &EntryWorkplanOptions) -> f64 {
+    if opts.max_entry_angle_deg > 0.0 {
+        opts.max_entry_angle_deg
+    } else {
+        45.0
+    }
 }
 
 /// A zigzag ramp entry that stays inside the region: the carrier is the

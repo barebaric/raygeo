@@ -31,29 +31,31 @@ plan_clearing(
     finishing: bool = False,
     feed_rate: Optional[float] = None,
     plunge_feed: Optional[float] = None,
+    max_entry_angle_deg: float = 0.0,
 ) -> plan.Plan
 ```
 
-| Parameter            | Type                     | Description |
-| -------------------- | ------------------------ | ----------- |
-| `part`               | `part.Part`              |             |
-| `face_id`            | `str = ''`               |             |
-| `tool_radius`        | `float = 3.0`            |             |
-| `step_over`          | `float = 2.0`            |             |
-| `step_length`        | `float = 0.6`            |             |
-| `target_z`           | `float = -5.0`           |             |
-| `safe_z`             | `float = 2.0`            |             |
-| `wall_margin`        | `float = 0.0`            |             |
-| `safe_margin`        | `float = 1.0`            |             |
-| `stock_to_leave`     | `float = 0.0`            |             |
-| `plunge_pitch`       | `float = 1.0`            |             |
-| `angular_step`       | `float = 0.1`            |             |
-| `area_tolerance`     | `float = 1.0`            |             |
-| `max_deflection_deg` | `float = 30.0`           |             |
-| `finishing`          | `bool = False`           |             |
-| `feed_rate`          | `Optional[float] = None` |             |
-| `plunge_feed`        | `Optional[float] = None` |             |
-| _Returns_            | `plan.Plan`              |             |
+| Parameter             | Type                     | Description |
+| --------------------- | ------------------------ | ----------- |
+| `part`                | `part.Part`              |             |
+| `face_id`             | `str = ''`               |             |
+| `tool_radius`         | `float = 3.0`            |             |
+| `step_over`           | `float = 2.0`            |             |
+| `step_length`         | `float = 0.6`            |             |
+| `target_z`            | `float = -5.0`           |             |
+| `safe_z`              | `float = 2.0`            |             |
+| `wall_margin`         | `float = 0.0`            |             |
+| `safe_margin`         | `float = 1.0`            |             |
+| `stock_to_leave`      | `float = 0.0`            |             |
+| `plunge_pitch`        | `float = 1.0`            |             |
+| `angular_step`        | `float = 0.1`            |             |
+| `area_tolerance`      | `float = 1.0`            |             |
+| `max_deflection_deg`  | `float = 30.0`           |             |
+| `finishing`           | `bool = False`           |             |
+| `feed_rate`           | `Optional[float] = None` |             |
+| `plunge_feed`         | `Optional[float] = None` |             |
+| `max_entry_angle_deg` | `float = 0.0`            |             |
+| _Returns_             | `plan.Plan`              |             |
 
 ![Clearing workplan: narrow passage (ToroidalClear), slot (Slot), dual-entry dumbbell (Unreachable).](images/cnc-plan-clearing-clearing.png)
 

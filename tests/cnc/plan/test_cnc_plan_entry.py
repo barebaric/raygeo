@@ -2,6 +2,8 @@
 
 import math
 
+import pytest
+
 from raygeo.cnc.plan.entry import plan_entry
 from raygeo.geo.shape.polygon import is_point_inside_polygon
 from raygeo.ops.feature.region import find_regions
@@ -186,3 +188,48 @@ def test_entry_workplan_island_avoids_entry():
     assert "helix" not in kinds, (
         f"unexpected helix in tight pocket with island: {kinds}"
     )
+
+
+def test_entry_angle_caps_the_ramp_entries():
+    """A positive max_entry_angle_deg caps the descent of the ramp
+    entries; without it the planner keeps its historical 45-degree
+    cap."""
+    boundary = _rect(0, 0, 40, 30)
+    # A 10 mm tool leaves r_max below two diameters: a ramp entry.
+    kwargs = dict(tool_radius=5.0, step_over=5.0, safe_z=2.0, target_z=-5.0)
+    steep = _build_entry(boundary, **kwargs)
+    gentle = _build_entry(boundary, max_entry_angle_deg=3.0, **kwargs)
+    steep_kinds = [s.kind for s in steep]
+    assert any(k in steep_kinds for k in ("toroidal_clear", "ramp")), (
+        f"expected a ramp entry, got {steep_kinds}"
+    )
+    for steps, expected in ((steep, 45.0), (gentle, 3.0)):
+        for s in steps:
+            if s.kind in ("toroidal_clear", "ramp"):
+                cap = s.spec_params()["max_ramp_angle_deg"]
+                assert cap == expected, (
+                    f"{s.kind}: cap {cap}, expected {expected}"
+                )
+
+
+def test_entry_angle_sets_the_helix_pitch():
+    """A positive max_entry_angle_deg derives the helix pitch from the
+    requested slope: one revolution drops tan(angle) · 2πr."""
+    boundary = _rect(-20, -20, 40, 40)
+    steps = _build_entry(
+        boundary,
+        tool_radius=3.0,
+        step_over=2.0,
+        safe_z=2.0,
+        target_z=-5.0,
+        max_entry_angle_deg=3.0,
+    )
+    helix = [s for s in steps if s.kind == "helix"]
+    assert len(helix) == 1
+    expected = (
+        math.tan(math.radians(3.0))
+        * 2.0
+        * math.pi
+        * helix[0].spec_params()["start_radius"]
+    )
+    assert helix[0].spec_params()["pitch"] == pytest.approx(expected, rel=1e-9)

@@ -15,5 +15,5 @@ __all__ = [
     "plan_clearing",
 ]
 
-def plan_clearing(part: part.Part, face_id: builtins.str = '', tool_radius: builtins.float = 3.0, step_over: builtins.float = 2.0, step_length: builtins.float = 0.6, target_z: builtins.float = -5.0, safe_z: builtins.float = 2.0, wall_margin: builtins.float = 0.0, safe_margin: builtins.float = 1.0, stock_to_leave: builtins.float = 0.0, plunge_pitch: builtins.float = 1.0, angular_step: builtins.float = 0.1, area_tolerance: builtins.float = 1.0, max_deflection_deg: builtins.float = 30.0, finishing: builtins.bool = False, feed_rate: typing.Optional[builtins.float] = None, plunge_feed: typing.Optional[builtins.float] = None) -> plan.Plan: ...
+def plan_clearing(part: part.Part, face_id: builtins.str = '', tool_radius: builtins.float = 3.0, step_over: builtins.float = 2.0, step_length: builtins.float = 0.6, target_z: builtins.float = -5.0, safe_z: builtins.float = 2.0, wall_margin: builtins.float = 0.0, safe_margin: builtins.float = 1.0, stock_to_leave: builtins.float = 0.0, plunge_pitch: builtins.float = 1.0, angular_step: builtins.float = 0.1, area_tolerance: builtins.float = 1.0, max_deflection_deg: builtins.float = 30.0, finishing: builtins.bool = False, feed_rate: typing.Optional[builtins.float] = None, plunge_feed: typing.Optional[builtins.float] = None, max_entry_angle_deg: builtins.float = 0.0) -> plan.Plan: ...
 

@@ -33,7 +33,9 @@ use crate::geo::shape::polygon::{
 };
 use crate::geo::types::{Point, Point3D, Polygon};
 use crate::ops::assembly::adaptive::AdaptiveClearingSpec;
-use crate::ops::assembly::profile::{ProfileKind, ProfileSpec};
+use crate::ops::assembly::profile::{
+    ProfileKind, ProfileRampSpec, ProfileSpec,
+};
 use crate::ops::assembly::slot::SlotSpec;
 use crate::ops::assembly::toroid::ToroidalClearSpec;
 use crate::ops::feature::narrow::{self, NarrowAnalysisOptions, PassageClass};
@@ -63,6 +65,10 @@ pub struct ClearingWorkplanOptions {
     pub area_tolerance: f64,
     pub max_deflection_deg: f64,
     pub finishing: bool,
+    /// Steepest entry descent in degrees; `<= 0` keeps the planner's
+    /// historical entry behaviour (see
+    /// [`EntryWorkplanOptions::max_entry_angle_deg`]).
+    pub max_entry_angle_deg: f64,
     /// Cut feed rate (mm/min) the plan's moves carry. `None` leaves the
     /// cut state unset, for embedders that map feeds themselves.
     pub feed_rate: Option<f64>,
@@ -213,6 +219,7 @@ pub fn plan_clearing(
         plunge_pitch: opts.plunge_pitch,
         safe_margin: opts.safe_margin,
         angular_step: opts.angular_step,
+        max_entry_angle_deg: opts.max_entry_angle_deg,
     };
 
     // All steps share the same face so that cleared fragments
@@ -423,59 +430,63 @@ pub fn plan_clearing(
         .len()
             > 1;
 
+        let profile_step = |region_boundary| PlanStep {
+            face_id: cur_face.clone(),
+            spec: Arc::new(ProfileSpec {
+                kind: ProfileKind::Inner,
+                tool_radius: opts.tool_radius,
+                step_over: opts.step_over,
+                step_length: opts.step_length,
+                target_z: opts.target_z,
+                safe_z: opts.safe_z,
+                wall_margin: opts.wall_margin,
+                stock_to_leave: opts.stock_to_leave,
+                cut_direction: crate::ops::types::CutDirection::Ccw,
+                start_pos: None,
+                tolerance: 0.05,
+                expansion_batch_size: 20,
+                cancel_check: None,
+                engagement_area_threshold: 1.0,
+                engagement_angle_threshold: 30.0,
+                feed_reduction_factor: 0.5,
+                trace_path: None,
+            }),
+            region_boundary,
+        };
+        let ramp_step = |region_boundary| PlanStep {
+            face_id: cur_face.clone(),
+            spec: Arc::new(ProfileRampSpec {
+                kind: ProfileKind::Inner,
+                tool_radius: opts.tool_radius,
+                wall_margin: opts.wall_margin,
+                stock_to_leave: opts.stock_to_leave,
+                ramp_angle: opts.max_entry_angle_deg.to_radians(),
+                z_start: opts.safe_z,
+                z_end: opts.target_z,
+                cut_direction: crate::ops::types::CutDirection::Ccw,
+                tolerance: 0.05,
+            }),
+            region_boundary,
+        };
         if has_unreachable || inset_splits {
             for reg in &regions {
-                steps.push(PlanStep {
-                    face_id: cur_face.clone(),
-                    spec: Arc::new(ProfileSpec {
-                        kind: ProfileKind::Inner,
-                        tool_radius: opts.tool_radius,
-                        step_over: opts.step_over,
-                        step_length: opts.step_length,
-                        target_z: opts.target_z,
-                        safe_z: opts.safe_z,
-                        wall_margin: opts.wall_margin,
-                        stock_to_leave: opts.stock_to_leave,
-                        cut_direction: crate::ops::types::CutDirection::Ccw,
-                        start_pos: None,
-                        tolerance: 0.05,
-                        expansion_batch_size: 20,
-                        cancel_check: None,
-                        engagement_area_threshold: 1.0,
-                        engagement_angle_threshold: 30.0,
-                        feed_reduction_factor: 0.5,
-                        trace_path: None,
-                    }),
-                    region_boundary: Some((
-                        reg.polygon.clone(),
-                        islands_inside(&reg.polygon, &islands),
-                    )),
-                });
+                let rb = Some((
+                    reg.polygon.clone(),
+                    islands_inside(&reg.polygon, &islands),
+                ));
+                // A requested entry angle brings its ramp: the descent
+                // walks the wall loop at the angle, and the profile pass
+                // enters in the channel it cut.
+                if opts.max_entry_angle_deg > 0.0 {
+                    steps.push(ramp_step(rb.clone()));
+                }
+                steps.push(profile_step(rb));
             }
         } else {
-            steps.push(PlanStep {
-                face_id: cur_face.clone(),
-                spec: Arc::new(ProfileSpec {
-                    kind: ProfileKind::Inner,
-                    tool_radius: opts.tool_radius,
-                    step_over: opts.step_over,
-                    step_length: opts.step_length,
-                    target_z: opts.target_z,
-                    safe_z: opts.safe_z,
-                    wall_margin: opts.wall_margin,
-                    stock_to_leave: opts.stock_to_leave,
-                    cut_direction: crate::ops::types::CutDirection::Ccw,
-                    start_pos: None,
-                    tolerance: 0.05,
-                    expansion_batch_size: 20,
-                    cancel_check: None,
-                    engagement_area_threshold: 1.0,
-                    engagement_angle_threshold: 30.0,
-                    feed_reduction_factor: 0.5,
-                    trace_path: None,
-                }),
-                region_boundary: None,
-            });
+            if opts.max_entry_angle_deg > 0.0 {
+                steps.push(ramp_step(None));
+            }
+            steps.push(profile_step(None));
         }
     }
 
