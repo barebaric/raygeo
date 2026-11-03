@@ -32,7 +32,7 @@ use crate::geo::shape::polygon::{
     is_point_inside_polygon, offset_polygon, JoinStyle,
 };
 use crate::geo::types::{Point, Point3D, Polygon};
-use crate::ops::assembly::adaptive::AdaptiveClearingSpec;
+use crate::ops::assembly::adaptive::{AdaptiveClearingSpec, TravelMode};
 use crate::ops::assembly::erosion::ErosionSpec;
 use crate::ops::assembly::profile::{
     ProfileKind, ProfileRampSpec, ProfileSpec,
@@ -76,6 +76,11 @@ pub struct ClearingWorkplanOptions {
     /// historical entry behaviour (see
     /// [`EntryWorkplanOptions::max_entry_angle_deg`]).
     pub max_entry_angle_deg: f64,
+    /// How travels between passes are routed (see [`TravelMode`]):
+    /// `ClearedArea` skims across cleared floor at cut height, `SafeZ`
+    /// retracts to `safe_z` for every travel — pick `SafeZ` when the
+    /// consumer verifies the path without knowing the cleared area.
+    pub travel_mode: TravelMode,
     /// Cut feed rate (mm/min) the plan's moves carry. `None` leaves the
     /// cut state unset, for embedders that map feeds themselves.
     pub feed_rate: Option<f64>,
@@ -116,6 +121,7 @@ impl ClearingWorkplanOptions {
             finishing: false,
             max_entry_angle_deg: 0.0,
             cut_direction: CutDirection::Ccw,
+            travel_mode: TravelMode::ClearedArea,
             feed_rate: None,
             plunge_feed: None,
         }
@@ -381,6 +387,7 @@ pub fn plan_clearing(
                 wall_margin: opts.wall_margin,
                 area_tolerance: opts.area_tolerance,
                 cut_direction: opts.cut_direction,
+                travel_mode: opts.travel_mode,
                 start_pos: start_pos_3d,
                 start_heading: None,
                 expansion_batch_size: 20,

@@ -41,6 +41,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         max_deflection_deg: 30.0,
         finishing: true,
         cut_direction: raygeo::ops::types::CutDirection::Ccw,
+        travel_mode: raygeo::ops::assembly::adaptive::TravelMode::ClearedArea,
         feed_rate: Some(900.0),
         plunge_feed: Some(300.0),
         max_entry_angle_deg: 0.0,

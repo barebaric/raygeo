@@ -99,6 +99,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         expansion_batch_size: int = 20,
         profile: bool = False,
         cut_direction: str = "ccw",
+        travel_mode: str = "cleared_area",
         trace_path: str | None = None,
         on_progress: collections.abc.Callable[[dict], None] | None = None,
         batch_size: int = 128,
@@ -139,6 +140,8 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
                                      reduce path quality.
         :param profile: Print a profiling report to stdout (default False).
         :param cut_direction: Rotational direction of all cutting moves.
+        :param travel_mode: ``"cleared_area"`` (skims across cleared
+             floor) or ``"safe_z"`` (every travel retracts to ``safe_z``).
                               ``"cw"`` or ``"ccw"`` (default ``"ccw"``).
         :param trace_path: When set, write a per-step binary trace file for
                            the Python inspector (debug builds only).
@@ -168,6 +171,7 @@ pub(crate) fn register(assembly_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     profile = false,
     trace_path = None,
     cut_direction = "ccw",
+    travel_mode = "cleared_area",
     on_progress = None,
     batch_size = 128,
 ))]
@@ -190,12 +194,17 @@ fn adaptive_clearing_py(
     profile: bool,
     trace_path: Option<String>,
     cut_direction: &str,
+    travel_mode: &str,
     on_progress: Option<Py<PyAny>>,
     batch_size: usize,
 ) -> PyResult<PyAssemblyResult> {
     let cd = match cut_direction.to_ascii_lowercase().as_str() {
         "cw" => CutDirection::Cw,
         _ => CutDirection::Ccw,
+    };
+    let tm = match travel_mode.to_ascii_lowercase().as_str() {
+        "safe_z" => adaptive::TravelMode::SafeZ,
+        _ => adaptive::TravelMode::ClearedArea,
     };
 
     let opts = adaptive::AdaptiveClearingSpec {
@@ -212,6 +221,7 @@ fn adaptive_clearing_py(
         expansion_batch_size,
         trace_path: trace_path.map(PathBuf::from),
         cut_direction: cd,
+        travel_mode: tm,
         tolerance: 0.1,
         cancel_check: Some(check_cancel),
     };
@@ -294,6 +304,9 @@ pub struct PyAdaptiveClearingSpec {
     /// ``"cw"`` or ``"ccw"``.
     #[pyo3(get)]
     pub cut_direction: String,
+    /// ``"cleared_area"`` or ``"safe_z"``.
+    #[pyo3(get)]
+    pub travel_mode: String,
     /// Optional override start ``(x, y)``.
     #[pyo3(get)]
     pub start_pos: Option<(f64, f64)>,
@@ -314,6 +327,10 @@ impl PyAdaptiveClearingSpec {
             "cw" => CutDirection::Cw,
             _ => CutDirection::Ccw,
         };
+        let tm = match self.travel_mode.as_str() {
+            "safe_z" => adaptive::TravelMode::SafeZ,
+            _ => adaptive::TravelMode::ClearedArea,
+        };
         adaptive::AdaptiveClearingSpec {
             tool_radius: self.tool_radius,
             step_over: self.step_over,
@@ -324,6 +341,7 @@ impl PyAdaptiveClearingSpec {
             wall_margin: self.wall_margin,
             area_tolerance: self.area_tolerance,
             cut_direction: cd,
+            travel_mode: tm,
             start_pos: self
                 .start_pos
                 .map(|(x, y)| Point3D::new(x, y, self.target_z)),
@@ -350,6 +368,7 @@ impl PyAdaptiveClearingSpec {
         wall_margin = 0.0,
         area_tolerance = 1.0,
         cut_direction = "ccw",
+        travel_mode = "cleared_area",
         start_pos = None,
         start_heading = None,
         expansion_batch_size = 20,
@@ -367,6 +386,7 @@ impl PyAdaptiveClearingSpec {
         wall_margin: f64,
         area_tolerance: f64,
         cut_direction: &str,
+        travel_mode: &str,
         start_pos: Option<(f64, f64)>,
         start_heading: Option<f64>,
         expansion_batch_size: usize,
@@ -383,6 +403,7 @@ impl PyAdaptiveClearingSpec {
             wall_margin,
             area_tolerance,
             cut_direction: cut_direction.to_string(),
+            travel_mode: travel_mode.to_string(),
             start_pos,
             start_heading,
             expansion_batch_size,

@@ -467,6 +467,11 @@ pub struct PyLinkMode {
     /// ``tag == "sequential"``).
     #[pyo3(get)]
     safe_z: f64,
+    /// Plunge feed (mm/min) for the link's descent into a lower entry
+    /// Z (only meaningful when ``tag == "sequential"``); ``None``
+    /// keeps the descent a rapid travel.
+    #[pyo3(get)]
+    plunge_feed: Option<i32>,
 }
 
 impl PyLinkMode {
@@ -475,6 +480,7 @@ impl PyLinkMode {
             "sequential" => {
                 crate::cnc::execution::specs::LinkMode::Sequential {
                     safe_z: self.safe_z,
+                    plunge_feed: self.plunge_feed,
                 }
             }
             _ => crate::cnc::execution::specs::LinkMode::None,
@@ -491,6 +497,7 @@ impl PyLinkMode {
         PyLinkMode {
             tag: "none".to_string(),
             safe_z: 0.0,
+            plunge_feed: None,
         }
     }
 
@@ -498,11 +505,19 @@ impl PyLinkMode {
     /// XY travel → plunge) between consecutive inputs.
     ///
     /// :param safe_z: Z height for retract and final lift.
+    /// :param plunge_feed: Plunge feed (mm/min) for the descent into a
+    ///   lower entry Z; ``None`` keeps it a rapid travel.
     #[classmethod]
-    fn sequential(_cls: &Bound<'_, PyType>, safe_z: f64) -> Self {
+    #[pyo3(signature = (safe_z, plunge_feed = None))]
+    fn sequential(
+        _cls: &Bound<'_, PyType>,
+        safe_z: f64,
+        plunge_feed: Option<i32>,
+    ) -> Self {
         PyLinkMode {
             tag: "sequential".to_string(),
             safe_z,
+            plunge_feed,
         }
     }
 }
@@ -583,6 +598,7 @@ impl PyAggregateGroup {
             link_mode: link_mode
                 .map(|lm| lm.borrow(py).clone())
                 .unwrap_or_else(|| PyLinkMode {
+                    plunge_feed: None,
                     tag: "none".to_string(),
                     safe_z: 0.0,
                 }),

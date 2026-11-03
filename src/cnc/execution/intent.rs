@@ -102,6 +102,10 @@ pub fn create_intent(
                 end_markers: Vec::new(),
                 link_mode: LinkMode::Sequential {
                     safe_z: plan.safe_z,
+                    plunge_feed: plan
+                        .cut_state
+                        .plunge_feed
+                        .or(plan.cut_state.feed_rate),
                 },
             }],
             wrap_end: Vec::new(),

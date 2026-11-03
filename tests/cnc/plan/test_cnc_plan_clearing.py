@@ -286,6 +286,61 @@ def _island_pocket():
     )
 
 
+def test_travel_mode_reaches_the_clearing_steps():
+    """A requested travel mode is pinned on the clearing spec."""
+    boundary = _rect(-20, -20, 40, 40)
+    plan = _plan(boundary, tool_radius=3.0, travel_mode="safe_z")
+    adaptive = [s for s in plan.steps if s.kind == "adaptive_clearing"]
+    assert adaptive, "clearing plans adaptive passes"
+    assert all(s.spec_params()["travel_mode"] == "SafeZ" for s in adaptive)
+
+    plan = _plan(boundary, tool_radius=3.0)
+    adaptive = [s for s in plan.steps if s.kind == "adaptive_clearing"]
+    assert adaptive
+    assert all(
+        s.spec_params()["travel_mode"] == "ClearedArea" for s in adaptive
+    )
+
+
+def test_safe_z_travel_keeps_sideways_travels_at_safe_z():
+    """With SafeZ travel and feeds set, every sideways travel move stays
+    at safe_z — a consumer that can only see the path can tell it is
+    safe — and every descent into material goes out as a cutting move
+    at the plunge feed."""
+    boundary = _rect(-20, -20, 40, 40)
+    part = Part.from_polygons(boundary, [], (40.0, 40.0))
+    plan = plan_clearing(
+        part,
+        "",
+        tool_radius=3.0,
+        step_over=2.0,
+        target_z=-3.0,
+        safe_z=5.0,
+        travel_mode="safe_z",
+        feed_rate=900.0,
+        plunge_feed=300.0,
+    )
+    ops = run_intent(create_intent(plan, part, 0))
+    prev = None
+    for cmd in ops.to_dict()["commands"]:
+        if cmd["type"] not in ("MOVE_TO", "LINE_TO"):
+            continue
+        x, y, z = cmd["end"]
+        if prev is not None:
+            px, py, pz = prev
+            sideways = abs(x - px) > 1e-6 or abs(y - py) > 1e-6
+            if sideways and cmd["type"] == "MOVE_TO":
+                assert z >= 5.0 - 1e-6, (
+                    f"sideways travel below safe_z: {prev} -> {cmd['end']}"
+                )
+            if not sideways and z < pz - 1e-6:
+                assert cmd["type"] == "LINE_TO", (
+                    f"descent into material is a rapid travel: "
+                    f"{prev} -> {cmd['end']}"
+                )
+        prev = (x, y, z)
+
+
 def _clearance(p):
     wall = min(p[0], 40.0 - p[0], p[1], 30.0 - p[1])
     dx = max(15.0 - p[0], 0.0, p[0] - 25.0)

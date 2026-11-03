@@ -304,6 +304,15 @@ Controls inter-input linking in an AggregateGroup.
 
 Create via class methods: LinkMode.none() LinkMode.sequential(safe_z=2.0)
 
+### `plunge_feed`
+
+```python
+plunge_feed: Optional[int]
+```
+
+Plunge feed (mm/min) for the link's descent into a lower entry Z (only meaningful when
+`tag == "sequential"`); `None` keeps the descent a rapid travel.
+
 ### `safe_z`
 
 ```python
@@ -335,16 +344,21 @@ Create a `LinkMode` with no inter-input linking.
 ### `sequential()`
 
 ```python
-@classmethod sequential(safe_z: float) -> LinkMode
+@classmethod
+sequential(
+    safe_z: float,
+    plunge_feed: Optional[int] = None,
+) -> LinkMode
 ```
 
 Create a `LinkMode` that emits travel moves (retract → XY travel → plunge) between consecutive
 inputs.
 
-| Parameter | Type       | Description                          |
-| --------- | ---------- | ------------------------------------ |
-| `safe_z`  | `float`    | Z height for retract and final lift. |
-| _Returns_ | `LinkMode` |                                      |
+| Parameter     | Type                   | Description                                                                                |
+| ------------- | ---------------------- | ------------------------------------------------------------------------------------------ |
+| `safe_z`      | `float`                | Z height for retract and final lift.                                                       |
+| `plunge_feed` | `Optional[int] = None` | Plunge feed (mm/min) for the descent into a lower entry Z; `None` keeps it a rapid travel. |
+| _Returns_     | `LinkMode`             |                                                                                            |
 
 ## MachineParams
 

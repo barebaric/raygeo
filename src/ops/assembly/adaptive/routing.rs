@@ -13,6 +13,7 @@ use crate::geo::shape::polygon::does_path_sweep_intersect_polygon;
 use crate::geo::shape::polygon::is_path_confined_to_boundary;
 use crate::geo::types::{Point, Point3D, Polygon, Rect};
 use crate::ops::assembly::adaptive::AdaptiveClearingSpec;
+use crate::ops::assembly::adaptive::TravelMode;
 use crate::ops::part::FaceState;
 
 use super::chain::StrategyChain;
@@ -60,9 +61,13 @@ pub const ROUTE_MAT_SWEEP_COLLIDE: u8 = 12;
 // ZHop
 pub const ROUTE_ZHOP_OK: u8 = 17;
 
+// Not attempted: the travel mode refuses the strategy.
+pub const ROUTE_TRAVEL_MODE_DISABLED: u8 = 16;
+
 /// Per-strategy detail label (for logging / error messages).
 pub fn route_detail_label(code: u8) -> &'static str {
     match code {
+        ROUTE_TRAVEL_MODE_DISABLED => "travel_mode",
         ROUTE_DIRECT_SWEEP_COLLIDE => "sweep_collide",
         ROUTE_FRONTIER_NO_OBSTACLES => "no_obstacles",
         ROUTE_FRONTIER_NO_FRONTIER => "no_frontier",
@@ -251,7 +256,18 @@ pub fn optimize_route<'a>(
         ]);
 
     let result = chain.run(
-        |_idx, s, _source, detail| s.find_route(ctx, from, to, detail),
+        |_idx, s, source, detail| {
+            // SafeZ travel refuses the cleared-area skims outright: the
+            // strategies are recorded as disabled, and only the Z-hop
+            // (retract → cross → plunge) is tried.
+            if ctx.opts.travel_mode == TravelMode::SafeZ
+                && source != RouteSource::RoutingZHop
+            {
+                *detail = ROUTE_TRAVEL_MODE_DISABLED;
+                return None;
+            }
+            s.find_route(ctx, from, to, detail)
+        },
         Some(
             |_: usize,
              s: &dyn RoutingStrategy,

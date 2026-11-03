@@ -62,6 +62,11 @@ class ClearingWorkplanOptions:
         ``"cw"`` or ``"ccw"``: how passes walk their loops.
         """
     @property
+    def travel_mode(self) -> builtins.str:
+        r"""
+        ``"cleared_area"`` or ``"safe_z"``: how travels are routed.
+        """
+    @property
     def feed_rate(self) -> typing.Optional[builtins.float]:
         r"""
         Cut feed rate (mm/min) the plan's moves carry; ``None`` leaves
@@ -74,7 +79,7 @@ class ClearingWorkplanOptions:
         ``None`` falls back to the cut feed.
         """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __new__(cls, tool_radius: builtins.float = 3.0, step_over: builtins.float = 2.0, step_length: builtins.float = 0.6, target_z: builtins.float = -5.0, safe_z: builtins.float = 2.0, wall_margin: builtins.float = 0.0, safe_margin: builtins.float = 1.0, stock_to_leave: builtins.float = 0.0, plunge_pitch: builtins.float = 1.0, angular_step: builtins.float = 0.1, area_tolerance: builtins.float = 1.0, max_deflection_deg: builtins.float = 30.0, finishing: builtins.bool = False, max_entry_angle_deg: builtins.float = 0.0, cut_direction: builtins.str = 'ccw', feed_rate: typing.Optional[builtins.float] = None, plunge_feed: typing.Optional[builtins.float] = None) -> ClearingWorkplanOptions:
+    def __new__(cls, tool_radius: builtins.float = 3.0, step_over: builtins.float = 2.0, step_length: builtins.float = 0.6, target_z: builtins.float = -5.0, safe_z: builtins.float = 2.0, wall_margin: builtins.float = 0.0, safe_margin: builtins.float = 1.0, stock_to_leave: builtins.float = 0.0, plunge_pitch: builtins.float = 1.0, angular_step: builtins.float = 0.1, area_tolerance: builtins.float = 1.0, max_deflection_deg: builtins.float = 30.0, finishing: builtins.bool = False, max_entry_angle_deg: builtins.float = 0.0, cut_direction: builtins.str = 'ccw', travel_mode: builtins.str = 'cleared_area', feed_rate: typing.Optional[builtins.float] = None, plunge_feed: typing.Optional[builtins.float] = None) -> ClearingWorkplanOptions:
         r"""
         :param tool_radius: Tool radius in mm.
         :param step_over: Radial step-over between passes (mm).
@@ -114,5 +119,5 @@ class ClearingWorkplanOptions:
         :param safe_z: Safe (rapid) Z height.
         """
 
-def plan_clearing(part: part.Part, face_id: builtins.str = '', tool_radius: builtins.float = 3.0, step_over: builtins.float = 2.0, step_length: builtins.float = 0.6, target_z: builtins.float = -5.0, safe_z: builtins.float = 2.0, wall_margin: builtins.float = 0.0, safe_margin: builtins.float = 1.0, stock_to_leave: builtins.float = 0.0, plunge_pitch: builtins.float = 1.0, angular_step: builtins.float = 0.1, area_tolerance: builtins.float = 1.0, max_deflection_deg: builtins.float = 30.0, finishing: builtins.bool = False, feed_rate: typing.Optional[builtins.float] = None, plunge_feed: typing.Optional[builtins.float] = None, max_entry_angle_deg: builtins.float = 0.0, cut_direction: builtins.str = 'ccw') -> plan.Plan: ...
+def plan_clearing(part: part.Part, face_id: builtins.str = '', tool_radius: builtins.float = 3.0, step_over: builtins.float = 2.0, step_length: builtins.float = 0.6, target_z: builtins.float = -5.0, safe_z: builtins.float = 2.0, wall_margin: builtins.float = 0.0, safe_margin: builtins.float = 1.0, stock_to_leave: builtins.float = 0.0, plunge_pitch: builtins.float = 1.0, angular_step: builtins.float = 0.1, area_tolerance: builtins.float = 1.0, max_deflection_deg: builtins.float = 30.0, finishing: builtins.bool = False, feed_rate: typing.Optional[builtins.float] = None, plunge_feed: typing.Optional[builtins.float] = None, max_entry_angle_deg: builtins.float = 0.0, cut_direction: builtins.str = 'ccw', travel_mode: builtins.str = 'cleared_area') -> plan.Plan: ...
 
