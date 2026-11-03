@@ -102,7 +102,7 @@ def _uncut_area(boundary, islands, segments, tool_radius, grid=0.5):
         if _boundary_dist(pt, boundary) < tool_radius - 1e-6:
             return False
         for island in islands:
-            if _point_in_polygon(pt, island) and (
+            if _point_in_polygon(pt, island) or (
                 _boundary_dist(pt, island) <= tool_radius + 1e-6
             ):
                 return False
@@ -591,11 +591,102 @@ def test_two_room_pocket_with_ramp_entry_clears_the_floor():
         assert d <= 3.05, (
             f"floor at ({px}, {py}) is {d:.3f} from the nearest cut"
         )
-    # Whole-floor probe: the machinable floor is covered except for the
-    # sub-millimetre slivers a ~92% step-over strands between passes
-    # (previously ~372 mm^2 stood uncut when the pass silently skipped).
+    # Whole-floor probe: the machinable floor is covered. The clearing
+    # pass used to strand ~372 mm^2 here (the silent skip), and after
+    # that fix still left ~6 mm^2 of sub-millimetre slivers between
+    # passes at this ~92% step-over — the erosion pass slots them.
     uncut = _uncut_area(rooms, [island], segments, 3.0, grid=0.5)
-    assert uncut <= 12.0, (
+    assert uncut <= 1.0, (
         f"{uncut:.1f} mm^2 of the machinable floor is farther than the "
         "tool radius from every cut"
+    )
+
+
+def test_erosion_step_slots_the_residual_the_gate_forgives():
+    """Issue #99's known issue: the convergence discriminator insets the
+    remaining material by the step scale, so sub-step-scale clumps read
+    as converged and stand uncut — ~1 mm-wide full-depth slivers
+    between passes at a ~92% step-over. The plan now carries an erosion
+    step after every clearing step; it re-examines the accumulated
+    cleared area at execution time and slots every actionable clump
+    inside the tool-centre envelope."""
+    rooms = [
+        (0.0, 0.0),
+        (30.0, 0.0),
+        (30.0, 8.0),
+        (60.0, 8.0),
+        (60.0, 26.0),
+        (30.0, 26.0),
+        (30.0, 40.0),
+        (0.0, 40.0),
+    ]
+    island = _circle(15.0, 20.0, 4.0)
+    part = Part.from_polygons(rooms, [island], (0.0, 0.0))
+    plan = plan_clearing(
+        part,
+        "",
+        tool_radius=3.0,
+        step_over=5.5,
+        target_z=-2.0,
+        safe_z=10.0,
+        finishing=False,
+    )
+    kinds = [s.kind for s in plan.steps]
+    assert "adaptive_clearing" in kinds
+    assert "erosion" in kinds, f"expected an erosion step, got {kinds}"
+    # The erosion step is planned where it can see the clearing pass's
+    # result: right after it, scoped to the same region.
+    adaptive_idx = kinds.index("adaptive_clearing")
+    assert kinds[adaptive_idx + 1] == "erosion"
+
+    ops = run_intent(create_intent(plan, part, 0))
+    segments = _floor_segments(ops, -2.0)
+    uncut = _uncut_area(rooms, [island], segments, 3.0, grid=0.25)
+    assert uncut <= 1.0, (
+        f"{uncut:.1f} mm^2 of the machinable floor is farther than the "
+        "tool radius from every cut"
+    )
+
+
+def test_erosion_step_emits_nothing_when_the_floor_is_clean():
+    """A pocket the wavefront converges on cleanly must not gain stray
+    cutting moves from the erosion pass: run the erosion assembler
+    against the part after a full plan run and assert it emits nothing
+    when the residual inside the tool-centre envelope is below
+    tolerance."""
+    from raygeo.ops.assembly.erosion import generate_erosion
+
+    rect = _rect(0, 0, 40, 30)
+    part = Part.from_polygons(rect, [], (0.0, 0.0))
+    plan = plan_clearing(
+        part,
+        "",
+        tool_radius=3.0,
+        step_over=3.0,
+        target_z=-2.0,
+        safe_z=10.0,
+        finishing=False,
+    )
+    ops = run_intent(create_intent(plan, part, 0))
+    segments = _floor_segments(ops, -2.0)
+    uncut = _uncut_area(rect, [], segments, 3.0, grid=0.5)
+    assert uncut <= 1.0
+
+    # The clearing pass left nothing actionable inside the envelope, so
+    # the erosion pass has nothing to emit.
+    residual = generate_erosion(
+        part,
+        tool_radius=3.0,
+        target_z=-2.0,
+        safe_z=10.0,
+        area_tolerance=1.0,
+    )
+    residual_cmds = [
+        c
+        for c in residual.ops.to_dict()["commands"]
+        if c["type"] == "LINE_TO" and c["end"][2] < 0.0
+    ]
+    assert not residual_cmds, (
+        f"the erosion pass emitted {len(residual_cmds)} cutting moves "
+        "although nothing was left to erode"
     )
