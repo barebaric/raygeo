@@ -13,7 +13,7 @@ use crate::geo::algo::medial_axis::MedialAxis;
 use crate::geo::shape::polygon::compute_polygon_bounds;
 use crate::geo::shape::polygon::{
     get_polygons_closest_point, get_polygons_group_intersection,
-    walk_polygon_vertices,
+    is_point_inside_polygon, walk_polygon_vertices,
 };
 use crate::geo::types::{Point, Point3D, Polygon};
 use crate::ops::assembly::Tracelet;
@@ -739,6 +739,7 @@ pub type ResumeReasons = [u8; 8];
 pub const REASON_NOT_TRIED: u8 = 0;
 pub const REASON_NO_CANDIDATE: u8 = 1;
 pub const REASON_BLACKLISTED: u8 = 2;
+pub const REASON_OUTSIDE_TOOL_ENVELOPE: u8 = 3;
 
 /// Detail codes for resume-strategy failure, stored in a parallel
 /// `[u8; 8]` next to the reason codes.  Each byte gives context for
@@ -760,6 +761,7 @@ pub const DETAIL_NO_HOLES: u8 = 10;
 pub const DETAIL_NO_ENGAGEMENT: u8 = 11;
 pub const DETAIL_BLACKLISTED: u8 = 12;
 pub const DETAIL_NO_WALL_HIT: u8 = 13;
+pub const DETAIL_OUTSIDE_TOOL_ENVELOPE: u8 = 14;
 
 /// Check that the cleared area has at least one fragment polygon.
 /// Returns `Some(fragments)` when non-empty, or `None` with
@@ -866,6 +868,34 @@ pub fn try_resume(
                     );
                     return None;
                 }
+            }
+            // The resume point must be a legal tool-centre position:
+            // inside the stock region and at least a tool radius from its
+            // boundary. Candidates taken from walk history can sit closer
+            // to a wall than the tool may ever centre (a hug recorded where
+            // the walk grazed a wall), and resuming there gouges the wall
+            // on every step that follows.
+            let stock = &ctx.part.stock_region;
+            let here = Point::new(rp.pos.x, rp.pos.y);
+            let inside = is_point_inside_polygon(here, &stock.boundary);
+            let clearance = get_polygons_closest_point(
+                std::slice::from_ref(&stock.boundary),
+                here,
+            )
+            .map(|(_, _, _, d2)| d2.sqrt());
+            let legal = inside
+                && clearance.is_some_and(|d| d + 1e-6 >= ctx.opts.tool_radius);
+            if !legal {
+                reasons[idx] = REASON_OUTSIDE_TOOL_ENVELOPE;
+                *detail = DETAIL_OUTSIDE_TOOL_ENVELOPE;
+                dbg_log!(
+                    "  RESUME  {}={}  → ({:.3},{:.3})  OUTSIDE TOOL ENVELOPE",
+                    source as u8,
+                    s.label(),
+                    rp.pos.x,
+                    rp.pos.y,
+                );
+                return None;
             }
             dbg_log!(
                 "  RESUME  {}={}  → ({:.3},{:.3})  heading={:.4}",

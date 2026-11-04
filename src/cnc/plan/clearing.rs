@@ -239,15 +239,6 @@ pub fn plan_clearing(
         )
     })?;
 
-    if opts.cut_direction == CutDirection::Cw && !islands.is_empty() {
-        // The clearing stepper walks island frontiers in climb direction
-        // only: a conventional (CW) request around islands cuts on the
-        // wrong side of its steps and is refused rather than machined.
-        return Err(crate::error::RaygeoError::DegenerateGeometry(
-            "not supported yet: conventional (CW) clearing around islands — the clearing stepper walks island frontiers in climb direction only".into(),
-        ));
-    }
-
     let mut steps = Vec::new();
 
     let regions = region::find_regions(
