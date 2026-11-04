@@ -927,3 +927,19 @@ def test_conventional_clearing_with_an_island_runs_like_climb_mirrored():
     assert winding(conventional) * winding(climb) < 0.0, (
         "conventional and climb walk opposite ways"
     )
+
+    def envelope_crossings(ops):
+        # Floor cutting points inside the island's tool-clearance outset
+        # (the rect (25,15)-(35,25) grown by the 3 mm tool radius).
+        pts = [
+            c["end"]
+            for c in ops.to_dict()["commands"]
+            if c["type"] in ("LINE_TO", "ARC_TO") and c["end"][2] <= -2.95
+        ]
+        return sum(
+            1 for (x, y, _) in pts if 22.0 < x < 38.0 and 12.0 < y < 28.0
+        )
+
+    assert envelope_crossings(conventional) <= (
+        envelope_crossings(climb) + 20
+    ), "conventional must not cross the island envelope more than climb"

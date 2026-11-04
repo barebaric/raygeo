@@ -219,3 +219,7 @@ plan_clearing(
 ![The same pockets with a 0.5 mm wall margin: too-narrow passages stay uncut.](images/cnc-plan-clearing-wall-margin.png)
 
 *The same pockets with a 0.5 mm wall margin: too-narrow passages stay uncut.*
+
+![Cut direction: climb ('ccw', left) vs conventional ('cw', right) — arrows mark the walk.](images/cnc-plan-clearing-direction-cut-direction.png)
+
+*Cut direction: climb ('ccw', left) vs conventional ('cw', right) — arrows mark the walk.*
