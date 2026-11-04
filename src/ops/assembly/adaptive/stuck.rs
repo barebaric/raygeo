@@ -1,6 +1,7 @@
 //! Stuck-detection and per-step safety invariants for
 //! [`super::adaptive_clearing`].
 
+use crate::error::{RaygeoError, RaygeoResult};
 use crate::geo::types::Point;
 use crate::ops::part::ClearedArea;
 
@@ -87,9 +88,12 @@ impl StuckDetector {
 
 /// After each successful step, verify the tool is not cutting
 /// predominantly on the wrong side of the step direction.  Panics if
-/// the wrong-side cut area exceeds the correct side and the per-step
-/// target — this signals a stepper bug (the solver should never yield
-/// an incorrect angle).
+/// After each successful step, verify the tool is not cutting
+/// predominantly on the wrong side of the step direction.  Returns a
+/// [`RaygeoError::WrongSideCut`] when the wrong-side cut area exceeds the
+/// correct side and the per-step target — this signals a solver bug (the
+/// solver should never yield an incorrect angle), and the run fails
+/// cleanly instead of producing a toolpath that cuts itself clear.
 pub(super) fn wrong_side_safehold(
     cleared: &ClearedArea,
     dir_sign: f64,
@@ -98,18 +102,17 @@ pub(super) fn wrong_side_safehold(
     radius: f64,
     target_area_pd: f64,
     step_length: f64,
-) {
+) -> RaygeoResult<()> {
     let (total, left) = cleared.cut_area_split(prev_pos, tool_pos, radius);
     let right = total - left;
     let wrong = if dir_sign < 0.0 { left } else { right };
     let correct = total - wrong;
     let per_step_target = target_area_pd * step_length;
     if wrong > correct && wrong > per_step_target * 0.5 {
-        panic!(
-            "adaptive_clearing: wrong-side safehold  \
-             dir_sign={:+.1}  total={:.6}  left={:.6}  \
-             right={:.6}  pos=({:.3},{:.3})  heading={:.4}",
-            dir_sign, total, left, right, tool_pos.x, tool_pos.y, 0.0,
-        );
+        return Err(RaygeoError::WrongSideCut(format!(
+            "dir_sign={:+.1}  total={:.6}  left={:.6}  right={:.6}  pos=({:.3},{:.3})",
+            dir_sign, total, left, right, tool_pos.x, tool_pos.y,
+        )));
     }
+    Ok(())
 }

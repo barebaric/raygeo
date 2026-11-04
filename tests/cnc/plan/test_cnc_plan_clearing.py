@@ -835,3 +835,69 @@ def test_erosion_step_emits_nothing_when_the_floor_is_clean():
         f"the erosion pass emitted {len(residual_cmds)} cutting moves "
         "although nothing was left to erode"
     )
+
+
+def test_conventional_clearing_runs_on_wide_regions():
+    """CW clearing (conventional) plans and runs on a plain pocket: the
+    walk starts around the frontier in the cut direction, cuts the floor
+    at the target depth, and winds the other way than the climb run."""
+    boundary = _rect(0.0, 0.0, 60.0, 40.0)
+    part = Part.from_polygons(boundary, [], (60.0, 40.0))
+
+    def run(direction):
+        plan = plan_clearing(
+            part,
+            "",
+            tool_radius=3.0,
+            step_over=2.5,
+            target_z=-3.0,
+            cut_direction=direction,
+            feed_rate=600.0,
+            plunge_feed=200.0,
+        )
+        return run_intent(create_intent(plan, part, 0))
+
+    def winding(ops):
+        ends = [
+            c["end"]
+            for c in ops.to_dict()["commands"]
+            if c["type"] == "LINE_TO" and c["end"][2] <= -2.99
+        ]
+        return sum(a[0] * b[1] - b[0] * a[1] for a, b in zip(ends, ends[1:]))
+
+    def floor(ops):
+        return [
+            c["end"]
+            for c in ops.to_dict()["commands"]
+            if c["type"] in ("LINE_TO", "ARC_TO") and c["end"][2] <= -2.99
+        ]
+
+    cw = run("cw")
+    climb = run("ccw")
+    assert floor(cw), "conventional clearing cuts the floor"
+    assert winding(cw) * winding(climb) < 0.0, (
+        "conventional and climb walk opposite ways"
+    )
+
+
+def test_conventional_clearing_with_an_island_is_refused_upfront():
+    """The clearing stepper walks island frontiers in climb direction only,
+    so a conventional request around islands is refused before anything is
+    planned — a clear error, never a panic, and never a wrong-side run."""
+    boundary = _rect(0.0, 0.0, 60.0, 40.0)
+    island = _rect(25.0, 15.0, 10.0, 10.0)  # a 10×10 island at (25, 15)
+    part = Part.from_polygons(boundary, [island], (60.0, 40.0))
+    with pytest.raises(Exception) as exc:
+        plan_clearing(
+            part,
+            "",
+            tool_radius=3.0,
+            step_over=2.5,
+            target_z=-3.0,
+            cut_direction="cw",
+            feed_rate=600.0,
+            plunge_feed=200.0,
+        )
+    message = str(exc.value)
+    assert "conventional (CW) clearing around islands" in message, message
+    assert "panicked" not in message, message

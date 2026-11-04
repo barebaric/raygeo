@@ -37,6 +37,13 @@ pub enum RaygeoError {
     #[error("degenerate geometry: {0}")]
     DegenerateGeometry(String),
 
+    /// The adaptive stepper cut predominantly on the wrong side of its
+    /// step direction — the solver yielded an angle it must not yield.
+    #[error(
+        "the clearing stepper cut on the wrong side of its step direction: {0}"
+    )]
+    WrongSideCut(String),
+
     /// A polygon has fewer than 3 vertices.
     #[error("polygon must have at least 3 vertices, got {0}")]
     InvalidPolygon(usize),
@@ -132,6 +139,9 @@ impl From<RaygeoError> for pyo3::PyErr {
                 PyValueError::new_err(err.to_string())
             }
             RaygeoError::EmptyGeometry | RaygeoError::DegenerateGeometry(_) => {
+                PyRuntimeError::new_err(err.to_string())
+            }
+            RaygeoError::WrongSideCut(_) => {
                 PyRuntimeError::new_err(err.to_string())
             }
             RaygeoError::InvalidPolygon(_) | RaygeoError::ContourError(_) => {
