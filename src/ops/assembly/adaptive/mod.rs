@@ -108,7 +108,8 @@ pub struct AdaptiveClearingSpec {
     /// auto-detected from the cleared-area frontier.
     pub start_pos: Option<Point3D>,
     /// Initial tool heading in radians.  When `None`, the heading is
-    /// auto-detected as the CCW tangent at the starting position.
+    /// auto-detected as the frontier tangent that walks the cut direction
+    /// at the starting position.
     pub start_heading: Option<f64>,
     /// How many steps to accumulate before committing cleared-area
     /// expansions.  Larger values reduce per‑step overhead at the cost
@@ -676,6 +677,14 @@ pub fn adaptive_clearing(
 ) -> RaygeoResult<AssemblyMeta> {
     let mut pocket_boundary = face.stock_region.boundary.clone();
     let islands = face.stock_region.islands.clone();
+    if opts.cut_direction == CutDirection::Cw && !islands.is_empty() {
+        // The clearing stepper walks island frontiers in climb direction
+        // only: a conventional (CW) request around islands cuts on the
+        // wrong side of its steps and is refused rather than machined.
+        return Err(crate::error::RaygeoError::DegenerateGeometry(
+            "not supported yet: conventional (CW) clearing around islands — the clearing stepper walks island frontiers in climb direction only".into(),
+        ));
+    }
 
     // The rest of the algorithm (envelope computation, cleared-area
     // frontier, bites) assumes a CCW (positive-signed-area) boundary.
@@ -750,12 +759,23 @@ pub fn adaptive_clearing(
 
     // Use caller-provided position/heading when available (e.g. the
     // tool is already in motion after an entry strategy).  Otherwise
-    // auto-detect from the cleared-area frontier.
+    // auto-detect from the cleared-area frontier: the position is the
+    // largest frontier ring's first point and the heading its tangent —
+    // mirrored for CW cutting, so the walk starts around the frontier in
+    // the cut direction (a CW seed on the CCW tangent cuts on the wrong
+    // side of every early step and trips the wrong-side safehold).
     let frontier = face.cleared.frontier(&face.stock_region, 0.5);
     let (default_pos, default_heading) =
         initial_pose(&frontier, centre, opts.target_z);
     let start_pos = opts.start_pos.unwrap_or(default_pos);
-    let start_heading = opts.start_heading.unwrap_or(default_heading);
+    let start_heading =
+        opts.start_heading
+            .unwrap_or_else(|| match opts.cut_direction {
+                CutDirection::Ccw => default_heading,
+                CutDirection::Cw => normalize_angle_signed(
+                    default_heading + std::f64::consts::PI,
+                ),
+            });
 
     let mut tool = Tool::new(start_pos, start_heading, opts.tool_radius);
 
@@ -972,7 +992,7 @@ pub fn adaptive_clearing(
                 opts.tool_radius,
                 target_area_pd,
                 step_length,
-            );
+            )?;
         }
         // Wall-hug tracking: enter when the tool cutting edge
         // reaches the pocket boundary (centre < radius from
