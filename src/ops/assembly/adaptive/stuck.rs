@@ -86,33 +86,64 @@ impl StuckDetector {
 
 // ── Wrong-side safehold ───────────────────────────────────────────────
 
-/// After each successful step, verify the tool is not cutting
-/// predominantly on the wrong side of the step direction.  Panics if
-/// After each successful step, verify the tool is not cutting
-/// predominantly on the wrong side of the step direction.  Returns a
-/// [`RaygeoError::WrongSideCut`] when the wrong-side cut area exceeds the
-/// correct side and the per-step target — this signals a solver bug (the
-/// solver should never yield an incorrect angle), and the run fails
-/// cleanly instead of producing a toolpath that cuts itself clear.
-pub(super) fn wrong_side_safehold(
-    cleared: &ClearedArea,
-    dir_sign: f64,
-    prev_pos: Point,
-    tool_pos: Point,
-    radius: f64,
-    target_area_pd: f64,
-    step_length: f64,
-) -> RaygeoResult<()> {
-    let (total, left) = cleared.cut_area_split(prev_pos, tool_pos, radius);
-    let right = total - left;
-    let wrong = if dir_sign < 0.0 { left } else { right };
-    let correct = total - wrong;
-    let per_step_target = target_area_pd * step_length;
-    if wrong > correct && wrong > per_step_target * 0.5 {
-        return Err(RaygeoError::WrongSideCut(format!(
-            "dir_sign={:+.1}  total={:.6}  left={:.6}  right={:.6}  pos=({:.3},{:.3})",
-            dir_sign, total, left, right, tool_pos.x, tool_pos.y,
-        )));
+/// Accumulates the fresh cut area on each side of the step direction over
+/// a clearing run, and fails the run when the walk has **sustained** on
+/// the wrong side of its direction.
+///
+/// Islands legitimately produce transient wrong-side steps: a frontier
+/// fold or a breakthrough between two cleared regions puts fresh material
+/// on the side the direction bias calls wrong for a step or two, and the
+/// walk recovers. A solver that yields incorrect *angles* systematically —
+/// the defect this guard exists to catch — accumulates wrong-side area
+/// every step with nothing on the correct side, so a sustained-dominance
+/// check catches it within a few steps while leaving island transients
+/// alone.
+pub(super) struct WrongSideGuard {
+    wrong: f64,
+    correct: f64,
+}
+
+impl WrongSideGuard {
+    pub(super) fn new() -> Self {
+        WrongSideGuard {
+            wrong: 0.0,
+            correct: 0.0,
+        }
     }
-    Ok(())
+
+    /// Accumulates this step's fresh cut sides and fails the run once the
+    /// wrong side dominates the run's cut area by more than two steps'
+    /// worth of target engagement.
+    #[allow(clippy::too_many_arguments)]
+    pub(super) fn check_step(
+        &mut self,
+        cleared: &ClearedArea,
+        dir_sign: f64,
+        prev_pos: Point,
+        tool_pos: Point,
+        radius: f64,
+        target_area_pd: f64,
+        step_length: f64,
+    ) -> RaygeoResult<()> {
+        let (total, left) = cleared.cut_area_split(prev_pos, tool_pos, radius);
+        let right = total - left;
+        let (wrong, correct) = if dir_sign < 0.0 {
+            (left, right)
+        } else {
+            (right, left)
+        };
+        self.wrong += wrong;
+        self.correct += correct;
+        let per_step_target = target_area_pd * step_length;
+        if self.wrong > self.correct
+            && self.wrong - self.correct > per_step_target * 2.0
+        {
+            return Err(RaygeoError::WrongSideCut(format!(
+                "sustained wrong-side cutting: wrong={:.6}  correct={:.6}  \
+                 dir_sign={:+.1}  pos=({:.3},{:.3})",
+                self.wrong, self.correct, dir_sign, tool_pos.x, tool_pos.y,
+            )));
+        }
+        Ok(())
+    }
 }
