@@ -677,14 +677,6 @@ pub fn adaptive_clearing(
 ) -> RaygeoResult<AssemblyMeta> {
     let mut pocket_boundary = face.stock_region.boundary.clone();
     let islands = face.stock_region.islands.clone();
-    if opts.cut_direction == CutDirection::Cw && !islands.is_empty() {
-        // The clearing stepper walks island frontiers in climb direction
-        // only: a conventional (CW) request around islands cuts on the
-        // wrong side of its steps and is refused rather than machined.
-        return Err(crate::error::RaygeoError::DegenerateGeometry(
-            "not supported yet: conventional (CW) clearing around islands — the clearing stepper walks island frontiers in climb direction only".into(),
-        ));
-    }
 
     // The rest of the algorithm (envelope computation, cleared-area
     // frontier, bites) assumes a CCW (positive-signed-area) boundary.
@@ -872,6 +864,7 @@ pub fn adaptive_clearing(
         ..Default::default()
     };
 
+    let mut wrong_side_guard = stuck::WrongSideGuard::new();
     let mut resume_reasons = resume::ResumeReasons::default();
     let mut resume_details = resume::ResumeReasons::default();
     let mut route_details = [0u8; 4];
@@ -984,7 +977,7 @@ pub fn adaptive_clearing(
 
         // ── Wrong-side safehold ──────────────────────────────────
         if result.status == StepStatus::Ok {
-            stuck::wrong_side_safehold(
+            wrong_side_guard.check_step(
                 &face.cleared,
                 dir_sign,
                 crate::geo::types::Point::new(prev_pos.x, prev_pos.y),
