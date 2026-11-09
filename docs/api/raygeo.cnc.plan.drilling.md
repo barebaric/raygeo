@@ -73,9 +73,9 @@ Cycles: `"plain"` single plunge, `"spot"` shallow marking cycle, `"peck"` full-r
 | `hole_order`         | `str = 'detection'`                              | `"detection"` or `"nearest_neighbor"`.                                                                            |
 | _Returns_            | `cnc.plan.Plan`                                  | the drilling plan, one step per hole.                                                                             |
 
-![Peck drilling of two holes detected as circular islands; each peck retracts to the rapid plane.](images/cnc-plan-drilling-plan-drilling-peck.png)
+![Peck drilling of two detected holes; right: the plunge/retract profile of the first cycle.](images/cnc-plan-drilling-plan-drilling-peck.png)
 
-*Peck drilling of two holes detected as circular islands; each peck retracts to the rapid plane.*
+*Peck drilling of two detected holes; right: the plunge/retract profile of the first cycle.*
 
 ![Plain cycles at explicit centers in solid material with safe-Z travel between holes.](images/cnc-plan-drilling-plan-drilling-explicit-centers.png)
 

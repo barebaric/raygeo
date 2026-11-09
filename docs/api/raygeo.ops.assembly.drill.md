@@ -206,9 +206,9 @@ the given cone angle. The cycle is wrapped in a `DRILL_CYCLE` section.
 | `state`           | `ops.state.State &#124; None = None` | optional machine state (feeds, spindle, coolant).            |
 | _Returns_         | `ops.assembly.AssemblyResult`        | An **AssemblyResult** with the cycle's moves.                |
 
-![Countersink cycle: the cone depth derives from the target diameter and the tip angle.](images/ops-assembly-drill-countersink-cycle.png)
+![Countersink cross-section: the cone meets the surface exactly at the target diameter.](images/ops-assembly-drill-countersink-cycle.png)
 
-*Countersink cycle: the cone depth derives from the target diameter and the tip angle.*
+*Countersink cross-section: the cone meets the surface exactly at the target diameter.*
 
 ### `generate_drill()`
 
@@ -252,10 +252,10 @@ wrapped in a `DRILL_CYCLE` section so encoders can substitute a canned cycle.
 | `state`     | `ops.state.State &#124; None = None`               | optional machine state (feeds, spindle, coolant). |
 | _Returns_   | `ops.assembly.AssemblyResult`                      | An **AssemblyResult** with the cycle's moves.     |
 
-![Peck cycle as explicit moves: rapid to the rapid plane, feed plunges, full retracts, dwell.](images/ops-assembly-drill-drill-peck-cycle.png)
+![Peck cycle: emitted plunge/retract profile (left) and cross-section with tool ghosts (right).](images/ops-assembly-drill-drill-peck-cycle.png)
 
-*Peck cycle as explicit moves: rapid to the rapid plane, feed plunges, full retracts, dwell.*
+*Peck cycle: emitted plunge/retract profile (left) and cross-section with tool ghosts (right).*
 
-![Chip-break cycle: the tool only lifts a fraction of a millimetre between pecks.](images/ops-assembly-drill-drill-chip-break-cycle.png)
+![Chip-break cycle: profile and cross-section; the tool never leaves the hole between pecks.](images/ops-assembly-drill-drill-chip-break-cycle.png)
 
-*Chip-break cycle: the tool only lifts a fraction of a millimetre between pecks.*
+*Chip-break cycle: profile and cross-section; the tool never leaves the hole between pecks.*
