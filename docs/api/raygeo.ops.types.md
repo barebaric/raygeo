@@ -102,7 +102,7 @@ Sections divide an Ops sequence into vector and raster portions.
 name: str
 ```
 
-The uppercase name (`"VECTOR_OUTLINE"` or `"RASTER_FILL"`).
+The uppercase name (`"VECTOR_OUTLINE"`, `"RASTER_FILL"` or `"DRILL_CYCLE"`).
 
 ### `value`
 

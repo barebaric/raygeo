@@ -10,14 +10,18 @@ to derive its own executable steps.  They are never executed directly.
 import builtins
 import typing
 from . import clearing
+from . import drilling
 from . import entry
 from . import profile
+from . import thread_milling
 __all__ = [
     "Plan",
     "PlanStep",
     "clearing",
+    "drilling",
     "entry",
     "profile",
+    "thread_milling",
 ]
 
 @typing.final

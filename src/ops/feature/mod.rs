@@ -4,6 +4,7 @@
 //! raw geometry from the `geo` layer with machining knowledge to
 //! identify features like narrow passages, plunge points, and ramps.
 
+pub mod hole;
 pub mod narrow;
 pub mod near;
 pub mod ramp;

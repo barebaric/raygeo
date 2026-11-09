@@ -8,8 +8,10 @@ to derive its own executable steps.  They are never executed directly.
 ";
 
 pub(crate) mod clearing;
+pub(crate) mod drilling;
 pub(crate) mod entry;
 pub(crate) mod profile;
+pub(crate) mod thread_milling;
 
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
@@ -139,6 +141,57 @@ impl PyPlanStep {
             d.set_item("z_start", r.z_start)?;
             d.set_item("z_end", r.z_end)?;
             d.set_item("cut_direction", format!("{:?}", r.cut_direction))?;
+        } else if let Some(dr) = spec.as_any().downcast_ref::<crate::ops::assembly::drill::DrillSpec>() {
+            d.set_item("center", (dr.center.x, dr.center.y))?;
+            d.set_item("diameter", dr.diameter)?;
+            d.set_item("tip_angle", dr.tip_angle)?;
+            d.set_item("z_surface", dr.z_surface)?;
+            d.set_item("target_z", dr.target_z)?;
+            d.set_item("rapid_z", dr.rapid_z)?;
+            d.set_item("safe_z", dr.safe_z)?;
+            match &dr.peck {
+                Some(p) => {
+                    d.set_item(
+                        "peck_mode",
+                        if p.mode == crate::ops::assembly::drill::PeckMode::ChipBreak {
+                            "CHIP_BREAK"
+                        } else {
+                            "FULL_RETRACT"
+                        },
+                    )?;
+                    d.set_item("peck_increment", p.increment)?;
+                    d.set_item("retract_amount", p.retract_amount)?;
+                }
+                None => {
+                    d.set_item("peck_mode", Option::<String>::None)?;
+                }
+            }
+            d.set_item("dwell_ms", dr.dwell_ms)?;
+            d.set_item("spot", dr.spot)?;
+        } else if let Some(cs) = spec.as_any().downcast_ref::<crate::ops::assembly::drill::CountersinkSpec>() {
+            d.set_item("center", (cs.center.x, cs.center.y))?;
+            d.set_item("tip_angle", cs.tip_angle)?;
+            d.set_item("target_diameter", cs.target_diameter)?;
+            d.set_item("z_surface", cs.z_surface)?;
+            d.set_item("rapid_z", cs.rapid_z)?;
+            d.set_item("safe_z", cs.safe_z)?;
+            d.set_item("dwell_ms", cs.dwell_ms)?;
+        } else if let Some(tm) = spec.as_any().downcast_ref::<crate::ops::assembly::thread_mill::ThreadMillSpec>() {
+            d.set_item("center", (tm.center.x, tm.center.y))?;
+            d.set_item("nominal_diameter", tm.nominal_diameter)?;
+            d.set_item("pitch", tm.pitch)?;
+            d.set_item("tool_diameter", tm.tool_diameter)?;
+            d.set_item("z_top", tm.z_top)?;
+            d.set_item("z_bottom", tm.z_bottom)?;
+            d.set_item(
+                "handedness",
+                if tm.handedness == crate::ops::assembly::thread_mill::ThreadHandedness::Lh {
+                    "LH"
+                } else {
+                    "RH"
+                },
+            )?;
+            d.set_item("safe_z", tm.safe_z)?;
         }
 
         Ok(d)
@@ -236,8 +289,10 @@ pub(crate) fn register(parent: &Bound<'_, PyModule>) -> PyResult<()> {
     plan_mod.add_class::<PyPlan>()?;
     plan_mod.add_class::<PyPlanStep>()?;
     clearing::register(&plan_mod)?;
+    drilling::register(&plan_mod)?;
     entry::register(&plan_mod)?;
     profile::register(&plan_mod)?;
+    thread_milling::register(&plan_mod)?;
     parent.add_submodule(&plan_mod)?;
 
     let sys_modules = py.import("sys")?.getattr("modules")?;

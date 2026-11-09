@@ -23,6 +23,7 @@ import typing
 from . import adaptive
 from . import contour
 from . import custom
+from . import drill
 from . import erosion
 from . import frame
 from . import helix
@@ -33,6 +34,7 @@ from . import raster
 from . import shrinkwrap
 from . import slot
 from . import spiral
+from . import thread_mill
 from . import toroid
 from . import wavefront
 __all__ = [
@@ -44,6 +46,7 @@ __all__ = [
     "adaptive",
     "contour",
     "custom",
+    "drill",
     "erosion",
     "frame",
     "helix",
@@ -54,6 +57,7 @@ __all__ = [
     "shrinkwrap",
     "slot",
     "spiral",
+    "thread_mill",
     "toroid",
     "wavefront",
 ]
