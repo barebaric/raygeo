@@ -85,6 +85,59 @@ pub fn diffusion_kernel_by_name(
     }
 }
 
+/// Group each scan line into cells of `cell` consecutive pixels and
+/// replace every cell with its mean, so the error diffusion decides
+/// per cell rather than per pixel. The last cell absorbs any
+/// remainder, which keeps every cell at least `cell` pixels wide.
+fn reduce_to_cell_means(
+    grayscale: &[u8],
+    width: usize,
+    height: usize,
+    cell: usize,
+    reduced: &mut [u8],
+) {
+    let cells_x = (width / cell).max(1);
+    for y in 0..height {
+        for cx in 0..cells_x {
+            let start = y * width + cx * cell;
+            let end = if cx + 1 == cells_x {
+                y * width + width
+            } else {
+                start + cell
+            };
+            let count = (end - start) as u32;
+            let sum: u32 = grayscale[start..end]
+                .iter()
+                .map(|&value| value as u32)
+                .sum();
+            reduced[y * cells_x + cx] = ((sum + count / 2) / count) as u8;
+        }
+    }
+}
+
+fn replicate_cells(
+    cells: &[u8],
+    cells_x: usize,
+    height: usize,
+    cell: usize,
+    width: usize,
+    output: &mut [u8],
+) {
+    for y in 0..height {
+        for cx in 0..cells_x {
+            let value = cells[y * cells_x + cx];
+            let start = y * width + cx * cell;
+            let end = if cx + 1 == cells_x {
+                y * width + width
+            } else {
+                start + cell
+            };
+            output[start..end].fill(value);
+        }
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
 pub fn apply_error_diffusion_dither(
     grayscale: &[u8],
     width: usize,
@@ -92,6 +145,37 @@ pub fn apply_error_diffusion_dither(
     kernel: &DiffusionKernel,
     invert: bool,
     serpentine: bool,
+    min_feature_px: usize,
+    linear: bool,
+    output: &mut [u8],
+) {
+    if min_feature_px <= 1 {
+        return diffuse_error(
+            grayscale, width, height, kernel, invert, serpentine, linear,
+            output,
+        );
+    }
+    let cell = min_feature_px;
+    let cells_x = (width / cell).max(1);
+    let mut reduced = vec![0u8; height * cells_x];
+    reduce_to_cell_means(grayscale, width, height, cell, &mut reduced);
+    let mut cells = vec![0u8; height * cells_x];
+    diffuse_error(
+        &reduced, cells_x, height, kernel, invert, serpentine, linear,
+        &mut cells,
+    );
+    replicate_cells(&cells, cells_x, height, cell, width, output);
+}
+
+#[allow(clippy::too_many_arguments)]
+fn diffuse_error(
+    grayscale: &[u8],
+    width: usize,
+    height: usize,
+    kernel: &DiffusionKernel,
+    invert: bool,
+    serpentine: bool,
+    linear: bool,
     output: &mut [u8],
 ) {
     if height == 0 || width == 0 {
@@ -119,8 +203,12 @@ pub fn apply_error_diffusion_dither(
         let lut = srgb::srgb_to_linear_lut();
         for y in 0..height {
             for x in 0..width {
-                work[y * stride + pad + x] =
-                    lut[grayscale[y * width + x] as usize];
+                let value = grayscale[y * width + x];
+                work[y * stride + pad + x] = if linear {
+                    lut[value as usize]
+                } else {
+                    value as f32 / 255.0
+                };
             }
         }
     }
@@ -173,15 +261,49 @@ pub fn apply_error_diffusion_dither(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn apply_floyd_steinberg_dither(
     grayscale: &[u8],
     width: usize,
     height: usize,
     invert: bool,
+    min_feature_px: usize,
+    linear: bool,
+    output: &mut [u8],
+) {
+    if min_feature_px <= 1 {
+        return floyd_steinberg_core(
+            grayscale, width, height, invert, linear, output,
+        );
+    }
+    let cell = min_feature_px;
+    let cells_x = (width / cell).max(1);
+    let mut reduced = vec![0u8; height * cells_x];
+    reduce_to_cell_means(grayscale, width, height, cell, &mut reduced);
+    let mut cells = vec![0u8; height * cells_x];
+    floyd_steinberg_core(&reduced, cells_x, height, invert, linear, &mut cells);
+    replicate_cells(&cells, cells_x, height, cell, width, output);
+}
+
+fn floyd_steinberg_core(
+    grayscale: &[u8],
+    width: usize,
+    height: usize,
+    invert: bool,
+    linear: bool,
     output: &mut [u8],
 ) {
     let mut dithered = vec![0.0f32; width * height];
-    srgb::srgb_to_linear(grayscale, &mut dithered[..width * height]);
+    {
+        let lut = srgb::srgb_to_linear_lut();
+        for (slot, &value) in dithered.iter_mut().zip(grayscale.iter()) {
+            *slot = if linear {
+                lut[value as usize]
+            } else {
+                value as f32 / 255.0
+            };
+        }
+    }
 
     for y in 0..height {
         for x in 0..width {
@@ -217,6 +339,12 @@ pub fn apply_floyd_steinberg_dither(
     }
 }
 
+/// Post-dither removal of short runs.
+///
+/// Prefer the `min_feature_px` argument of the dither functions: it
+/// groups pixels into cells before diffusing, which keeps the tone.
+/// Filtering after the fact deletes the isolated dots that carry the
+/// light tones and distorts the result.
 pub fn apply_minimum_run_length(
     binary: &mut [u8],
     width: usize,

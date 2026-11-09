@@ -48,11 +48,22 @@ fn checked_pixels_per_mm(pixels_per_mm: (f64, f64)) -> PyResult<()> {
     def apply_floyd_steinberg_dither(
         grayscale: numpy.typing.NDArray[numpy.uint8],
         invert: bool,
+        min_feature_px: int = 1,
+        linear: bool = False,
     ) -> numpy.typing.NDArray[numpy.uint8]:
         """Apply Floyd-Steinberg error-diffusion dithering.
 
+        By default dithers on the raw sRGB-encoded values, so dot
+        coverage matches the tone the image shows on screen.
+
         :param grayscale: 2D grayscale image as uint8 array.
         :param invert: If True, invert the output (swap black/white).
+        :param min_feature_px: Minimum feature size in pixels along
+            the scan direction. Values above 1 group each scan line
+            into cells of at least that width, diffuse at cell
+            granularity, and stretch each cell's dot across the cell.
+        :param linear: If True, convert to linear light before
+            diffusing instead of dithering the sRGB values.
         :returns: 2D binary uint8 array (values 0 or 1).
         :complexity: O(w*h)
         """
@@ -60,10 +71,13 @@ fn checked_pixels_per_mm(pixels_per_mm: (f64, f64)) -> PyResult<()> {
     module = "raygeo.image.dither"
 )]
 #[pyfunction(name = "apply_floyd_steinberg_dither")]
+#[pyo3(signature = (grayscale, invert, min_feature_px=1, linear=false))]
 fn py_apply_floyd_steinberg_dither(
     py: Python<'_>,
     grayscale: &Bound<'_, PyAny>,
     invert: bool,
+    min_feature_px: usize,
+    linear: bool,
 ) -> PyResult<Py<PyAny>> {
     let numpy = py.import("numpy")?;
     let arr = numpy.call_method1("asarray", (grayscale,))?;
@@ -81,6 +95,8 @@ fn py_apply_floyd_steinberg_dither(
         width,
         height,
         invert,
+        min_feature_px,
+        linear,
         &mut output,
     );
 
@@ -209,19 +225,29 @@ fn py_apply_bayer_dither(
         grayscale: numpy.typing.NDArray[numpy.uint8],
         kernel: str,
         invert: bool = False,
-        serpentine: bool = False,
+        serpentine: bool = True,
+        min_feature_px: int = 1,
+        linear: bool = False,
     ) -> numpy.typing.NDArray[numpy.uint8]:
         """Error-diffusion dithering with a named kernel.
 
-        Dithers in linear light. Available kernels: atkinson, burkes,
-        floyd_steinberg, jarvis_judice_ninke, sierra, sierra_2row,
-        sierra_lite, stucki.
+        By default dithers on the raw sRGB-encoded values, so dot
+        coverage matches the tone the image shows on screen.
+        Available kernels: atkinson, burkes, floyd_steinberg,
+        jarvis_judice_ninke, sierra, sierra_2row, sierra_lite,
+        stucki.
 
         :param grayscale: 2D grayscale image as uint8 array.
         :param kernel: Name of the error-diffusion kernel to use.
         :param invert: If True, invert the output (swap black/white).
         :param serpentine: Scan odd rows right-to-left, mirroring the
             kernel. Avoids directional artifacts.
+        :param min_feature_px: Minimum feature size in pixels along
+            the scan direction. Values above 1 group each scan line
+            into cells of at least that width, diffuse at cell
+            granularity, and stretch each cell's dot across the cell.
+        :param linear: If True, convert to linear light before
+            diffusing instead of dithering the sRGB values.
         :returns: 2D binary uint8 array (values 0 or 1, 1 marks dark).
         :raises ValueError: If the kernel name is not recognized.
         :complexity: O(w*h)
@@ -230,13 +256,15 @@ fn py_apply_bayer_dither(
     module = "raygeo.image.dither"
 )]
 #[pyfunction(name = "apply_error_diffusion_dither")]
-#[pyo3(signature = (grayscale, kernel, invert=false, serpentine=false))]
+#[pyo3(signature = (grayscale, kernel, invert=false, serpentine=true, min_feature_px=1, linear=false))]
 fn py_apply_error_diffusion_dither(
     py: Python<'_>,
     grayscale: &Bound<'_, PyAny>,
     kernel: &str,
     invert: bool,
     serpentine: bool,
+    min_feature_px: usize,
+    linear: bool,
 ) -> PyResult<Py<PyAny>> {
     let kernel_impl = match dither::diffusion_kernel_by_name(kernel) {
         Some(kernel_impl) => kernel_impl,
@@ -258,6 +286,8 @@ fn py_apply_error_diffusion_dither(
         kernel_impl,
         invert,
         serpentine,
+        min_feature_px,
+        linear,
         &mut output,
     );
 
