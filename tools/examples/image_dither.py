@@ -19,7 +19,7 @@ def _plot_dither(gray, dithered, title):
     fig, axes = plt.subplots(1, 2, figsize=(10, 4))
     axes[0].imshow(gray, cmap="gray", vmin=0, vmax=255)
     axes[0].set_title("Original")
-    axes[1].imshow(dithered, cmap="gray", vmin=0, vmax=1)
+    axes[1].imshow(1 - dithered, cmap="gray", vmin=0, vmax=1)
     axes[1].set_title(title)
     plt.tight_layout()
     return fig
@@ -70,11 +70,11 @@ def generate_min_run_len():
     result = apply_minimum_run_length(binary5.copy(), min_run_length=4)
 
     fig, axes = plt.subplots(1, 2, figsize=(8, 3))
-    axes[0].imshow(binary5, cmap="gray", vmin=0, vmax=1, aspect="auto")
+    axes[0].imshow(1 - binary5, cmap="gray", vmin=0, vmax=1, aspect="auto")
     axes[0].set_title(f"Before ({w2} px wide)")
     axes[0].set_yticks(range(h2))
     axes[0].set_xticks(range(w2))
-    axes[1].imshow(result, cmap="gray", vmin=0, vmax=1, aspect="auto")
+    axes[1].imshow(1 - result, cmap="gray", vmin=0, vmax=1, aspect="auto")
     axes[1].set_title("After (min_run_length=4)")
     axes[1].set_yticks(range(h2))
     axes[1].set_xticks(range(w2))
@@ -100,7 +100,7 @@ def generate_error_diffusion():
     fig, axes = plt.subplots(2, 3, figsize=(10, 7))
     for ax, (kernel, title) in zip(axes.ravel(), kernels):
         dithered = apply_error_diffusion_dither(gray, kernel)
-        ax.imshow(dithered, cmap="gray", vmin=0, vmax=1)
+        ax.imshow(1 - dithered, cmap="gray", vmin=0, vmax=1)
         ax.set_title(title)
     plt.tight_layout()
     return fig
@@ -121,7 +121,7 @@ def generate_error_diffusion_serpentine():
         dithered = apply_error_diffusion_dither(
             gray, "stucki", serpentine=serpentine
         )
-        ax.imshow(dithered, cmap="gray", vmin=0, vmax=1)
+        ax.imshow(1 - dithered, cmap="gray", vmin=0, vmax=1)
         ax.set_title(title)
     plt.tight_layout()
     return fig
@@ -142,7 +142,7 @@ def generate_error_diffusion_srgb_vs_linear():
     for ax, (linear, title) in zip(axes, panels):
         dithered = apply_error_diffusion_dither(gray, "stucki", linear=linear)
         coverage = dithered[:, mid].mean()
-        ax.imshow(dithered, cmap="gray", vmin=0, vmax=1)
+        ax.imshow(1 - dithered, cmap="gray", vmin=0, vmax=1)
         ax.set_title(
             f"Stucki on {title}\nmid-tone dot coverage {coverage:.0%}"
         )
@@ -166,7 +166,7 @@ def generate_min_feature_px():
         dithered = apply_error_diffusion_dither(
             gray, "stucki", min_feature_px=min_feature_px
         )
-        ax.imshow(dithered, cmap="gray", vmin=0, vmax=1)
+        ax.imshow(1 - dithered, cmap="gray", vmin=0, vmax=1)
         ax.set_title(f"Stucki, {title}")
     plt.tight_layout()
     return fig
@@ -188,7 +188,7 @@ def generate_halftone():
         dithered = apply_halftone_dither(
             gray, cell_mm, angle, pixels_per_mm=(10.0, 10.0)
         )
-        ax.imshow(dithered, cmap="gray", vmin=0, vmax=1)
+        ax.imshow(1 - dithered, cmap="gray", vmin=0, vmax=1)
         ax.set_title(title)
     plt.tight_layout()
     return fig
@@ -208,7 +208,7 @@ def generate_newsprint():
         dithered = apply_newsprint_dither(
             gray, cell_size, pixels_per_mm=(10.0, 10.0)
         )
-        ax.imshow(dithered, cmap="gray", vmin=0, vmax=1)
+        ax.imshow(1 - dithered, cmap="gray", vmin=0, vmax=1)
         ax.set_title(title)
     plt.tight_layout()
     return fig
