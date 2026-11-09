@@ -131,7 +131,6 @@ pub(crate) fn register(plan_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     hole_tolerance = 0.1,
     hole_order = "detection",
 ))]
-#[allow(clippy::too_many_arguments)]
 pub fn plan_drilling_py(
     part: &Bound<'_, PyPart>,
     face_id: &str,
