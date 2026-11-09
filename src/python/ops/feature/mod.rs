@@ -5,6 +5,7 @@ pyo3_stub_gen::module_doc!(
 );
 
 use pyo3::prelude::*;
+pub(crate) mod hole;
 pub(crate) mod narrow;
 pub(crate) mod near;
 pub(crate) mod ramp;
@@ -17,6 +18,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     feature_mod
         .setattr("__doc__", "Feature detection for machining analysis.")?;
 
+    hole::register(&feature_mod)?;
     narrow::register(&feature_mod)?;
     near::register(&feature_mod)?;
     ramp::register(&feature_mod)?;

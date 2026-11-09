@@ -161,6 +161,7 @@ class SectionType:
     """
     VECTOR_OUTLINE: SectionType = SectionType.VECTOR_OUTLINE
     RASTER_FILL: SectionType = SectionType.RASTER_FILL
+    DRILL_CYCLE: SectionType = SectionType.DRILL_CYCLE
     @property
     def value(self) -> builtins.int:
         r"""
@@ -171,7 +172,8 @@ class SectionType:
     @property
     def name(self) -> builtins.str:
         r"""
-        The uppercase name (``"VECTOR_OUTLINE"`` or ``"RASTER_FILL"``).
+        The uppercase name (``"VECTOR_OUTLINE"``, ``"RASTER_FILL"`` or
+        ``"DRILL_CYCLE"``).
         
         :complexity: O(1)
         """

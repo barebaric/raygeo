@@ -128,6 +128,10 @@ impl CommandCategory {
 pub enum SectionType {
     VectorOutline,
     RasterFill,
+    /// One hole-making cycle (drill, peck drill, countersink), expanded
+    /// into explicit moves. Tags the moves so encoders or downstream
+    /// consumers can substitute a canned cycle (G81/G82/G73/G83).
+    DrillCycle,
 }
 
 impl SectionType {
@@ -135,6 +139,7 @@ impl SectionType {
         match self {
             SectionType::VectorOutline => "VECTOR_OUTLINE",
             SectionType::RasterFill => "RASTER_FILL",
+            SectionType::DrillCycle => "DRILL_CYCLE",
         }
     }
 

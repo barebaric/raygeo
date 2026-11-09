@@ -4,12 +4,14 @@ r"""
 Feature detection for machining analysis.
 """
 
+from . import hole
 from . import narrow
 from . import near
 from . import ramp
 from . import region
 from . import slot_path
 __all__ = [
+    "hole",
     "narrow",
     "near",
     "ramp",

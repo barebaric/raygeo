@@ -339,6 +339,9 @@ impl PySectionType {
     #[classattr]
     pub const RASTER_FILL: PySectionType =
         PySectionType(SectionType::RasterFill);
+    #[classattr]
+    pub const DRILL_CYCLE: PySectionType =
+        PySectionType(SectionType::DrillCycle);
 
     /// String representation like ``SectionType.VECTOR_OUTLINE``.
     ///
@@ -355,7 +358,8 @@ impl PySectionType {
         self.0 as u8
     }
 
-    /// The uppercase name (``"VECTOR_OUTLINE"`` or ``"RASTER_FILL"``).
+    /// The uppercase name (``"VECTOR_OUTLINE"``, ``"RASTER_FILL"`` or
+    /// ``"DRILL_CYCLE"``).
     ///
     /// :complexity: O(1)
     #[getter]

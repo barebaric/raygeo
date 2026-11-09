@@ -29,6 +29,7 @@ use crate::ops::assembly::{
 pub(crate) mod adaptive;
 pub(crate) mod contour;
 pub(crate) mod custom;
+pub(crate) mod drill;
 pub(crate) mod erosion;
 pub(crate) mod frame;
 pub(crate) mod helix;
@@ -40,6 +41,7 @@ pub(crate) mod result;
 pub(crate) mod shrinkwrap;
 pub(crate) mod slot;
 pub(crate) mod spiral;
+pub(crate) mod thread_mill;
 pub(crate) mod toroid;
 pub(crate) mod wavefront;
 
@@ -50,6 +52,7 @@ use crate::python::geo::flex_point::{
 use crate::python::ops::assembly::adaptive::PyAdaptiveClearingSpec;
 use crate::python::ops::assembly::contour::PyContourSpec;
 use crate::python::ops::assembly::custom::PyCustomSpec;
+use crate::python::ops::assembly::drill::{PyCountersinkSpec, PyDrillSpec};
 use crate::python::ops::assembly::erosion::PyErosionSpec;
 use crate::python::ops::assembly::frame::PyFrameSpec;
 use crate::python::ops::assembly::helix::PyHelixSpec;
@@ -61,6 +64,7 @@ use crate::python::ops::assembly::raster::PyRasterSpec;
 use crate::python::ops::assembly::shrinkwrap::PyShrinkwrapSpec;
 use crate::python::ops::assembly::slot::PySlotSpec;
 use crate::python::ops::assembly::spiral::PySpiralSpec;
+use crate::python::ops::assembly::thread_mill::PyThreadMillSpec;
 use crate::python::ops::assembly::toroid::{PyToroidSpec, PyToroidalClearSpec};
 use crate::python::ops::assembly::wavefront::PyAdaptiveWavefrontSpec;
 use crate::python::ops::container::PyOps;
@@ -74,6 +78,15 @@ pub fn extract_assembler(
     ob: &Bound<'_, PyAny>,
 ) -> PyResult<Box<dyn Assembler>> {
     if let Ok(s) = ob.extract::<PyContourSpec>() {
+        return Ok(Box::new(s.into_core()));
+    }
+    if let Ok(s) = ob.extract::<PyDrillSpec>() {
+        return Ok(Box::new(s.into_core()));
+    }
+    if let Ok(s) = ob.extract::<PyCountersinkSpec>() {
+        return Ok(Box::new(s.into_core()));
+    }
+    if let Ok(s) = ob.extract::<PyThreadMillSpec>() {
         return Ok(Box::new(s.into_core()));
     }
     if let Ok(s) = ob.extract::<PyCustomSpec>() {
@@ -483,6 +496,7 @@ pub(crate) fn register(ops_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     adaptive::register(&assembly_mod)?;
     contour::register(&assembly_mod)?;
     custom::register(&assembly_mod)?;
+    drill::register(&assembly_mod)?;
     erosion::register(&assembly_mod)?;
     frame::register(&assembly_mod)?;
     helix::register(&assembly_mod)?;
@@ -494,6 +508,7 @@ pub(crate) fn register(ops_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     result::register(&assembly_mod)?;
     slot::register(&assembly_mod)?;
     spiral::register(&assembly_mod)?;
+    thread_mill::register(&assembly_mod)?;
     toroid::register(&assembly_mod)?;
     wavefront::register(&assembly_mod)?;
 

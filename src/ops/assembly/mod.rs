@@ -18,6 +18,7 @@
 pub mod adaptive;
 pub mod contour;
 pub mod custom;
+pub mod drill;
 pub mod erosion;
 pub mod frame;
 pub mod helix;
@@ -30,6 +31,7 @@ pub use result::AssemblyMeta;
 pub mod shrinkwrap;
 pub mod slot;
 pub mod spiral;
+pub mod thread_mill;
 pub mod toroid;
 pub(crate) mod trace_utils;
 pub mod tracelet;

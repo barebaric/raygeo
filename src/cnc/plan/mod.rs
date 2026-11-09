@@ -8,7 +8,9 @@
 //! `src/python/cnc/plan/` exposing `raygeo.cnc.plan.<x>`.
 
 pub mod clearing;
+pub mod drilling;
 pub mod entry;
 #[allow(clippy::module_inception)]
 pub mod plan;
 pub mod profile;
+pub mod thread_milling;
