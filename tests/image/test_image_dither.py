@@ -125,7 +125,7 @@ BAYER8 = np.array(
 )
 
 
-def reference_diffusion(grayscale, kernel, invert, serpentine):
+def reference_diffusion(grayscale, kernel, invert, serpentine, linear):
     """Straightforward per-pixel error diffusion used as an oracle."""
     divisor, taps = REFERENCE_KERNELS[kernel]
     forward = {
@@ -142,7 +142,10 @@ def reference_diffusion(grayscale, kernel, invert, serpentine):
     pad = max((abs(dx) for dx, _dy, _w in later), default=0)
     extra_rows = max((dy for _dx, dy, _w in later), default=0)
     work = np.zeros((height + extra_rows, width + 2 * pad), dtype=np.float32)
-    work[:height, pad : pad + width] = srgb_to_linear(grayscale)
+    if linear:
+        work[:height, pad : pad + width] = srgb_to_linear(grayscale)
+    else:
+        work[:height, pad : pad + width] = grayscale.astype(np.float32) / 255.0
     out = np.zeros((height, width), dtype=np.uint8)
     for y in range(height):
         reverse = serpentine and y % 2 == 1
@@ -206,27 +209,37 @@ def dot_boxes(binary):
 
 
 class TestErrorDiffusionCore:
+    @pytest.mark.parametrize("linear", [False, True])
     @pytest.mark.parametrize("serpentine", [False, True])
     @pytest.mark.parametrize("kernel", KERNELS)
-    def test_matches_reference_implementation(self, kernel, serpentine):
+    def test_matches_reference_implementation(
+        self, kernel, serpentine, linear
+    ):
         rng = np.random.default_rng(7)
         for shape in [(1, 1), (1, 6), (5, 1), (4, 6), (6, 5)]:
             grayscale = rng.integers(0, 256, shape).astype(np.uint8)
             expected = reference_diffusion(
-                grayscale, kernel, False, serpentine
+                grayscale, kernel, False, serpentine, linear
             )
             result = apply_error_diffusion_dither(
-                grayscale, kernel, serpentine=serpentine
+                grayscale, kernel, serpentine=serpentine, linear=linear
             )
             np.testing.assert_array_equal(result, expected)
 
-    def test_matches_legacy_floyd_steinberg(self):
+    @pytest.mark.parametrize("linear", [False, True])
+    def test_matches_legacy_floyd_steinberg(self, linear):
         rng = np.random.default_rng(11)
         for invert in (False, True):
             grayscale = rng.integers(0, 256, (40, 60)).astype(np.uint8)
-            legacy = apply_floyd_steinberg_dither(grayscale, invert)
+            legacy = apply_floyd_steinberg_dither(
+                grayscale, invert, linear=linear
+            )
             result = apply_error_diffusion_dither(
-                grayscale, "floyd_steinberg", invert=invert
+                grayscale,
+                "floyd_steinberg",
+                invert=invert,
+                serpentine=False,
+                linear=linear,
             )
             np.testing.assert_array_equal(result, legacy)
 
@@ -237,7 +250,9 @@ class TestErrorDiffusionCore:
 
     def test_serpentine_reverses_odd_rows(self):
         grayscale = np.tile(np.linspace(0, 255, 8).astype(np.uint8), (4, 1))
-        plain = apply_error_diffusion_dither(grayscale, "sierra_lite")
+        plain = apply_error_diffusion_dither(
+            grayscale, "sierra_lite", serpentine=False
+        )
         serpentine = apply_error_diffusion_dither(
             grayscale, "sierra_lite", serpentine=True
         )
@@ -291,9 +306,17 @@ class TestErrorDiffusionBehaviour:
 
     @pytest.mark.parametrize("gray", [40, 128, 200])
     @pytest.mark.parametrize("kernel", [k for k in KERNELS if k != "atkinson"])
-    def test_preserves_linear_tone(self, kernel, gray):
+    def test_preserves_srgb_tone(self, kernel, gray):
         grayscale = np.full((64, 96), gray, dtype=np.uint8)
         result = apply_error_diffusion_dither(grayscale, kernel)
+        expected = 1.0 - gray / 255.0
+        assert result.mean() == pytest.approx(expected, abs=0.02)
+
+    @pytest.mark.parametrize("gray", [40, 128, 200])
+    @pytest.mark.parametrize("kernel", [k for k in KERNELS if k != "atkinson"])
+    def test_preserves_linear_tone(self, kernel, gray):
+        grayscale = np.full((64, 96), gray, dtype=np.uint8)
+        result = apply_error_diffusion_dither(grayscale, kernel, linear=True)
         expected = 1.0 - float(
             srgb_to_linear(np.array([gray], dtype=np.uint8))[0]
         )
@@ -306,6 +329,85 @@ class TestErrorDiffusionBehaviour:
         atkinson = apply_error_diffusion_dither(grayscale, "atkinson")
         stucki = apply_error_diffusion_dither(grayscale, "stucki")
         assert atkinson.mean() < stucki.mean()
+
+    def test_serpentine_is_the_default(self):
+        rng = np.random.default_rng(19)
+        grayscale = rng.integers(0, 256, (12, 40)).astype(np.uint8)
+        default = apply_error_diffusion_dither(grayscale, "sierra")
+        explicit = apply_error_diffusion_dither(
+            grayscale, "sierra", serpentine=True
+        )
+        plain = apply_error_diffusion_dither(
+            grayscale, "sierra", serpentine=False
+        )
+        np.testing.assert_array_equal(default, explicit)
+        assert not np.array_equal(default, plain)
+
+
+def horizontal_run_lengths(row):
+    """Lengths of the runs of ones along one scan line."""
+    padded = np.concatenate(([0], row, [0]))
+    edges = np.diff(padded)
+    starts = np.nonzero(edges == 1)[0]
+    ends = np.nonzero(edges == -1)[0]
+    return (ends - starts).tolist()
+
+
+class TestMinFeaturePx:
+    @pytest.mark.parametrize("kernel", KERNELS)
+    def test_one_is_a_no_op(self, kernel):
+        rng = np.random.default_rng(23)
+        grayscale = rng.integers(0, 256, (24, 33)).astype(np.uint8)
+        default = apply_error_diffusion_dither(grayscale, kernel)
+        explicit = apply_error_diffusion_dither(
+            grayscale, kernel, min_feature_px=1
+        )
+        np.testing.assert_array_equal(default, explicit)
+
+    @pytest.mark.parametrize("min_feature_px", [2, 3, 5])
+    @pytest.mark.parametrize("kernel", KERNELS)
+    def test_runs_never_fall_below_the_cell(self, kernel, min_feature_px):
+        rng = np.random.default_rng(29)
+        grayscale = rng.integers(0, 256, (24, 61)).astype(np.uint8)
+        result = apply_error_diffusion_dither(
+            grayscale, kernel, min_feature_px=min_feature_px
+        )
+        assert result.shape == grayscale.shape
+        for row in result:
+            runs = horizontal_run_lengths(row)
+            assert runs
+            assert min(runs) >= min_feature_px
+
+    @pytest.mark.parametrize("kernel", KERNELS)
+    def test_cells_preserve_the_tone(self, kernel):
+        grayscale = np.full((64, 96), 128, dtype=np.uint8)
+        result = apply_error_diffusion_dither(
+            grayscale, kernel, min_feature_px=3
+        )
+        assert result.mean() == pytest.approx(1.0 - 128 / 255.0, abs=0.02)
+
+    def test_handles_widths_that_do_not_split_evenly(self):
+        grayscale = np.full((8, 7), 100, dtype=np.uint8)
+        result = apply_error_diffusion_dither(
+            grayscale, "stucki", min_feature_px=3
+        )
+        assert result.shape == grayscale.shape
+        for row in result:
+            runs = horizontal_run_lengths(row)
+            assert runs
+            assert min(runs) >= 3
+
+    def test_floyd_steinberg_shares_the_behaviour(self):
+        rng = np.random.default_rng(31)
+        grayscale = rng.integers(0, 256, (24, 33)).astype(np.uint8)
+        default = apply_floyd_steinberg_dither(grayscale, False)
+        explicit = apply_floyd_steinberg_dither(grayscale, False, 1)
+        np.testing.assert_array_equal(default, explicit)
+        grouped = apply_floyd_steinberg_dither(grayscale, False, 4)
+        for row in grouped:
+            runs = horizontal_run_lengths(row)
+            assert runs
+            assert min(runs) >= 4
 
 
 class TestHalftone:

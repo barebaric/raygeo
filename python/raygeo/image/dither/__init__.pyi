@@ -24,30 +24,47 @@ def apply_bayer_dither(grayscale: numpy.typing.NDArray[numpy.uint8], bayer_matri
     :complexity: O(w*h)
     """
 
-def apply_error_diffusion_dither(grayscale: numpy.typing.NDArray[numpy.uint8], kernel: str, invert: bool = False, serpentine: bool = False) -> numpy.typing.NDArray[numpy.uint8]:
+def apply_error_diffusion_dither(grayscale: numpy.typing.NDArray[numpy.uint8], kernel: str, invert: bool = False, serpentine: bool = True, min_feature_px: int = 1, linear: bool = False) -> numpy.typing.NDArray[numpy.uint8]:
     r"""
     Error-diffusion dithering with a named kernel.
     
-    Dithers in linear light. Available kernels: atkinson, burkes,
-    floyd_steinberg, jarvis_judice_ninke, sierra, sierra_2row,
-    sierra_lite, stucki.
+    By default dithers on the raw sRGB-encoded values, so dot
+    coverage matches the tone the image shows on screen.
+    Available kernels: atkinson, burkes, floyd_steinberg,
+    jarvis_judice_ninke, sierra, sierra_2row, sierra_lite,
+    stucki.
     
     :param grayscale: 2D grayscale image as uint8 array.
     :param kernel: Name of the error-diffusion kernel to use.
     :param invert: If True, invert the output (swap black/white).
     :param serpentine: Scan odd rows right-to-left, mirroring the
         kernel. Avoids directional artifacts.
+    :param min_feature_px: Minimum feature size in pixels along
+        the scan direction. Values above 1 group each scan line
+        into cells of at least that width, diffuse at cell
+        granularity, and stretch each cell's dot across the cell.
+    :param linear: If True, convert to linear light before
+        diffusing instead of dithering the sRGB values.
     :returns: 2D binary uint8 array (values 0 or 1, 1 marks dark).
     :raises ValueError: If the kernel name is not recognized.
     :complexity: O(w*h)
     """
 
-def apply_floyd_steinberg_dither(grayscale: numpy.typing.NDArray[numpy.uint8], invert: bool) -> numpy.typing.NDArray[numpy.uint8]:
+def apply_floyd_steinberg_dither(grayscale: numpy.typing.NDArray[numpy.uint8], invert: bool, min_feature_px: int = 1, linear: bool = False) -> numpy.typing.NDArray[numpy.uint8]:
     r"""
     Apply Floyd-Steinberg error-diffusion dithering.
     
+    By default dithers on the raw sRGB-encoded values, so dot
+    coverage matches the tone the image shows on screen.
+    
     :param grayscale: 2D grayscale image as uint8 array.
     :param invert: If True, invert the output (swap black/white).
+    :param min_feature_px: Minimum feature size in pixels along
+        the scan direction. Values above 1 group each scan line
+        into cells of at least that width, diffuse at cell
+        granularity, and stretch each cell's dot across the cell.
+    :param linear: If True, convert to linear light before
+        diffusing instead of dithering the sRGB values.
     :returns: 2D binary uint8 array (values 0 or 1).
     :complexity: O(w*h)
     """

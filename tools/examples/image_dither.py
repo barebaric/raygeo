@@ -127,6 +127,51 @@ def generate_error_diffusion_serpentine():
     return fig
 
 
+def generate_error_diffusion_srgb_vs_linear():
+    """sRGB vs linear-light error diffusion."""
+    w, h = 160, 128
+    arr = make_pattern(w, h, "Gradient")
+    gray = normalize_grayscale(arr).astype(np.uint8)
+
+    fig, axes = plt.subplots(1, 2, figsize=(10, 5))
+    panels = (
+        (False, "sRGB values (default)"),
+        (True, "linear light"),
+    )
+    mid = slice(w // 3, (2 * w) // 3)
+    for ax, (linear, title) in zip(axes, panels):
+        dithered = apply_error_diffusion_dither(gray, "stucki", linear=linear)
+        coverage = dithered[:, mid].mean()
+        ax.imshow(dithered, cmap="gray", vmin=0, vmax=1)
+        ax.set_title(
+            f"Stucki on {title}\nmid-tone dot coverage {coverage:.0%}"
+        )
+    plt.tight_layout()
+    return fig
+
+
+def generate_min_feature_px():
+    """Cell grouping along the scan line via min_feature_px."""
+    w, h = 160, 128
+    arr = make_pattern(w, h, "Gradient")
+    gray = normalize_grayscale(arr).astype(np.uint8)
+
+    panels = (
+        (1, "min_feature_px=1"),
+        (3, "min_feature_px=3"),
+        (6, "min_feature_px=6"),
+    )
+    fig, axes = plt.subplots(1, 3, figsize=(12, 4))
+    for ax, (min_feature_px, title) in zip(axes, panels):
+        dithered = apply_error_diffusion_dither(
+            gray, "stucki", min_feature_px=min_feature_px
+        )
+        ax.imshow(dithered, cmap="gray", vmin=0, vmax=1)
+        ax.set_title(f"Stucki, {title}")
+    plt.tight_layout()
+    return fig
+
+
 def generate_halftone():
     """Halftone dither."""
     w, h = 128, 128
@@ -195,6 +240,22 @@ __images__ = [
         "heading": "apply_error_diffusion_dither",
         "caption": "Stucki kernel with plain and serpentine scan",
         "function": generate_error_diffusion_serpentine,
+    },
+    {
+        "heading": "apply_error_diffusion_dither",
+        "caption": (
+            "Stucki kernel on raw sRGB values vs in linear light; "
+            "sRGB matches the tone the image shows"
+        ),
+        "function": generate_error_diffusion_srgb_vs_linear,
+    },
+    {
+        "heading": "apply_error_diffusion_dither",
+        "caption": (
+            "min_feature_px groups scan lines into cells; dots grow "
+            "while the tone stays"
+        ),
+        "function": generate_min_feature_px,
     },
     {
         "heading": "apply_halftone_dither",

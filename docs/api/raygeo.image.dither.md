@@ -38,25 +38,30 @@ apply_error_diffusion_dither(
     grayscale: numpy.NDArray[numpy.uint8],
     kernel: str,
     invert: bool = False,
-    serpentine: bool = False,
+    serpentine: bool = True,
+    min_feature_px: int = 1,
+    linear: bool = False,
 ) -> numpy.NDArray[numpy.uint8]
 ```
 
 Error-diffusion dithering with a named kernel.
 
-Dithers in linear light. Available kernels: atkinson, burkes, floyd_steinberg, jarvis_judice_ninke,
-sierra, sierra_2row, sierra_lite, stucki.
+By default dithers on the raw sRGB-encoded values, so dot coverage matches the tone the image shows
+on screen. Available kernels: atkinson, burkes, floyd_steinberg, jarvis_judice_ninke, sierra,
+sierra_2row, sierra_lite, stucki.
 
 **Raises:** `ValueError` — If the kernel name is not recognized.
 
-| Parameter    | Type                         | Description                                                                      |
-| ------------ | ---------------------------- | -------------------------------------------------------------------------------- |
-| `grayscale`  | `numpy.NDArray[numpy.uint8]` | 2D grayscale image as uint8 array.                                               |
-| `kernel`     | `str`                        | Name of the error-diffusion kernel to use.                                       |
-| `invert`     | `bool = False`               | If True, invert the output (swap black/white).                                   |
-| `serpentine` | `bool = False`               | Scan odd rows right-to-left, mirroring the kernel. Avoids directional artifacts. |
-| _Returns_    | `numpy.NDArray[numpy.uint8]` | 2D binary uint8 array (values 0 or 1, 1 marks dark).                             |
-| _Complexity_ |                              | O(w\*h)                                                                          |
+| Parameter        | Type                         | Description                                                                                                                                                                                               |
+| ---------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `grayscale`      | `numpy.NDArray[numpy.uint8]` | 2D grayscale image as uint8 array.                                                                                                                                                                        |
+| `kernel`         | `str`                        | Name of the error-diffusion kernel to use.                                                                                                                                                                |
+| `invert`         | `bool = False`               | If True, invert the output (swap black/white).                                                                                                                                                            |
+| `serpentine`     | `bool = True`                | Scan odd rows right-to-left, mirroring the kernel. Avoids directional artifacts.                                                                                                                          |
+| `min_feature_px` | `int = 1`                    | Minimum feature size in pixels along the scan direction. Values above 1 group each scan line into cells of at least that width, diffuse at cell granularity, and stretch each cell's dot across the cell. |
+| `linear`         | `bool = False`               | If True, convert to linear light before diffusing instead of dithering the sRGB values.                                                                                                                   |
+| _Returns_        | `numpy.NDArray[numpy.uint8]` | 2D binary uint8 array (values 0 or 1, 1 marks dark).                                                                                                                                                      |
+| _Complexity_     |                              | O(w\*h)                                                                                                                                                                                                   |
 
 ![Error-diffusion kernel comparison](images/image-dither-error-diffusion.png)
 
@@ -66,23 +71,38 @@ sierra, sierra_2row, sierra_lite, stucki.
 
 *Stucki kernel with plain and serpentine scan*
 
+![Stucki kernel on raw sRGB values vs in linear light; sRGB matches the tone the image shows](images/image-dither-error-diffusion-srgb-vs-linear.png)
+
+*Stucki kernel on raw sRGB values vs in linear light; sRGB matches the tone the image shows*
+
+![min_feature_px groups scan lines into cells; dots grow while the tone stays](images/image-dither-min-feature-px.png)
+
+*min_feature_px groups scan lines into cells; dots grow while the tone stays*
+
 ### `apply_floyd_steinberg_dither()`
 
 ```python
 apply_floyd_steinberg_dither(
     grayscale: numpy.NDArray[numpy.uint8],
     invert: bool,
+    min_feature_px: int = 1,
+    linear: bool = False,
 ) -> numpy.NDArray[numpy.uint8]
 ```
 
 Apply Floyd-Steinberg error-diffusion dithering.
 
-| Parameter    | Type                         | Description                                    |
-| ------------ | ---------------------------- | ---------------------------------------------- |
-| `grayscale`  | `numpy.NDArray[numpy.uint8]` | 2D grayscale image as uint8 array.             |
-| `invert`     | `bool`                       | If True, invert the output (swap black/white). |
-| _Returns_    | `numpy.NDArray[numpy.uint8]` | 2D binary uint8 array (values 0 or 1).         |
-| _Complexity_ |                              | O(w\*h)                                        |
+By default dithers on the raw sRGB-encoded values, so dot coverage matches the tone the image shows
+on screen.
+
+| Parameter        | Type                         | Description                                                                                                                                                                                               |
+| ---------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `grayscale`      | `numpy.NDArray[numpy.uint8]` | 2D grayscale image as uint8 array.                                                                                                                                                                        |
+| `invert`         | `bool`                       | If True, invert the output (swap black/white).                                                                                                                                                            |
+| `min_feature_px` | `int = 1`                    | Minimum feature size in pixels along the scan direction. Values above 1 group each scan line into cells of at least that width, diffuse at cell granularity, and stretch each cell's dot across the cell. |
+| `linear`         | `bool = False`               | If True, convert to linear light before diffusing instead of dithering the sRGB values.                                                                                                                   |
+| _Returns_        | `numpy.NDArray[numpy.uint8]` | 2D binary uint8 array (values 0 or 1).                                                                                                                                                                    |
+| _Complexity_     |                              | O(w\*h)                                                                                                                                                                                                   |
 
 ![Floyd-Steinberg dithering](images/image-dither-dither-floyd.png)
 
