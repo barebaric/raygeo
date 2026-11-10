@@ -4,7 +4,7 @@ use pyo3::types::{PyDict, PyList};
 use crate::ops::{
     AirAssistMode, Axis, CommandCategory, CommandType, CoolantMode,
     HeadCoolantMode, MarkerCmd, MoveCmd, OpCategory, PowerMode, RasterMode,
-    StateCmd,
+    SpindleDirection, StateCmd,
 };
 
 use crate::geo::types::Point3D;
@@ -106,6 +106,10 @@ pub(crate) fn cmd_to_dict<'a>(
             StateCmd::SetFrequency(f) => d.set_item("frequency", *f)?,
             StateCmd::SetPulseWidth(pw) => d.set_item("pulse_width", *pw)?,
             StateCmd::SetSpindleRpm(s) => d.set_item("spindle_speed", *s)?,
+            StateCmd::SetSpindleDirection(dir) => {
+                d.set_item("direction", format!("{:?}", dir))?;
+            }
+            StateCmd::SetSyncPitch(p) => d.set_item("pitch", *p)?,
             StateCmd::SetCoolant(mode) => {
                 d.set_item("coolant", format!("{:?}", mode))?;
             }
@@ -340,6 +344,26 @@ pub fn create_and_append_command(
             })?
             .extract()?;
         ops.set_spindle_rpm(s);
+    } else if ct == CommandType::SetSpindleDirection {
+        let dir_str: String = cmd_data
+            .get_item("direction")?
+            .ok_or_else(|| {
+                pyo3::exceptions::PyKeyError::new_err("missing 'direction'")
+            })?
+            .extract()?;
+        let dir = match dir_str.as_str() {
+            "Ccw" => SpindleDirection::Ccw,
+            _ => SpindleDirection::Cw,
+        };
+        ops.set_spindle_direction(dir);
+    } else if ct == CommandType::SetSyncPitch {
+        let p: f64 = cmd_data
+            .get_item("pitch")?
+            .ok_or_else(|| {
+                pyo3::exceptions::PyKeyError::new_err("missing 'pitch'")
+            })?
+            .extract()?;
+        ops.set_sync_pitch(p);
     } else if ct == CommandType::SetCoolant {
         let mode_str: String = cmd_data
             .get_item("coolant")?

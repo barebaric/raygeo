@@ -31,6 +31,7 @@ pub use result::AssemblyMeta;
 pub mod shrinkwrap;
 pub mod slot;
 pub mod spiral;
+pub mod tap;
 pub mod thread_mill;
 pub mod toroid;
 pub(crate) mod trace_utils;

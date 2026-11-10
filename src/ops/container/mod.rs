@@ -7,7 +7,8 @@ use crate::error::RaygeoError;
 use super::axis::Axis;
 use super::enums::{CommandCategory, CommandType, RasterMode, SectionType};
 use super::state::{
-    AirAssistMode, CoolantMode, HeadCoolantMode, PowerMode, State,
+    AirAssistMode, CoolantMode, HeadCoolantMode, PowerMode, SpindleDirection,
+    State,
 };
 use super::types::{MarkerCmd, MoveCmd, OpCategory, OpNode, StateCmd};
 use crate::geo::types::{Point, Point3D, Rect};
@@ -386,6 +387,20 @@ impl Ops {
         self.invalidate_time_cache();
     }
 
+    pub fn set_spindle_direction(&mut self, direction: SpindleDirection) {
+        self.cmds_mut()
+            .push(OpNode::set_spindle_direction(direction));
+        self.invalidate_time_cache();
+    }
+
+    /// Set the spindle-synchronized feed pitch (mm per revolution) for
+    /// subsequent feed moves; `0.0` switches back to ordinary
+    /// feed-per-minute motion.
+    pub fn set_sync_pitch(&mut self, pitch: f64) {
+        self.cmds_mut().push(OpNode::set_sync_pitch(pitch));
+        self.invalidate_time_cache();
+    }
+
     pub fn set_coolant(&mut self, mode: CoolantMode) {
         self.cmds_mut().push(OpNode::set_coolant(mode));
         self.invalidate_time_cache();
@@ -430,6 +445,12 @@ impl Ops {
         }
         if let Some(rpm) = state.spindle_rpm {
             self.set_spindle_rpm(rpm);
+        }
+        if let Some(dir) = state.spindle_direction {
+            self.set_spindle_direction(dir);
+        }
+        if let Some(p) = state.sync_pitch {
+            self.set_sync_pitch(p);
         }
         if let Some(c) = state.coolant {
             self.set_coolant(c);
@@ -629,6 +650,12 @@ impl Ops {
                 StateCmd::SetFrequency(f) => state.frequency = Some(*f),
                 StateCmd::SetPulseWidth(pw) => state.pulse_width = Some(*pw),
                 StateCmd::SetSpindleRpm(s) => state.spindle_rpm = Some(*s),
+                StateCmd::SetSpindleDirection(dir) => {
+                    state.spindle_direction = Some(*dir)
+                }
+                StateCmd::SetSyncPitch(p) => {
+                    state.sync_pitch = if *p > 0.0 { Some(*p) } else { None }
+                }
                 StateCmd::SetCoolant(mode) => state.coolant = Some(*mode),
                 StateCmd::SetAirAssist(mode) => state.air_assist = Some(*mode),
                 StateCmd::SetHeadCoolant(mode) => {

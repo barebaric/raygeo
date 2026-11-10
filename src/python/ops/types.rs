@@ -144,6 +144,12 @@ impl PyCommandType {
     pub const SET_SPINDLE_RPM: PyCommandType =
         PyCommandType(CommandType::SetSpindleRpm);
     #[classattr]
+    pub const SET_SPINDLE_DIRECTION: PyCommandType =
+        PyCommandType(CommandType::SetSpindleDirection);
+    #[classattr]
+    pub const SET_SYNC_PITCH: PyCommandType =
+        PyCommandType(CommandType::SetSyncPitch);
+    #[classattr]
     pub const SET_COOLANT: PyCommandType =
         PyCommandType(CommandType::SetCoolant);
     #[classattr]
@@ -342,6 +348,9 @@ impl PySectionType {
     #[classattr]
     pub const DRILL_CYCLE: PySectionType =
         PySectionType(SectionType::DrillCycle);
+    #[classattr]
+    pub const TAPPING_CYCLE: PySectionType =
+        PySectionType(SectionType::TappingCycle);
 
     /// String representation like ``SectionType.VECTOR_OUTLINE``.
     ///
@@ -358,8 +367,8 @@ impl PySectionType {
         self.0 as u8
     }
 
-    /// The uppercase name (``"VECTOR_OUTLINE"``, ``"RASTER_FILL"`` or
-    /// ``"DRILL_CYCLE"``).
+    /// The uppercase name (``"VECTOR_OUTLINE"``, ``"RASTER_FILL"``,
+    /// ``"DRILL_CYCLE"`` or ``"TAPPING_CYCLE"``).
     ///
     /// :complexity: O(1)
     #[getter]

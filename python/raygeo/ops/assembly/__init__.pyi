@@ -34,6 +34,7 @@ from . import raster
 from . import shrinkwrap
 from . import slot
 from . import spiral
+from . import tap
 from . import thread_mill
 from . import toroid
 from . import wavefront
@@ -57,6 +58,7 @@ __all__ = [
     "shrinkwrap",
     "slot",
     "spiral",
+    "tap",
     "thread_mill",
     "toroid",
     "wavefront",

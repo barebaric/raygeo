@@ -13,4 +13,5 @@ pub mod entry;
 #[allow(clippy::module_inception)]
 pub mod plan;
 pub mod profile;
+pub mod tapping;
 pub mod thread_milling;

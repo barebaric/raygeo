@@ -23,6 +23,7 @@ pub use container::structure::{OpsSection, OpsSectionRange};
 pub use container::Ops;
 pub use enums::{CommandCategory, CommandType, RasterMode, SectionType};
 pub use state::{
-    AirAssistMode, CoolantMode, HeadCoolantMode, PowerMode, State,
+    AirAssistMode, CoolantMode, HeadCoolantMode, PowerMode, SpindleDirection,
+    State,
 };
 pub use types::{MarkerCmd, MoveCmd, OpCategory, OpNode, StateCmd};

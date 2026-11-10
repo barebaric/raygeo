@@ -148,6 +148,16 @@ class CommandInfo:
         Spindle RPM, if a SetSpindleRpm command.
         """
     @property
+    def spindle_direction(self) -> typing.Optional[state.SpindleDirection]:
+        r"""
+        Spindle direction, if a SetSpindleDirection command.
+        """
+    @property
+    def sync_pitch(self) -> typing.Optional[builtins.float]:
+        r"""
+        Sync pitch (mm/rev), if a SetSyncPitch command.
+        """
+    @property
     def coolant(self) -> typing.Optional[state.CoolantMode]:
         r"""
         Coolant mode, if a SetCoolant command.
@@ -527,6 +537,24 @@ class Ops:
         :raises TypeError: If the command is not a SetSpindleRpm.
         :complexity: O(1) time, O(1) space
         """
+    def spindle_direction(self, idx: builtins.int) -> state.SpindleDirection:
+        r"""
+        Get the spindle direction from a SetSpindleDirection command.
+        
+        :param idx: Command index.
+        :returns: The spindle direction.
+        :raises TypeError: If the command is not a SetSpindleDirection.
+        :complexity: O(1) time, O(1) space
+        """
+    def sync_pitch(self, idx: builtins.int) -> builtins.float:
+        r"""
+        Get the sync pitch from a SetSyncPitch command.
+        
+        :param idx: Command index.
+        :returns: The sync pitch in mm per revolution.
+        :raises TypeError: If the command is not a SetSyncPitch.
+        :complexity: O(1) time, O(1) space
+        """
     def coolant(self, idx: builtins.int) -> state.CoolantMode:
         r"""
         Get the coolant mode from a SetCoolant command.
@@ -747,6 +775,23 @@ class Ops:
         Set the spindle RPM for subsequent commands.
         
         :param rpm: Spindle RPM.
+        :complexity: O(1) time, O(1) space
+        """
+    def set_spindle_direction(self, direction: state.SpindleDirection) -> None:
+        r"""
+        Set the spindle rotational direction for subsequent commands.
+        
+        :param direction: Spindle direction (``CW`` or ``CCW``).
+        :complexity: O(1) time, O(1) space
+        """
+    def set_sync_pitch(self, pitch: builtins.float) -> None:
+        r"""
+        Set the spindle-sync pitch (mm per revolution) for subsequent
+        feed moves; ``0.0`` switches back to ordinary feed-per-minute
+        motion. While active, feed moves run at ``pitch × rpm`` mm/min
+        (rigid tapping).
+        
+        :param pitch: Sync pitch in mm per revolution.
         :complexity: O(1) time, O(1) space
         """
     def set_coolant(self, mode: state.CoolantMode) -> None:

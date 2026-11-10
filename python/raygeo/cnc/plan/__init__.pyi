@@ -13,6 +13,7 @@ from . import clearing
 from . import drilling
 from . import entry
 from . import profile
+from . import tapping
 from . import thread_milling
 __all__ = [
     "Plan",
@@ -21,6 +22,7 @@ __all__ = [
     "drilling",
     "entry",
     "profile",
+    "tapping",
     "thread_milling",
 ]
 

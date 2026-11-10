@@ -83,6 +83,25 @@ name: str
 value: int
 ```
 
+## SpindleDirection
+
+Spindle rotational direction.
+
+`CW` corresponds to M3, `CCW` to M4. Rigid tapping reverses the spindle at the bottom of the hole so
+the synchronized retract unscrews the tap.
+
+### `name`
+
+```python
+name: str
+```
+
+### `value`
+
+```python
+value: int
+```
+
 ## State
 
 The current state of a CNC machine.
@@ -178,6 +197,14 @@ rapid_rate: Optional[int]
 
 Rapid (traverse) rate in mm/s (if set).
 
+### `spindle_direction`
+
+```python
+spindle_direction: Optional[SpindleDirection]
+```
+
+Spindle rotational direction (if set).
+
 ### `spindle_rpm`
 
 ```python
@@ -185,6 +212,15 @@ spindle_rpm: Optional[int]
 ```
 
 Spindle RPM (if set).
+
+### `sync_pitch`
+
+```python
+sync_pitch: Optional[float]
+```
+
+Spindle-sync pitch in mm per revolution (if set). When set, feed moves run synchronized with the
+spindle (rigid tapping).
 
 ### `allow_rapid_change()`
 
