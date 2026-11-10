@@ -2,7 +2,12 @@ import pytest
 
 from raygeo.ops import Ops
 from raygeo.ops.axis import Axis
-from raygeo.ops.state import AirAssistMode, HeadCoolantMode, PowerMode
+from raygeo.ops.state import (
+    AirAssistMode,
+    HeadCoolantMode,
+    PowerMode,
+    SpindleDirection,
+)
 from raygeo.ops.types import CommandType, RasterMode, SectionType
 
 
@@ -215,3 +220,57 @@ def test_custom_from_dict_missing_text_raises():
     }
     with pytest.raises(KeyError):
         Ops.from_dict(data)
+
+
+def test_spindle_direction_dict_round_trip():
+    ops = Ops()
+    ops.set_spindle_direction(SpindleDirection.CCW)
+    ops.set_spindle_direction(SpindleDirection.CW)
+
+    data = ops.to_dict()
+    assert data["commands"][0]["direction"] == "Ccw"
+    assert data["commands"][1]["direction"] == "Cw"
+
+    restored = Ops.from_dict(data)
+    assert len(restored) == 2
+    assert restored.command_type(0) == CommandType.SET_SPINDLE_DIRECTION
+    assert restored.command_type(1) == CommandType.SET_SPINDLE_DIRECTION
+    assert restored.spindle_direction(0) == SpindleDirection.CCW
+    assert restored.spindle_direction(1) == SpindleDirection.CW
+    assert restored.inspect(0) == ops.inspect(0)
+    assert restored.inspect(1) == ops.inspect(1)
+
+
+def test_sync_pitch_dict_round_trip():
+    ops = Ops()
+    ops.set_sync_pitch(1.25)
+    ops.set_sync_pitch(0.0)
+
+    data = ops.to_dict()
+    assert data["commands"][0]["pitch"] == pytest.approx(1.25)
+    assert data["commands"][1]["pitch"] == pytest.approx(0.0)
+
+    restored = Ops.from_dict(data)
+    assert len(restored) == 2
+    assert restored.command_type(0) == CommandType.SET_SYNC_PITCH
+    assert restored.sync_pitch(0) == pytest.approx(1.25)
+    assert restored.sync_pitch(1) == pytest.approx(0.0)
+    assert restored.inspect(0) == ops.inspect(0)
+    assert restored.inspect(1) == ops.inspect(1)
+
+
+def test_sync_and_direction_from_dict_missing_fields_raise():
+    with pytest.raises(KeyError):
+        Ops.from_dict(
+            {
+                "commands": [{"type": "SET_SPINDLE_DIRECTION"}],
+                "last_move_to": [0, 0, 0],
+            }
+        )
+    with pytest.raises(KeyError):
+        Ops.from_dict(
+            {
+                "commands": [{"type": "SET_SYNC_PITCH"}],
+                "last_move_to": [0, 0, 0],
+            }
+        )

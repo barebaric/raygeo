@@ -27,7 +27,7 @@ venv:
 	@echo "Run 'source .venv/bin/activate' to activate the virtual environment."
 
 stubs:
-	cargo clean -p raygeo && cargo run --bin stub_gen
+	cargo clean -p raygeo && cargo run --bin stub_gen --features python
 
 format: format-rust format-python
 

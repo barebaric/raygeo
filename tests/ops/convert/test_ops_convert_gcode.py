@@ -12,7 +12,12 @@ import numpy as np
 from raygeo.ops import Ops
 from raygeo.ops.axis import Axis
 from raygeo.ops.convert import GcodeDialectSpec
-from raygeo.ops.state import AirAssistMode, CoolantMode, PowerMode
+from raygeo.ops.state import (
+    AirAssistMode,
+    CoolantMode,
+    PowerMode,
+    SpindleDirection,
+)
 
 # ── Helpers ──────────────────────────────────────────────────────
 
@@ -1247,3 +1252,68 @@ def test_power_cap_absent_leaves_power_untouched():
     ops.job_end()
     text = _encode(ops, ctx=_ctx(power_cap=None))["text"]
     assert "M4 S80" in text
+
+
+# ── Spindle direction / rigid tapping ───────────────────────────
+
+
+def test_spindle_direction_ccw_emits_m4():
+    """The previously unreachable spindle_on_ccw dialect template is
+    selected by a SET_SPINDLE_DIRECTION command."""
+    ops = Ops()
+    ops.job_start()
+    # Direction set before the spindle turns on: it starts in CCW.
+    ops.set_spindle_direction(SpindleDirection.CCW)
+    ops.set_spindle_rpm(1000)
+    ops.job_end()
+    text = _encode(ops)["text"]
+    assert "M4 S1000" in text
+    # Never turns on clockwise (watch out for the M30 postscript).
+    assert "M3 S" not in text
+
+
+def test_spindle_reversal_stops_before_restarting():
+    """A direction change while running emits M5 first, then the
+    spindle-on line for the new direction at the same speed."""
+    ops = Ops()
+    ops.job_start()
+    ops.set_spindle_rpm(1000)
+    ops.set_spindle_direction(SpindleDirection.CCW)
+    ops.set_spindle_direction(SpindleDirection.CW)
+    ops.job_end()
+    lines = _encode(ops)["text"].splitlines()
+    assert lines.count("M5") >= 2
+    first_ccw = next(i for i, line in enumerate(lines) if line == "M4 S1000")
+    restart = next(
+        i
+        for i, line in enumerate(lines)
+        if line == "M3 S1000" and i > first_ccw
+    )
+    assert lines[first_ccw - 1] == "M5"
+    assert lines[restart - 1] == "M5"
+
+
+def test_rigid_tap_cycle_gcode():
+    """A rigid-tapping fragment: sync pitch turns the feed into
+    pitch * rpm, the reversal sequence is M3 → M5/M4 → M5/M3."""
+    ops = Ops()
+    ops.job_start()
+    ops.set_spindle_rpm(500)
+    ops.set_sync_pitch(1.0)
+    ops.line_to(0.0, 0.0, -3.0)
+    ops.set_spindle_direction(SpindleDirection.CCW)
+    ops.line_to(0.0, 0.0, 0.0)
+    ops.set_spindle_direction(SpindleDirection.CW)
+    ops.set_sync_pitch(0.0)
+    ops.job_end()
+    text = _encode(ops)["text"]
+    lines = text.splitlines()
+    # Synchronized feed = 1.0 mm/rev * 500 rpm = 500 mm/min.
+    assert "G1 F500" in text
+    assert text.count("G1 Z-3 F500") == 1
+    assert text.count("G1 Z0 F500") == 1
+    m3_idx = next(i for i, line in enumerate(lines) if line == "M3 S500")
+    m4_idx = next(i for i, line in enumerate(lines) if line == "M4 S500")
+    assert m3_idx < m4_idx
+    assert lines[m4_idx - 1] == "M5"
+    assert "M3 S500" in lines[m4_idx + 1 :]

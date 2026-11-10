@@ -24,7 +24,9 @@ use crate::ops::convert::gcode_types::{
 };
 use crate::ops::convert::{EncodeCtx, EncodeOutput, Encoder};
 use crate::ops::enums::CommandType;
-use crate::ops::state::{AirAssistMode, CoolantMode, PowerMode};
+use crate::ops::state::{
+    AirAssistMode, CoolantMode, PowerMode, SpindleDirection,
+};
 use crate::ops::types::MoveCmd;
 
 const COORD_TOLERANCE: f64 = 1e-6;
@@ -113,6 +115,10 @@ pub(crate) struct GcodeEncoder<'a> {
     pub(crate) frequency: Option<i32>,
     pub(crate) pulse_width: Option<f64>,
     pub(crate) spindle_rpm: u32,
+    pub(crate) spindle_direction: SpindleDirection,
+    /// Spindle-sync pitch (mm per revolution) currently in effect; 0.0
+    /// means ordinary feed-per-minute motion.
+    pub(crate) sync_pitch: f64,
     pub(crate) coolant_mode: Option<CoolantMode>,
     pub(crate) current_pos: AxisMap,
     pub(crate) position_established: bool,
@@ -148,6 +154,8 @@ impl<'a> GcodeEncoder<'a> {
             frequency: None,
             pulse_width: None,
             spindle_rpm: 0,
+            spindle_direction: SpindleDirection::Cw,
+            sync_pitch: 0.0,
             coolant_mode: None,
             current_pos: AxisMap::default(),
             position_established: false,
@@ -500,9 +508,14 @@ impl<'a> GcodeEncoder<'a> {
             {
                 self.push_line(&dialect.spindle_off);
             }
+            let template = if self.spindle_direction == SpindleDirection::Ccw {
+                &dialect.spindle_on_ccw
+            } else {
+                &dialect.spindle_on_cw
+            };
             let mut vars = NamedVars::default();
             vars.set_str("rpm", &rpm.to_string());
-            let out = render_named(&dialect.spindle_on_cw, &vars);
+            let out = render_named(template, &vars);
             if !out.is_empty() {
                 self.push_line(&out);
             }
@@ -510,6 +523,36 @@ impl<'a> GcodeEncoder<'a> {
             self.push_line(&dialect.spindle_off);
         }
         self.spindle_rpm = rpm;
+    }
+
+    /// Switch the spindle direction. While the spindle is running this
+    /// stops it first and restarts it in the new direction at the same
+    /// speed — the reversal rigid tapping performs at the bottom of
+    /// the hole. While stopped, only the tracked direction changes.
+    fn handle_spindle_direction(&mut self, direction: SpindleDirection) {
+        if direction == self.spindle_direction {
+            return;
+        }
+        let running_rpm = self.spindle_rpm;
+        self.spindle_direction = direction;
+        if running_rpm == 0 {
+            return;
+        }
+        let dialect = self.dialect;
+        if !dialect.spindle_off.is_empty() {
+            self.push_line(&dialect.spindle_off);
+        }
+        let template = if direction == SpindleDirection::Ccw {
+            &dialect.spindle_on_ccw
+        } else {
+            &dialect.spindle_on_cw
+        };
+        let mut vars = NamedVars::default();
+        vars.set_str("rpm", &running_rpm.to_string());
+        let out = render_named(template, &vars);
+        if !out.is_empty() {
+            self.push_line(&out);
+        }
     }
 
     fn handle_set_laser(&mut self, laser_uid: &str) {
@@ -548,6 +591,17 @@ impl<'a> GcodeEncoder<'a> {
         }
     }
 
+    /// The feed (mm/min) cut moves currently run at: the synchronized
+    /// speed `sync_pitch × rpm` while spindle sync is active (rigid
+    /// tapping), otherwise the plain feed rate.
+    fn effective_cut_speed(&self) -> Option<f64> {
+        if self.sync_pitch > 0.0 && self.spindle_rpm > 0 {
+            Some(self.sync_pitch * self.spindle_rpm as f64)
+        } else {
+            self.cut_speed
+        }
+    }
+
     fn build_cut_move_vars(
         &mut self,
         x: f64,
@@ -556,29 +610,28 @@ impl<'a> GcodeEncoder<'a> {
         extra_axes: Option<&[(Axis, f64)]>,
     ) {
         self.laser_on();
-        let cut_speed = self.cut_speed.unwrap_or(0.0);
-        self.emit_modal_speed(cut_speed);
+        let cut_speed = self.effective_cut_speed();
+        self.emit_modal_speed(cut_speed.unwrap_or(0.0));
 
         let mut f_command = self.take_var();
         if self.dialect.modal_feedrate {
             let needs_emit = self.emitted_cut_feed.is_none()
-                || (Some(self.cut_speed.unwrap_or(0.0))
-                    != self.emitted_cut_feed)
-                    && (self
-                        .cut_speed
+                || (cut_speed.unwrap_or(0.0)
+                    != self.emitted_cut_feed.unwrap_or(0.0))
+                    && (cut_speed
                         .map(|s| {
                             (s - self.emitted_cut_feed.unwrap_or(-1.0)).abs()
                                 > 1e-12
                         })
                         .unwrap_or(false));
-            if let Some(cs) = self.cut_speed {
+            if let Some(cs) = cut_speed {
                 if needs_emit {
                     f_command.push_str(" F");
                     self.write_feed(&mut f_command, cs);
                     self.emitted_cut_feed = Some(cs);
                 }
             }
-        } else if let Some(s) = self.cut_speed {
+        } else if let Some(s) = cut_speed {
             f_command.push_str(" F");
             self.write_feed(&mut f_command, s);
         }
@@ -822,6 +875,12 @@ impl<'a> GcodeEncoder<'a> {
             CommandType::SetSpindleRpm => {
                 self.handle_spindle(ops_spindle_rpm(ops, idx));
             }
+            CommandType::SetSpindleDirection => {
+                self.handle_spindle_direction(ops_spindle_direction(ops, idx));
+            }
+            CommandType::SetSyncPitch => {
+                self.sync_pitch = ops_sync_pitch(ops, idx);
+            }
             CommandType::SetHead => {
                 if let Some(uid) = ops_head_uid(ops, idx) {
                     self.handle_set_laser(&uid);
@@ -1044,6 +1103,28 @@ fn ops_spindle_rpm(ops: &Ops, idx: usize) -> u32 {
         *r
     } else {
         0
+    }
+}
+
+fn ops_spindle_direction(ops: &Ops, idx: usize) -> SpindleDirection {
+    if let crate::ops::types::OpCategory::State(
+        crate::ops::types::StateCmd::SetSpindleDirection(d),
+    ) = &ops.commands[idx].category
+    {
+        *d
+    } else {
+        SpindleDirection::Cw
+    }
+}
+
+fn ops_sync_pitch(ops: &Ops, idx: usize) -> f64 {
+    if let crate::ops::types::OpCategory::State(
+        crate::ops::types::StateCmd::SetSyncPitch(p),
+    ) = &ops.commands[idx].category
+    {
+        *p
+    } else {
+        0.0
     }
 }
 

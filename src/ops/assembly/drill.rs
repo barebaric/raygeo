@@ -25,7 +25,8 @@ use crate::ops::state::State;
 use crate::ops::types::{OpNode, ToolPose};
 
 /// Clearance the rapid re-entry stops above the previous peck bottom.
-const REENTRY_CLEARANCE: f64 = 0.5;
+/// Shared with the tapping assembler, whose pecks re-enter the same way.
+pub(crate) const REENTRY_CLEARANCE: f64 = 0.5;
 
 /// Peck retract strategy.
 #[derive(Clone, Copy, Debug, PartialEq)]

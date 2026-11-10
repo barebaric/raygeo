@@ -18,6 +18,7 @@ __all__ = [
     "CoolantMode",
     "HeadCoolantMode",
     "PowerMode",
+    "SpindleDirection",
     "State",
 ]
 
@@ -93,6 +94,26 @@ class PowerMode:
     def __str__(self) -> builtins.str: ...
 
 @typing.final
+class SpindleDirection:
+    r"""
+    Spindle rotational direction.
+    
+    ``CW`` corresponds to M3, ``CCW`` to M4. Rigid tapping reverses
+    the spindle at the bottom of the hole so the synchronized retract
+    unscrews the tap.
+    """
+    CW: SpindleDirection = SpindleDirection.CW
+    CCW: SpindleDirection = SpindleDirection.CCW
+    @property
+    def value(self) -> builtins.int: ...
+    @property
+    def name(self) -> builtins.str: ...
+    def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
+    def __hash__(self) -> builtins.int: ...
+    def __repr__(self) -> builtins.str: ...
+    def __str__(self) -> builtins.str: ...
+
+@typing.final
 class State:
     r"""
     The current state of a CNC machine.
@@ -158,6 +179,21 @@ class State:
     @spindle_rpm.setter
     def spindle_rpm(self, value: typing.Optional[builtins.int]) -> None: ...
     @property
+    def spindle_direction(self) -> typing.Optional[SpindleDirection]:
+        r"""
+        Spindle rotational direction (if set).
+        """
+    @spindle_direction.setter
+    def spindle_direction(self, value: typing.Optional[SpindleDirection]) -> None: ...
+    @property
+    def sync_pitch(self) -> typing.Optional[builtins.float]:
+        r"""
+        Spindle-sync pitch in mm per revolution (if set). When set,
+        feed moves run synchronized with the spindle (rigid tapping).
+        """
+    @sync_pitch.setter
+    def sync_pitch(self, value: typing.Optional[builtins.float]) -> None: ...
+    @property
     def coolant(self) -> typing.Optional[CoolantMode]:
         r"""
         Coolant mode (if set).
@@ -185,7 +221,7 @@ class State:
         """
     @power_mode.setter
     def power_mode(self, value: typing.Optional[PowerMode]) -> None: ...
-    def __new__(cls, power: builtins.float = 0.0, feed_rate: typing.Optional[builtins.int] = None, rapid_rate: typing.Optional[builtins.int] = None, active_head_uid: typing.Optional[builtins.str] = None, frequency: typing.Optional[builtins.int] = None, pulse_width: typing.Optional[builtins.float] = None, dwell_ms: typing.Optional[builtins.float] = None, spindle_rpm: typing.Optional[builtins.int] = None, coolant: typing.Optional[CoolantMode] = None, air_assist: typing.Optional[AirAssistMode] = None, head_coolant: typing.Optional[HeadCoolantMode] = None, power_mode: typing.Optional[PowerMode] = None, plunge_feed: typing.Optional[builtins.int] = None) -> State: ...
+    def __new__(cls, power: builtins.float = 0.0, feed_rate: typing.Optional[builtins.int] = None, rapid_rate: typing.Optional[builtins.int] = None, active_head_uid: typing.Optional[builtins.str] = None, frequency: typing.Optional[builtins.int] = None, pulse_width: typing.Optional[builtins.float] = None, dwell_ms: typing.Optional[builtins.float] = None, spindle_rpm: typing.Optional[builtins.int] = None, coolant: typing.Optional[CoolantMode] = None, air_assist: typing.Optional[AirAssistMode] = None, head_coolant: typing.Optional[HeadCoolantMode] = None, power_mode: typing.Optional[PowerMode] = None, plunge_feed: typing.Optional[builtins.int] = None, spindle_direction: typing.Optional[SpindleDirection] = None, sync_pitch: typing.Optional[builtins.float] = None) -> State: ...
     def __repr__(self) -> builtins.str:
         r"""
         String representation like ``State(power=...)``.

@@ -11,6 +11,7 @@ pub(crate) mod clearing;
 pub(crate) mod drilling;
 pub(crate) mod entry;
 pub(crate) mod profile;
+pub(crate) mod tapping;
 pub(crate) mod thread_milling;
 
 use pyo3::prelude::*;
@@ -192,6 +193,24 @@ impl PyPlanStep {
                 },
             )?;
             d.set_item("safe_z", tm.safe_z)?;
+        } else if let Some(t) = spec.as_any().downcast_ref::<crate::ops::assembly::tap::TapSpec>() {
+            d.set_item("center", (t.center.x, t.center.y))?;
+            d.set_item("nominal_diameter", t.nominal_diameter)?;
+            d.set_item("pitch", t.pitch)?;
+            d.set_item(
+                "handedness",
+                if t.handedness == crate::ops::assembly::thread_mill::ThreadHandedness::Lh {
+                    "LH"
+                } else {
+                    "RH"
+                },
+            )?;
+            d.set_item("z_surface", t.z_surface)?;
+            d.set_item("target_z", t.target_z)?;
+            d.set_item("rapid_z", t.rapid_z)?;
+            d.set_item("safe_z", t.safe_z)?;
+            d.set_item("peck_increment", t.peck)?;
+            d.set_item("dwell_ms", t.dwell_ms)?;
         }
 
         Ok(d)
@@ -292,6 +311,7 @@ pub(crate) fn register(parent: &Bound<'_, PyModule>) -> PyResult<()> {
     drilling::register(&plan_mod)?;
     entry::register(&plan_mod)?;
     profile::register(&plan_mod)?;
+    tapping::register(&plan_mod)?;
     thread_milling::register(&plan_mod)?;
     parent.add_submodule(&plan_mod)?;
 

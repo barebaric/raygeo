@@ -41,6 +41,7 @@ pub(crate) mod result;
 pub(crate) mod shrinkwrap;
 pub(crate) mod slot;
 pub(crate) mod spiral;
+pub(crate) mod tap;
 pub(crate) mod thread_mill;
 pub(crate) mod toroid;
 pub(crate) mod wavefront;
@@ -64,6 +65,7 @@ use crate::python::ops::assembly::raster::PyRasterSpec;
 use crate::python::ops::assembly::shrinkwrap::PyShrinkwrapSpec;
 use crate::python::ops::assembly::slot::PySlotSpec;
 use crate::python::ops::assembly::spiral::PySpiralSpec;
+use crate::python::ops::assembly::tap::PyTapSpec;
 use crate::python::ops::assembly::thread_mill::PyThreadMillSpec;
 use crate::python::ops::assembly::toroid::{PyToroidSpec, PyToroidalClearSpec};
 use crate::python::ops::assembly::wavefront::PyAdaptiveWavefrontSpec;
@@ -87,6 +89,9 @@ pub fn extract_assembler(
         return Ok(Box::new(s.into_core()));
     }
     if let Ok(s) = ob.extract::<PyThreadMillSpec>() {
+        return Ok(Box::new(s.into_core()));
+    }
+    if let Ok(s) = ob.extract::<PyTapSpec>() {
         return Ok(Box::new(s.into_core()));
     }
     if let Ok(s) = ob.extract::<PyCustomSpec>() {
@@ -508,6 +513,7 @@ pub(crate) fn register(ops_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     result::register(&assembly_mod)?;
     slot::register(&assembly_mod)?;
     spiral::register(&assembly_mod)?;
+    tap::register(&assembly_mod)?;
     thread_mill::register(&assembly_mod)?;
     toroid::register(&assembly_mod)?;
     wavefront::register(&assembly_mod)?;

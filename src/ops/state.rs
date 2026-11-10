@@ -34,6 +34,20 @@ pub enum HeadCoolantMode {
     On,
 }
 
+/// Spindle rotational direction.
+///
+/// `Cw` corresponds to M3, `Ccw` to M4. Rigid tapping reverses the
+/// spindle at the bottom of the hole so the synchronized retract
+/// unscrews the tap.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+pub enum SpindleDirection {
+    /// Clockwise (M3).
+    #[default]
+    Cw,
+    /// Counter-clockwise (M4).
+    Ccw,
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct State {
     pub power: f64,
@@ -47,6 +61,13 @@ pub struct State {
     pub pulse_width: Option<f64>,
     pub dwell_ms: Option<f64>,
     pub spindle_rpm: Option<u32>,
+    /// Rotational direction of the spindle; `None` behaves as `Cw`.
+    pub spindle_direction: Option<SpindleDirection>,
+    /// Axial travel (mm) per spindle revolution for subsequent feed
+    /// moves. When `Some`, feed moves are spindle-synchronized (rigid
+    /// tapping): their effective feed is `sync_pitch × spindle_rpm`
+    /// mm/min. `None` = normal feed-per-minute motion.
+    pub sync_pitch: Option<f64>,
     pub coolant: Option<CoolantMode>,
     pub air_assist: Option<AirAssistMode>,
     pub head_coolant: Option<HeadCoolantMode>,

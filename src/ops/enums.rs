@@ -34,6 +34,10 @@ pub enum CommandType {
     SetPulseWidth = 17,
     #[strum(serialize = "SET_SPINDLE_RPM")]
     SetSpindleRpm = 18,
+    #[strum(serialize = "SET_SPINDLE_DIRECTION")]
+    SetSpindleDirection = 24,
+    #[strum(serialize = "SET_SYNC_PITCH")]
+    SetSyncPitch = 25,
     #[strum(serialize = "SET_COOLANT")]
     SetCoolant = 20,
     #[strum(serialize = "SET_AIR_ASSIST")]
@@ -87,6 +91,8 @@ impl CommandType {
             | CommandType::SetPulseWidth
             | CommandType::SetHead
             | CommandType::SetSpindleRpm
+            | CommandType::SetSpindleDirection
+            | CommandType::SetSyncPitch
             | CommandType::SetCoolant
             | CommandType::SetAirAssist
             | CommandType::SetHeadCoolant
@@ -132,6 +138,11 @@ pub enum SectionType {
     /// into explicit moves. Tags the moves so encoders or downstream
     /// consumers can substitute a canned cycle (G81/G82/G73/G83).
     DrillCycle,
+    /// One rigid-tapping cycle (right- or left-hand, optionally pecked),
+    /// expanded into spindle-synchronized moves. Tags the moves so
+    /// encoders or downstream consumers can substitute a canned cycle
+    /// (G84/G74).
+    TappingCycle,
 }
 
 impl SectionType {
@@ -140,6 +151,7 @@ impl SectionType {
             SectionType::VectorOutline => "VECTOR_OUTLINE",
             SectionType::RasterFill => "RASTER_FILL",
             SectionType::DrillCycle => "DRILL_CYCLE",
+            SectionType::TappingCycle => "TAPPING_CYCLE",
         }
     }
 

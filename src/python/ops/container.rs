@@ -23,7 +23,8 @@ use py_transform::{extract_transformer, PyCallableCallbacks};
 
 use super::axis::PyAxis;
 use super::state::{
-    PyAirAssistMode, PyCoolantMode, PyHeadCoolantMode, PyPowerMode, PyState,
+    PyAirAssistMode, PyCoolantMode, PyHeadCoolantMode, PyPowerMode,
+    PySpindleDirection, PyState,
 };
 use super::types::{
     PyCommandCategory, PyCommandType, PyRasterMode, PySectionType, PyStateBlock,
@@ -527,6 +528,12 @@ pub struct PyCommandInfo {
     /// Spindle RPM, if a SetSpindleRpm command.
     #[pyo3(get)]
     pub spindle_rpm: Option<u32>,
+    /// Spindle direction, if a SetSpindleDirection command.
+    #[pyo3(get)]
+    pub spindle_direction: Option<PySpindleDirection>,
+    /// Sync pitch (mm/rev), if a SetSyncPitch command.
+    #[pyo3(get)]
+    pub sync_pitch: Option<f64>,
     /// Coolant mode, if a SetCoolant command.
     #[pyo3(get)]
     pub coolant: Option<PyCoolantMode>,
@@ -605,6 +612,12 @@ impl PyCommandInfo {
                 return Ok(false);
             }
             if self.spindle_rpm != other_info.spindle_rpm {
+                return Ok(false);
+            }
+            if self.spindle_direction != other_info.spindle_direction {
+                return Ok(false);
+            }
+            if self.sync_pitch != other_info.sync_pitch {
                 return Ok(false);
             }
             if self.coolant != other_info.coolant {
@@ -1243,6 +1256,52 @@ impl PyOps {
         }
     }
 
+    /// Get the spindle direction from a SetSpindleDirection command.
+    ///
+    /// :param idx: Command index.
+    /// :returns: The spindle direction.
+    /// :raises TypeError: If the command is not a SetSpindleDirection.
+    /// :complexity: O(1) time, O(1) space
+    fn spindle_direction(&self, idx: usize) -> PyResult<PySpindleDirection> {
+        if idx >= self.inner.len() {
+            return Err(PyErr::new::<pyo3::exceptions::PyIndexError, _>(
+                "index out of range",
+            ));
+        }
+        if let OpCategory::State(StateCmd::SetSpindleDirection(dir)) =
+            &self.inner.commands[idx].category
+        {
+            Ok(PySpindleDirection(*dir))
+        } else {
+            Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
+                "Not a SetSpindleDirectionCommand",
+            ))
+        }
+    }
+
+    /// Get the sync pitch from a SetSyncPitch command.
+    ///
+    /// :param idx: Command index.
+    /// :returns: The sync pitch in mm per revolution.
+    /// :raises TypeError: If the command is not a SetSyncPitch.
+    /// :complexity: O(1) time, O(1) space
+    fn sync_pitch(&self, idx: usize) -> PyResult<f64> {
+        if idx >= self.inner.len() {
+            return Err(PyErr::new::<pyo3::exceptions::PyIndexError, _>(
+                "index out of range",
+            ));
+        }
+        if let OpCategory::State(StateCmd::SetSyncPitch(p)) =
+            &self.inner.commands[idx].category
+        {
+            Ok(*p)
+        } else {
+            Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
+                "Not a SetSyncPitchCommand",
+            ))
+        }
+    }
+
     /// Get the coolant mode from a SetCoolant command.
     ///
     /// :param idx: Command index.
@@ -1715,6 +1774,25 @@ impl PyOps {
     /// :complexity: O(1) time, O(1) space
     fn set_spindle_rpm(&mut self, rpm: u32) {
         self.inner.set_spindle_rpm(rpm);
+    }
+
+    /// Set the spindle rotational direction for subsequent commands.
+    ///
+    /// :param direction: Spindle direction (``CW`` or ``CCW``).
+    /// :complexity: O(1) time, O(1) space
+    fn set_spindle_direction(&mut self, direction: &PySpindleDirection) {
+        self.inner.set_spindle_direction(direction.0);
+    }
+
+    /// Set the spindle-sync pitch (mm per revolution) for subsequent
+    /// feed moves; ``0.0`` switches back to ordinary feed-per-minute
+    /// motion. While active, feed moves run at ``pitch × rpm`` mm/min
+    /// (rigid tapping).
+    ///
+    /// :param pitch: Sync pitch in mm per revolution.
+    /// :complexity: O(1) time, O(1) space
+    fn set_sync_pitch(&mut self, pitch: f64) {
+        self.inner.set_sync_pitch(pitch);
     }
 
     /// Set the coolant mode for subsequent commands.
@@ -2207,6 +2285,8 @@ impl PyOps {
             pulse_width: None,
             head_uid: None,
             spindle_rpm: None,
+            spindle_direction: None,
+            sync_pitch: None,
             coolant: None,
             air_assist: None,
             head_coolant: None,
@@ -2259,6 +2339,10 @@ impl PyOps {
                 StateCmd::SetFrequency(f) => info.frequency = Some(*f),
                 StateCmd::SetPulseWidth(pw) => info.pulse_width = Some(*pw),
                 StateCmd::SetSpindleRpm(s) => info.spindle_rpm = Some(*s),
+                StateCmd::SetSpindleDirection(dir) => {
+                    info.spindle_direction = Some(PySpindleDirection(*dir))
+                }
+                StateCmd::SetSyncPitch(p) => info.sync_pitch = Some(*p),
                 StateCmd::SetCoolant(mode) => {
                     info.coolant = Some(PyCoolantMode(*mode))
                 }

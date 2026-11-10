@@ -85,6 +85,8 @@ class CommandType:
     SET_FREQUENCY: CommandType = CommandType.SET_FREQUENCY
     SET_PULSE_WIDTH: CommandType = CommandType.SET_PULSE_WIDTH
     SET_SPINDLE_RPM: CommandType = CommandType.SET_SPINDLE_RPM
+    SET_SPINDLE_DIRECTION: CommandType = CommandType.SET_SPINDLE_DIRECTION
+    SET_SYNC_PITCH: CommandType = CommandType.SET_SYNC_PITCH
     SET_COOLANT: CommandType = CommandType.SET_COOLANT
     SET_AIR_ASSIST: CommandType = CommandType.SET_AIR_ASSIST
     SET_HEAD_COOLANT: CommandType = CommandType.SET_HEAD_COOLANT
@@ -162,6 +164,7 @@ class SectionType:
     VECTOR_OUTLINE: SectionType = SectionType.VECTOR_OUTLINE
     RASTER_FILL: SectionType = SectionType.RASTER_FILL
     DRILL_CYCLE: SectionType = SectionType.DRILL_CYCLE
+    TAPPING_CYCLE: SectionType = SectionType.TAPPING_CYCLE
     @property
     def value(self) -> builtins.int:
         r"""
@@ -172,8 +175,8 @@ class SectionType:
     @property
     def name(self) -> builtins.str:
         r"""
-        The uppercase name (``"VECTOR_OUTLINE"``, ``"RASTER_FILL"`` or
-        ``"DRILL_CYCLE"``).
+        The uppercase name (``"VECTOR_OUTLINE"``, ``"RASTER_FILL"``,
+        ``"DRILL_CYCLE"`` or ``"TAPPING_CYCLE"``).
         
         :complexity: O(1)
         """

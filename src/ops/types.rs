@@ -3,7 +3,8 @@ use std::sync::Arc;
 use super::axis::Axis;
 use super::enums::{CommandType, RasterMode, SectionType};
 use super::state::{
-    AirAssistMode, CoolantMode, HeadCoolantMode, PowerMode, State,
+    AirAssistMode, CoolantMode, HeadCoolantMode, PowerMode, SpindleDirection,
+    State,
 };
 use crate::error::RaygeoError;
 use crate::geo::types::{Point, Point3D};
@@ -90,6 +91,10 @@ pub enum StateCmd {
     SetFrequency(i32),
     SetPulseWidth(f64),
     SetSpindleRpm(u32),
+    SetSpindleDirection(SpindleDirection),
+    /// Axial travel (mm) per spindle revolution for subsequent feed
+    /// moves; `0.0` switches back to ordinary feed-per-minute motion.
+    SetSyncPitch(f64),
     SetCoolant(CoolantMode),
     SetAirAssist(AirAssistMode),
     SetHeadCoolant(HeadCoolantMode),
@@ -318,6 +323,24 @@ impl OpNode {
         }
     }
 
+    pub fn set_spindle_direction(direction: SpindleDirection) -> Self {
+        OpNode {
+            category: OpCategory::State(StateCmd::SetSpindleDirection(
+                direction,
+            )),
+            state: None,
+            extra_axes: None,
+        }
+    }
+
+    pub fn set_sync_pitch(pitch: f64) -> Self {
+        OpNode {
+            category: OpCategory::State(StateCmd::SetSyncPitch(pitch)),
+            state: None,
+            extra_axes: None,
+        }
+    }
+
     pub fn set_coolant(mode: CoolantMode) -> Self {
         OpNode {
             category: OpCategory::State(StateCmd::SetCoolant(mode)),
@@ -514,6 +537,10 @@ impl OpNode {
                 StateCmd::SetFrequency(_) => CommandType::SetFrequency,
                 StateCmd::SetPulseWidth(_) => CommandType::SetPulseWidth,
                 StateCmd::SetSpindleRpm(_) => CommandType::SetSpindleRpm,
+                StateCmd::SetSpindleDirection(_) => {
+                    CommandType::SetSpindleDirection
+                }
+                StateCmd::SetSyncPitch(_) => CommandType::SetSyncPitch,
                 StateCmd::SetCoolant(_) => CommandType::SetCoolant,
                 StateCmd::SetAirAssist(_) => CommandType::SetAirAssist,
                 StateCmd::SetHeadCoolant(_) => CommandType::SetHeadCoolant,

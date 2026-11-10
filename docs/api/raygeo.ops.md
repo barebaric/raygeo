@@ -198,6 +198,14 @@ section_type: Optional[types.SectionType]
 
 Section type, if a section marker.
 
+### `spindle_direction`
+
+```python
+spindle_direction: Optional[state.SpindleDirection]
+```
+
+Spindle direction, if a SetSpindleDirection command.
+
 ### `spindle_rpm`
 
 ```python
@@ -213,6 +221,14 @@ state: Optional[state.State]
 ```
 
 State snapshot at this command, if present.
+
+### `sync_pitch`
+
+```python
+sync_pitch: Optional[float]
+```
+
+Sync pitch (mm/rev), if a SetSyncPitch command.
 
 ### `type_`
 
@@ -2509,6 +2525,20 @@ Set the rapid (traverse) rate for subsequent commands.
 | _Returns_    | `None`  |                       |
 | _Complexity_ |         | O(1) time, O(1) space |
 
+### `set_spindle_direction()`
+
+```python
+set_spindle_direction(direction: state.SpindleDirection) -> None
+```
+
+Set the spindle rotational direction for subsequent commands.
+
+| Parameter    | Type                     | Description                        |
+| ------------ | ------------------------ | ---------------------------------- |
+| `direction`  | `state.SpindleDirection` | Spindle direction (`CW` or `CCW`). |
+| _Returns_    | `None`                   |                                    |
+| _Complexity_ |                          | O(1) time, O(1) space              |
+
 ### `set_spindle_rpm()`
 
 ```python
@@ -2552,6 +2582,22 @@ Apply a state to all moving commands without an explicit state.
 | _Returns_    | `None`        |                       |
 | _Complexity_ |               | O(n) time, O(1) space |
 
+### `set_sync_pitch()`
+
+```python
+set_sync_pitch(pitch: float) -> None
+```
+
+Set the spindle-sync pitch (mm per revolution) for subsequent feed moves; `0.0` switches back to
+ordinary feed-per-minute motion. While active, feed moves run at `pitch × rpm` mm/min (rigid
+tapping).
+
+| Parameter    | Type    | Description                      |
+| ------------ | ------- | -------------------------------- |
+| `pitch`      | `float` | Sync pitch in mm per revolution. |
+| _Returns_    | `None`  |                                  |
+| _Complexity_ |         | O(1) time, O(1) space            |
+
 ### `smooth()`
 
 ```python
@@ -2573,6 +2619,22 @@ operates in place.
 ![Gaussian smoothing applied to a square path](images/ops-transform-smooth-smooth.png)
 
 *Gaussian smoothing applied to a square path*
+
+### `spindle_direction()`
+
+```python
+spindle_direction(idx: int) -> state.SpindleDirection
+```
+
+Get the spindle direction from a SetSpindleDirection command.
+
+**Raises:** `TypeError` — If the command is not a SetSpindleDirection.
+
+| Parameter    | Type                     | Description            |
+| ------------ | ------------------------ | ---------------------- |
+| `idx`        | `int`                    | Command index.         |
+| _Returns_    | `state.SpindleDirection` | The spindle direction. |
+| _Complexity_ |                          | O(1) time, O(1) space  |
 
 ### `spindle_rpm()`
 
@@ -2735,6 +2797,22 @@ Subtract polygonal regions from the cutting paths.
 | `regions`    | `Sequence[Sequence[tuple[float, float]]]` | List of polygons, each being a list of `(x, y)` vertices.           |
 | _Returns_    | `None`                                    |                                                                     |
 | _Complexity_ |                                           | O(n * m) time, O(n) space where m is the number of polygon vertices |
+
+### `sync_pitch()`
+
+```python
+sync_pitch(idx: int) -> float
+```
+
+Get the sync pitch from a SetSyncPitch command.
+
+**Raises:** `TypeError` — If the command is not a SetSyncPitch.
+
+| Parameter    | Type    | Description                          |
+| ------------ | ------- | ------------------------------------ |
+| `idx`        | `int`   | Command index.                       |
+| _Returns_    | `float` | The sync pitch in mm per revolution. |
+| _Complexity_ |         | O(1) time, O(1) space                |
 
 ### `to_dict()`
 

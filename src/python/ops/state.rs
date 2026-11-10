@@ -1,5 +1,6 @@
 use crate::ops::state::{
-    AirAssistMode, CoolantMode, HeadCoolantMode, PowerMode, State,
+    AirAssistMode, CoolantMode, HeadCoolantMode, PowerMode, SpindleDirection,
+    State,
 };
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
@@ -18,7 +19,7 @@ state changes.
 ";
 
 /// Register the State, CoolantMode, AirAssistMode, HeadCoolantMode,
-/// and PowerMode classes with the Python module.
+/// PowerMode, and SpindleDirection classes with the Python module.
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.setattr("__doc__", MODULE_DOC)?;
     m.add_class::<PyState>()?;
@@ -26,6 +27,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyAirAssistMode>()?;
     m.add_class::<PyHeadCoolantMode>()?;
     m.add_class::<PyPowerMode>()?;
+    m.add_class::<PySpindleDirection>()?;
     let sys_modules = m.py().import("sys")?.getattr("modules")?;
     sys_modules.set_item("raygeo.ops.state", m)?;
     Ok(())
@@ -220,6 +222,58 @@ impl PyPowerMode {
     }
 }
 
+/// Spindle rotational direction.
+///
+/// ``CW`` corresponds to M3, ``CCW`` to M4. Rigid tapping reverses
+/// the spindle at the bottom of the hole so the synchronized retract
+/// unscrews the tap.
+#[gen_stub_pyclass]
+#[pyclass(
+    frozen,
+    eq,
+    hash,
+    skip_from_py_object,
+    module = "raygeo.ops.state",
+    name = "SpindleDirection"
+)]
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub struct PySpindleDirection(pub SpindleDirection);
+
+#[gen_stub_pymethods]
+#[pymethods]
+impl PySpindleDirection {
+    #[classattr]
+    pub const CW: PySpindleDirection = PySpindleDirection(SpindleDirection::Cw);
+    #[classattr]
+    pub const CCW: PySpindleDirection =
+        PySpindleDirection(SpindleDirection::Ccw);
+
+    fn __repr__(&self) -> String {
+        format!("SpindleDirection.{}", self.name())
+    }
+
+    fn __str__(&self) -> String {
+        self.name()
+    }
+
+    #[getter]
+    fn value(&self) -> u8 {
+        match self.0 {
+            SpindleDirection::Cw => 0,
+            SpindleDirection::Ccw => 1,
+        }
+    }
+
+    #[getter]
+    fn name(&self) -> String {
+        match self.0 {
+            SpindleDirection::Cw => "CW",
+            SpindleDirection::Ccw => "CCW",
+        }
+        .to_string()
+    }
+}
+
 /// The current state of a CNC machine.
 ///
 /// Tracks power level, coolant mode, air assist, head coolant,
@@ -235,7 +289,7 @@ pub struct PyState(pub State);
 impl PyState {
     #[allow(clippy::too_many_arguments)]
     #[new]
-    #[pyo3(signature = (power=0.0, feed_rate=None, rapid_rate=None, active_head_uid=None, frequency=None, pulse_width=None, dwell_ms=None, spindle_rpm=None, coolant=None, air_assist=None, head_coolant=None, power_mode=None, plunge_feed=None))]
+    #[pyo3(signature = (power=0.0, feed_rate=None, rapid_rate=None, active_head_uid=None, frequency=None, pulse_width=None, dwell_ms=None, spindle_rpm=None, coolant=None, air_assist=None, head_coolant=None, power_mode=None, plunge_feed=None, spindle_direction=None, sync_pitch=None))]
     fn new(
         power: f64,
         feed_rate: Option<i32>,
@@ -250,6 +304,8 @@ impl PyState {
         head_coolant: Option<Bound<'_, PyHeadCoolantMode>>,
         power_mode: Option<Bound<'_, PyPowerMode>>,
         plunge_feed: Option<i32>,
+        spindle_direction: Option<Bound<'_, PySpindleDirection>>,
+        sync_pitch: Option<f64>,
     ) -> Self {
         PyState(State {
             power,
@@ -261,6 +317,8 @@ impl PyState {
             pulse_width,
             dwell_ms,
             spindle_rpm,
+            spindle_direction: spindle_direction.map(|d| d.borrow().0),
+            sync_pitch,
             coolant: coolant.map(|c| c.borrow().0),
             air_assist: air_assist.map(|a| a.borrow().0),
             head_coolant: head_coolant.map(|h| h.borrow().0),
@@ -369,6 +427,32 @@ impl PyState {
     #[setter]
     fn set_spindle_rpm(&mut self, value: Option<u32>) {
         self.0.spindle_rpm = value;
+    }
+
+    /// Spindle rotational direction (if set).
+    #[getter]
+    fn spindle_direction(&self) -> Option<PySpindleDirection> {
+        self.0.spindle_direction.map(PySpindleDirection)
+    }
+
+    #[setter]
+    fn set_spindle_direction(
+        &mut self,
+        value: Option<Bound<'_, PySpindleDirection>>,
+    ) {
+        self.0.spindle_direction = value.map(|d| d.borrow().0);
+    }
+
+    /// Spindle-sync pitch in mm per revolution (if set). When set,
+    /// feed moves run synchronized with the spindle (rigid tapping).
+    #[getter]
+    fn sync_pitch(&self) -> Option<f64> {
+        self.0.sync_pitch
+    }
+
+    #[setter]
+    fn set_sync_pitch(&mut self, value: Option<f64>) {
+        self.0.sync_pitch = value;
     }
 
     /// Coolant mode (if set).

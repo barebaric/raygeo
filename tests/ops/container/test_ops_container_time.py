@@ -801,3 +801,59 @@ def test_estimate_time_custom_commands_do_not_add_time():
 
     ops.custom("M103")
     assert ops.estimate_time() == pytest.approx(base, rel=1e-12)
+
+
+# --- estimate_time: spindle-synchronized moves (rigid tapping) ---
+
+
+def test_estimate_time_synchronized_move_uses_pitch_times_rpm():
+    ops = Ops()
+    ops.set_spindle_rpm(500)
+    ops.set_sync_pitch(1.0)
+    ops.line_to(50, 0, 0)
+    # 50 mm at 1.0 mm/rev * 500 rpm = 500 mm/min = 8.33 mm/s.
+    assert ops.estimate_time(acceleration=0) == pytest.approx(6.0, abs=0.01)
+
+
+def test_estimate_time_synchronized_speed_follows_rpm():
+    ops = Ops()
+    ops.set_spindle_rpm(250)
+    ops.set_sync_pitch(1.0)
+    ops.line_to(50, 0, 0)
+    # Halving the rpm doubles the time: 12 s at 250 mm/min.
+    assert ops.estimate_time(acceleration=0) == pytest.approx(12.0, abs=0.01)
+
+
+def test_estimate_time_sync_off_falls_back_to_feed_rate():
+    ops = Ops()
+    ops.set_feed_rate(600)
+    ops.set_spindle_rpm(500)
+    ops.set_sync_pitch(1.0)
+    ops.line_to(50, 0, 0)
+    ops.set_sync_pitch(0.0)
+    ops.line_to(100, 0, 0)
+    times = ops.estimate_command_times(600.0, 1200.0, 0.0)
+    # First move synced at 500 mm/min, second at the 600 mm/min feed.
+    assert times[3] == pytest.approx(6.0, abs=0.01)
+    assert times[5] == pytest.approx(5.0, abs=0.01)
+
+
+def test_estimate_time_sync_without_rpm_falls_back_to_feed_rate():
+    ops = Ops()
+    ops.set_sync_pitch(1.0)  # no spindle speed in the stream
+    ops.line_to(50, 0, 0)
+    # Falls back to the feed rate: 50 mm at 600 mm/min.
+    assert ops.estimate_time(600.0, 1200.0, 0.0) == pytest.approx(
+        5.0, abs=0.01
+    )
+
+
+def test_estimate_time_rapid_ignores_sync():
+    ops = Ops()
+    ops.set_spindle_rpm(500)
+    ops.set_sync_pitch(1.0)
+    ops.move_to(50, 0, 0)
+    # Travels stay at the rapid rate even while sync is active.
+    assert ops.estimate_time(600.0, 1200.0, 0.0) == pytest.approx(
+        2.5, abs=0.01
+    )

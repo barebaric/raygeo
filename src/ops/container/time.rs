@@ -62,12 +62,14 @@ impl Ops {
         let mut last_point = Point3D::new(0.0, 0.0, 0.0);
         let mut feed_rate = default_feed_rate;
         let mut rapid_rate = default_rapid_rate;
+        let mut sync = SyncState::default();
         for node in self.commands.iter() {
             total += command_duration(
                 node,
                 &mut last_point,
                 &mut feed_rate,
                 &mut rapid_rate,
+                &mut sync,
                 acceleration,
             );
         }
@@ -90,6 +92,7 @@ impl Ops {
         let mut last_point = Point3D::new(0.0, 0.0, 0.0);
         let mut feed_rate = default_feed_rate;
         let mut rapid_rate = default_rapid_rate;
+        let mut sync = SyncState::default();
 
         for node in self.commands.iter() {
             let cmd_time = command_duration(
@@ -97,6 +100,7 @@ impl Ops {
                 &mut last_point,
                 &mut feed_rate,
                 &mut rapid_rate,
+                &mut sync,
                 acceleration,
             );
             times.push(cmd_time);
@@ -201,11 +205,35 @@ pub(crate) fn move_duration(
     }
 }
 
+/// Spindle-sync state tracked alongside the feed rates while walking
+/// the command stream. When `sync_pitch` is active, feed moves travel
+/// `sync_pitch` mm per spindle revolution, i.e. at
+/// `sync_pitch × spindle_rpm` mm/min (rigid tapping).
+#[derive(Default)]
+struct SyncState {
+    spindle_rpm: u32,
+    sync_pitch: f64,
+}
+
+impl SyncState {
+    /// Effective speed (mm/min) of a feed move under the current sync
+    /// state: the synchronized speed when both pitch and rpm are set,
+    /// otherwise `None` (the caller falls back to the feed rate).
+    fn synchronized_speed(&self) -> Option<f64> {
+        if self.sync_pitch > 0.0 && self.spindle_rpm > 0 {
+            Some(self.sync_pitch * self.spindle_rpm as f64)
+        } else {
+            None
+        }
+    }
+}
+
 fn command_duration(
     node: &OpNode,
     last_point: &mut Point3D,
     feed_rate: &mut f64,
     rapid_rate: &mut f64,
+    sync: &mut SyncState,
     acceleration: f64,
 ) -> f64 {
     match &node.category {
@@ -215,6 +243,14 @@ fn command_duration(
         }
         OpCategory::State(StateCmd::SetRapidRate(s)) => {
             *rapid_rate = *s as f64;
+            0.0
+        }
+        OpCategory::State(StateCmd::SetSpindleRpm(rpm)) => {
+            sync.spindle_rpm = *rpm;
+            0.0
+        }
+        OpCategory::State(StateCmd::SetSyncPitch(pitch)) => {
+            sync.sync_pitch = *pitch;
             0.0
         }
         OpCategory::State(StateCmd::Dwell(ms)) => *ms / 1000.0,
@@ -228,7 +264,7 @@ fn command_duration(
                 let speed = if matches!(cmd, MoveCmd::MoveTo) {
                     *rapid_rate
                 } else {
-                    *feed_rate
+                    sync.synchronized_speed().unwrap_or(*feed_rate)
                 };
 
                 let move_time = move_duration(distance, speed, acceleration);
@@ -288,6 +324,7 @@ fn compute_cumulative_time_index(
     let mut last_point = Point3D::new(0.0, 0.0, 0.0);
     let mut feed_rate = default_feed_rate;
     let mut rapid_rate = default_rapid_rate;
+    let mut sync = SyncState::default();
 
     for node in ops.commands.iter() {
         acc += command_duration(
@@ -295,6 +332,7 @@ fn compute_cumulative_time_index(
             &mut last_point,
             &mut feed_rate,
             &mut rapid_rate,
+            &mut sync,
             acceleration,
         );
         cumulative.push(acc);
