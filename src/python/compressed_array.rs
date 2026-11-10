@@ -4,7 +4,7 @@ use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::compressed_array::{CompressedArray, Dtype};
 
-/// A numpy-compatible array stored in compressed (zstd) form.
+/// A numpy-compatible array stored in compressed (DEFLATE) form.
 ///
 /// Created by raygeo's scene compiler and texture rasterizer to keep
 /// large numpy buffers compressed in memory until they are needed
