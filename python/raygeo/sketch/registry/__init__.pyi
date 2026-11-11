@@ -156,6 +156,29 @@ class EntityRegistry:
         r"""
         Sets the construction flag.
         """
+    def add_constraint_json(self, dict: dict) -> builtins.int:
+        r"""
+        Adds a constraint from a reference constraint dictionary
+        (`.ryp` shape), resolving entity references through the
+        registry.  Returns the constraint handle.
+        """
+    def constraint_count(self) -> builtins.int:
+        r"""
+        Number of stored constraints.
+        """
+    def constraint_dict(self, index: builtins.int) -> dict:
+        r"""
+        The stored reference dictionary of a constraint.
+        """
+    def remove_constraint(self, index: builtins.int) -> None:
+        r"""
+        Removes a constraint by handle.
+        """
+    def constraint_residuals(self) -> builtins.list[builtins.float]:
+        r"""
+        Residual values of all stored constraints at the current
+        point positions.
+        """
     def point_constrained(self, id: builtins.int) -> builtins.bool:
         r"""
         Whether the point is solver-constrained.
