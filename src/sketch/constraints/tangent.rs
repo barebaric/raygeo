@@ -90,7 +90,7 @@ impl SketchConstraint for TangentConstraint {
         let length = len_sq.sqrt();
         let inv_len = 1.0 / length;
         let cross = line_dx * (cy - ly1) - line_dy * (cx - lx1);
-        let sign = cross.copysign(1.0);
+        let sign = 1.0_f64.copysign(cross);
 
         // Part 2: gradient of the signed distance, combined with the
         // sign of the abs() term.

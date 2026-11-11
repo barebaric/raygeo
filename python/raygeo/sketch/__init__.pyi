@@ -85,8 +85,28 @@ class Solver:
         Per-point fully-constrained flags, aligned with the input
         point order.
         """
+    def residuals(self) -> builtins.list[builtins.float]:
+        r"""
+        All residual values of the hard constraints at the current
+        positions, in constraint order.
+        """
     def max_residuals(self) -> builtins.list[builtins.float]:
         r"""
         Maximum absolute residual per hard constraint.
+        """
+    def jacobian(self) -> builtins.list[builtins.list[builtins.float]]:
+        r"""
+        Dense Jacobian rows of the hard constraints at the current
+        positions, over the state points (non-fixed points touched by
+        any constraint, in input order).  For tests and debugging.
+        """
+    def status(self) -> builtins.int:
+        r"""
+        Termination status of the last solve (>0 means success,
+        mirroring SciPy: 1 gtol, 2 ftol, 3 xtol, 4 both, 0 max_nfev).
+        """
+    def nfev(self) -> builtins.int:
+        r"""
+        Residual function evaluations of the last solve.
         """
 

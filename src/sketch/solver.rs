@@ -42,6 +42,8 @@ pub struct SketchSolver {
     hard: Vec<Box<dyn SketchConstraint>>,
     auxiliary: Vec<Box<dyn SketchConstraint>>,
     point_filter: Option<HashSet<u64>>,
+    last_status: i32,
+    last_nfev: usize,
 }
 
 impl SketchSolver {
@@ -75,6 +77,8 @@ impl SketchSolver {
             hard,
             auxiliary,
             point_filter: point_filter.map(HashSet::from_iter),
+            last_status: 0,
+            last_nfev: 0,
         }
     }
 
@@ -274,6 +278,9 @@ impl SketchSolver {
             self.coords[2 * slot + 1] = final_coords[2 * slot + 1];
         }
 
+        self.last_status = result.status;
+        self.last_nfev = result.nfev;
+
         let success = result.status > 0 && result.cost <= tolerance;
 
         if success && update_dof {
@@ -329,6 +336,28 @@ impl SketchSolver {
             .collect()
     }
 
+    /// Returns all residual values of the hard constraints at the
+    /// current positions, in constraint order.  For tests and
+    /// debugging.
+    pub fn residuals(&self) -> Vec<f64> {
+        let lookup = Evaluator::new(self.slot_of.clone(), self.coords.clone());
+        let constraints: Vec<&dyn SketchConstraint> =
+            self.hard.iter().map(|c| c.as_ref()).collect();
+        lookup.residuals(&constraints)
+    }
+
+    /// Termination status of the last solve (>0 means success,
+    /// mirroring SciPy: 1 gtol, 2 ftol, 3 xtol, 4 both, 0 max_nfev).
+    pub fn status(&self) -> i32 {
+        self.last_status
+    }
+
+    /// Residual function evaluations of the last solve (the last
+    /// component's solve for decomposed runs).
+    pub fn nfev(&self) -> usize {
+        self.last_nfev
+    }
+
     /// Returns the maximum absolute residual per hard constraint at
     /// the final positions (aligned with the hard constraint order).
     pub fn max_residuals(&self) -> Vec<f64> {
@@ -336,6 +365,39 @@ impl SketchSolver {
         let constraints: Vec<&dyn SketchConstraint> =
             self.hard.iter().map(|c| c.as_ref()).collect();
         lookup.max_residuals(&constraints)
+    }
+
+    /// Returns the dense Jacobian (row-major per row vector) of the
+    /// hard constraints at the current positions, over the state
+    /// points (non-fixed points touched by any constraint, in input
+    /// order).  For tests and debugging.
+    pub fn jacobian(&self) -> Vec<Vec<f64>> {
+        let mut touched: HashSet<u64> = HashSet::new();
+        let all: Vec<&dyn SketchConstraint> = self
+            .hard
+            .iter()
+            .chain(self.auxiliary.iter())
+            .map(|c| c.as_ref())
+            .collect();
+        for constraint in &all {
+            touched.extend(constraint.referenced_points());
+        }
+        let mut state_ids: Vec<u64> = Vec::new();
+        let mut state_col_of: HashMap<u64, usize> = HashMap::new();
+        for (i, &id) in self.point_ids.iter().enumerate() {
+            if self.fixed[i] || !touched.contains(&id) {
+                continue;
+            }
+            state_col_of.insert(id, 2 * state_ids.len());
+            state_ids.push(id);
+        }
+        let mut evaluator =
+            Evaluator::new(self.slot_of.clone(), self.coords.clone());
+        let n_vars = 2 * state_ids.len();
+        let hard: Vec<&dyn SketchConstraint> =
+            self.hard.iter().map(|c| c.as_ref()).collect();
+        let data = evaluator.jacobian(&hard, n_vars, &state_col_of);
+        data.chunks(n_vars).map(|row| row.to_vec()).collect()
     }
 }
 
