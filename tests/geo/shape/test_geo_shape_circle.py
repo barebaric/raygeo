@@ -574,6 +574,4 @@ def test_get_circle_signed_distance_signs():
         pytest.approx(-2.0)
     )
     on = (center[0] + radius, center[1])
-    assert get_circle_signed_distance(on, center, radius) == pytest.approx(
-        0.0
-    )
+    assert get_circle_signed_distance(on, center, radius) == pytest.approx(0.0)
