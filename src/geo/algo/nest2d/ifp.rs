@@ -1,7 +1,8 @@
-use clipper2::FillRule;
+use clipper2_rs::{difference, FillRule};
 
 use crate::geo::shape::polygon::{
-    get_polygon_bounds, get_polygon_convex_hull, polygons_to_paths,
+    get_polygon_bounds, get_polygon_convex_hull, paths_to_polygons,
+    polygons_to_paths,
 };
 use crate::geo::types::{Point, Polygon};
 
@@ -38,30 +39,19 @@ pub fn inner_fit_polygon(bin: &Polygon, part: &Polygon) -> Vec<Polygon> {
         return vec![bin.to_vec()];
     }
 
-    // Use clipper2 builder: bin - (no_go_zone_1 ∪ no_go_zone_2 ∪ ...)
-    // This matches the Python approach of a single CT_DIFFERENCE with
-    // multiple clip paths, which correctly handles outer/hole contours.
+    // Single CT_DIFFERENCE: bin - (no_go_zone_1 ∪ no_go_zone_2 ∪ ...)
+    // This matches the Python approach, which correctly handles
+    // outer/hole contours.
     let bin_paths = polygons_to_paths(std::slice::from_ref(bin));
     let no_go_paths = polygons_to_paths(&no_go_zones);
 
-    let result: Vec<Polygon> = match bin_paths
-        .to_clipper_subject()
-        .add_clip(no_go_paths)
-        .difference(FillRule::NonZero)
-    {
-        Ok(paths) => {
-            let tuples: Vec<Vec<(f64, f64)>> = Vec::from(paths);
-            tuples
-                .iter()
-                .map(|path| {
-                    path.iter().map(|(x, y)| Point::new(*x, *y)).collect()
-                })
-                .collect()
-        }
-        Err(_) => return vec![],
-    };
+    let result = difference(&bin_paths, &no_go_paths, FillRule::NonZero)
+        .unwrap_or_default();
 
-    result.into_iter().filter(|p| p.len() >= 3).collect()
+    paths_to_polygons(&result)
+        .into_iter()
+        .filter(|p| p.len() >= 3)
+        .collect()
 }
 
 /// Build the no-go zones for a bin-part pair.

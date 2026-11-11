@@ -6,8 +6,8 @@
 //! `get_polygons_union`, `get_polygons_intersection`,
 //! `get_polygons_difference`, `get_polygons_group_intersection`,
 //! `get_polygons_group_difference`) are **strictly 2D** — they operate on
-//! `Polygon` (= `Vec<Point>`) and use [Clipper2] under the hood.  Z
-//! coordinates are not modeled.
+//! `Polygon` (= `Vec<Point>`) and use the pure-Rust [Clipper2] port
+//! (`clipper2-rs`) under the hood.  Z coordinates are not modeled.
 //!
 //! 3D callers must project to the XY plane before calling these functions
 //! and (if desired) lift the result back to the source Z afterwards.  See
@@ -15,11 +15,9 @@
 //!
 //! [Clipper2]: https://www.angusj.com/clipper2/Docs/Overview.htm
 
-use clipper2::{
-    difference as clipper_difference, intersect as clipper_intersect,
-    simplify as clipper_simplify, union as clipper_union, EndType, FillRule,
-    JoinType, Path as GeoPath, Paths as GeoPaths, Point as GeoPoint,
-    PointInPolygonResult, PointScaler,
+use clipper2_rs::{
+    area, difference, intersect, point_in_polygon, simplify_paths, union,
+    EndType, FillRule, JoinType, Point64, PointInPolygonResult,
 };
 
 use crate::geo::matrix::Matrix;
@@ -52,48 +50,62 @@ pub enum EndStyle {
     Round,
 }
 
-/// Custom point scaler matching Python's CLIPPER_SCALE = 10^7.
+/// Clipper integer coordinate scale factor matching Python's
+/// CLIPPER_SCALE = 10^7.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Hash)]
 pub struct GeoScale;
 
-impl PointScaler for GeoScale {
-    const MULTIPLIER: f64 = 10_000_000.0;
+impl GeoScale {
+    pub const MULTIPLIER: f64 = 10_000_000.0;
+
+    /// Scale a user-space value into clipper float space (before
+    /// rounding to [`scale_coord`]'s integer grid).
+    pub fn scale(value: f64) -> f64 {
+        value * Self::MULTIPLIER
+    }
 }
 
-/// A clipper2 path using our custom GeoScale.
-pub type ClipperPath = GeoPath<GeoScale>;
+/// A polygon path in clipper integer coordinates.
+pub type ClipperPath = Vec<Point64>;
 
-/// A clipper2 paths collection using our custom GeoScale.
-pub type ClipperPaths = GeoPaths<GeoScale>;
+/// A collection of clipper paths.
+pub type ClipperPaths = Vec<ClipperPath>;
+
+/// Scale a user-space coordinate onto the clipper integer grid,
+/// replicating the `(value * multiplier).round()` conversion the
+/// C++ backend performed.
+fn scale_coord(value: f64) -> i64 {
+    (value * GeoScale::MULTIPLIER).round() as i64
+}
+
+/// Convert a clipper integer coordinate back to user space.
+fn unscale_coord(value: i64) -> f64 {
+    value as f64 / GeoScale::MULTIPLIER
+}
 
 pub fn is_almost_equal(a: f64, b: f64, tolerance: f64) -> bool {
     (a - b).abs() < tolerance
 }
 
 pub fn polygon_to_path(polygon: &Polygon) -> ClipperPath {
-    let tuples: Vec<(f64, f64)> = polygon.iter().map(|p| (p.x, p.y)).collect();
-    ClipperPath::from(tuples)
-}
-
-pub fn path_to_polygon(path: &ClipperPath) -> Polygon {
-    let tuples: Vec<(f64, f64)> = Vec::from(path.clone());
-    tuples.iter().map(|(x, y)| Point::new(*x, *y)).collect()
-}
-
-pub fn paths_to_polygons(paths: &ClipperPaths) -> Vec<Polygon> {
-    let tuples: Vec<Vec<(f64, f64)>> = Vec::from(paths.clone());
-    tuples
+    polygon
         .iter()
-        .map(|path| path.iter().map(|(x, y)| Point::new(*x, *y)).collect())
+        .map(|p| Point64::new(scale_coord(p.x), scale_coord(p.y)))
         .collect()
 }
 
+pub fn path_to_polygon(path: &ClipperPath) -> Polygon {
+    path.iter()
+        .map(|p| Point::new(unscale_coord(p.x), unscale_coord(p.y)))
+        .collect()
+}
+
+pub fn paths_to_polygons(paths: &ClipperPaths) -> Vec<Polygon> {
+    paths.iter().map(path_to_polygon).collect()
+}
+
 pub fn polygons_to_paths(polygons: &[Polygon]) -> ClipperPaths {
-    let v: Vec<Vec<(f64, f64)>> = polygons
-        .iter()
-        .map(|poly| poly.iter().map(|p| (p.x, p.y)).collect())
-        .collect();
-    ClipperPaths::from(v)
+    polygons.iter().map(polygon_to_path).collect()
 }
 
 /// Calculate the signed area of a polygon using the shoelace formula.
@@ -981,30 +993,25 @@ pub fn clean_polygon(polygon: &Polygon, tolerance: f64) -> Option<Polygon> {
         return None;
     }
     let path = polygon_to_path(polygon);
-    let paths = ClipperPaths::from(path);
-    let simplified = clipper_simplify(paths, 0.0, false);
+    let simplified = simplify_paths(&[path], 0.0, false);
     if simplified.is_empty() {
         return None;
     }
     let mut biggest = simplified.first().unwrap().clone();
-    let mut biggest_area = biggest.signed_area().abs();
+    let mut biggest_area = area(&biggest).abs();
     for path in simplified.iter().skip(1) {
-        let area = path.signed_area().abs();
-        if area > biggest_area {
+        let path_area = area(path).abs();
+        if path_area > biggest_area {
             biggest = path.clone();
-            biggest_area = area;
+            biggest_area = path_area;
         }
     }
+    // The epsilon is in clipper integer units (the backend works on the
+    // scaled grid), matching what the previous engine received after its
+    // internal rescaling.
     let clean_tol = GeoScale::scale(tolerance);
-    let cleaned_paths = clipper_simplify(
-        ClipperPaths::from(biggest),
-        clean_tol / GeoScale::MULTIPLIER,
-        false,
-    );
-    let cleaned = {
-        let p = cleaned_paths.get(0)?;
-        p.clone()
-    };
+    let cleaned_paths = simplify_paths(&[biggest], clean_tol, false);
+    let cleaned = cleaned_paths.first()?.clone();
     let mut result = path_to_polygon(&cleaned);
     if result.len() > 1 {
         let first = result[0];
@@ -1038,6 +1045,35 @@ pub fn get_polygon_from_points(
     }
 }
 
+/// Miter limit passed to offset operations, mirroring the value the
+/// previous C++ engine received.
+const OFFSET_MITER_LIMIT: f64 = 2.0;
+
+/// Inflate (or deflate) `paths` by `delta` on the clipper integer grid.
+///
+/// `delta` and `miter_limit` are scaled into clipper integer units before
+/// reaching the backend: the C++ engine used previously received
+/// pre-scaled values, and the scaled miter limit keeps its internal
+/// `2 / miter_limit²` threshold effectively unlimited — the offset
+/// behaviour every caller was tuned against. `arc_tolerance = 0.0`
+/// selects the backend's default arc quantization, as before.
+fn inflate_paths(
+    paths: &ClipperPaths,
+    delta: f64,
+    join_type: JoinType,
+    end_type: EndType,
+) -> ClipperPaths {
+    clipper2_rs::inflate_paths(
+        paths,
+        delta * GeoScale::MULTIPLIER,
+        join_type,
+        end_type,
+        OFFSET_MITER_LIMIT * GeoScale::MULTIPLIER,
+        0.0,
+    )
+    .unwrap_or_default()
+}
+
 /// Offset (inflate/deflate) a polygon with a specific join style.
 ///
 /// **Planar (XY-plane only).** Z is not modeled.
@@ -1057,8 +1093,8 @@ pub fn offset_polygon(
         JoinStyle::Round => JoinType::Round,
         JoinStyle::Square => JoinType::Square,
     };
-    let path = polygon_to_path(polygon);
-    let result = path.inflate(offset, clipper_join, EndType::Polygon, 2.0);
+    let paths = vec![polygon_to_path(polygon)];
+    let result = inflate_paths(&paths, offset, clipper_join, EndType::Polygon);
     let mut output = Vec::new();
     for p in result.iter() {
         let poly = path_to_polygon(p);
@@ -1099,8 +1135,8 @@ pub fn offset_polyline(
         EndStyle::Square => EndType::Square,
         EndStyle::Round => EndType::Round,
     };
-    let path = polygon_to_path(polyline);
-    let result = path.inflate(offset, clipper_join, clipper_end, 2.0);
+    let paths = vec![polygon_to_path(polyline)];
+    let result = inflate_paths(&paths, offset, clipper_join, clipper_end);
     let mut output = Vec::new();
     for p in result.iter() {
         let poly = path_to_polygon(p);
@@ -1149,9 +1185,8 @@ pub fn get_polygons_union(polygons: &[Polygon]) -> Vec<Polygon> {
     if clipper_paths.is_empty() {
         return vec![];
     }
-    let result =
-        clipper_union(clipper_paths.clone(), clipper_paths, FillRule::NonZero)
-            .unwrap_or_default();
+    let result = union(&clipper_paths, &clipper_paths, FillRule::NonZero)
+        .unwrap_or_default();
     paths_to_polygons(&result)
         .into_iter()
         .filter(|p| p.len() >= 3)
@@ -1175,9 +1210,8 @@ pub fn get_polygons_group_intersection(
     if subject_paths.is_empty() || clip_paths.is_empty() {
         return vec![];
     }
-    let result =
-        clipper_intersect(subject_paths, clip_paths, FillRule::NonZero)
-            .unwrap_or_default();
+    let result = intersect(&subject_paths, &clip_paths, FillRule::NonZero)
+        .unwrap_or_default();
     paths_to_polygons(&result)
         .into_iter()
         .filter(|p| p.len() >= 3)
@@ -1197,7 +1231,7 @@ pub fn get_polygons_intersection(
     let path1 = polygons_to_paths(std::slice::from_ref(poly1));
     let path2 = polygons_to_paths(std::slice::from_ref(poly2));
     let result =
-        clipper_intersect(path1, path2, FillRule::NonZero).unwrap_or_default();
+        intersect(&path1, &path2, FillRule::NonZero).unwrap_or_default();
     paths_to_polygons(&result)
         .into_iter()
         .filter(|p| p.len() >= 3)
@@ -1221,9 +1255,8 @@ pub fn get_polygons_group_difference(
     if subject_paths.is_empty() {
         return vec![];
     }
-    let result =
-        clipper_difference(subject_paths, clip_paths, FillRule::NonZero)
-            .unwrap_or_default();
+    let result = difference(&subject_paths, &clip_paths, FillRule::NonZero)
+        .unwrap_or_default();
     paths_to_polygons(&result)
         .into_iter()
         .filter(|p| p.len() >= 3)
@@ -1246,7 +1279,7 @@ pub fn get_polygons_difference(
     let path1 = polygons_to_paths(std::slice::from_ref(poly1));
     let path2 = polygons_to_paths(std::slice::from_ref(poly2));
     let result =
-        clipper_difference(path1, path2, FillRule::NonZero).unwrap_or_default();
+        difference(&path1, &path2, FillRule::NonZero).unwrap_or_default();
     paths_to_polygons(&result)
         .into_iter()
         .filter(|p| p.len() >= 3)
@@ -1520,8 +1553,8 @@ pub fn clip_point_in_polygon(point: Point, polygon: &Polygon) -> bool {
         }
     }
     let path = polygon_to_path(polygon);
-    let geo_point = GeoPoint::<GeoScale>::new(point.x, point.y);
-    path.is_point_inside(geo_point) == PointInPolygonResult::IsInside
+    let geo_point = Point64::new(scale_coord(point.x), scale_coord(point.y));
+    point_in_polygon(geo_point, &path) == PointInPolygonResult::IsInside
 }
 
 /// Resample a closed polygon by inserting evenly-spaced points along each

@@ -12,7 +12,7 @@ __all__ = [
 @typing.final
 class CompressedArray:
     r"""
-    A numpy-compatible array stored in compressed (zstd) form.
+    A numpy-compatible array stored in compressed (DEFLATE) form.
     
     Created by raygeo's scene compiler and texture rasterizer to keep
     large numpy buffers compressed in memory until they are needed

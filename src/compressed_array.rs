@@ -1,14 +1,14 @@
 //! Compressed in-memory array storage for large numpy buffers.
 //!
-//! Provides zstd-based compression of typed arrays so that scene
+//! Provides DEFLATE-based compression of typed arrays so that scene
 //! compilation output (vertex buffers, power textures) can be kept
 //! compressed in memory and only decompressed on demand at GPU
 //! upload time.
 
-use std::io::Read;
+use std::io::{Read, Write};
 
 const COMPRESS_THRESHOLD: usize = 4096;
-const ZSTD_LEVEL: i32 = 3;
+const DEFLATE_LEVEL: u32 = 6;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Dtype {
@@ -49,8 +49,16 @@ impl CompressedArray {
                 uncompressed_size,
             };
         }
-        let compressed =
-            zstd::encode_all(raw, ZSTD_LEVEL).expect("zstd compression");
+        let compressed = {
+            let mut encoder = flate2::write::ZlibEncoder::new(
+                Vec::new(),
+                flate2::Compression::new(DEFLATE_LEVEL),
+            );
+            encoder
+                .write_all(raw)
+                .and_then(|()| encoder.finish())
+                .expect("deflate compression")
+        };
         Self {
             data: compressed,
             shape,
@@ -101,8 +109,7 @@ impl CompressedArray {
     /// Decompress into the provided buffer.
     pub fn decompress_into(&self, dst: &mut [u8]) -> Result<(), String> {
         if self.is_compressed {
-            zstd::Decoder::new(self.data.as_slice())
-                .map_err(|e| e.to_string())?
+            flate2::read::ZlibDecoder::new(self.data.as_slice())
                 .read_exact(dst)
                 .map_err(|e| e.to_string())?;
         } else {

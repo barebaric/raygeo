@@ -5,7 +5,7 @@ sidebar_label: raygeo.compressed_array
 
 ## CompressedArray
 
-A numpy-compatible array stored in compressed (zstd) form.
+A numpy-compatible array stored in compressed (DEFLATE) form.
 
 Created by raygeo's scene compiler and texture rasterizer to keep large numpy buffers compressed in
 memory until they are needed for GPU upload. Call **to_numpy** to decompress on demand.
