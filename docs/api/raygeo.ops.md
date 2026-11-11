@@ -2001,6 +2001,7 @@ optimize_travel(
     progress_cb: Optional[Any] = None,
     best_start_point: bool = False,
     prefer_corners: bool = False,
+    reorder_scanlines: bool = False,
 ) -> None
 ```
 
@@ -2009,16 +2010,17 @@ Optimize travel distance by reordering segments.
 Performs two-level optimization: workpiece-level reordering (when workpiece markers are present) and
 segment-level nearest-neighbor + 2-opt refinement.
 
-| Parameter          | Type                   | Description                                                                                     |
-| ------------------ | ---------------------- | ----------------------------------------------------------------------------------------------- |
-| `allow_flip`       | `bool = True`          | Whether to allow flipping subpaths.                                                             |
-| `preserve_first`   | `bool = False`         | Keep the first workpiece in place.                                                              |
-| `preserve_order`   | `Sequence[str] = []`   | Workpiece UIDs whose order to preserve.                                                         |
-| `progress_cb`      | `Optional[Any] = None` | Optional callable(progress, message).                                                           |
-| `best_start_point` | `bool = False`         | Rotate closed paths so they are entered at the vertex nearest the current head position.        |
-| `prefer_corners`   | `bool = False`         | With *best_start_point*, restrict the candidate start vertices of a closed path to its corners. |
-| _Returns_          | `None`                 |                                                                                                 |
-| _Complexity_       |                        | O(n²) average time, O(n) space                                                                  |
+| Parameter           | Type                   | Description                                                                                                                                                                                                                                                                                                              |
+| ------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `allow_flip`        | `bool = True`          | Whether to allow flipping subpaths.                                                                                                                                                                                                                                                                                      |
+| `preserve_first`    | `bool = False`         | Keep the first workpiece in place.                                                                                                                                                                                                                                                                                       |
+| `preserve_order`    | `Sequence[str] = []`   | Workpiece UIDs whose order to preserve.                                                                                                                                                                                                                                                                                  |
+| `progress_cb`       | `Optional[Any] = None` | Optional callable(progress, message).                                                                                                                                                                                                                                                                                    |
+| `best_start_point`  | `bool = False`         | Rotate closed paths so they are entered at the vertex nearest the current head position.                                                                                                                                                                                                                                 |
+| `prefer_corners`    | `bool = False`         | With *best_start_point*, restrict the candidate start vertices of a closed path to its corners.                                                                                                                                                                                                                          |
+| `reorder_scanlines` | `bool = False`         | When true, raster scan-line runs participate in the reorder like ordinary cut segments. Defaults to false: raster rows keep their emission order, because reordering them makes the machine reverse and hop its Y axis between rows, and the backlash of every reversal displaces the rows enough to show up as banding. |
+| _Returns_           | `None`                 |                                                                                                                                                                                                                                                                                                                          |
+| _Complexity_        |                        | O(n²) average time, O(n) space                                                                                                                                                                                                                                                                                           |
 
 ![Travel path before and after optimization](images/ops-transform-optimize-optimize-travel.png)
 

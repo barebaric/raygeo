@@ -21,7 +21,7 @@ pub(crate) fn register(transform_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 }
 
 #[pyfunction(name = "optimize_travel")]
-#[pyo3(signature = (ops, allow_flip=true, preserve_first=false, preserve_order=Vec::new(), progress_cb=None, best_start_point=false, prefer_corners=false))]
+#[pyo3(signature = (ops, allow_flip=true, preserve_first=false, preserve_order=Vec::new(), progress_cb=None, best_start_point=false, prefer_corners=false, reorder_scanlines=false))]
 fn optimize_travel_py(
     ops: &mut crate::python::ops::PyOps,
     allow_flip: bool,
@@ -30,6 +30,7 @@ fn optimize_travel_py(
     progress_cb: Option<&Bound<'_, PyAny>>,
     best_start_point: bool,
     prefer_corners: bool,
+    reorder_scanlines: bool,
 ) -> PyResult<()> {
     let py_callbacks =
         PyCallableCallbacks::new(progress_cb.map(|b| b.clone().unbind()));
@@ -41,6 +42,7 @@ fn optimize_travel_py(
         &py_callbacks,
         best_start_point,
         prefer_corners,
+        reorder_scanlines,
     );
     Ok(())
 }
@@ -77,6 +79,14 @@ pub struct OptimizeSpec {
     /// of a closed path to its corners.
     #[pyo3(get)]
     pub prefer_corners: bool,
+    /// When true, raster scan-line runs participate in the
+    /// travel-optimizing reorder like ordinary cut segments. Defaults
+    /// to false: raster rows keep their emission order, because
+    /// reordering them makes the machine reverse and hop its Y axis
+    /// between rows, and the backlash of every reversal displaces the
+    /// rows enough to show up as banding on the material.
+    #[pyo3(get)]
+    pub reorder_scanlines: bool,
 }
 
 impl OptimizeSpec {
@@ -89,6 +99,7 @@ impl OptimizeSpec {
             merge_scanlines: self.merge_scanlines.map(|m| m.into_core()),
             best_start_point: self.best_start_point,
             prefer_corners: self.prefer_corners,
+            reorder_scanlines: self.reorder_scanlines,
         }
     }
 }
@@ -96,7 +107,7 @@ impl OptimizeSpec {
 #[gen_stub_pymethods]
 #[pymethods]
 impl OptimizeSpec {
-    #[pyo3(signature = (allow_flip, preserve_first, preserve_order, merge_scanlines=None, best_start_point=false, prefer_corners=false))]
+    #[pyo3(signature = (allow_flip, preserve_first, preserve_order, merge_scanlines=None, best_start_point=false, prefer_corners=false, reorder_scanlines=false))]
     #[new]
     fn new(
         allow_flip: bool,
@@ -105,6 +116,7 @@ impl OptimizeSpec {
         merge_scanlines: Option<MergeScanlinesSpec>,
         best_start_point: bool,
         prefer_corners: bool,
+        reorder_scanlines: bool,
     ) -> Self {
         Self {
             allow_flip,
@@ -113,6 +125,7 @@ impl OptimizeSpec {
             merge_scanlines,
             best_start_point,
             prefer_corners,
+            reorder_scanlines,
         }
     }
 }

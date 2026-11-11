@@ -55,3 +55,14 @@ preserve_order: list[str]
 ```
 
 Workpiece UIDs whose order to preserve.
+
+### `reorder_scanlines`
+
+```python
+reorder_scanlines: bool
+```
+
+When true, raster scan-line runs participate in the travel-optimizing reorder like ordinary cut
+segments. Defaults to false: raster rows keep their emission order, because reordering them makes
+the machine reverse and hop its Y axis between rows, and the backlash of every reversal displaces
+the rows enough to show up as banding on the material.
