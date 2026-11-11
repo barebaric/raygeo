@@ -83,6 +83,28 @@ Get intersection points of two circles.
 
 *Circle-circle and line-circle intersection points*
 
+### `get_circle_signed_distance()`
+
+```python
+get_circle_signed_distance(
+    point: types.Point,
+    center: types.Point,
+    radius: float,
+) -> float
+```
+
+Signed distance from a point to a circle's circumference.
+
+Positive outside, negative inside, zero on the circle.
+
+| Parameter    | Type          | Description                           |
+| ------------ | ------------- | ------------------------------------- |
+| `point`      | `types.Point` | Query point (x, y).                   |
+| `center`     | `types.Point` | Circle center (x, y).                 |
+| `radius`     | `float`       | Circle radius.                        |
+| _Returns_    | `float`       | Signed distance to the circumference. |
+| _Complexity_ |               | O(1) time, O(1) space                 |
+
 ### `get_line_circle_intersections()`
 
 ```python

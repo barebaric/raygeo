@@ -1007,3 +1007,90 @@ pub fn nearest_tangent_circle_on_bezier(
         None
     }
 }
+
+/// First derivative B'(t) of the cubic Bezier, as a raw vector
+/// (unnormalized).  At t = 0 this is parallel to `c1 - p0`, at t = 1
+/// to `p3 - c2`.
+pub fn get_bezier_tangent(
+    p0: Point,
+    c1: Point,
+    c2: Point,
+    p3: Point,
+    t: f64,
+) -> Point {
+    let mt = 1.0 - t;
+    let a = 3.0 * mt * mt;
+    let b = 6.0 * mt * t;
+    let c = 3.0 * t * t;
+    Point::new(
+        a * (c1.x - p0.x) + b * (c2.x - c1.x) + c * (p3.x - c2.x),
+        a * (c1.y - p0.y) + b * (c2.y - c1.y) + c * (p3.y - c2.y),
+    )
+}
+
+/// Samples the cubic Bezier uniformly in parameter, including both
+/// endpoints.
+pub fn get_bezier_samples(
+    p0: Point,
+    c1: Point,
+    c2: Point,
+    p3: Point,
+    segments: usize,
+) -> Vec<Point> {
+    if segments == 0 {
+        return Vec::new();
+    }
+    (0..=segments)
+        .map(|i| {
+            let t = i as f64 / segments as f64;
+            let mt = 1.0 - t;
+            let mt2 = mt * mt;
+            let mt3 = mt2 * mt;
+            let t2 = t * t;
+            let t3 = t2 * t;
+            Point::new(
+                mt3 * p0.x
+                    + 3.0 * mt2 * t * c1.x
+                    + 3.0 * mt * t2 * c2.x
+                    + t3 * p3.x,
+                mt3 * p0.y
+                    + 3.0 * mt2 * t * c1.y
+                    + 3.0 * mt * t2 * c2.y
+                    + t3 * p3.y,
+            )
+        })
+        .collect()
+}
+
+/// Computes the opposite control-point offset of a smooth or
+/// symmetric Bezier joint from the modified one.
+///
+/// The offsets are relative to the shared joint point.  Symmetric
+/// joints mirror the modified offset; smooth joints mirror its
+/// direction and keep the other offset's length (collinear handles,
+/// G1 continuity).  Degenerate inputs fall back to mirroring.
+pub fn compute_constrained_control_offset(
+    modified: Point,
+    other: Option<Point>,
+    symmetric: bool,
+) -> Point {
+    if symmetric {
+        return Point::new(-modified.x, -modified.y);
+    }
+    let other_length = match other {
+        Some(other) => (other.x * other.x + other.y * other.y).sqrt(),
+        None => return Point::new(-modified.x, -modified.y),
+    };
+    if other_length < 1e-10 {
+        return Point::new(-modified.x, -modified.y);
+    }
+    let modified_length =
+        (modified.x * modified.x + modified.y * modified.y).sqrt();
+    if modified_length < 1e-10 {
+        return Point::new(0.0, 0.0);
+    }
+    Point::new(
+        -modified.x / modified_length * other_length,
+        -modified.y / modified_length * other_length,
+    )
+}

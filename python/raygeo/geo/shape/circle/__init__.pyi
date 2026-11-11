@@ -15,6 +15,7 @@ __all__ = [
     "does_circle_intersect_rect",
     "find_tangent_circle_centers",
     "get_circle_circle_intersections",
+    "get_circle_signed_distance",
     "get_line_circle_intersections",
     "is_circle_inside_rect",
     "line_segment_intersects_circle",
@@ -54,6 +55,19 @@ def get_circle_circle_intersections(c1: types.Point, r1: float, c2: types.Point,
     :param c2: Center of second circle (x, y).
     :param r2: Radius of second circle.
     :returns: List of intersection points (x, y).
+    :complexity: O(1) time, O(1) space
+    """
+
+def get_circle_signed_distance(point: types.Point, center: types.Point, radius: float) -> float:
+    r"""
+    Signed distance from a point to a circle's circumference.
+    
+    Positive outside, negative inside, zero on the circle.
+    
+    :param point: Query point (x, y).
+    :param center: Circle center (x, y).
+    :param radius: Circle radius.
+    :returns: Signed distance to the circumference.
     :complexity: O(1) time, O(1) space
     """
 

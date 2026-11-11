@@ -5,6 +5,7 @@
 pub mod arc;
 pub mod bezier;
 pub mod circle;
+pub mod ellipse;
 pub mod line;
 pub mod point;
 pub mod polygon;

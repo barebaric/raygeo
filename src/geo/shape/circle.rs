@@ -290,3 +290,13 @@ pub fn nearest_tangent_circle_on_polyline(
 
     best
 }
+
+/// Signed distance from a point to a circle's circumference:
+/// positive outside, negative inside, zero on the circle.
+pub fn get_circle_signed_distance(
+    point: Point,
+    center: Point,
+    radius: f64,
+) -> f64 {
+    (point.x - center.x).hypot(point.y - center.y) - radius
+}

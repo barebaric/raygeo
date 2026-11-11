@@ -16,12 +16,14 @@ use super::super::flex_point::{
 };
 use super::super::types::{CubicBezier2D, Edge3D};
 use crate::geo::shape::bezier::{
-    clip_bezier_with_rect, convert_cubic_bezier_to_quadratic, fit_cubic_bezier,
-    flatten_bezier, get_bezier_bounds, get_bezier_closest_point,
-    get_bezier_flatness_sq, get_bezier_length, get_bezier_point_at,
-    get_bezier_rect_intersections, get_perpendicular_dist_sq, is_bezier_flat,
-    is_bezier_inside_polygons, linearize_bezier, linearize_bezier_adaptive,
-    linearize_bezier_segment, nearest_tangent_circle_on_bezier, split_bezier,
+    clip_bezier_with_rect, compute_constrained_control_offset,
+    convert_cubic_bezier_to_quadratic, fit_cubic_bezier, flatten_bezier,
+    get_bezier_bounds, get_bezier_closest_point, get_bezier_flatness_sq,
+    get_bezier_length, get_bezier_point_at, get_bezier_rect_intersections,
+    get_bezier_samples, get_bezier_tangent, get_perpendicular_dist_sq,
+    is_bezier_flat, is_bezier_inside_polygons, linearize_bezier,
+    linearize_bezier_adaptive, linearize_bezier_segment,
+    nearest_tangent_circle_on_bezier, split_bezier,
 };
 use crate::geo::types::{CubicBezier, Point, Point3D, Rect};
 use pyo3::prelude::*;
@@ -53,6 +55,9 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         fit_cubic_bezier_py,
         nearest_tangent_circle_on_bezier_py,
         get_bezier_closest_point_py,
+        get_bezier_tangent_py,
+        get_bezier_samples_py,
+        compute_constrained_control_offset_py,
     );
 
     shape_mod.add_submodule(&m)?;
@@ -842,4 +847,139 @@ fn get_bezier_closest_point_py(
         y,
     )
     .map(|(t, pt, dist_sq)| (t, (pt.x, pt.y), dist_sq))
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import raygeo.geo.types
+
+    def get_bezier_tangent(
+        p0: types.Point,
+        c1: types.Point,
+        c2: types.Point,
+        p3: types.Point,
+        t: float,
+    ) -> types.Point:
+        """First derivative B'(t) of the cubic Bezier, as a raw vector.
+
+        Unnormalized.  At t = 0 this is parallel to ``c1 - p0``, at
+        t = 1 to ``p3 - c2``.
+
+        :param p0: Start point (x, y).
+        :param c1: First control point (x, y).
+        :param c2: Second control point (x, y).
+        :param p3: End point (x, y).
+        :param t: Curve parameter in [0, 1].
+        :returns: Tangent vector (x, y).
+        :complexity: O(1) time, O(1) space
+        """
+"#,
+    module = "raygeo.geo.shape.bezier"
+)]
+#[pyfunction(name = "get_bezier_tangent")]
+fn get_bezier_tangent_py(
+    p0: (f64, f64),
+    c1: (f64, f64),
+    c2: (f64, f64),
+    p3: (f64, f64),
+    t: f64,
+) -> (f64, f64) {
+    let tangent = get_bezier_tangent(
+        Point::new(p0.0, p0.1),
+        Point::new(c1.0, c1.1),
+        Point::new(c2.0, c2.1),
+        Point::new(p3.0, p3.1),
+        t,
+    );
+    (tangent.x, tangent.y)
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import raygeo.geo.types
+
+    def get_bezier_samples(
+        p0: types.Point,
+        c1: types.Point,
+        c2: types.Point,
+        p3: types.Point,
+        segments: int,
+    ) -> list[types.Point]:
+        """Sample the cubic Bezier uniformly in parameter.
+
+        Returns ``segments + 1`` points from t = 0 through t = 1,
+        including both endpoints.
+
+        :param p0: Start point (x, y).
+        :param c1: First control point (x, y).
+        :param c2: Second control point (x, y).
+        :param p3: End point (x, y).
+        :param segments: Number of segments (sample count - 1).
+        :returns: List of points (x, y).
+        :complexity: O(n) time, O(n) space for n samples
+        """
+"#,
+    module = "raygeo.geo.shape.bezier"
+)]
+#[pyfunction(name = "get_bezier_samples")]
+fn get_bezier_samples_py(
+    p0: (f64, f64),
+    c1: (f64, f64),
+    c2: (f64, f64),
+    p3: (f64, f64),
+    segments: usize,
+) -> Vec<(f64, f64)> {
+    get_bezier_samples(
+        Point::new(p0.0, p0.1),
+        Point::new(c1.0, c1.1),
+        Point::new(c2.0, c2.1),
+        Point::new(p3.0, p3.1),
+        segments,
+    )
+    .into_iter()
+    .map(|p| (p.x, p.y))
+    .collect()
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import typing
+    import raygeo.geo.types
+
+    def compute_constrained_control_offset(
+        modified: types.Point,
+        other: typing.Optional[types.Point],
+        symmetric: bool,
+    ) -> types.Point:
+        """Compute the opposite control-point offset of a smooth or
+        symmetric Bezier joint from the modified one.
+
+        Offsets are relative to the shared joint point.  Symmetric
+        joints mirror the modified offset; smooth joints mirror its
+        direction and keep the other offset's length (collinear
+        handles, G1 continuity).  Degenerate inputs fall back to
+        mirroring.
+
+        :param modified: The modified control offset (x, y).
+        :param other: The opposite control offset (x, y), if any.
+        :param symmetric: Whether the joint is symmetric.
+        :returns: The constrained opposite offset (x, y).
+        :complexity: O(1) time, O(1) space
+        """
+"#,
+    module = "raygeo.geo.shape.bezier"
+)]
+#[pyfunction(name = "compute_constrained_control_offset")]
+fn compute_constrained_control_offset_py(
+    modified: (f64, f64),
+    other: Option<(f64, f64)>,
+    symmetric: bool,
+) -> (f64, f64) {
+    let other = other.map(|o| Point::new(o.0, o.1));
+    let result = compute_constrained_control_offset(
+        Point::new(modified.0, modified.1),
+        other,
+        symmetric,
+    );
+    (result.x, result.y)
 }

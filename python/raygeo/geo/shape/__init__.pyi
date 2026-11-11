@@ -11,6 +11,7 @@ and affine transformations.
 from . import arc
 from . import bezier
 from . import circle
+from . import ellipse
 from . import line
 from . import point
 from . import polygon
@@ -22,6 +23,7 @@ __all__ = [
     "arc",
     "bezier",
     "circle",
+    "ellipse",
     "line",
     "point",
     "polygon",
