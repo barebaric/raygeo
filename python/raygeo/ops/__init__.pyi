@@ -1605,7 +1605,7 @@ class Ops:
         :param safe_z: Z height used for lifting the knife.
         :complexity: O(n) time, O(n) space
         """
-    def optimize_travel(self, allow_flip: builtins.bool = True, preserve_first: builtins.bool = False, preserve_order: typing.Sequence[builtins.str] = [], progress_cb: typing.Optional[typing.Any] = None, best_start_point: builtins.bool = False, prefer_corners: builtins.bool = False) -> None:
+    def optimize_travel(self, allow_flip: builtins.bool = True, preserve_first: builtins.bool = False, preserve_order: typing.Sequence[builtins.str] = [], progress_cb: typing.Optional[typing.Any] = None, best_start_point: builtins.bool = False, prefer_corners: builtins.bool = False, reorder_scanlines: builtins.bool = False) -> None:
         r"""
         Optimize travel distance by reordering segments.
         
@@ -1621,6 +1621,12 @@ class Ops:
             at the vertex nearest the current head position.
         :param prefer_corners: With *best_start_point*, restrict the
             candidate start vertices of a closed path to its corners.
+        :param reorder_scanlines: When true, raster scan-line runs
+            participate in the reorder like ordinary cut segments.
+            Defaults to false: raster rows keep their emission order,
+            because reordering them makes the machine reverse and hop
+            its Y axis between rows, and the backlash of every reversal
+            displaces the rows enough to show up as banding.
         :complexity: O(n²) average time, O(n) space
         """
     def apply_transformers(self, transformers: typing.Sequence[typing.Any], progress_cb: typing.Optional[typing.Any] = None) -> None:

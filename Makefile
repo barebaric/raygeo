@@ -40,9 +40,12 @@ format-python:
 
 lint: lint-rust lint-python
 
+# Mirror the CI clippy passes: the python feature gates the PyO3
+# bindings, the pure-Rust core is what embedding consumers build.
 lint-rust:
 	cargo fmt --check
-	cargo clippy -- -D warnings
+	cargo clippy --lib --features python -- -D warnings
+	cargo clippy --lib --no-default-features -- -D warnings
 
 lint-python:
 	ruff check tests/ python/ tools/

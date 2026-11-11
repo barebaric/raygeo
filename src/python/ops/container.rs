@@ -3426,8 +3426,15 @@ impl PyOps {
     ///     at the vertex nearest the current head position.
     /// :param prefer_corners: With *best_start_point*, restrict the
     ///     candidate start vertices of a closed path to its corners.
+    /// :param reorder_scanlines: When true, raster scan-line runs
+    ///     participate in the reorder like ordinary cut segments.
+    ///     Defaults to false: raster rows keep their emission order,
+    ///     because reordering them makes the machine reverse and hop
+    ///     its Y axis between rows, and the backlash of every reversal
+    ///     displaces the rows enough to show up as banding.
     /// :complexity: O(n²) average time, O(n) space
-    #[pyo3(signature = (allow_flip=true, preserve_first=false, preserve_order=Vec::new(), progress_cb=None, best_start_point=false, prefer_corners=false))]
+    #[allow(clippy::too_many_arguments)]
+    #[pyo3(signature = (allow_flip=true, preserve_first=false, preserve_order=Vec::new(), progress_cb=None, best_start_point=false, prefer_corners=false, reorder_scanlines=false))]
     fn optimize_travel(
         &mut self,
         allow_flip: bool,
@@ -3436,6 +3443,7 @@ impl PyOps {
         progress_cb: Option<&Bound<'_, PyAny>>,
         best_start_point: bool,
         prefer_corners: bool,
+        reorder_scanlines: bool,
     ) -> PyResult<()> {
         let py_callbacks =
             PyCallableCallbacks::new(progress_cb.map(|b| b.clone().unbind()));
@@ -3447,6 +3455,7 @@ impl PyOps {
             &py_callbacks,
             best_start_point,
             prefer_corners,
+            reorder_scanlines,
         );
         Ok(())
     }

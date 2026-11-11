@@ -173,7 +173,7 @@ class TestOptimizeAllowFlip:
         ops.line_to(10, 0)
         ops.move_to(20, 0)
         ops.scan_to(10, 0, 0, power_values=bytearray([10, 20, 30]))
-        ops.optimize_travel(allow_flip=True)
+        ops.optimize_travel(allow_flip=True, reorder_scanlines=True)
         scan_indices = [
             i
             for i in range(ops.len())
@@ -408,7 +408,7 @@ class TestOptimizeScanline:
         ops.line_to(10, 0, 0)
         ops.move_to(20, 0, 0)
         ops.scan_to(10, 0, 0, power_values=bytearray([10, 20, 30]))
-        ops.optimize_travel()
+        ops.optimize_travel(reorder_scanlines=True)
         ops.preload_state()
         travel_after = _travel_distance(ops)
         assert travel_after == pytest.approx(0.0)
@@ -420,7 +420,7 @@ class TestOptimizeScanline:
         ops.line_to(10, 0, 0)
         ops.move_to(20, 0, 0)
         ops.scan_to(10, 0, 0, power_values=bytearray([10, 20, 30]))
-        ops.optimize_travel()
+        ops.optimize_travel(reorder_scanlines=True)
         scan_indices = [
             i
             for i in range(ops.len())
@@ -438,7 +438,7 @@ class TestOptimizeScanline:
         ops.line_to(10, 0, 0)
         ops.move_to(20, 0, 0)
         ops.scan_to(10, 0, 0, power_values=bytearray([10, 20, 30]))
-        ops.optimize_travel()
+        ops.optimize_travel(reorder_scanlines=True)
         scan_indices = [
             i
             for i in range(ops.len())
@@ -468,9 +468,9 @@ class TestOptimizeScanline:
         assert len(scan_indices) == 1
 
     def test_many_scanline_runs_are_reordered(self):
-        """Scanline-only content is still optimized: the runs are
-        reordered by nearest-neighbor travel without being split into
-        separate ops."""
+        """With reorder_scanlines opted in, scanline-only content is
+        still optimized: the runs are reordered by nearest-neighbor
+        travel without being split into separate ops."""
         runs = [
             ((0.0, 0.0), (10.0, 0.0)),
             ((40.0, 0.0), (50.0, 0.0)),
@@ -490,7 +490,7 @@ class TestOptimizeScanline:
         before = _travel_distance(ops)
         assert before == pytest.approx(340.0)
 
-        ops.optimize_travel()
+        ops.optimize_travel(reorder_scanlines=True)
         ops.preload_state()
 
         scan_indices = [
@@ -502,6 +502,66 @@ class TestOptimizeScanline:
         assert _travel_distance(ops) == pytest.approx(120.0)
         for si in scan_indices:
             assert ops.command_type(si - 1) == CommandType.MOVE_TO
+
+    def test_scanline_runs_keep_emission_order_by_default(self):
+        """Raster rows keep their emission order unless reordering is
+        explicitly enabled: reordering makes the machine reverse its Y
+        axis between rows, and the backlash of every reversal shows up
+        as banding on the material."""
+        runs = [
+            ((0.0, 0.0), (10.0, 0.0)),
+            ((40.0, 0.0), (50.0, 0.0)),
+            ((80.0, 0.0), (90.0, 0.0)),
+            ((120.0, 0.0), (130.0, 0.0)),
+            ((160.0, 0.0), (170.0, 0.0)),
+        ]
+        ops = Ops()
+        ops.set_power(1.0)
+        for idx in (0, 2, 4, 1, 3):
+            start, end = runs[idx]
+            ops.move_to(start[0], start[1], 0.0)
+            ops.scan_to(
+                end[0], end[1], 0.0, power_values=bytearray([50, 60, 50])
+            )
+
+        ops.optimize_travel()
+        ops.preload_state()
+
+        scan_starts = [
+            ops.endpoint(i - 1)[0]
+            for i in range(ops.len())
+            if ops.command_type(i) == CommandType.SCAN_LINE
+        ]
+        assert scan_starts == [0.0, 80.0, 160.0, 40.0, 120.0]
+        assert _travel_distance(ops) == pytest.approx(340.0)
+
+    def test_mixed_scanline_content_passes_through_by_default(self):
+        """A segment mixing scan lines and cuts passes through intact
+        by default: scan-line order is preserved and no content is
+        dropped."""
+        ops = Ops()
+        ops.set_power(1.0)
+        # Two raster runs, emitted out of order.
+        ops.move_to(0, 0, 0)
+        ops.scan_to(10, 0, 0, power_values=bytearray([50, 60, 50]))
+        ops.move_to(80, 0, 0)
+        ops.scan_to(90, 0, 0, power_values=bytearray([50, 60, 50]))
+        # A cut pair placed so nearest-neighbor reordering would pay.
+        ops.move_to(500, 500)
+        ops.line_to(510, 500)
+        ops.move_to(10, 0)
+        ops.line_to(10, 10)
+
+        ops.optimize_travel()
+        ops.preload_state()
+
+        scan_starts = [
+            ops.endpoint(i - 1)[0]
+            for i in range(ops.len())
+            if ops.command_type(i) == CommandType.SCAN_LINE
+        ]
+        assert scan_starts == [0.0, 80.0]
+        assert _count_cuts(ops) == 4
 
     def test_overscanned_scanline_not_split(self):
         ops = Ops()
@@ -615,7 +675,7 @@ class TestOptimizeScanline:
         power_values = bytearray([0, 0] + [100, 120, 140] + [0, 0])
         ops.move_to(*start_pt)
         ops.scan_to(*end_pt, power_values=power_values)
-        ops.optimize_travel()
+        ops.optimize_travel(reorder_scanlines=True)
         ops.preload_state()
         scan_indices = [
             i
@@ -1266,6 +1326,43 @@ class TestNestedMergeScanlines:
         spec = OptimizeSpec(True, False, [])
         Ops.apply_transformers(ops, [spec], progress_cb=None)
         assert len(ops.indices_of(CommandType.SCAN_LINE)) == 2
+
+
+class TestReorderScanlinesFlag:
+    """The OptimizeSpec flag gates raster run reordering."""
+
+    def _scanned_ops(self):
+        ops = Ops()
+        ops.set_feed_rate(6000)
+        ops.set_rapid_rate(12000)
+        xs = [0.0, 40.0, 80.0, 120.0, 160.0]
+        for idx in (0, 2, 4, 1, 3):
+            ops.move_to(xs[idx], 0)
+            ops.scan_to(xs[idx] + 10, 0, 0, power_values=[128] * 10)
+        return ops
+
+    def _scan_starts(self, ops):
+        return [
+            ops.endpoint(i - 1)[0]
+            for i in range(ops.len())
+            if ops.command_type(i) == CommandType.SCAN_LINE
+        ]
+
+    def test_spec_default_preserves_scanline_order(self):
+        from raygeo.ops.transform.optimize import OptimizeSpec
+
+        ops = self._scanned_ops()
+        spec = OptimizeSpec(True, False, [])
+        Ops.apply_transformers(ops, [spec], progress_cb=None)
+        assert self._scan_starts(ops) == [0.0, 80.0, 160.0, 40.0, 120.0]
+
+    def test_spec_opt_in_reorders_scanlines(self):
+        from raygeo.ops.transform.optimize import OptimizeSpec
+
+        ops = self._scanned_ops()
+        spec = OptimizeSpec(True, False, [], reorder_scanlines=True)
+        Ops.apply_transformers(ops, [spec], progress_cb=None)
+        assert self._scan_starts(ops) == [0.0, 40.0, 80.0, 120.0, 160.0]
 
 
 # ---------------------------------------------------------------------------

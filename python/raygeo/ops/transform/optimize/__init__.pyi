@@ -46,6 +46,16 @@ class OptimizeSpec:
         With *best_start_point*, restrict the candidate start vertices
         of a closed path to its corners.
         """
+    @property
+    def reorder_scanlines(self) -> builtins.bool:
+        r"""
+        When true, raster scan-line runs participate in the
+        travel-optimizing reorder like ordinary cut segments. Defaults
+        to false: raster rows keep their emission order, because
+        reordering them makes the machine reverse and hop its Y axis
+        between rows, and the backlash of every reversal displaces the
+        rows enough to show up as banding on the material.
+        """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __new__(cls, allow_flip: builtins.bool, preserve_first: builtins.bool, preserve_order: typing.Sequence[builtins.str], merge_scanlines: typing.Optional[merge_scanlines.MergeScanlinesSpec] = None, best_start_point: builtins.bool = False, prefer_corners: builtins.bool = False) -> OptimizeSpec: ...
+    def __new__(cls, allow_flip: builtins.bool, preserve_first: builtins.bool, preserve_order: typing.Sequence[builtins.str], merge_scanlines: typing.Optional[merge_scanlines.MergeScanlinesSpec] = None, best_start_point: builtins.bool = False, prefer_corners: builtins.bool = False, reorder_scanlines: builtins.bool = False) -> OptimizeSpec: ...
 

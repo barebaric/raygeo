@@ -59,6 +59,13 @@ pub struct OptimizeSpec {
     /// [`CORNER_ANGLE_DEG`]). Paths without corners, like circles,
     /// fall back to any vertex. Defaults to false.
     pub prefer_corners: bool,
+    /// When true, raster scan-line runs participate in the
+    /// travel-optimizing reorder like ordinary cut segments. Defaults
+    /// to false: raster rows keep their emission order, because
+    /// reordering them makes the machine reverse and hop its Y axis
+    /// between rows, and the backlash of every reversal displaces the
+    /// rows enough to show up as banding on the material.
+    pub reorder_scanlines: bool,
 }
 
 impl Transformer for OptimizeSpec {
@@ -82,6 +89,7 @@ impl Transformer for OptimizeSpec {
             ctx.callbacks,
             self.best_start_point,
             self.prefer_corners,
+            self.reorder_scanlines,
         );
     }
 
@@ -98,6 +106,7 @@ impl Transformer for OptimizeSpec {
         self.preserve_order.hash(&mut h);
         self.best_start_point.hash(&mut h);
         self.prefer_corners.hash(&mut h);
+        self.reorder_scanlines.hash(&mut h);
         self.merge_scanlines
             .as_ref()
             .map(|m| m.cache_key())
@@ -1121,6 +1130,7 @@ fn sync_state_commands(ops: &mut Ops, state: &State, prev: &State) -> State {
 ///   preserved.
 /// - `callbacks`: Callback bundle for progress reports and
 ///   cancellation polling.
+#[allow(clippy::too_many_arguments)]
 pub fn optimize_travel(
     ops: &mut Ops,
     allow_flip: bool,
@@ -1129,6 +1139,7 @@ pub fn optimize_travel(
     callbacks: &dyn Callbacks,
     best_start_point: bool,
     prefer_corners: bool,
+    reorder_scanlines: bool,
 ) {
     ops.preload_state();
 
@@ -1150,6 +1161,7 @@ pub fn optimize_travel(
         allow_flip,
         best_start_point,
         prefer_corners,
+        reorder_scanlines,
         callbacks,
     );
 }
@@ -1525,6 +1537,7 @@ fn optimize_segments(
     allow_flip: bool,
     best_start_point: bool,
     prefer_corners: bool,
+    reorder_scanlines: bool,
     callbacks: &dyn Callbacks,
 ) {
     report_progress(callbacks, 0.0, "Preprocessing for optimization...");
@@ -1553,7 +1566,12 @@ fn optimize_segments(
         Vec::with_capacity(long_segments.len());
     for (i, seg) in long_segments.iter().enumerate() {
         let contains_scanline = (0..seg.len()).any(|j| seg.is_scanline(j));
-        if contains_scanline && is_scanline_only(seg) {
+        if contains_scanline && !reorder_scanlines {
+            // Raster rows keep their emission order: reordering them
+            // makes the machine reverse its Y axis between rows, and
+            // the backlash of every reversal shows up as banding.
+            processed_results.insert(i, vec![seg.clone()]);
+        } else if contains_scanline && is_scanline_only(seg) {
             match optimize_scanline_runs(seg, allow_flip, callbacks) {
                 Some(runs) => {
                     scanline_units.insert(i, runs);
