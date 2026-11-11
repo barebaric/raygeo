@@ -13,7 +13,7 @@ use std::collections::{BTreeSet, HashMap, HashSet};
 use nalgebra::{DMatrix, SVD};
 
 use super::components::compute_constraint_components;
-use super::constraint::ConstraintSpec;
+use super::constraint::SketchConstraint;
 use super::eval::Evaluator;
 use super::trf::{solve_trf_no_bounds, TrfProblem};
 
@@ -39,8 +39,8 @@ pub struct SketchSolver {
     slot_of: HashMap<u64, usize>,
     coords: Vec<f64>,
     constrained: Vec<bool>,
-    hard: Vec<ConstraintSpec>,
-    auxiliary: Vec<ConstraintSpec>,
+    hard: Vec<Box<dyn SketchConstraint>>,
+    auxiliary: Vec<Box<dyn SketchConstraint>>,
     point_filter: Option<HashSet<u64>>,
 }
 
@@ -50,8 +50,8 @@ impl SketchSolver {
     /// optional filter restricting which points may move.
     pub fn new(
         points: Vec<(u64, f64, f64, bool)>,
-        hard: Vec<ConstraintSpec>,
-        auxiliary: Vec<ConstraintSpec>,
+        hard: Vec<Box<dyn SketchConstraint>>,
+        auxiliary: Vec<Box<dyn SketchConstraint>>,
         point_filter: Option<Vec<u64>>,
     ) -> Self {
         let mut point_ids = Vec::with_capacity(points.len());
@@ -124,9 +124,9 @@ impl SketchSolver {
     fn partition_constraints(
         &self,
     ) -> Vec<(Vec<usize>, Vec<usize>, BTreeSet<u64>)> {
-        let mut all_refs: Vec<&ConstraintSpec> = Vec::new();
-        all_refs.extend(self.hard.iter());
-        all_refs.extend(self.auxiliary.iter());
+        let mut all_refs: Vec<&dyn SketchConstraint> = Vec::new();
+        all_refs.extend(self.hard.iter().map(|c| c.as_ref()));
+        all_refs.extend(self.auxiliary.iter().map(|c| c.as_ref()));
         let components = compute_constraint_components(&all_refs);
 
         let mut component_of: HashMap<u64, usize> = HashMap::new();
@@ -140,16 +140,16 @@ impl SketchSolver {
             vec![Vec::new(); components.len()];
         let mut aux_parts: Vec<Vec<usize>> = vec![Vec::new(); components.len()];
 
-        for (i, spec) in self.hard.iter().enumerate() {
-            for pid in spec.referenced_points() {
+        for (i, constraint) in self.hard.iter().enumerate() {
+            for pid in constraint.referenced_points() {
                 if let Some(&index) = component_of.get(&pid) {
                     hard_parts[index].push(i);
                     break;
                 }
             }
         }
-        for (i, spec) in self.auxiliary.iter().enumerate() {
-            for pid in spec.referenced_points() {
+        for (i, constraint) in self.auxiliary.iter().enumerate() {
+            for pid in constraint.referenced_points() {
                 if let Some(&index) = component_of.get(&pid) {
                     aux_parts[index].push(i);
                     break;
@@ -179,10 +179,12 @@ impl SketchSolver {
         tolerance: f64,
         update_dof: bool,
     ) -> bool {
-        let hard_specs: Vec<&ConstraintSpec> =
-            hard_idx.iter().map(|&i| &self.hard[i]).collect();
-        let aux_specs: Vec<&ConstraintSpec> =
-            aux_idx.iter().map(|&i| &self.auxiliary[i]).collect();
+        let hard_specs: Vec<&dyn SketchConstraint> =
+            hard_idx.iter().map(|&i| self.hard[i].as_ref()).collect();
+        let aux_specs: Vec<&dyn SketchConstraint> = aux_idx
+            .iter()
+            .map(|&i| self.auxiliary[i].as_ref())
+            .collect();
 
         let mut touched: HashSet<u64> = HashSet::new();
         for spec in hard_specs.iter().chain(aux_specs.iter()) {
@@ -219,15 +221,15 @@ impl SketchSolver {
             x0.push(self.coords[2 * slot + 1]);
         }
 
-        let all_specs: Vec<&ConstraintSpec> = hard_specs
+        let all_specs: Vec<&dyn SketchConstraint> = hard_specs
             .iter()
             .copied()
             .chain(aux_specs.iter().copied())
             .collect();
 
         let mut residual_count = 0usize;
-        for spec in &all_specs {
-            residual_count += spec.residual_count();
+        for constraint in &all_specs {
+            residual_count += constraint.residual_count();
         }
         if residual_count == 0 {
             residual_count = 1;
@@ -316,8 +318,10 @@ impl SketchSolver {
     /// residual exceeds `threshold` at the final positions.
     pub fn conflicting(&self, threshold: f64) -> Vec<usize> {
         let lookup = Evaluator::new(self.slot_of.clone(), self.coords.clone());
-        let specs: Vec<&ConstraintSpec> = self.hard.iter().collect();
-        super::eval::compute_max_residuals(&specs, &lookup)
+        let constraints: Vec<&dyn SketchConstraint> =
+            self.hard.iter().map(|c| c.as_ref()).collect();
+        lookup
+            .max_residuals(&constraints)
             .into_iter()
             .enumerate()
             .filter(|(_, value)| *value > threshold)
@@ -329,8 +333,9 @@ impl SketchSolver {
     /// the final positions (aligned with the hard constraint order).
     pub fn max_residuals(&self) -> Vec<f64> {
         let lookup = Evaluator::new(self.slot_of.clone(), self.coords.clone());
-        let specs: Vec<&ConstraintSpec> = self.hard.iter().collect();
-        super::eval::compute_max_residuals(&specs, &lookup)
+        let constraints: Vec<&dyn SketchConstraint> =
+            self.hard.iter().map(|c| c.as_ref()).collect();
+        lookup.max_residuals(&constraints)
     }
 }
 
@@ -338,15 +343,15 @@ impl SketchSolver {
 /// and returns per-point constrained flags for `mutable_ids`
 /// (mirroring the null-space mobility rule of the reference solver).
 fn analyze_dof_flags(
-    hard_specs: &[&ConstraintSpec],
+    hard_specs: &[&dyn SketchConstraint],
     evaluator: &mut Evaluator,
     state_col_of: &HashMap<u64, usize>,
     n_vars: usize,
     mutable_ids: &[u64],
 ) -> Vec<bool> {
     let mut rows = 0usize;
-    for spec in hard_specs {
-        rows += spec.residual_count();
+    for constraint in hard_specs {
+        rows += constraint.residual_count();
     }
     if rows == 0 {
         return vec![false; mutable_ids.len()];

@@ -1007,19 +1007,3 @@ pub fn nearest_tangent_circle_on_bezier(
         None
     }
 }
-
-/// Weights of the two curve endpoints in the cubic Bernstein basis:
-/// `(B0(t) + B1(t), B2(t) + B3(t))`.
-///
-/// These are the derivatives of the endpoint-relative control-point
-/// representation: when the control points are stored as offsets from
-/// their owning endpoint (`C1 = P0 + o1`, `C2 = P3 + o2`), the
-/// envelope theorem turns these weights into the sensitivity of the
-/// curve — and hence of the distance to it — with respect to moving
-/// the endpoints.
-pub fn get_bezier_endpoint_weights(t: f64) -> (f64, f64) {
-    let mt = 1.0 - t;
-    let w_start = mt * mt * mt + 3.0 * mt * mt * t;
-    let w_end = 3.0 * mt * t * t + t * t * t;
-    (w_start, w_end)
-}

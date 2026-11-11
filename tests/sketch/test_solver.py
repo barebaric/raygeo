@@ -2,14 +2,17 @@
 
 import math
 
-from raygeo.sketch import Constraint, PointDef, Solver
+from raygeo.sketch import PointDef, Solver
+from raygeo.sketch.constraints.coincident import CoincidentConstraint
+from raygeo.sketch.constraints.distance import DistanceConstraint
+from raygeo.sketch.constraints.drag import DragConstraint
+from raygeo.sketch.constraints.horizontal import HorizontalConstraint
+from raygeo.sketch.constraints.vertical import VerticalConstraint
 
 
 def _stabilizers(points, weight=1e-4):
     return [
-        Constraint.Drag(point=p.id, target_x=p.x, target_y=p.y, weight=weight)
-        for p in points
-        if not p.fixed
+        DragConstraint(p.id, p.x, p.y, weight) for p in points if not p.fixed
     ]
 
 
@@ -29,12 +32,12 @@ def _rectangle_points():
 
 def _rectangle_constraints():
     return [
-        Constraint.Horizontal(p1=0, p2=1),
-        Constraint.Vertical(p1=1, p2=2),
-        Constraint.Horizontal(p1=2, p2=3),
-        Constraint.Vertical(p1=3, p2=0),
-        Constraint.Distance(p1=0, p2=1, value=100.0),
-        Constraint.Distance(p1=1, p2=2, value=50.0),
+        HorizontalConstraint(0, 1),
+        VerticalConstraint(1, 2),
+        HorizontalConstraint(2, 3),
+        VerticalConstraint(3, 0),
+        DistanceConstraint(0, 1, 100.0),
+        DistanceConstraint(1, 2, 50.0),
     ]
 
 
@@ -65,12 +68,12 @@ def test_conflicting_constraint_detection():
         PointDef(3, 0.0, 55.0, False),
     ]
     hard = [
-        Constraint.Horizontal(p1=0, p2=1),
-        Constraint.Vertical(p1=1, p2=2),
-        Constraint.Horizontal(p1=2, p2=3),
-        Constraint.Coincident(p1=0, p2=3),
-        Constraint.Distance(p1=0, p2=1, value=100.0),
-        Constraint.Distance(p1=1, p2=2, value=50.0),
+        HorizontalConstraint(0, 1),
+        VerticalConstraint(1, 2),
+        HorizontalConstraint(2, 3),
+        CoincidentConstraint(0, 3),
+        DistanceConstraint(0, 1, 100.0),
+        DistanceConstraint(1, 2, 50.0),
     ]
     solver = Solver(points, hard, _stabilizers(points))
     assert not solver.solve(1e-5, True)
@@ -82,8 +85,9 @@ def test_under_constrained_dof():
         PointDef(0, 0.0, 0.0, True),
         PointDef(1, 10.0, 0.0, False),
     ]
-    hard = [Constraint.Distance(p1=0, p2=1, value=10.0)]
-    solver = Solver(points, hard, _stabilizers(points))
+    solver = Solver(
+        points, [DistanceConstraint(0, 1, 10.0)], _stabilizers(points)
+    )
     assert solver.solve(1e-5, True)
     constrained = solver.constrained()
     assert constrained[0] is True
@@ -96,8 +100,8 @@ def test_fully_constrained_segment():
         PointDef(1, 10.0, 5.0, False),
     ]
     hard = [
-        Constraint.Horizontal(p1=0, p2=1),
-        Constraint.Distance(p1=0, p2=1, value=10.0),
+        HorizontalConstraint(0, 1),
+        DistanceConstraint(0, 1, 10.0),
     ]
     solver = Solver(points, hard, _stabilizers(points))
     assert solver.solve(1e-5, True)
@@ -127,8 +131,8 @@ def test_decomposed_components_solve_independently():
         PointDef(3, 60.0, 40.0, False),
     ]
     hard = [
-        Constraint.Distance(p1=0, p2=1, value=10.0),
-        Constraint.Distance(p1=2, p2=3, value=15.0),
+        DistanceConstraint(0, 1, 10.0),
+        DistanceConstraint(2, 3, 15.0),
     ]
     solver = Solver(points, hard, _stabilizers(points))
     assert solver.solve(1e-5, True)
@@ -147,8 +151,8 @@ def test_max_residuals_aligned_with_hard_constraints():
         PointDef(1, 10.0, 3.0, False),
     ]
     hard = [
-        Constraint.Horizontal(p1=0, p2=1),
-        Constraint.Distance(p1=0, p2=1, value=12.0),
+        HorizontalConstraint(0, 1),
+        DistanceConstraint(0, 1, 12.0),
     ]
     solver = Solver(points, hard, [])
     residuals = solver.max_residuals()

@@ -2,7 +2,35 @@
 
 import math
 
-from raygeo.sketch import Constraint, PointDef, Solver
+from raygeo.sketch import PointDef, Solver
+from raygeo.sketch.constraints.angle import AngleConstraint
+from raygeo.sketch.constraints.aspect_ratio import AspectRatioConstraint
+from raygeo.sketch.constraints.coincident import CoincidentConstraint
+from raygeo.sketch.constraints.collinear import CollinearConstraint
+from raygeo.sketch.constraints.diameter import DiameterConstraint
+from raygeo.sketch.constraints.distance import DistanceConstraint
+from raygeo.sketch.constraints.drag import DragConstraint
+from raygeo.sketch.constraints.equal_distance import EqualDistanceConstraint
+from raygeo.sketch.constraints.equal_length import EqualLengthConstraint
+from raygeo.sketch.constraints.horizontal import HorizontalConstraint
+from raygeo.sketch.constraints.parallelogram import ParallelogramConstraint
+from raygeo.sketch.constraints.perpendicular import (
+    PerpendicularConstraint,
+    PerpendicularTarget,
+)
+from raygeo.sketch.constraints.point_on_curve import PointOnCurveConstraint
+from raygeo.sketch.constraints.point_on_line import (
+    PointOnLineConstraint,
+    PointOnTarget,
+)
+from raygeo.sketch.constraints.radius import RadiusConstraint
+from raygeo.sketch.constraints.rotational import RotationalConstraint
+from raygeo.sketch.constraints.symmetry import (
+    SymmetryConstraint,
+    SymmetryTarget,
+)
+from raygeo.sketch.constraints.tangent import TangentConstraint
+from raygeo.sketch.constraints.vertical import VerticalConstraint
 
 
 def _max_residuals(points, hard):
@@ -18,11 +46,10 @@ def test_horizontal_vertical():
         PointDef(0, 1.0, 2.0, False),
         PointDef(1, 5.0, 6.0, False),
     ]
-    hard = [
-        Constraint.Horizontal(p1=0, p2=1),
-        Constraint.Vertical(p1=0, p2=1),
-    ]
-    residuals = _max_residuals(points, hard)
+    residuals = _max_residuals(
+        points,
+        [HorizontalConstraint(0, 1), VerticalConstraint(0, 1)],
+    )
     _assert_close(residuals[0], abs(2.0 - 6.0))
     _assert_close(residuals[1], abs(1.0 - 5.0))
 
@@ -32,7 +59,7 @@ def test_coincident():
         PointDef(0, 1.0, 2.0, False),
         PointDef(1, 4.0, -1.0, False),
     ]
-    residuals = _max_residuals(points, [Constraint.Coincident(p1=0, p2=1)])
+    residuals = _max_residuals(points, [CoincidentConstraint(0, 1)])
     _assert_close(residuals[0], 3.0)
 
 
@@ -41,9 +68,7 @@ def test_distance():
         PointDef(0, 0.0, 0.0, False),
         PointDef(1, 3.0, 4.0, False),
     ]
-    residuals = _max_residuals(
-        points, [Constraint.Distance(p1=0, p2=1, value=10.0)]
-    )
+    residuals = _max_residuals(points, [DistanceConstraint(0, 1, 10.0)])
     _assert_close(residuals[0], 5.0)
 
 
@@ -52,52 +77,46 @@ def test_radius_diameter():
         PointDef(0, 1.0, 1.0, False),
         PointDef(1, 4.0, 5.0, False),
     ]
-    residuals = _max_residuals(
-        points, [Constraint.Radius(center=0, radius_point=1, value=10.0)]
-    )
+    residuals = _max_residuals(points, [RadiusConstraint(0, 1, 10.0)])
     _assert_close(residuals[0], 5.0)
-    residuals = _max_residuals(
-        points, [Constraint.Diameter(center=0, radius_point=1, value=10.0)]
-    )
-    _assert_close(residuals[0], 10.0 - 10.0)
+    residuals = _max_residuals(points, [DiameterConstraint(0, 1, 10.0)])
+    _assert_close(residuals[0], 0.0)
 
 
-def test_perp_line_line():
+def test_perpendicular_line_line():
     points = [
         PointDef(0, 0.0, 0.0, False),
         PointDef(1, 2.0, 0.0, False),
         PointDef(2, 1.0, 1.0, False),
         PointDef(3, 1.0, 3.0, False),
     ]
-    residuals = _max_residuals(
-        points, [Constraint.PerpLineLine(a1=0, a2=1, b1=2, b2=3)]
+    constraint = PerpendicularConstraint(
+        PerpendicularTarget.LineLine(0, 1, 2, 3)
     )
+    residuals = _max_residuals(points, [constraint])
     _assert_close(residuals[0], 0.0)
     points[3] = PointDef(3, 2.0, 3.0, False)
-    residuals = _max_residuals(
-        points, [Constraint.PerpLineLine(a1=0, a2=1, b1=2, b2=3)]
-    )
+    residuals = _max_residuals(points, [constraint])
     _assert_close(residuals[0], 2.0 * 1.0 + 0.0 * 2.0)
 
 
-def test_perp_line_center():
+def test_perpendicular_line_center():
     points = [
         PointDef(0, 0.0, 0.0, False),
         PointDef(1, 2.0, 0.0, False),
         PointDef(2, 1.0, 0.0, False),
     ]
-    residuals = _max_residuals(
-        points, [Constraint.PerpLineCenter(l1=0, l2=1, center=2)]
+    constraint = PerpendicularConstraint(
+        PerpendicularTarget.LineCenter(0, 1, 2)
     )
+    residuals = _max_residuals(points, [constraint])
     _assert_close(residuals[0], 0.0)
     points[2] = PointDef(2, 1.0, 5.0, False)
-    residuals = _max_residuals(
-        points, [Constraint.PerpLineCenter(l1=0, l2=1, center=2)]
-    )
+    residuals = _max_residuals(points, [constraint])
     _assert_close(residuals[0], 10.0)
 
 
-def test_perp_circles():
+def test_perpendicular_circles():
     points = [
         PointDef(0, 0.0, 0.0, False),
         PointDef(1, 3.0, 0.0, False),
@@ -106,9 +125,9 @@ def test_perp_circles():
     ]
     residuals = _max_residuals(
         points,
-        [Constraint.PerpCircles(c1=0, r1_point=1, c2=2, r2_point=3)],
+        [PerpendicularConstraint(PerpendicularTarget.Circles(0, 1, 2, 3))],
     )
-    _assert_close(residuals[0], 9.0 + 16.0 - 25.0)
+    _assert_close(residuals[0], 0.0)
 
 
 def test_tangent():
@@ -118,9 +137,7 @@ def test_tangent():
         PointDef(2, 5.0, 2.0, False),
         PointDef(3, 5.0, 5.0, False),
     ]
-    residuals = _max_residuals(
-        points, [Constraint.Tangent(l1=0, l2=1, center=2, radius_point=3)]
-    )
+    residuals = _max_residuals(points, [TangentConstraint(0, 1, 2, 3)])
     _assert_close(residuals[0], 1.0)
 
 
@@ -131,7 +148,8 @@ def test_point_on_line():
         PointDef(2, 2.0, 0.0, False),
     ]
     residuals = _max_residuals(
-        points, [Constraint.PointOnLine(point=0, l1=1, l2=2)]
+        points,
+        [PointOnLineConstraint(0, PointOnTarget.Line(1, 2))],
     )
     _assert_close(residuals[0], 2.0)
 
@@ -144,9 +162,9 @@ def test_point_on_radius_curve():
     ]
     residuals = _max_residuals(
         points,
-        [Constraint.PointOnRadiusCurve(point=0, center=1, radius_point=2)],
+        [PointOnLineConstraint(0, PointOnTarget.RadiusCurve(1, 2))],
     )
-    _assert_close(residuals[0], 5.0 - 3.0)
+    _assert_close(residuals[0], 2.0)
 
 
 def test_point_on_bezier():
@@ -158,13 +176,13 @@ def test_point_on_bezier():
     residuals = _max_residuals(
         points,
         [
-            Constraint.PointOnBezier(
-                point=0,
-                start=1,
-                end=2,
-                cp1_offset=(0.5, 0.5),
-                cp2_offset=(-0.5, 0.5),
-                is_line=False,
+            PointOnCurveConstraint(
+                0,
+                1,
+                2,
+                (0.5, 0.5),
+                (-0.5, 0.5),
+                False,
             )
         ],
     )
@@ -178,7 +196,8 @@ def test_symmetry_point():
         PointDef(2, 1.0, 1.0, False),
     ]
     residuals = _max_residuals(
-        points, [Constraint.SymmetryPoint(p1=0, p2=1, center=2)]
+        points,
+        [SymmetryConstraint(0, 1, SymmetryTarget.Point(2))],
     )
     _assert_close(residuals[0], 2.0)
 
@@ -191,7 +210,8 @@ def test_symmetry_line():
         PointDef(3, 0.0, 4.0, False),
     ]
     residuals = _max_residuals(
-        points, [Constraint.SymmetryLine(p1=0, p2=1, l1=2, l2=3)]
+        points,
+        [SymmetryConstraint(0, 1, SymmetryTarget.Line(2, 3))],
     )
     _assert_close(residuals[0], 0.0)
 
@@ -202,9 +222,7 @@ def test_collinear():
         PointDef(1, 2.0, 0.0, False),
         PointDef(2, 1.0, 1.0, False),
     ]
-    residuals = _max_residuals(
-        points, [Constraint.Collinear(p1=0, p2=1, p3=2)]
-    )
+    residuals = _max_residuals(points, [CollinearConstraint(0, 1, 2)])
     _assert_close(residuals[0], 2.0 * 1.0 - 0.0 * 1.0)
 
 
@@ -215,10 +233,8 @@ def test_equal_distance():
         PointDef(2, 1.0, 1.0, False),
         PointDef(3, 4.0, 1.0, False),
     ]
-    residuals = _max_residuals(
-        points, [Constraint.EqualDistance(p1=0, p2=1, p3=2, p4=3)]
-    )
-    _assert_close(residuals[0], 5.0 - 3.0)
+    residuals = _max_residuals(points, [EqualDistanceConstraint(0, 1, 2, 3)])
+    _assert_close(residuals[0], 2.0)
 
 
 def test_equal_length():
@@ -228,10 +244,7 @@ def test_equal_length():
         PointDef(2, 0.0, 1.0, False),
         PointDef(3, 1.0, 1.0, False),
     ]
-    residuals = _max_residuals(
-        points,
-        [Constraint.EqualLength(pairs=[[0, 1, 2, 3]])],
-    )
+    residuals = _max_residuals(points, [EqualLengthConstraint([[0, 1, 2, 3]])])
     _assert_close(residuals[0], 3.0)
 
 
@@ -243,10 +256,9 @@ def test_aspect_ratio():
         PointDef(3, 0.0, 2.0, False),
     ]
     residuals = _max_residuals(
-        points,
-        [Constraint.AspectRatio(p1=0, p2=1, p3=2, p4=3, ratio=2.0)],
+        points, [AspectRatioConstraint(0, 1, 2, 3, 2.0)]
     )
-    _assert_close(residuals[0], 4.0 - 2.0 * 1.0)
+    _assert_close(residuals[0], 2.0)
 
 
 def test_parallelogram():
@@ -256,10 +268,7 @@ def test_parallelogram():
         PointDef(2, 0.0, 3.0, False),
         PointDef(3, 4.0, 2.0, False),
     ]
-    residuals = _max_residuals(
-        points,
-        [Constraint.Parallelogram(p_origin=0, p_width=1, p_height=2, p4=3)],
-    )
+    residuals = _max_residuals(points, [ParallelogramConstraint(0, 1, 2, 3)])
     _assert_close(residuals[0], 1.0)
 
 
@@ -271,7 +280,7 @@ def test_rotational():
     ]
     residuals = _max_residuals(
         points,
-        [Constraint.Rotational(center=0, p1=1, p2=2, angle_rad=math.pi / 2)],
+        [RotationalConstraint(0, 1, 2, math.pi / 2)],
     )
     _assert_close(residuals[0], 0.0)
 
@@ -283,27 +292,11 @@ def test_angle():
         PointDef(2, 2.0, 0.0, False),
         PointDef(3, 2.0, 2.0, False),
     ]
-    residuals = _max_residuals(
-        points,
-        [
-            Constraint.Angle(
-                p1=0,
-                p2=1,
-                p3=2,
-                p4=3,
-                e1_far=None,
-                e2_far=None,
-                value_deg=90.0,
-            )
-        ],
-    )
+    residuals = _max_residuals(points, [AngleConstraint(0, 1, 2, 3, 90.0)])
     _assert_close(residuals[0], 0.0)
 
 
 def test_drag():
     points = [PointDef(0, 2.0, 3.0, False)]
-    residuals = _max_residuals(
-        points,
-        [Constraint.Drag(point=0, target_x=4.0, target_y=3.0, weight=0.5)],
-    )
+    residuals = _max_residuals(points, [DragConstraint(0, 4.0, 3.0, 0.5)])
     _assert_close(residuals[0], 1.0)

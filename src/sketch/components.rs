@@ -7,14 +7,14 @@
 
 use std::collections::{BTreeSet, HashMap};
 
-use super::constraint::ConstraintSpec;
+use super::constraint::SketchConstraint;
 
 /// Partitions all points referenced by constraints into connected
 /// components of the constraint graph.  Two points share a component
 /// when some chain of constraints couples them.  Points not referenced
 /// by any constraint belong to no component.
 pub fn compute_constraint_components(
-    constraints: &[&ConstraintSpec],
+    constraints: &[&dyn SketchConstraint],
 ) -> Vec<BTreeSet<u64>> {
     let mut parent: HashMap<u64, u64> = HashMap::new();
 

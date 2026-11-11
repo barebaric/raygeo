@@ -14,6 +14,7 @@
 
 pub mod components;
 pub mod constraint;
+pub mod constraints;
 pub mod eval;
 pub mod solver;
 pub mod trf;
