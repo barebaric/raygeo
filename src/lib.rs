@@ -11,6 +11,7 @@
 //!
 //! ```text
 //!   geo   →   ops   →   cnc
+//!     └→   sketch
 //!                        │
 //!                        ↓ depends on
 //!                    pipeline (generic runtime; std + rayon only)
@@ -21,6 +22,11 @@
 //! axes, clearing-state tracking, adaptive entry/wavefront generation.
 //! Knows nothing about machining, motion commands, tools, or feed
 //! rates.
+//!
+//! **[`sketch`]** — Sketch constraint solving.
+//! Moves a set of 2D points so that geometric constraints (horizontal,
+//! distance, tangency, ...) hold, via trust-region-reflective least
+//! squares. Knows only [`geo`] primitives; no machining concepts.
 //!
 //! **[`ops`]** — Motion assembly.
 //! Turns geometric primitives into [`Ops`] command sequences: linking,
@@ -97,6 +103,7 @@ pub mod mesh;
 pub mod ops;
 pub mod pipeline;
 pub mod prof;
+pub mod sketch;
 pub mod svg;
 // The tracing machinery is only driven from the Python bindings; the
 // pure Rust core compiles it but has no caller.
@@ -235,6 +242,7 @@ fn raygeo(m: &Bound<'_, PyModule>) -> PyResult<()> {
     python::image::register(m)?;
     python::mesh::register(m)?;
     python::ops::register(m)?;
+    python::sketch::register(m)?;
     python::svg::register(m)?;
     python::trace::register(m)?;
     python::pipeline::register(m)?;

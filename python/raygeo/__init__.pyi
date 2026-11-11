@@ -87,6 +87,7 @@ from . import image
 from . import mesh
 from . import ops
 from . import pipeline
+from . import sketch
 from . import svg
 from . import trace
 __all__ = [
@@ -98,6 +99,7 @@ __all__ = [
     "mesh",
     "ops",
     "pipeline",
+    "sketch",
     "svg",
     "trace",
 ]

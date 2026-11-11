@@ -268,6 +268,28 @@ distance is measured to the nearest endpoint when the perpendicular falls outsid
 
 *Perpendicular distance from a point to a line*
 
+### `get_point_line_signed_distance()`
+
+```python
+get_point_line_signed_distance(
+    point: types.Point,
+    line_p1: types.Point,
+    line_p2: types.Point,
+) -> float
+```
+
+Get the signed perpendicular distance from a point to the **infinite line** through `line_p1` and
+`line_p2`. Positive when the point lies left of the line direction, negative when right. Falls back
+to the plain distance to `line_p1` for degenerate lines.
+
+| Parameter    | Type          | Description                     |
+| ------------ | ------------- | ------------------------------- |
+| `point`      | `types.Point` | Point (x, y).                   |
+| `line_p1`    | `types.Point` | First point defining the line.  |
+| `line_p2`    | `types.Point` | Second point defining the line. |
+| _Returns_    | `float`       | Signed perpendicular distance.  |
+| _Complexity_ |               | O(1) time, O(1) space           |
+
 ### `get_segment_segment_distance()`
 
 ```python

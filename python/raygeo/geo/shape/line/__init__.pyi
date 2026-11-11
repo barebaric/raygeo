@@ -25,6 +25,7 @@ __all__ = [
     "get_line_segment_length",
     "get_line_segment_polygon_intersections",
     "get_point_line_distance",
+    "get_point_line_signed_distance",
     "get_segment_segment_distance",
     "interpolated_segment_3d",
     "is_point_on_line_segment",
@@ -173,6 +174,21 @@ def get_point_line_distance(point: types.Point, line_p1: types.Point, line_p2: t
     :param line_p1: First point on the segment.
     :param line_p2: Second point on the segment.
     :returns: Distance (clamped to segment).
+    :complexity: O(1) time, O(1) space
+    """
+
+def get_point_line_signed_distance(point: types.Point, line_p1: types.Point, line_p2: types.Point) -> float:
+    r"""
+    Get the signed perpendicular distance from a point to the
+    **infinite line** through ``line_p1`` and ``line_p2``.
+    Positive when the point lies left of the line direction,
+    negative when right. Falls back to the plain distance to
+    ``line_p1`` for degenerate lines.
+    
+    :param point: Point (x, y).
+    :param line_p1: First point defining the line.
+    :param line_p2: Second point defining the line.
+    :returns: Signed perpendicular distance.
     :complexity: O(1) time, O(1) space
     """
 
