@@ -13,7 +13,9 @@ from raygeo.geo.shape.arc import (
     get_arc_closest_point,
     get_arc_direction,
     get_arc_midpoint,
+    get_arc_samples,
     get_arc_sweep,
+    get_arc_tangent_at_point,
     get_arc_through_point,
     get_polyline_turn_sign,
     is_angle_between,
@@ -943,3 +945,70 @@ class TestGetArcChordSteps:
             assert chord_sag <= sag + 1e-12, (
                 f"step sag {chord_sag:.4f} exceeds {sag}"
             )
+
+
+def test_get_arc_samples_count_and_endpoints():
+    center = (10.0, 20.0)
+    radius = 7.0
+    start_angle = 0.3
+    sweep = get_arc_sweep(0.3, 2.1, False)
+    samples = get_arc_samples(center, radius, start_angle, sweep, 8)
+    assert len(samples) == 9
+    assert samples[0] == pytest.approx(
+        (
+            center[0] + radius * math.cos(start_angle),
+            center[1] + radius * math.sin(start_angle),
+        )
+    )
+    assert samples[-1] == pytest.approx(
+        (
+            center[0] + radius * math.cos(start_angle + sweep),
+            center[1] + radius * math.sin(start_angle + sweep),
+        )
+    )
+    for x, y in samples:
+        assert math.hypot(x - center[0], y - center[1]) == pytest.approx(
+            radius
+        )
+
+
+def test_get_arc_samples_zero_segments_is_empty():
+    assert get_arc_samples((10.0, 20.0), 7.0, 0.0, 1.0, 0) == []
+
+
+def test_get_arc_tangent_at_point():
+    center = (10.0, 20.0)
+    radius = 7.0
+    angle = 1.1
+    point = (
+        center[0] + radius * math.cos(angle),
+        center[1] + radius * math.sin(angle),
+    )
+    radius_vec = (math.cos(angle), math.sin(angle))
+
+    ccw = get_arc_tangent_at_point(center, point, False)
+    cw = get_arc_tangent_at_point(center, point, True)
+
+    # Tangents are unit vectors perpendicular to the radius, and the
+    # two chiralities oppose each other.
+    for tangent in (ccw, cw):
+        dot = tangent[0] * radius_vec[0] + tangent[1] * radius_vec[1]
+        assert dot == pytest.approx(0.0, abs=1e-12)
+        assert math.hypot(*tangent) == pytest.approx(1.0)
+    assert ccw == pytest.approx((-cw[0], -cw[1]))
+
+    # CCW travel moves towards increasing angle.
+    slightly_on = (
+        center[0] + radius * math.cos(angle + 1e-9),
+        center[1] + radius * math.sin(angle + 1e-9),
+    )
+    forward = (slightly_on[0] - point[0], slightly_on[1] - point[1])
+    assert ccw[0] * forward[0] + ccw[1] * forward[1] > 0.0
+    assert cw[0] * forward[0] + cw[1] * forward[1] < 0.0
+
+
+def test_get_arc_tangent_at_point_degenerate_center_point():
+    assert get_arc_tangent_at_point((10.0, 20.0), (10.0, 20.0), False) == (
+        1.0,
+        0.0,
+    )
