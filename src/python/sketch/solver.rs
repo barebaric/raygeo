@@ -119,8 +119,21 @@ impl PySketchSolver {
         self.inner.constrained_flags()
     }
 
+    /// All residual values of the hard constraints at the current
+    /// positions, in constraint order.
+    fn residuals(&self) -> Vec<f64> {
+        self.inner.residuals()
+    }
+
     /// Maximum absolute residual per hard constraint.
     fn max_residuals(&self) -> Vec<f64> {
         self.inner.max_residuals()
+    }
+
+    /// Dense Jacobian rows of the hard constraints at the current
+    /// positions, over the state points (non-fixed points touched by
+    /// any constraint, in input order).  For tests and debugging.
+    fn jacobian(&self) -> Vec<Vec<f64>> {
+        self.inner.jacobian()
     }
 }
