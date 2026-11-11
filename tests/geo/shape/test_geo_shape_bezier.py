@@ -736,9 +736,10 @@ def test_get_bezier_samples_match_parametric_evaluation():
 
 
 def test_get_bezier_samples_zero_segments_is_empty():
-    assert get_bezier_samples(
-        (1.0, 2.0), (3.0, 5.0), (6.0, 4.0), (8.0, 7.0), 0
-    ) == []
+    assert (
+        get_bezier_samples((1.0, 2.0), (3.0, 5.0), (6.0, 4.0), (8.0, 7.0), 0)
+        == []
+    )
 
 
 def test_get_bezier_tangent_directions_at_endpoints():

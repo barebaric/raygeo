@@ -17,4 +17,5 @@ pub mod constraint;
 pub mod constraints;
 pub mod eval;
 pub mod solver;
+pub mod topology;
 pub mod trf;

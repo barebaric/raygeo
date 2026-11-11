@@ -16,10 +16,12 @@ conflict indices.
 import builtins
 import typing
 from . import constraints
+from . import topology
 __all__ = [
     "PointDef",
     "Solver",
     "constraints",
+    "topology",
 ]
 
 @typing.final
