@@ -3433,6 +3433,7 @@ impl PyOps {
     ///     its Y axis between rows, and the backlash of every reversal
     ///     displaces the rows enough to show up as banding.
     /// :complexity: O(n²) average time, O(n) space
+    #[allow(clippy::too_many_arguments)]
     #[pyo3(signature = (allow_flip=true, preserve_first=false, preserve_order=Vec::new(), progress_cb=None, best_start_point=false, prefer_corners=false, reorder_scanlines=false))]
     fn optimize_travel(
         &mut self,

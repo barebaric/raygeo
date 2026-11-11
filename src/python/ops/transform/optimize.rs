@@ -20,6 +20,7 @@ pub(crate) fn register(transform_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 #[pyfunction(name = "optimize_travel")]
 #[pyo3(signature = (ops, allow_flip=true, preserve_first=false, preserve_order=Vec::new(), progress_cb=None, best_start_point=false, prefer_corners=false, reorder_scanlines=false))]
 fn optimize_travel_py(
