@@ -145,7 +145,12 @@ impl SketchConstraint for AngleConstraint {
 
     fn gradient(&self, reg: &mut dyn PointContext) -> Vec<JacobianEntry> {
         let mut entries = Vec::new();
+        let mut seen: Vec<u64> = Vec::new();
         for pid in [self.p1, self.p2, self.p3, self.p4] {
+            if seen.contains(&pid) {
+                continue;
+            }
+            seen.push(pid);
             let (orig_x, orig_y) = reg.xy(pid);
 
             reg.set_xy(pid, orig_x + GRAD_FD_EPS, orig_y);

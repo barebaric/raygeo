@@ -100,4 +100,13 @@ class Solver:
         positions, over the state points (non-fixed points touched by
         any constraint, in input order).  For tests and debugging.
         """
+    def status(self) -> builtins.int:
+        r"""
+        Termination status of the last solve (>0 means success,
+        mirroring SciPy: 1 gtol, 2 ftol, 3 xtol, 4 both, 0 max_nfev).
+        """
+    def nfev(self) -> builtins.int:
+        r"""
+        Residual function evaluations of the last solve.
+        """
 

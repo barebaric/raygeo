@@ -136,4 +136,15 @@ impl PySketchSolver {
     fn jacobian(&self) -> Vec<Vec<f64>> {
         self.inner.jacobian()
     }
+
+    /// Termination status of the last solve (>0 means success,
+    /// mirroring SciPy: 1 gtol, 2 ftol, 3 xtol, 4 both, 0 max_nfev).
+    fn status(&self) -> i32 {
+        self.inner.status()
+    }
+
+    /// Residual function evaluations of the last solve.
+    fn nfev(&self) -> usize {
+        self.inner.nfev()
+    }
 }

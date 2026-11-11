@@ -42,6 +42,8 @@ pub struct SketchSolver {
     hard: Vec<Box<dyn SketchConstraint>>,
     auxiliary: Vec<Box<dyn SketchConstraint>>,
     point_filter: Option<HashSet<u64>>,
+    last_status: i32,
+    last_nfev: usize,
 }
 
 impl SketchSolver {
@@ -75,6 +77,8 @@ impl SketchSolver {
             hard,
             auxiliary,
             point_filter: point_filter.map(HashSet::from_iter),
+            last_status: 0,
+            last_nfev: 0,
         }
     }
 
@@ -274,6 +278,9 @@ impl SketchSolver {
             self.coords[2 * slot + 1] = final_coords[2 * slot + 1];
         }
 
+        self.last_status = result.status;
+        self.last_nfev = result.nfev;
+
         let success = result.status > 0 && result.cost <= tolerance;
 
         if success && update_dof {
@@ -337,6 +344,18 @@ impl SketchSolver {
         let constraints: Vec<&dyn SketchConstraint> =
             self.hard.iter().map(|c| c.as_ref()).collect();
         lookup.residuals(&constraints)
+    }
+
+    /// Termination status of the last solve (>0 means success,
+    /// mirroring SciPy: 1 gtol, 2 ftol, 3 xtol, 4 both, 0 max_nfev).
+    pub fn status(&self) -> i32 {
+        self.last_status
+    }
+
+    /// Residual function evaluations of the last solve (the last
+    /// component's solve for decomposed runs).
+    pub fn nfev(&self) -> usize {
+        self.last_nfev
     }
 
     /// Returns the maximum absolute residual per hard constraint at

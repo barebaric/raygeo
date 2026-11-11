@@ -205,5 +205,17 @@ def test_angle():
     )
 
 
+def test_angle_shared_joint():
+    """Adjacent lines sharing a joint point: the finite difference
+    of the error captures the joint in both line roles, so the
+    analytic gradient must contain one combined entry, not a sum of
+    two.  Regression test for a double-counting bug that stalled
+    chained-angle sketches."""
+    _check_gradient(
+        AngleConstraint(0, 1, 1, 2, 150.0),
+        [(0, 0), (2, 0), (4, 2)],
+    )
+
+
 def test_drag():
     _check_gradient(DragConstraint(0, 4.0, 3.0, 0.5), [(2, 3)])
