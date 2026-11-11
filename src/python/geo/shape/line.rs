@@ -19,8 +19,9 @@ use crate::geo::shape::line::{
     get_line_closest_point, get_line_line_intersection,
     get_line_segment_closest_point, get_line_segment_intersection,
     get_line_segment_length, get_line_segment_polygon_intersections,
-    get_point_line_distance, get_segment_segment_distance,
-    interpolated_segment_3d, is_point_on_segment, longest_line_through_point,
+    get_point_line_distance, get_point_line_signed_distance,
+    get_segment_segment_distance, interpolated_segment_3d, is_point_on_segment,
+    longest_line_through_point,
 };
 use crate::geo::types::{Point, Rect};
 use pyo3::prelude::*;
@@ -84,6 +85,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         get_line_closest_point_py,
         get_line_segment_closest_point_py,
         get_point_line_distance_py,
+        get_point_line_signed_distance_py,
         get_segment_segment_distance_py,
         is_point_on_line_segment_py,
         does_line_segment_intersect_rect_py,
@@ -283,6 +285,43 @@ fn get_point_line_distance_py(
     line_p2: (f64, f64),
 ) -> f64 {
     get_point_line_distance(
+        Point::new(point.0, point.1),
+        Point::new(line_p1.0, line_p1.1),
+        Point::new(line_p2.0, line_p2.1),
+    )
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import raygeo.geo.types
+
+    def get_point_line_signed_distance(
+        point: types.Point,
+        line_p1: types.Point,
+        line_p2: types.Point,
+    ) -> float:
+        """Get the signed perpendicular distance from a point to the
+        **infinite line** through ``line_p1`` and ``line_p2``.
+        Positive when the point lies left of the line direction,
+        negative when right. Falls back to the plain distance to
+        ``line_p1`` for degenerate lines.
+
+        :param point: Point (x, y).
+        :param line_p1: First point defining the line.
+        :param line_p2: Second point defining the line.
+        :returns: Signed perpendicular distance.
+        :complexity: O(1) time, O(1) space
+        """
+"#,
+    module = "raygeo.geo.shape.line"
+)]
+#[pyfunction(name = "get_point_line_signed_distance")]
+fn get_point_line_signed_distance_py(
+    point: (f64, f64),
+    line_p1: (f64, f64),
+    line_p2: (f64, f64),
+) -> f64 {
+    get_point_line_signed_distance(
         Point::new(point.0, point.1),
         Point::new(line_p1.0, line_p1.1),
         Point::new(line_p2.0, line_p2.1),

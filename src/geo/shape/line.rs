@@ -165,6 +165,25 @@ pub fn get_point_line_distance(
     (point - closest).length()
 }
 
+/// Signed perpendicular distance from a point to the infinite line
+/// through `line_start` and `line_end`.  Positive when the point lies
+/// left of the line direction, negative when right.  Falls back to
+/// the plain distance to `line_start` for degenerate lines.
+pub fn get_point_line_signed_distance(
+    point: Point,
+    line_start: Point,
+    line_end: Point,
+) -> f64 {
+    let dx = line_end.x - line_start.x;
+    let dy = line_end.y - line_start.y;
+    let length = dx.hypot(dy);
+    if length < 1e-9 {
+        return (point.x - line_start.x).hypot(point.y - line_start.y);
+    }
+    let cross = dx * (point.y - line_start.y) - (point.x - line_start.x) * dy;
+    cross / length
+}
+
 /// Finds all intersection parameters along a line segment with multiple polygons.
 /// Returns sorted list of t values [0, 1] where segment intersects any region.
 pub fn get_line_segment_polygon_intersections(

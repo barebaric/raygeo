@@ -1,0 +1,45 @@
+//! The sketch constraint contract.
+//!
+//! Every constraint mirrors one class of the reference sketch model
+//! and owns its own residual and gradient math (see the [`constraints`
+//! submodule]).  The caller resolves entity references to concrete
+//! point ids and parameter expressions to plain floats, so a
+//! constraint sees only a point context and never entity or parameter
+//! knowledge.
+
+/// Read/write view of the sketch's point coordinates, addressed by
+/// point id.  Constraints read coordinates through [`PointContext::xy`];
+/// constraints whose Jacobian is computed by finite differences
+/// (e.g. the angle constraint) additionally write perturbed
+/// coordinates through [`PointContext::set_xy`], mirroring how the
+/// reference implementation mutates registry points.
+pub trait PointContext {
+    /// Returns the `(x, y)` coordinates of a point id.
+    fn xy(&self, id: u64) -> (f64, f64);
+
+    /// Overwrites the coordinates of a point id.
+    fn set_xy(&mut self, id: u64, x: f64, y: f64);
+}
+
+/// One Jacobian entry: derivative of residual `row` w.r.t. the two
+/// coordinates of `point_id`.
+pub type JacobianEntry = (u64, usize, f64, f64);
+
+/// Base contract of all sketch constraints, mirroring the reference
+/// implementation's constraint base class.
+pub trait SketchConstraint: Send + Sync {
+    /// Returns all point ids this constraint couples.
+    fn referenced_points(&self) -> Vec<u64>;
+
+    /// Returns the number of scalar residuals.
+    fn residual_count(&self) -> usize;
+
+    /// Calculates the error of the constraint.
+    fn error(&self, reg: &dyn PointContext) -> Vec<f64>;
+
+    /// Calculates the partial derivatives of the error as
+    /// `(point_id, row, d/dx, d/dy)` entries.  Entries referencing
+    /// points outside the solver's state vector are skipped by the
+    /// assembler; entries for the same `(point_id, row)` accumulate.
+    fn gradient(&self, reg: &mut dyn PointContext) -> Vec<JacobianEntry>;
+}
