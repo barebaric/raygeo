@@ -695,3 +695,53 @@ pub fn get_polyline_turn_sign(polyline: &[Point]) -> f64 {
         -1.0
     }
 }
+
+/// Samples an arc uniformly in angle, including both endpoints.
+///
+/// `sweep` is the signed angular extent; a full turn passes through
+/// `2 * pi` (or `-2 * pi` for clockwise sweeps).
+pub fn get_arc_samples(
+    center: Point,
+    radius: f64,
+    start_angle: f64,
+    sweep: f64,
+    segments: usize,
+) -> Vec<Point> {
+    if segments == 0 {
+        return Vec::new();
+    }
+    (0..=segments)
+        .map(|i| {
+            let t = i as f64 / segments as f64;
+            let angle = start_angle + sweep * t;
+            Point::new(
+                center.x + radius * angle.cos(),
+                center.y + radius * angle.sin(),
+            )
+        })
+        .collect()
+}
+
+/// Unit tangent of the circle at `point` for the given chirality.
+///
+/// Counter-clockwise travel is perpendicular to the outward radius,
+/// rotated 90 degrees left; clockwise travel reverses it.  Returns
+/// (1, 0) when `point` coincides with `center`.
+pub fn get_arc_tangent_at_point(
+    center: Point,
+    point: Point,
+    clockwise: bool,
+) -> Point {
+    let dx = point.x - center.x;
+    let dy = point.y - center.y;
+    let length = dx.hypot(dy);
+    if length < 1e-12 {
+        return Point::new(1.0, 0.0);
+    }
+    let (ux, uy) = (dx / length, dy / length);
+    if clockwise {
+        Point::new(uy, -ux)
+    } else {
+        Point::new(-uy, ux)
+    }
+}

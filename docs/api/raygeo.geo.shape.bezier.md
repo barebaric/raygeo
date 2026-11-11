@@ -36,6 +36,31 @@ Clip a cubic bezier with a rectangle.
 | _Returns_    | `list[tuple[types.Point, types.Point, types.Point, types.Point]]` | List of bezier segments inside the rectangle.    |
 | _Complexity_ |                                                                   | O(n)                                             |
 
+### `compute_constrained_control_offset()`
+
+```python
+compute_constrained_control_offset(
+    modified: types.Point,
+    other: Optional[types.Point],
+    symmetric: bool,
+) -> types.Point
+```
+
+Compute the opposite control-point offset of a smooth or symmetric Bezier joint from the modified
+one.
+
+Offsets are relative to the shared joint point. Symmetric joints mirror the modified offset; smooth
+joints mirror its direction and keep the other offset's length (collinear handles, G1 continuity).
+Degenerate inputs fall back to mirroring.
+
+| Parameter    | Type                    | Description                                 |
+| ------------ | ----------------------- | ------------------------------------------- |
+| `modified`   | `types.Point`           | The modified control offset (x, y).         |
+| `other`      | `Optional[types.Point]` | The opposite control offset (x, y), if any. |
+| `symmetric`  | `bool`                  | Whether the joint is symmetric.             |
+| _Returns_    | `types.Point`           | The constrained opposite offset (x, y).     |
+| _Complexity_ |                         | O(1) time, O(1) space                       |
+
 ### `convert_cubic_bezier_to_quadratic()`
 
 ```python
@@ -256,6 +281,58 @@ Get intersection t-values of a bezier with a rectangle.
 | `rect`       | `types.Rect`  | Rectangle (x_min, y_min, x_max, y_max).       |
 | _Returns_    | `list[float]` | List of t-values where the bezier intersects. |
 | _Complexity_ |               | O(n)                                          |
+
+### `get_bezier_samples()`
+
+```python
+get_bezier_samples(
+    p0: types.Point,
+    c1: types.Point,
+    c2: types.Point,
+    p3: types.Point,
+    segments: int,
+) -> list[types.Point]
+```
+
+Sample the cubic Bezier uniformly in parameter.
+
+Returns `segments + 1` points from t = 0 through t = 1, including both endpoints.
+
+| Parameter    | Type                | Description                            |
+| ------------ | ------------------- | -------------------------------------- |
+| `p0`         | `types.Point`       | Start point (x, y).                    |
+| `c1`         | `types.Point`       | First control point (x, y).            |
+| `c2`         | `types.Point`       | Second control point (x, y).           |
+| `p3`         | `types.Point`       | End point (x, y).                      |
+| `segments`   | `int`               | Number of segments (sample count - 1). |
+| _Returns_    | `list[types.Point]` | List of points (x, y).                 |
+| _Complexity_ |                     | O(n) time, O(n) space for n samples    |
+
+### `get_bezier_tangent()`
+
+```python
+get_bezier_tangent(
+    p0: types.Point,
+    c1: types.Point,
+    c2: types.Point,
+    p3: types.Point,
+    t: float,
+) -> types.Point
+```
+
+First derivative B'(t) of the cubic Bezier, as a raw vector.
+
+Unnormalized. At t = 0 this is parallel to `c1 - p0`, at t = 1 to `p3 - c2`.
+
+| Parameter    | Type          | Description                  |
+| ------------ | ------------- | ---------------------------- |
+| `p0`         | `types.Point` | Start point (x, y).          |
+| `c1`         | `types.Point` | First control point (x, y).  |
+| `c2`         | `types.Point` | Second control point (x, y). |
+| `p3`         | `types.Point` | End point (x, y).            |
+| `t`          | `float`       | Curve parameter in [0, 1].   |
+| _Returns_    | `types.Point` | Tangent vector (x, y).       |
+| _Complexity_ |               | O(1) time, O(1) space        |
 
 ### `get_perpendicular_dist_sq()`
 

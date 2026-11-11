@@ -22,7 +22,9 @@ __all__ = [
     "get_arc_direction",
     "get_arc_length",
     "get_arc_midpoint",
+    "get_arc_samples",
     "get_arc_sweep",
+    "get_arc_tangent_at_point",
     "get_arc_through_point",
     "get_polyline_turn_sign",
     "is_angle_between",
@@ -145,6 +147,19 @@ def get_arc_midpoint(start: types.Point, end: types.Point, center: types.Point, 
     :complexity: O(1) time, O(1) space
     """
 
+def get_arc_samples(center: types.Point, radius: float, start_angle: float, sweep: float, segments: int) -> list[types.Point]:
+    r"""
+    Sample an arc uniformly in angle, including both endpoints.
+    
+    :param center: Arc center (x, y).
+    :param radius: Arc radius.
+    :param start_angle: Start angle in radians.
+    :param sweep: Signed angular extent in radians.
+    :param segments: Number of segments (sample count - 1).
+    :returns: List of ``segments + 1`` points (x, y).
+    :complexity: O(n) time, O(n) space for n samples
+    """
+
 def get_arc_sweep(start_angle: float, end_angle: float, clockwise: bool) -> float:
     r"""
     Compute the signed sweep angle for an arc.
@@ -155,6 +170,22 @@ def get_arc_sweep(start_angle: float, end_angle: float, clockwise: bool) -> floa
     :param end_angle: End angle in radians.
     :param clockwise: Whether the arc is clockwise.
     :returns: Signed sweep angle in radians.
+    :complexity: O(1) time, O(1) space
+    """
+
+def get_arc_tangent_at_point(center: types.Point, point: types.Point, clockwise: bool) -> types.Point:
+    r"""
+    Unit tangent of the circle at ``point`` for the given
+    chirality.
+    
+    Counter-clockwise travel is perpendicular to the outward
+    radius, rotated 90 degrees left; clockwise travel reverses it.
+    Returns ``(1, 0)`` when the point coincides with the center.
+    
+    :param center: Arc/circle center (x, y).
+    :param point: Point on the circle (x, y).
+    :param clockwise: Chirality of the arc travel.
+    :returns: Unit tangent direction (x, y).
     :complexity: O(1) time, O(1) space
     """
 

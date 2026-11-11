@@ -17,9 +17,10 @@ use super::super::types::{ArcClosestResult, Edge3D};
 use crate::geo::shape::arc::{
     does_arc_intersect_circle, does_arc_intersect_rect, get_arc_angles,
     get_arc_bounds, get_arc_chord_steps, get_arc_closest_point,
-    get_arc_direction, get_arc_length, get_arc_midpoint, get_arc_sweep,
-    get_arc_through_point, get_polyline_turn_sign, is_angle_between,
-    is_arc_clockwise, is_arc_inside_polygons, linearize_arc, normalize_angle,
+    get_arc_direction, get_arc_length, get_arc_midpoint, get_arc_samples,
+    get_arc_sweep, get_arc_tangent_at_point, get_arc_through_point,
+    get_polyline_turn_sign, is_angle_between, is_arc_clockwise,
+    is_arc_inside_polygons, linearize_arc, normalize_angle,
     normalize_angle_signed,
 };
 use crate::geo::types::{Point, Point3D, Rect};
@@ -84,6 +85,8 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         get_arc_bounds_py,
         get_arc_direction_py,
         get_arc_closest_point_py,
+        get_arc_samples_py,
+        get_arc_tangent_at_point_py,
         get_arc_midpoint_py,
         get_arc_angles_py,
         does_arc_intersect_rect_py,
@@ -695,4 +698,87 @@ fn get_polyline_turn_sign_py(polyline: Vec<(f64, f64)>) -> f64 {
     let pts: Vec<Point> =
         polyline.iter().map(|&(x, y)| Point::new(x, y)).collect();
     get_polyline_turn_sign(&pts)
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import raygeo.geo.types
+
+    def get_arc_samples(
+        center: types.Point,
+        radius: float,
+        start_angle: float,
+        sweep: float,
+        segments: int,
+    ) -> list[types.Point]:
+        """Sample an arc uniformly in angle, including both endpoints.
+
+        :param center: Arc center (x, y).
+        :param radius: Arc radius.
+        :param start_angle: Start angle in radians.
+        :param sweep: Signed angular extent in radians.
+        :param segments: Number of segments (sample count - 1).
+        :returns: List of ``segments + 1`` points (x, y).
+        :complexity: O(n) time, O(n) space for n samples
+        """
+"#,
+    module = "raygeo.geo.shape.arc"
+)]
+#[pyfunction(name = "get_arc_samples")]
+fn get_arc_samples_py(
+    center: (f64, f64),
+    radius: f64,
+    start_angle: f64,
+    sweep: f64,
+    segments: usize,
+) -> Vec<(f64, f64)> {
+    get_arc_samples(
+        Point::new(center.0, center.1),
+        radius,
+        start_angle,
+        sweep,
+        segments,
+    )
+    .into_iter()
+    .map(|p| (p.x, p.y))
+    .collect()
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import raygeo.geo.types
+
+    def get_arc_tangent_at_point(
+        center: types.Point,
+        point: types.Point,
+        clockwise: bool,
+    ) -> types.Point:
+        """Unit tangent of the circle at ``point`` for the given
+        chirality.
+
+        Counter-clockwise travel is perpendicular to the outward
+        radius, rotated 90 degrees left; clockwise travel reverses it.
+        Returns ``(1, 0)`` when the point coincides with the center.
+
+        :param center: Arc/circle center (x, y).
+        :param point: Point on the circle (x, y).
+        :param clockwise: Chirality of the arc travel.
+        :returns: Unit tangent direction (x, y).
+        :complexity: O(1) time, O(1) space
+        """
+"#,
+    module = "raygeo.geo.shape.arc"
+)]
+#[pyfunction(name = "get_arc_tangent_at_point")]
+fn get_arc_tangent_at_point_py(
+    center: (f64, f64),
+    point: (f64, f64),
+    clockwise: bool,
+) -> (f64, f64) {
+    let tangent = get_arc_tangent_at_point(
+        Point::new(center.0, center.1),
+        Point::new(point.0, point.1),
+        clockwise,
+    );
+    (tangent.x, tangent.y)
 }

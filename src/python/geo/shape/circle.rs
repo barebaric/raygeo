@@ -12,9 +12,10 @@ circle's circumference.
 use super::super::flex_point::{option_point_to_tuple, points_to_tuples};
 use crate::geo::shape::circle::{
     does_circle_intersect_rect, find_tangent_circle_centers,
-    get_circle_circle_intersections, get_line_circle_intersections,
-    is_circle_inside_rect, line_segment_intersects_circle,
-    nearest_tangent_circle_on_polyline, project_point_onto_circle,
+    get_circle_circle_intersections, get_circle_signed_distance,
+    get_line_circle_intersections, is_circle_inside_rect,
+    line_segment_intersects_circle, nearest_tangent_circle_on_polyline,
+    project_point_onto_circle,
 };
 use crate::geo::types::{Point, Polygon, Rect};
 use pyo3::prelude::*;
@@ -33,6 +34,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
         does_circle_intersect_rect_py,
         line_segment_intersects_circle_py,
         project_point_onto_circle_py,
+        get_circle_signed_distance_py,
         find_tangent_circle_centers_py,
         nearest_tangent_circle_on_polyline_py,
     );
@@ -346,4 +348,39 @@ fn nearest_tangent_circle_on_polyline_py(
         &cont,
     )
     .map(|(c, t, i)| ((c.x, c.y), (t.x, t.y), i))
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import raygeo.geo.types
+
+    def get_circle_signed_distance(
+        point: types.Point,
+        center: types.Point,
+        radius: float,
+    ) -> float:
+        """Signed distance from a point to a circle's circumference.
+
+        Positive outside, negative inside, zero on the circle.
+
+        :param point: Query point (x, y).
+        :param center: Circle center (x, y).
+        :param radius: Circle radius.
+        :returns: Signed distance to the circumference.
+        :complexity: O(1) time, O(1) space
+        """
+"#,
+    module = "raygeo.geo.shape.circle"
+)]
+#[pyfunction(name = "get_circle_signed_distance")]
+fn get_circle_signed_distance_py(
+    point: (f64, f64),
+    center: (f64, f64),
+    radius: f64,
+) -> f64 {
+    get_circle_signed_distance(
+        Point::new(point.0, point.1),
+        Point::new(center.0, center.1),
+        radius,
+    )
 }

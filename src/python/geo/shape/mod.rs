@@ -3,6 +3,7 @@
 pub(crate) mod arc;
 pub(crate) mod bezier;
 pub(crate) mod circle;
+pub(crate) mod ellipse;
 pub(crate) mod line;
 pub(crate) mod point;
 pub(crate) mod polygon;
@@ -31,6 +32,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     arc::register(&shape_mod)?;
     bezier::register(&shape_mod)?;
     circle::register(&shape_mod)?;
+    ellipse::register(&shape_mod)?;
     line::register(&shape_mod)?;
     point::register(&shape_mod)?;
     polygon::register(&shape_mod)?;

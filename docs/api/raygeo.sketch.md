@@ -77,6 +77,19 @@ Per-point fully-constrained flags, aligned with the input point order.
 | --------- | ------------ | ----------- |
 | _Returns_ | `list[bool]` |             |
 
+### `jacobian()`
+
+```python
+jacobian() -> list[list[float]]
+```
+
+Dense Jacobian rows of the hard constraints at the current positions, over the state points
+(non-fixed points touched by any constraint, in input order). For tests and debugging.
+
+| Parameter | Type                | Description |
+| --------- | ------------------- | ----------- |
+| _Returns_ | `list[list[float]]` |             |
+
 ### `max_residuals()`
 
 ```python
@@ -89,6 +102,18 @@ Maximum absolute residual per hard constraint.
 | --------- | ------------- | ----------- |
 | _Returns_ | `list[float]` |             |
 
+### `nfev()`
+
+```python
+nfev() -> int
+```
+
+Residual function evaluations of the last solve.
+
+| Parameter | Type  | Description |
+| --------- | ----- | ----------- |
+| _Returns_ | `int` |             |
+
 ### `positions()`
 
 ```python
@@ -100,6 +125,18 @@ Final `(x, y)` positions, aligned with the input point order.
 | Parameter | Type                        | Description |
 | --------- | --------------------------- | ----------- |
 | _Returns_ | `list[tuple[float, float]]` |             |
+
+### `residuals()`
+
+```python
+residuals() -> list[float]
+```
+
+All residual values of the hard constraints at the current positions, in constraint order.
+
+| Parameter | Type          | Description |
+| --------- | ------------- | ----------- |
+| _Returns_ | `list[float]` |             |
 
 ### `solve()`
 
@@ -114,3 +151,16 @@ Runs the solve. Returns True when all components converged.
 | `tolerance`  | `float` | Cost threshold and ftol of the optimizer.                                   |
 | `update_dof` | `bool`  | Whether to re-analyze per-point constrained flags after a successful solve. |
 | _Returns_    | `bool`  |                                                                             |
+
+### `status()`
+
+```python
+status() -> int
+```
+
+Termination status of the last solve (>0 means success, mirroring SciPy: 1 gtol, 2 ftol, 3 xtol, 4
+both, 0 max_nfev).
+
+| Parameter | Type  | Description |
+| --------- | ----- | ----------- |
+| _Returns_ | `int` |             |

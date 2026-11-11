@@ -6,6 +6,7 @@ from raygeo.geo.shape.circle import (
     does_circle_intersect_rect,
     find_tangent_circle_centers,
     get_circle_circle_intersections,
+    get_circle_signed_distance,
     get_line_circle_intersections,
     is_circle_inside_rect,
     line_segment_intersects_circle,
@@ -561,3 +562,18 @@ class TestNearestTangentCircleOnPolyline:
         )
         assert result is not None
         assert result[2] == 1
+
+
+def test_get_circle_signed_distance_signs():
+    center = (10.0, 20.0)
+    radius = 7.0
+    assert get_circle_signed_distance((20.0, 20.0), center, radius) == (
+        pytest.approx(3.0)
+    )
+    assert get_circle_signed_distance((5.0, 20.0), center, radius) == (
+        pytest.approx(-2.0)
+    )
+    on = (center[0] + radius, center[1])
+    assert get_circle_signed_distance(on, center, radius) == pytest.approx(
+        0.0
+    )

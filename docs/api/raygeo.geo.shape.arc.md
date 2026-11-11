@@ -209,6 +209,30 @@ Get the midpoint of an arc.
 | _Returns_    | `types.Point` | Midpoint (x, y).              |
 | _Complexity_ |               | O(1) time, O(1) space         |
 
+### `get_arc_samples()`
+
+```python
+get_arc_samples(
+    center: types.Point,
+    radius: float,
+    start_angle: float,
+    sweep: float,
+    segments: int,
+) -> list[types.Point]
+```
+
+Sample an arc uniformly in angle, including both endpoints.
+
+| Parameter     | Type                | Description                            |
+| ------------- | ------------------- | -------------------------------------- |
+| `center`      | `types.Point`       | Arc center (x, y).                     |
+| `radius`      | `float`             | Arc radius.                            |
+| `start_angle` | `float`             | Start angle in radians.                |
+| `sweep`       | `float`             | Signed angular extent in radians.      |
+| `segments`    | `int`               | Number of segments (sample count - 1). |
+| _Returns_     | `list[types.Point]` | List of `segments + 1` points (x, y).  |
+| _Complexity_  |                     | O(n) time, O(n) space for n samples    |
+
 ### `get_arc_sweep()`
 
 ```python
@@ -226,6 +250,29 @@ Handles direction (CW/CCW) and full-circle detection.
 | `clockwise`   | `bool`  | Whether the arc is clockwise.  |
 | _Returns_     | `float` | Signed sweep angle in radians. |
 | _Complexity_  |         | O(1) time, O(1) space          |
+
+### `get_arc_tangent_at_point()`
+
+```python
+get_arc_tangent_at_point(
+    center: types.Point,
+    point: types.Point,
+    clockwise: bool,
+) -> types.Point
+```
+
+Unit tangent of the circle at `point` for the given chirality.
+
+Counter-clockwise travel is perpendicular to the outward radius, rotated 90 degrees left; clockwise
+travel reverses it. Returns `(1, 0)` when the point coincides with the center.
+
+| Parameter    | Type          | Description                    |
+| ------------ | ------------- | ------------------------------ |
+| `center`     | `types.Point` | Arc/circle center (x, y).      |
+| `point`      | `types.Point` | Point on the circle (x, y).    |
+| `clockwise`  | `bool`        | Chirality of the arc travel.   |
+| _Returns_    | `types.Point` | Unit tangent direction (x, y). |
+| _Complexity_ |               | O(1) time, O(1) space          |
 
 ### `get_arc_through_point()`
 

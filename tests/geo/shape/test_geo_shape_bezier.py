@@ -4,6 +4,7 @@ import pytest
 
 from raygeo.geo.shape.bezier import (
     clip_bezier_with_rect,
+    compute_constrained_control_offset,
     convert_cubic_bezier_to_quadratic,
     fit_cubic_bezier,
     flatten_bezier,
@@ -11,6 +12,8 @@ from raygeo.geo.shape.bezier import (
     get_bezier_flatness_sq,
     get_bezier_point_at,
     get_bezier_rect_intersections,
+    get_bezier_samples,
+    get_bezier_tangent,
     get_perpendicular_dist_sq,
     is_bezier_flat,
     is_bezier_inside_polygons,
@@ -704,3 +707,72 @@ class TestNearestTangentCircleOnBezier:
         d = math.hypot(center[0] - tangent_pt[0], center[1] - tangent_pt[1])
         assert d == pytest.approx(r, rel=2e-2)
         assert 0.0 < t < 1.0
+
+
+def test_get_bezier_samples_endpoints():
+    p0, c1, c2, p3 = (1.0, 2.0), (3.0, 5.0), (6.0, 4.0), (8.0, 7.0)
+    samples = get_bezier_samples(p0, c1, c2, p3, 20)
+    assert len(samples) == 21
+    assert samples[0] == pytest.approx(p0)
+    assert samples[-1] == pytest.approx(p3)
+
+
+def test_get_bezier_samples_match_parametric_evaluation():
+    p0, c1, c2, p3 = (1.0, 2.0), (3.0, 5.0), (6.0, 4.0), (8.0, 7.0)
+    samples = get_bezier_samples(p0, c1, c2, p3, 4)
+    t = 0.25
+    mt = 1.0 - t
+    expected = (
+        mt**3 * p0[0]
+        + 3 * mt**2 * t * c1[0]
+        + 3 * mt * t**2 * c2[0]
+        + t**3 * p3[0],
+        mt**3 * p0[1]
+        + 3 * mt**2 * t * c1[1]
+        + 3 * mt * t**2 * c2[1]
+        + t**3 * p3[1],
+    )
+    assert samples[1] == pytest.approx(expected)
+
+
+def test_get_bezier_samples_zero_segments_is_empty():
+    assert get_bezier_samples(
+        (1.0, 2.0), (3.0, 5.0), (6.0, 4.0), (8.0, 7.0), 0
+    ) == []
+
+
+def test_get_bezier_tangent_directions_at_endpoints():
+    p0, c1, c2, p3 = (1.0, 2.0), (3.0, 5.0), (6.0, 4.0), (8.0, 7.0)
+
+    tangent = get_bezier_tangent(p0, c1, c2, p3, 0.0)
+    cross = tangent[0] * (c1[1] - p0[1]) - tangent[1] * (c1[0] - p0[0])
+    assert cross == pytest.approx(0.0)
+    assert tangent[0] * (c1[0] - p0[0]) > 0.0
+
+    end = get_bezier_tangent(p0, c1, c2, p3, 1.0)
+    cross = end[0] * (p3[1] - c2[1]) - end[1] * (p3[0] - c2[0])
+    assert cross == pytest.approx(0.0)
+    assert end[0] * (p3[0] - c2[0]) > 0.0
+
+
+def test_compute_constrained_control_offset_symmetric_mirrors():
+    result = compute_constrained_control_offset((2.0, 3.0), None, True)
+    assert result == pytest.approx((-2.0, -3.0))
+
+
+def test_compute_constrained_control_offset_smooth_keeps_other_length():
+    result = compute_constrained_control_offset((3.0, 0.0), (0.0, -2.0), False)
+    assert math.hypot(*result) == pytest.approx(2.0)
+    assert result == pytest.approx((-2.0, 0.0))
+
+
+def test_compute_constrained_control_offset_degenerate_fallbacks():
+    assert compute_constrained_control_offset(
+        (2.0, 3.0), None, False
+    ) == pytest.approx((-2.0, -3.0))
+    assert compute_constrained_control_offset(
+        (2.0, 3.0), (0.0, 0.0), False
+    ) == pytest.approx((-2.0, -3.0))
+    assert compute_constrained_control_offset(
+        (0.0, 0.0), (1.0, 1.0), False
+    ) == pytest.approx((0.0, 0.0))
