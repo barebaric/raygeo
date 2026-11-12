@@ -11,7 +11,7 @@ use crate::sketch::constraint::{
 };
 use crate::sketch::draw::{
     draw_conflict_underlay, draw_label, draw_status_color, format_value,
-    screen_scale, CairoLike, DrawStyle,
+    screen_scale, CairoLike, DrawContext, DrawStyle,
 };
 use crate::sketch::registry::EntityRegistry;
 
@@ -135,13 +135,13 @@ impl SketchConstraint for DistanceConstraint {
 
     fn draw(
         &self,
-        registry: &EntityRegistry,
+        context: &dyn DrawContext,
         to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
         ctx: &dyn CairoLike,
         style: &DrawStyle,
     ) {
         let (Some(p1), Some(p2)) =
-            (registry.get_point(self.p1), registry.get_point(self.p2))
+            (context.get_point(self.p1), context.get_point(self.p2))
         else {
             return;
         };
@@ -162,11 +162,11 @@ impl SketchConstraint for DistanceConstraint {
 
         let mut has_geometry = false;
         let endpoints = HashSet::from([self.p1, self.p2]);
-        for entity_id in registry.entity_ids() {
-            if registry.entity_type(entity_id) != Some("line") {
+        for entity_id in context.entity_ids() {
+            if context.entity_type(entity_id).as_deref() != Some("line") {
                 continue;
             }
-            if let Some(ids) = registry.entity_point_ids(entity_id) {
+            if let Some(ids) = context.entity_point_ids(entity_id) {
                 if ids.iter().copied().collect::<HashSet<u64>>() == endpoints {
                     has_geometry = true;
                     break;

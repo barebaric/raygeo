@@ -10,7 +10,7 @@ use crate::sketch::constraint::{
 };
 use crate::sketch::draw::{
     draw_conflict_underlay, draw_selection_underlay, draw_status_color,
-    status_color, CairoLike, DrawStyle,
+    status_color, CairoLike, DrawContext, DrawStyle,
 };
 use crate::sketch::registry::EntityRegistry;
 
@@ -320,7 +320,7 @@ impl SketchConstraint for PerpendicularConstraint {
 
     fn draw(
         &self,
-        registry: &EntityRegistry,
+        context: &dyn DrawContext,
         to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
         ctx: &dyn CairoLike,
         style: &DrawStyle,
@@ -330,10 +330,10 @@ impl SketchConstraint for PerpendicularConstraint {
         match &self.target {
             PerpendicularTarget::LineLine { a1, a2, b1, b2 } => {
                 let (Some(p1), Some(p2), Some(p3), Some(p4)) = (
-                    registry.get_point(*a1),
-                    registry.get_point(*a2),
-                    registry.get_point(*b1),
-                    registry.get_point(*b2),
+                    context.get_point(*a1),
+                    context.get_point(*a2),
+                    context.get_point(*b1),
+                    context.get_point(*b2),
                 ) else {
                     ctx.restore();
                     return;
@@ -406,9 +406,9 @@ impl SketchConstraint for PerpendicularConstraint {
                 // Box-style marker anchored at the center (the
                 // line/circle intersection fallback; see is_hit).
                 let (Some(lp1), Some(lp2), Some(center)) = (
-                    registry.get_point(*l1),
-                    registry.get_point(*l2),
-                    registry.get_point(*center),
+                    context.get_point(*l1),
+                    context.get_point(*l2),
+                    context.get_point(*center),
                 ) else {
                     ctx.restore();
                     return;
@@ -436,10 +436,10 @@ impl SketchConstraint for PerpendicularConstraint {
                 // Box-style marker at the first circle-circle
                 // intersection.
                 let (Some(c1p), Some(r1p), Some(c2p), Some(r2p)) = (
-                    registry.get_point(*c1),
-                    registry.get_point(*r1_point),
-                    registry.get_point(*c2),
-                    registry.get_point(*r2_point),
+                    context.get_point(*c1),
+                    context.get_point(*r1_point),
+                    context.get_point(*c2),
+                    context.get_point(*r2_point),
                 ) else {
                     ctx.restore();
                     return;

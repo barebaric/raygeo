@@ -191,6 +191,14 @@ class EntityRegistry:
         r"""
         Coordinates of a point as ``(x, y)``, or ``None``.
         """
+    def point_is_fixed(self, id: builtins.int) -> builtins.bool:
+        r"""
+        Whether a point carries the fixed flag.
+        """
+    def point_is_in_text_box_frame(self, id: builtins.int) -> builtins.bool:
+        r"""
+        Whether the point is one of a text box frame's corner points.
+        """
     def junction_point_ids(self, id: builtins.int) -> builtins.list[builtins.int]:
         r"""
         Junction point ids of an entity.

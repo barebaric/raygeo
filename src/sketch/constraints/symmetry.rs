@@ -7,7 +7,7 @@ use crate::sketch::constraint::{
 };
 use crate::sketch::draw::{
     draw_conflict_underlay, draw_selection_underlay, draw_status_color,
-    draw_symmetry_arrows, CairoLike, DrawStyle,
+    draw_symmetry_arrows, CairoLike, DrawContext, DrawStyle,
 };
 use crate::sketch::registry::EntityRegistry;
 
@@ -152,13 +152,13 @@ impl SketchConstraint for SymmetryConstraint {
 
     fn draw(
         &self,
-        registry: &EntityRegistry,
+        context: &dyn DrawContext,
         to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
         ctx: &dyn CairoLike,
         style: &DrawStyle,
     ) {
         let (Some(p1), Some(p2)) =
-            (registry.get_point(self.p1), registry.get_point(self.p2))
+            (context.get_point(self.p1), context.get_point(self.p2))
         else {
             return;
         };

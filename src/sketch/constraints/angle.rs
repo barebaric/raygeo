@@ -10,7 +10,8 @@ use crate::sketch::constraint::{
 };
 use crate::sketch::draw::{
     draw_conflict_underlay, draw_label, draw_selection_underlay,
-    draw_status_color, format_value, screen_scale, CairoLike, DrawStyle,
+    draw_status_color, format_value, screen_scale, CairoLike, DrawContext,
+    DrawStyle,
 };
 use crate::sketch::registry::EntityRegistry;
 
@@ -219,16 +220,16 @@ impl SketchConstraint for AngleConstraint {
 
     fn draw(
         &self,
-        registry: &EntityRegistry,
+        context: &dyn DrawContext,
         to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
         ctx: &dyn CairoLike,
         style: &DrawStyle,
     ) {
         let (Some(p1), Some(p2), Some(p3), Some(p4)) = (
-            registry.get_point(self.p1),
-            registry.get_point(self.p2),
-            registry.get_point(self.p3),
-            registry.get_point(self.p4),
+            context.get_point(self.p1),
+            context.get_point(self.p2),
+            context.get_point(self.p3),
+            context.get_point(self.p4),
         ) else {
             return;
         };
@@ -248,9 +249,9 @@ impl SketchConstraint for AngleConstraint {
         let (sx, sy) = to_screen((ix, iy));
 
         let far1 =
-            self.far_point(self.p1, self.p2, self.e1_far, ix, iy, registry);
+            draw_far_point(context, self.p1, self.p2, self.e1_far, ix, iy);
         let far2 =
-            self.far_point(self.p3, self.p4, self.e2_far, ix, iy, registry);
+            draw_far_point(context, self.p3, self.p4, self.e2_far, ix, iy);
         let far1_screen = to_screen(far1);
         let far2_screen = to_screen(far2);
         let anchor_ang = (far1_screen.1 - sy).atan2(far1_screen.0 - sx);
@@ -349,5 +350,36 @@ impl AngleConstraint {
             data["expression"] = json!(expression);
         }
         data
+    }
+}
+
+/// Resolves the far endpoint for the drawn arc through the draw
+/// context, mirroring the reference far-point selection.
+fn draw_far_point(
+    context: &dyn DrawContext,
+    first: u64,
+    second: u64,
+    far: Option<u64>,
+    ix: f64,
+    iy: f64,
+) -> (f64, f64) {
+    if let Some(id) = far {
+        if id == first || id == second {
+            if let Some(point) = context.get_point(id) {
+                return (point.x, point.y);
+            }
+        }
+    }
+    let (Some(a), Some(b)) =
+        (context.get_point(first), context.get_point(second))
+    else {
+        return (0.0, 0.0);
+    };
+    let d1 = (a.x - ix).powi(2) + (a.y - iy).powi(2);
+    let d2 = (b.x - ix).powi(2) + (b.y - iy).powi(2);
+    if d1 > d2 {
+        (a.x, a.y)
+    } else {
+        (b.x, b.y)
     }
 }

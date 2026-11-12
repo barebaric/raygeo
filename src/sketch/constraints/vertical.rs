@@ -7,7 +7,7 @@ use crate::sketch::constraint::{
 };
 use crate::sketch::draw::{
     draw_conflict_underlay, draw_selection_underlay, draw_status_color,
-    CairoLike, DrawStyle, MARKER_OFFSET, MARKER_SIZE, MARKER_T,
+    CairoLike, DrawContext, DrawStyle, MARKER_OFFSET, MARKER_SIZE, MARKER_T,
 };
 use crate::sketch::registry::EntityRegistry;
 
@@ -76,13 +76,13 @@ impl SketchConstraint for VerticalConstraint {
 
     fn draw(
         &self,
-        registry: &EntityRegistry,
+        context: &dyn DrawContext,
         to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
         ctx: &dyn CairoLike,
         style: &DrawStyle,
     ) {
         let (Some(p1), Some(p2)) =
-            (registry.get_point(self.p1), registry.get_point(self.p2))
+            (context.get_point(self.p1), context.get_point(self.p2))
         else {
             return;
         };

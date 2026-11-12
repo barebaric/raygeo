@@ -110,7 +110,7 @@ impl PyAngleConstraint {
     fn draw<'py>(
         &self,
         ctx: &Bound<'py, PyAny>,
-        registry: &PyEntityRegistry,
+        registry: &Bound<'py, PyAny>,
         to_screen: &Bound<'py, PyAny>,
         is_selected: bool,
         is_hovered: bool,

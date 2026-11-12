@@ -6,9 +6,9 @@ use crate::sketch::constraint::{
     JacobianEntry, PointContext, SketchConstraint,
 };
 use crate::sketch::draw::{
-    draw_status_color, CairoLike, ConstraintStatus, DrawStyle, ICON_SIZE,
+    draw_status_color, CairoLike, ConstraintStatus, DrawContext, DrawStyle,
+    ICON_SIZE,
 };
-use crate::sketch::entities::point::SketchPoint;
 use crate::sketch::registry::EntityRegistry;
 
 /// Enforces `dist(p1, p2) == ratio * dist(p3, p4)`.
@@ -84,7 +84,7 @@ impl SketchConstraint for AspectRatioConstraint {
         let icon_pos = icon_pos(
             (self.p1, self.p2),
             (self.p3, self.p4),
-            (&p1, &p2, &p3, &p4),
+            ((p1.x, p1.y), (p2.x, p2.y), (p3.x, p3.y), (p4.x, p4.y)),
             to_screen,
         );
         let Some((cx, cy)) = icon_pos else {
@@ -95,23 +95,23 @@ impl SketchConstraint for AspectRatioConstraint {
 
     fn draw(
         &self,
-        registry: &EntityRegistry,
+        context: &dyn DrawContext,
         to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
         ctx: &dyn CairoLike,
         style: &DrawStyle,
     ) {
         let (Some(p1), Some(p2), Some(p3), Some(p4)) = (
-            registry.get_point(self.p1),
-            registry.get_point(self.p2),
-            registry.get_point(self.p3),
-            registry.get_point(self.p4),
+            context.get_point(self.p1),
+            context.get_point(self.p2),
+            context.get_point(self.p3),
+            context.get_point(self.p4),
         ) else {
             return;
         };
         let Some((cx, cy)) = icon_pos(
             (self.p1, self.p2),
             (self.p3, self.p4),
-            (&p1, &p2, &p3, &p4),
+            ((p1.x, p1.y), (p2.x, p2.y), (p3.x, p3.y), (p4.x, p4.y)),
             to_screen,
         ) else {
             return;
@@ -189,10 +189,13 @@ impl SketchConstraint for AspectRatioConstraint {
 /// Screen position of the constraint icon: near the shared junction
 /// point along the external angle bisector when the segments adjoin,
 /// otherwise at the center of the two segment midpoints.
+/// Segment endpoint coordinates of both operands.
+type IconPoints = ((f64, f64), (f64, f64), (f64, f64), (f64, f64));
+
 fn icon_pos(
     ids1: (u64, u64),
     ids2: (u64, u64),
-    points: (&SketchPoint, &SketchPoint, &SketchPoint, &SketchPoint),
+    points: IconPoints,
     to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
 ) -> Option<(f64, f64)> {
     let (p1, p2, p3, p4) = points;
@@ -209,9 +212,9 @@ fn icon_pos(
         let p_other1 = if ids1.1 == junction_id { p1 } else { p2 };
         let p_other2 = if ids2.1 == junction_id { p3 } else { p4 };
 
-        let s_junc = to_screen((p_junc.x, p_junc.y));
-        let s_other1 = to_screen((p_other1.x, p_other1.y));
-        let s_other2 = to_screen((p_other2.x, p_other2.y));
+        let s_junc = to_screen((p_junc.0, p_junc.1));
+        let s_other1 = to_screen((p_other1.0, p_other1.1));
+        let s_other2 = to_screen((p_other2.0, p_other2.1));
 
         let sv1 = (s_other1.0 - s_junc.0, s_other1.1 - s_junc.1);
         let sv2 = (s_other2.0 - s_junc.0, s_other2.1 - s_junc.1);
@@ -242,10 +245,10 @@ fn icon_pos(
         ));
     }
 
-    let m1_x = (p1.x + p2.x) / 2.0;
-    let m1_y = (p1.y + p2.y) / 2.0;
-    let m2_x = (p3.x + p4.x) / 2.0;
-    let m2_y = (p3.y + p4.y) / 2.0;
+    let m1_x = (p1.0 + p2.0) / 2.0;
+    let m1_y = (p1.1 + p2.1) / 2.0;
+    let m2_x = (p3.0 + p4.0) / 2.0;
+    let m2_y = (p3.1 + p4.1) / 2.0;
     Some(to_screen(((m1_x + m2_x) / 2.0, (m1_y + m2_y) / 2.0)))
 }
 

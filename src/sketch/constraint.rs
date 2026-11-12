@@ -7,7 +7,7 @@
 //! constraint sees only a point context and never entity or parameter
 //! knowledge.
 
-use crate::sketch::draw::{CairoLike, DrawStyle};
+use crate::sketch::draw::{CairoLike, DrawContext, DrawStyle};
 use crate::sketch::registry::EntityRegistry;
 
 /// Read/write view of the sketch's point coordinates, addressed by
@@ -65,7 +65,7 @@ pub trait SketchConstraint: Send + Sync {
     /// implementation draws nothing.
     fn draw(
         &self,
-        _registry: &EntityRegistry,
+        _context: &dyn DrawContext,
         _to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
         _ctx: &dyn CairoLike,
         _style: &DrawStyle,

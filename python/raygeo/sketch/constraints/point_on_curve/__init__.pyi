@@ -70,7 +70,7 @@ class PointOnCurveConstraint:
         r"""
         Serializes to the reference constraint dictionary shape.
         """
-    def draw(self, ctx: typing.Any, registry: registry.EntityRegistry, to_screen: typing.Any, is_selected: builtins.bool = False, is_hovered: builtins.bool = False, point_radius: builtins.float = 5.0) -> None:
+    def draw(self, ctx: typing.Any, registry: typing.Any, to_screen: typing.Any, is_selected: builtins.bool = False, is_hovered: builtins.bool = False, point_radius: builtins.float = 5.0) -> None:
         r"""
         Draws the constraint's symbol onto the cairo context.
         """

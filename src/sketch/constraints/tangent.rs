@@ -10,7 +10,7 @@ use crate::sketch::constraint::{
 };
 use crate::sketch::draw::{
     draw_conflict_underlay, draw_selection_underlay, draw_status_color,
-    CairoLike, DrawStyle, TANGENT_OFFSET, TANGENT_RADIUS,
+    CairoLike, DrawContext, DrawStyle, TANGENT_OFFSET, TANGENT_RADIUS,
 };
 use crate::sketch::registry::EntityRegistry;
 
@@ -171,15 +171,15 @@ impl SketchConstraint for TangentConstraint {
 
     fn draw(
         &self,
-        registry: &EntityRegistry,
+        context: &dyn DrawContext,
         to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
         ctx: &dyn CairoLike,
         style: &DrawStyle,
     ) {
         let (Some(p1), Some(p2), Some(center)) = (
-            registry.get_point(self.l1),
-            registry.get_point(self.l2),
-            registry.get_point(self.center),
+            context.get_point(self.l1),
+            context.get_point(self.l2),
+            context.get_point(self.center),
         ) else {
             return;
         };

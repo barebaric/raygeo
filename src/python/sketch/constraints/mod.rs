@@ -28,7 +28,9 @@ use serde_json::Value;
 
 use crate::python::sketch::registry::PyEntityRegistry;
 use crate::sketch::constraint::SketchConstraint;
-use crate::sketch::draw::{CairoLike, ConstraintStatus, DrawStyle};
+use crate::sketch::draw::{
+    CairoLike, ConstraintStatus, DrawContext, DrawPoint, DrawStyle,
+};
 
 /// Type of a leaf-module registration function.
 type LeafRegister = fn(&Bound<'_, PyModule>) -> PyResult<()>;
@@ -91,6 +93,75 @@ fn value_to_py<'py>(
                 dict.set_item(key, value_to_py(py, item)?)?;
             }
             Ok(dict.into_any())
+        }
+    }
+}
+
+/// Maps the [`DrawContext`] protocol onto a Python object: the
+/// caller's own document (or any duck-typed stand-in) reads through
+/// its methods, and the first call error surfaces after the draw
+/// pass.
+struct PyDrawContext<'a> {
+    registry: Bound<'a, PyAny>,
+    error: std::cell::RefCell<Option<PyErr>>,
+}
+
+impl<'a> PyDrawContext<'a> {
+    fn call(&self, name: &str, id: u64) -> Option<Bound<'a, PyAny>> {
+        if self.error.borrow().is_some() {
+            return None;
+        }
+        match self.registry.call_method1(name, (id,)) {
+            Ok(value) => Some(value),
+            Err(err) => {
+                *self.error.borrow_mut() = Some(err);
+                None
+            }
+        }
+    }
+}
+
+impl DrawContext for PyDrawContext<'_> {
+    fn get_point(&self, id: u64) -> Option<DrawPoint> {
+        let value = self.call("get_point", id)?;
+        let xy: (f64, f64) = value.extract().ok()?;
+        let fixed = match self.call("point_is_fixed", id) {
+            Some(flag) => flag.extract::<bool>().unwrap_or(false),
+            None => false,
+        };
+        Some(DrawPoint {
+            x: xy.0,
+            y: xy.1,
+            fixed,
+        })
+    }
+
+    fn entity_ids(&self) -> Vec<u64> {
+        self.registry
+            .call_method0("entity_ids")
+            .and_then(|ids| ids.extract::<Vec<u64>>())
+            .unwrap_or_default()
+    }
+
+    fn entity_type(&self, id: u64) -> Option<std::borrow::Cow<'static, str>> {
+        let value = self.call("entity_type", id)?;
+        let name: String = value.extract().ok()?;
+        match name.as_str() {
+            "line" => Some(std::borrow::Cow::Borrowed("line")),
+            "text_box" => Some(std::borrow::Cow::Borrowed("text_box")),
+            _ => Some(std::borrow::Cow::Owned(name)),
+        }
+    }
+
+    fn entity_point_ids(&self, id: u64) -> Option<Vec<u64>> {
+        let value = self.call("entity_point_ids", id)?;
+        value.extract().ok()
+    }
+
+    fn point_in_text_box_frame(&self, point_id: u64) -> bool {
+        match self.call("point_is_in_text_box_frame", point_id) {
+            Some(flag) => flag.extract::<bool>().unwrap_or(false),
+            None => false,
         }
     }
 }
@@ -225,7 +296,7 @@ impl CairoLike for PyCairoAdapter<'_> {
 pub(crate) fn constraint_draw(
     constraint: &dyn SketchConstraint,
     ctx: &Bound<'_, PyAny>,
-    registry: &PyEntityRegistry,
+    registry: &Bound<'_, PyAny>,
     to_screen: &Bound<'_, PyAny>,
     is_selected: bool,
     is_hovered: bool,
@@ -244,12 +315,20 @@ pub(crate) fn constraint_draw(
             .and_then(|result| result.extract::<(f64, f64)>())
             .unwrap_or(point)
     };
-    let adapter = PyCairoAdapter {
+    let canvas = PyCairoAdapter {
         ctx: ctx.clone(),
         error: std::cell::RefCell::new(None),
     };
-    constraint.draw(&registry.inner, &to_screen, &adapter, &style);
-    match adapter.error.into_inner() {
+    let context = PyDrawContext {
+        registry: registry.clone(),
+        error: std::cell::RefCell::new(None),
+    };
+    constraint.draw(&context, &to_screen, &canvas, &style);
+    let error = canvas
+        .error
+        .into_inner()
+        .or_else(|| context.error.into_inner());
+    match error {
         Some(err) => Err(err),
         None => Ok(()),
     }
