@@ -7,6 +7,8 @@
 //! constraint sees only a point context and never entity or parameter
 //! knowledge.
 
+use crate::sketch::registry::EntityRegistry;
+
 /// Read/write view of the sketch's point coordinates, addressed by
 /// point id.  Constraints read coordinates through [`PointContext::xy`];
 /// constraints whose Jacobian is computed by finite differences
@@ -42,4 +44,18 @@ pub trait SketchConstraint: Send + Sync {
     /// points outside the solver's state vector are skipped by the
     /// assembler; entries for the same `(point_id, row)` accumulate.
     fn gradient(&self, reg: &mut dyn PointContext) -> Vec<JacobianEntry>;
+
+    /// Whether the constraint's rendered symbol is hit at (mx, my).
+    /// `to_screen` maps model coordinates to screen coordinates (the
+    /// reference constraint symbol layout math runs in screen space).
+    fn is_hit(
+        &self,
+        _mx: f64,
+        _my: f64,
+        _threshold: f64,
+        _model: &EntityRegistry,
+        _to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
+    ) -> bool {
+        false
+    }
 }

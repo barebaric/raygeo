@@ -14,6 +14,7 @@ pub mod drag;
 pub mod equal_distance;
 pub mod equal_length;
 pub mod horizontal;
+pub mod json;
 pub mod parallelogram;
 pub mod perpendicular;
 pub mod point_on_curve;

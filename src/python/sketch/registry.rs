@@ -102,7 +102,7 @@ fn value_to_py<'py>(
     skip_from_py_object
 )]
 pub struct PyEntityRegistry {
-    inner: EntityRegistry,
+    pub(crate) inner: EntityRegistry,
 }
 
 #[gen_stub_pymethods]
@@ -403,6 +403,53 @@ impl PyEntityRegistry {
             return;
         };
         entity.base_mut().construction = construction;
+    }
+
+    /// Adds a constraint from a reference constraint dictionary
+    /// (`.ryp` shape), resolving entity references through the
+    /// registry.  Returns the constraint handle.
+    fn add_constraint_json(
+        &mut self,
+        dict: &Bound<'_, PyDict>,
+    ) -> PyResult<u64> {
+        let value = value_from_dict(dict)?;
+        self.inner
+            .add_constraint_json(&value)
+            .map_err(PyValueError::new_err)
+    }
+
+    /// Number of stored constraints.
+    fn constraint_count(&self) -> usize {
+        self.inner.constraint_count()
+    }
+
+    /// The stored reference dictionary of a constraint.
+    fn constraint_dict<'py>(
+        &self,
+        py: Python<'py>,
+        index: u64,
+    ) -> PyResult<Bound<'py, PyDict>> {
+        let Some(value) = self.inner.constraint_dict(index) else {
+            return Err(PyValueError::new_err("constraint index out of range"));
+        };
+        let dict = PyDict::new(py);
+        if let Value::Object(map) = &value {
+            for (key, item) in map {
+                dict.set_item(key, value_to_py(py, item)?)?;
+            }
+        }
+        Ok(dict)
+    }
+
+    /// Removes a constraint by handle.
+    fn remove_constraint(&mut self, index: u64) {
+        self.inner.remove_constraint(index);
+    }
+
+    /// Residual values of all stored constraints at the current
+    /// point positions.
+    fn constraint_residuals(&self) -> Vec<f64> {
+        self.inner.constraint_residuals()
     }
 
     /// Whether the point is solver-constrained.

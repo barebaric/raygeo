@@ -1,8 +1,11 @@
 //! Symmetry constraint: two points mirrored about a point or a line.
 
+use serde_json::{json, Value};
+
 use crate::sketch::constraint::{
     JacobianEntry, PointContext, SketchConstraint,
 };
+use crate::sketch::registry::EntityRegistry;
 
 /// The symmetry reference, mirroring the reference constraint's two
 /// cases: point symmetry about a center, or line symmetry about an
@@ -24,12 +27,19 @@ pub struct SymmetryConstraint {
     pub p2: u64,
     /// Symmetry reference.
     pub target: SymmetryTarget,
+    /// Reference user-visibility flag.
+    pub user_visible: bool,
 }
 
 impl SymmetryConstraint {
     /// Creates a symmetry constraint.
     pub fn new(p1: u64, p2: u64, target: SymmetryTarget) -> Self {
-        SymmetryConstraint { p1, p2, target }
+        SymmetryConstraint {
+            user_visible: true,
+            p1,
+            p2,
+            target,
+        }
     }
 }
 
@@ -105,5 +115,57 @@ impl SketchConstraint for SymmetryConstraint {
                 ]
             }
         }
+    }
+
+    fn is_hit(
+        &self,
+        mx: f64,
+        my: f64,
+        threshold: f64,
+        model: &EntityRegistry,
+        to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
+    ) -> bool {
+        let (Some(p1), Some(p2)) =
+            (model.get_point(self.p1), model.get_point(self.p2))
+        else {
+            return false;
+        };
+        let s1 = to_screen((p1.x, p1.y));
+        let s2 = to_screen((p2.x, p2.y));
+        let mid_x = (s1.0 + s2.0) / 2.0;
+        let mid_y = (s1.1 + s2.1) / 2.0;
+        let angle = (s2.1 - s1.1).atan2(s2.0 - s1.0);
+        let offset = 12.0;
+        let lx = mid_x - offset * angle.cos();
+        let ly = mid_y - offset * angle.sin();
+        let rx = mid_x + offset * angle.cos();
+        let ry = mid_y + offset * angle.sin();
+        if (mx - lx).hypot(my - ly) < threshold {
+            return true;
+        }
+        (mx - rx).hypot(my - ry) < threshold
+    }
+}
+
+impl SymmetryConstraint {
+    /// Reference user-visibility flag.
+    pub fn user_visible(&self) -> bool {
+        self.user_visible
+    }
+
+    /// Sets the reference user-visibility flag.
+    pub fn set_user_visible(&mut self, value: bool) {
+        self.user_visible = value;
+    }
+
+    /// Serializes to the reference constraint dictionary shape.
+    pub fn to_json(&self) -> Value {
+        let mut data = json!({
+            "type": "SymmetryConstraint",
+            "user_visible": self.user_visible,
+        });
+        data["p1"] = json!(self.p1);
+        data["p2"] = json!(self.p2);
+        data
     }
 }

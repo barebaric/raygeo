@@ -6,10 +6,13 @@ use std::collections::HashMap;
 
 use serde_json::Value;
 
+use crate::sketch::constraints::json::constraint_from_dict;
 use crate::sketch::entities::entity::Entity;
 pub use crate::sketch::entities::entity::FontConfig;
 use crate::sketch::entities::entity_from_json;
 use crate::sketch::entities::point::SketchPoint;
+
+use crate::sketch::constraint::PointContext;
 
 /// Stores all points and entities of a sketch document.
 #[derive(Default)]
@@ -18,6 +21,7 @@ pub struct EntityRegistry {
     point_index: HashMap<u64, usize>,
     entities: Vec<Box<dyn Entity>>,
     entity_index: HashMap<u64, usize>,
+    constraints: Vec<crate::sketch::constraints::json::ConstraintEntry>,
     id_counter: u64,
     entity_version: u64,
     point_usage: HashMap<u64, u64>,
@@ -147,6 +151,54 @@ impl EntityRegistry {
     /// Monotonic version bumped on every entity-list mutation.
     pub fn entity_version(&self) -> u64 {
         self.entity_version
+    }
+
+    /// Adds a constraint from a reference constraint dictionary
+    /// (`.ryp` shape), resolving entity references through this
+    /// registry.  Returns the constraint handle (list index).
+    pub fn add_constraint_json(&mut self, dict: &Value) -> Result<u64, String> {
+        let constraint = constraint_from_dict(dict, self)
+            .ok_or_else(|| "unsupported constraint dict".to_string())?;
+        let referenced = constraint.referenced_points();
+        let index = self.constraints.len();
+        self.constraints.push(
+            crate::sketch::constraints::json::ConstraintEntry::new(
+                constraint,
+                dict.clone(),
+                referenced,
+            ),
+        );
+        Ok(index as u64)
+    }
+
+    /// Number of stored constraints.
+    pub fn constraint_count(&self) -> usize {
+        self.constraints.len()
+    }
+
+    /// The stored reference dictionary of a constraint.
+    pub fn constraint_dict(&self, index: u64) -> Option<Value> {
+        self.constraints.get(index as usize).map(|e| e.dict.clone())
+    }
+
+    /// Removes a constraint by handle.
+    pub fn remove_constraint(&mut self, index: u64) {
+        if (index as usize) < self.constraints.len() {
+            self.constraints.remove(index as usize);
+        }
+    }
+
+    /// Residual values of all stored constraints at the current
+    /// point positions, in constraint order.
+    pub fn constraint_residuals(&self) -> Vec<f64> {
+        let mut residuals = Vec::new();
+        for entry in self.constraints.iter() {
+            if entry.constraint.residual_count() == 0 {
+                continue;
+            }
+            residuals.extend(entry.constraint.error(self));
+        }
+        residuals
     }
 
     // ── mutation ────────────────────────────────────────────────
@@ -446,5 +498,15 @@ impl EntityRegistry {
         for (entity, flag) in self.entities.iter_mut().zip(flags) {
             entity.base_mut().constrained = flag;
         }
+    }
+}
+
+impl PointContext for EntityRegistry {
+    fn xy(&self, id: u64) -> (f64, f64) {
+        self.point_position(id).unwrap_or((0.0, 0.0))
+    }
+
+    fn set_xy(&mut self, id: u64, x: f64, y: f64) {
+        let _ = self.set_point_position(id, x, y);
     }
 }

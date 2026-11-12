@@ -2,6 +2,7 @@
 # ruff: noqa: E501, F401, F403, F405
 
 import builtins
+from raygeo.sketch import registry
 import typing
 __all__ = [
     "SymmetryConstraint",
@@ -29,9 +30,30 @@ class SymmetryConstraint:
         Symmetry reference.
         """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __new__(cls, p1: builtins.int, p2: builtins.int, target: SymmetryTarget) -> SymmetryConstraint:
+    def __new__(cls, p1: builtins.int, p2: builtins.int, target: SymmetryTarget, user_visible: builtins.bool = True) -> SymmetryConstraint:
         r"""
         Creates the symmetry constraint.
+        """
+    def error(self, registry: registry.EntityRegistry) -> builtins.list[builtins.float]:
+        r"""
+        Returns the constraint error at the registry's point
+        positions.
+        """
+    def to_dict(self) -> dict:
+        r"""
+        Serializes to the reference constraint dictionary shape.
+        """
+    def user_visible(self) -> builtins.bool:
+        r"""
+        Reference user-visibility flag.
+        """
+    def set_user_visible(self, value: builtins.bool) -> None:
+        r"""
+        Sets the reference user-visibility flag.
+        """
+    def is_hit(self, mx: builtins.float, my: builtins.float, threshold: builtins.float, registry: registry.EntityRegistry, to_screen: typing.Optional[typing.Any] = None) -> builtins.bool:
+        r"""
+        Whether the constraint's rendered symbol is hit at (mx, my).
         """
 
 class SymmetryTarget:

@@ -2,6 +2,7 @@
 # ruff: noqa: E501, F401, F403, F405
 
 import builtins
+from raygeo.sketch import registry
 import typing
 __all__ = [
     "EqualLengthConstraint",
@@ -21,8 +22,41 @@ class EqualLengthConstraint:
         Resolved characteristic-length pairs.
         """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __new__(cls, pairs: typing.Sequence[typing.Sequence[builtins.int]]) -> EqualLengthConstraint:
+    def __new__(cls, pairs: typing.Sequence[typing.Sequence[builtins.int]], user_visible: builtins.bool = True) -> EqualLengthConstraint:
         r"""
         Creates the constraint from resolved pairs.
+        """
+    def error(self, registry: registry.EntityRegistry) -> builtins.list[builtins.float]:
+        r"""
+        Returns the constraint error at the registry's point
+        positions.
+        """
+    def to_dict(self) -> dict:
+        r"""
+        Serializes to the reference constraint dictionary shape.
+        """
+    def user_visible(self) -> builtins.bool:
+        r"""
+        Reference user-visibility flag.
+        """
+    def set_user_visible(self, value: builtins.bool) -> None:
+        r"""
+        Sets the reference user-visibility flag.
+        """
+    def targets_segment(self, p1: builtins.int, p2: builtins.int, entity_id: typing.Optional[builtins.int], registry: registry.EntityRegistry) -> builtins.bool:
+        r"""
+        Whether this constraint restricts the length of the given
+        entity, matched through the registry by its defining points
+        (the point ids are ignored, mirroring the reference).
+        """
+    def constrains_radius(self, registry: registry.EntityRegistry, entity_id: builtins.int) -> builtins.bool:
+        r"""
+        Whether this constraint explicitly defines the radius/length
+        of the given entity, matched through the registry by its
+        defining points.
+        """
+    def is_hit(self, mx: builtins.float, my: builtins.float, threshold: builtins.float, registry: registry.EntityRegistry, to_screen: typing.Optional[typing.Any] = None) -> builtins.bool:
+        r"""
+        Whether the constraint's rendered symbol is hit at (mx, my).
         """
 

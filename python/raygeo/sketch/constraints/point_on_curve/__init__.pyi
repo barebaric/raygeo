@@ -2,6 +2,7 @@
 # ruff: noqa: E501, F401, F403, F405
 
 import builtins
+from raygeo.sketch import registry
 import typing
 __all__ = [
     "PointOnCurveConstraint",
@@ -46,8 +47,29 @@ class PointOnCurveConstraint:
         Whether the curve degenerates to a straight segment.
         """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __new__(cls, point: builtins.int, start: builtins.int, end: builtins.int, cp1_offset: tuple[builtins.float, builtins.float], cp2_offset: tuple[builtins.float, builtins.float], is_line: builtins.bool) -> PointOnCurveConstraint:
+    def __new__(cls, point: builtins.int, start: builtins.int, end: builtins.int, cp1_offset: tuple[builtins.float, builtins.float], cp2_offset: tuple[builtins.float, builtins.float], is_line: builtins.bool, user_visible: builtins.bool = True) -> PointOnCurveConstraint:
         r"""
         Creates the point-on-curve constraint.
+        """
+    def error(self, registry: registry.EntityRegistry) -> builtins.list[builtins.float]:
+        r"""
+        Returns the constraint error at the registry's point
+        positions.
+        """
+    def to_dict(self) -> dict:
+        r"""
+        Serializes to the reference constraint dictionary shape.
+        """
+    def user_visible(self) -> builtins.bool:
+        r"""
+        Reference user-visibility flag.
+        """
+    def set_user_visible(self, value: builtins.bool) -> None:
+        r"""
+        Sets the reference user-visibility flag.
+        """
+    def is_hit(self, mx: builtins.float, my: builtins.float, threshold: builtins.float, registry: registry.EntityRegistry, to_screen: typing.Optional[typing.Any] = None) -> builtins.bool:
+        r"""
+        Whether the constraint's rendered symbol is hit at (mx, my).
         """
 

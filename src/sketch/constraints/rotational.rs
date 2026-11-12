@@ -1,5 +1,7 @@
 //! Rotational constraint: a point rotated about a center.
 
+use serde_json::{json, Value};
+
 use crate::sketch::constraint::{
     JacobianEntry, PointContext, SketchConstraint,
 };
@@ -15,6 +17,10 @@ pub struct RotationalConstraint {
     pub p2: u64,
     /// Resolved rotation angle in radians.
     pub angle_rad: f64,
+    /// Reference user-visibility flag.
+    pub user_visible: bool,
+    /// Stored expression string (evaluated caller-side).
+    pub expression: Option<String>,
 }
 
 impl RotationalConstraint {
@@ -25,6 +31,8 @@ impl RotationalConstraint {
             p1,
             p2,
             angle_rad,
+            user_visible: true,
+            expression: None,
         }
     }
 }
@@ -60,5 +68,43 @@ impl SketchConstraint for RotationalConstraint {
             (self.center, 0, -1.0 + ca, -sa),
             (self.center, 1, sa, -1.0 + ca),
         ]
+    }
+}
+
+impl RotationalConstraint {
+    /// Reference user-visibility flag.
+    pub fn user_visible(&self) -> bool {
+        self.user_visible
+    }
+
+    /// Sets the reference user-visibility flag.
+    pub fn set_user_visible(&mut self, value: bool) {
+        self.user_visible = value;
+    }
+
+    /// The stored expression string, if any (evaluated caller-side).
+    pub fn expression(&self) -> Option<&str> {
+        self.expression.as_deref()
+    }
+
+    /// Sets the expression string (evaluated caller-side).
+    pub fn set_expression(&mut self, expression: Option<String>) {
+        self.expression = expression;
+    }
+
+    /// Serializes to the reference constraint dictionary shape.
+    pub fn to_json(&self) -> Value {
+        let mut data = json!({
+            "type": "RotationalConstraint",
+            "user_visible": self.user_visible,
+        });
+        data["center"] = json!(self.center);
+        data["p1"] = json!(self.p1);
+        data["p2"] = json!(self.p2);
+        data["value"] = json!(self.angle_rad);
+        if let Some(expression) = &self.expression {
+            data["expression"] = json!(expression);
+        }
+        data
     }
 }

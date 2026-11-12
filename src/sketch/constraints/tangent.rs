@@ -1,9 +1,14 @@
 //! Tangent constraint: a line tangent to a circle or arc.
 
-use crate::geo::shape::line::get_point_line_signed_distance;
+use crate::geo::shape::line::{
+    get_line_closest_point, get_point_line_signed_distance,
+};
+use serde_json::{json, Value};
+
 use crate::sketch::constraint::{
     JacobianEntry, PointContext, SketchConstraint,
 };
+use crate::sketch::registry::EntityRegistry;
 
 /// Enforces a line is tangent to a circle/arc: the absolute signed
 /// distance from the center to the line equals the radius.
@@ -17,6 +22,8 @@ pub struct TangentConstraint {
     pub center: u64,
     /// Radius-bearing point (circle radius point or arc start).
     pub radius_point: u64,
+    /// Reference user-visibility flag.
+    pub user_visible: bool,
 }
 
 impl TangentConstraint {
@@ -27,6 +34,7 @@ impl TangentConstraint {
             l2,
             center,
             radius_point,
+            user_visible: true,
         }
     }
 }
@@ -117,5 +125,68 @@ impl SketchConstraint for TangentConstraint {
         entries.push((self.l1, 0, sign * grad_pol_l1_x, sign * grad_pol_l1_y));
         entries.push((self.l2, 0, sign * grad_pol_l2_x, sign * grad_pol_l2_y));
         entries
+    }
+
+    fn is_hit(
+        &self,
+        mx: f64,
+        my: f64,
+        threshold: f64,
+        model: &EntityRegistry,
+        to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
+    ) -> bool {
+        let (Some(p1), Some(p2), Some(center)) = (
+            model.get_point(self.l1),
+            model.get_point(self.l2),
+            model.get_point(self.center),
+        ) else {
+            return false;
+        };
+
+        // Closest point on the infinite line from the center, in
+        // model space.
+        let tangent = get_line_closest_point(
+            crate::geo::types::Point::new(p1.x, p1.y),
+            crate::geo::types::Point::new(p2.x, p2.y),
+            center.x,
+            center.y,
+        );
+
+        // Convert to screen space first, then offset in screen pixels.
+        let (sx_tangent, sy_tangent) = to_screen((tangent.x, tangent.y));
+        let (sx_center, sy_center) = to_screen((center.x, center.y));
+
+        let angle = (sy_tangent - sy_center).atan2(sx_tangent - sx_center);
+
+        let offset = 15.0;
+        let symbol_sx = sx_tangent + offset * angle.cos();
+        let symbol_sy = sy_tangent + offset * angle.sin();
+
+        (mx - symbol_sx).hypot(my - symbol_sy) < threshold
+    }
+}
+
+impl TangentConstraint {
+    /// Reference user-visibility flag.
+    pub fn user_visible(&self) -> bool {
+        self.user_visible
+    }
+
+    /// Sets the reference user-visibility flag.
+    pub fn set_user_visible(&mut self, value: bool) {
+        self.user_visible = value;
+    }
+
+    /// Serializes to the reference constraint dictionary shape.
+    pub fn to_json(&self) -> Value {
+        let mut data = json!({
+            "type": "TangentConstraint",
+            "user_visible": self.user_visible,
+        });
+        data["l1_idx"] = json!(self.l1);
+        data["l2_idx"] = json!(self.l2);
+        data["center_idx"] = json!(self.center);
+        data["radius_pt_idx"] = json!(self.radius_point);
+        data
     }
 }
