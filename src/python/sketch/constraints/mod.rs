@@ -207,11 +207,11 @@ impl CairoLike for PyCairoAdapter<'_> {
     }
 
     fn set_line_cap_round(&self) {
-        self.call("set_line_cap", ("round",));
+        self.call("set_line_cap", (1,));
     }
 
     fn set_line_join_round(&self) {
-        self.call("set_line_join", ("round",));
+        self.call("set_line_join", (1,));
     }
 
     fn set_source_rgb(&self, r: f64, g: f64, b: f64) {

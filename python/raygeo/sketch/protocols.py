@@ -6,7 +6,7 @@ replay onto, the document the symbol layout reads through, and the
 solver constraint classes.
 """
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from typing import Protocol, runtime_checkable
 
 ScreenMap = Callable[[tuple[float, float]], tuple[float, float]]
@@ -22,11 +22,13 @@ class Canvas(Protocol):
 
     def set_line_width(self, width: float) -> None: ...
 
-    def set_dash(self, on: float, off: float) -> None: ...
+    def set_dash(
+        self, dashes: Sequence[float], offset: float = 0
+    ) -> None: ...
 
-    def set_line_cap(self, cap: str) -> None: ...
+    def set_line_cap(self, cap: int) -> None: ...
 
-    def set_line_join(self, join: str) -> None: ...
+    def set_line_join(self, join: int) -> None: ...
 
     def set_source_rgb(self, r: float, g: float, b: float) -> None: ...
 
@@ -99,7 +101,11 @@ class DrawContext(Protocol):
 class SolverConstraint(Protocol):
     """Runtime surface of the solver constraint classes."""
 
-    status: int
+    @property
+    def status(self) -> int: ...
+
+    @status.setter
+    def status(self, value: int) -> None: ...
 
     def draw(
         self,
