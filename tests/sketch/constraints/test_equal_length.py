@@ -1,6 +1,7 @@
 """Port of the reference equal-length constraint tests against the
 raygeo bindings."""
 
+import cairo
 import pytest
 
 from raygeo.sketch import PointDef, Solver
@@ -205,7 +206,6 @@ def test_equal_length_is_hit(setup_env):
     assert c.is_hit(0, 0, threshold, reg) is False
 
 
-# deferred: draw — command/UI layer
 # deferred: can_apply_to — command/UI layer
 
 
@@ -318,3 +318,26 @@ def test_equal_length_gradient_ellipse_circle(setup_env):
 
 # deferred: reports referenced entities — entity reference reporting
 # is not bound on the resolved constraint.
+
+
+def test_equal_length_draw(setup_env):
+    reg = setup_env
+    p1 = reg.add_point(0, 0)
+    p2 = reg.add_point(10, 0)
+    reg.add_line(p1, p2)
+
+    p3 = reg.add_point(0, 10)
+    p4 = reg.add_point(5, 10)
+    reg.add_line(p3, p4)
+
+    c = EqualLengthConstraint([[p1, p2, p3, p4]])
+
+    ctx = cairo.Context(cairo.ImageSurface(cairo.FORMAT_ARGB32, 200, 200))
+
+    def to_screen(pos):
+        return pos
+
+    c.draw(ctx, reg, to_screen)
+    c.draw(ctx, reg, to_screen, is_selected=True)
+    c.draw(ctx, reg, to_screen, is_hovered=True)
+    c.draw(ctx, reg, to_screen, point_radius=10.0)

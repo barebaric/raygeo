@@ -5,6 +5,10 @@ use serde_json::{json, Value};
 use crate::sketch::constraint::{
     JacobianEntry, PointContext, SketchConstraint,
 };
+use crate::sketch::draw::{
+    draw_conflict_underlay, draw_selection_underlay, draw_status_color,
+    draw_symmetry_arrows, CairoLike, DrawStyle,
+};
 use crate::sketch::registry::EntityRegistry;
 
 /// The symmetry reference, mirroring the reference constraint's two
@@ -144,6 +148,33 @@ impl SketchConstraint for SymmetryConstraint {
             return true;
         }
         (mx - rx).hypot(my - ry) < threshold
+    }
+
+    fn draw(
+        &self,
+        registry: &EntityRegistry,
+        to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
+        ctx: &dyn CairoLike,
+        style: &DrawStyle,
+    ) {
+        let (Some(p1), Some(p2)) =
+            (registry.get_point(self.p1), registry.get_point(self.p2))
+        else {
+            return;
+        };
+        let s1 = to_screen((p1.x, p1.y));
+        let s2 = to_screen((p2.x, p2.y));
+
+        ctx.save();
+        ctx.set_line_width(1.5);
+        draw_symmetry_arrows(ctx, s1, s2);
+        if style.is_selected {
+            draw_selection_underlay(ctx);
+        }
+        draw_conflict_underlay(ctx, style);
+        draw_status_color(ctx, style);
+        ctx.stroke();
+        ctx.restore();
     }
 }
 

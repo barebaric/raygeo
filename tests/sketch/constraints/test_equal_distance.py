@@ -1,6 +1,7 @@
 """Port of the reference equal-distance constraint tests against the
 raygeo bindings."""
 
+import cairo
 import pytest
 
 from raygeo.sketch import PointDef, Solver
@@ -138,4 +139,21 @@ def test_equal_distance_constraint_serialization_round_trip(setup_env):
     assert original.user_visible() == restored.user_visible()
 
 
-# deferred: draw — command/UI layer
+def test_equal_distance_draw(setup_env):
+    reg = setup_env
+    p1 = reg.add_point(0, 0)
+    p2 = reg.add_point(10, 0)
+    p3 = reg.add_point(0, 10)
+    p4 = reg.add_point(0, 14)
+
+    c = EqualDistanceConstraint(p1, p2, p3, p4)
+
+    ctx = cairo.Context(cairo.ImageSurface(cairo.FORMAT_ARGB32, 200, 200))
+
+    def to_screen(pos):
+        return pos
+
+    c.draw(ctx, reg, to_screen)
+    c.draw(ctx, reg, to_screen, is_selected=True)
+    c.draw(ctx, reg, to_screen, is_hovered=True)
+    c.draw(ctx, reg, to_screen, point_radius=10.0)

@@ -5,6 +5,9 @@ use serde_json::{json, Value};
 use crate::sketch::constraint::{
     JacobianEntry, PointContext, SketchConstraint,
 };
+use crate::sketch::draw::{
+    draw_equal_symbol, screen_scale, CairoLike, DrawStyle, EQUAL_OFFSET_SCREEN,
+};
 use crate::sketch::registry::EntityRegistry;
 
 use std::f64::consts::FRAC_PI_2;
@@ -122,6 +125,44 @@ impl SketchConstraint for EqualLengthConstraint {
             }
         }
         false
+    }
+
+    fn draw(
+        &self,
+        registry: &EntityRegistry,
+        to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
+        ctx: &dyn CairoLike,
+        style: &DrawStyle,
+    ) {
+        // One equality symbol per resolved segment (line-branch
+        // math; see is_hit).
+        let scale = screen_scale(to_screen);
+        for pair in &self.pairs {
+            for segment in [[pair[0], pair[1]], [pair[2], pair[3]]] {
+                let (Some(a), Some(b)) = (
+                    registry.get_point(segment[0]),
+                    registry.get_point(segment[1]),
+                ) else {
+                    continue;
+                };
+                let mid_x = (a.x + b.x) / 2.0;
+                let mid_y = (a.y + b.y) / 2.0;
+                let tangent_angle = (b.y - a.y).atan2(b.x - a.x);
+                let normal_angle = tangent_angle - FRAC_PI_2;
+
+                let offset_dist_model = EQUAL_OFFSET_SCREEN / scale;
+                let final_x = mid_x + offset_dist_model * normal_angle.cos();
+                let final_y = mid_y + offset_dist_model * normal_angle.sin();
+                let (sym_sx, sym_sy) = to_screen((final_x, final_y));
+                draw_equal_symbol(
+                    ctx,
+                    sym_sx,
+                    sym_sy,
+                    style,
+                    screen_scale(to_screen),
+                );
+            }
+        }
     }
 }
 

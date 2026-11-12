@@ -1,6 +1,8 @@
 """Port of the reference aspect-ratio constraint tests against the
 raygeo bindings."""
 
+from unittest.mock import MagicMock
+
 import pytest
 
 from raygeo.sketch import PointDef, Solver
@@ -231,5 +233,24 @@ def test_aspect_ratio_constraint_serialization_dict_format(setup_env):
 # deferred: depends_on_points / depends_on_entities — reference
 # reporting is not bound on the resolved constraint.
 
-# deferred: draw — command/UI layer
 # deferred: can_apply_to — command/UI layer
+
+
+def test_aspect_ratio_draw(setup_env):
+    reg = setup_env
+    p1 = reg.add_point(0, 0)
+    p2 = reg.add_point(10, 0)
+    p3 = reg.add_point(0, 10)
+    p4 = reg.add_point(5, 10)
+
+    c = AspectRatioConstraint(p1, p2, p3, p4, 2.0)
+
+    ctx = MagicMock()
+
+    def to_screen(pos):
+        return pos
+
+    c.draw(ctx, reg, to_screen)
+    c.draw(ctx, reg, to_screen, is_selected=True)
+    c.draw(ctx, reg, to_screen, is_hovered=True)
+    c.draw(ctx, reg, to_screen, point_radius=10.0)

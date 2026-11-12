@@ -21,12 +21,14 @@ pub(crate) mod symmetry;
 pub(crate) mod tangent;
 pub(crate) mod vertical;
 
+use pyo3::call::PyCallArgs;
 use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyDict};
 use serde_json::Value;
 
 use crate::python::sketch::registry::PyEntityRegistry;
 use crate::sketch::constraint::SketchConstraint;
+use crate::sketch::draw::{CairoLike, ConstraintStatus, DrawStyle};
 
 /// Type of a leaf-module registration function.
 type LeafRegister = fn(&Bound<'_, PyModule>) -> PyResult<()>;
@@ -90,6 +92,166 @@ fn value_to_py<'py>(
             }
             Ok(dict.into_any())
         }
+    }
+}
+
+/// Maps the [`CairoLike`] interface onto a Python cairo context,
+/// remembering the first call error so it can surface after the
+/// draw pass.
+struct PyCairoAdapter<'a> {
+    ctx: Bound<'a, PyAny>,
+    error: std::cell::RefCell<Option<PyErr>>,
+}
+
+impl<'a> PyCairoAdapter<'a> {
+    fn call<A: for<'py> PyCallArgs<'py>>(&self, name: &str, args: A) {
+        if self.error.borrow().is_some() {
+            return;
+        }
+        if let Err(err) = self.ctx.call_method1(name, args) {
+            *self.error.borrow_mut() = Some(err);
+        }
+    }
+}
+
+impl CairoLike for PyCairoAdapter<'_> {
+    fn save(&self) {
+        self.call("save", ());
+    }
+
+    fn restore(&self) {
+        self.call("restore", ());
+    }
+
+    fn set_line_width(&self, width: f64) {
+        self.call("set_line_width", (width,));
+    }
+
+    fn set_dash(&self, on: f64, off: f64) {
+        self.call("set_dash", ((on, off),));
+    }
+
+    fn set_line_cap_round(&self) {
+        self.call("set_line_cap", ("round",));
+    }
+
+    fn set_line_join_round(&self) {
+        self.call("set_line_join", ("round",));
+    }
+
+    fn set_source_rgb(&self, r: f64, g: f64, b: f64) {
+        self.call("set_source_rgb", (r, g, b));
+    }
+
+    fn set_source_rgba(&self, r: f64, g: f64, b: f64, a: f64) {
+        self.call("set_source_rgba", (r, g, b, a));
+    }
+
+    fn move_to(&self, x: f64, y: f64) {
+        self.call("move_to", (x, y));
+    }
+
+    fn line_to(&self, x: f64, y: f64) {
+        self.call("line_to", (x, y));
+    }
+
+    fn arc(
+        &self,
+        x: f64,
+        y: f64,
+        radius: f64,
+        start_angle: f64,
+        end_angle: f64,
+    ) {
+        self.call("arc", (x, y, radius, start_angle, end_angle));
+    }
+
+    fn arc_negative(
+        &self,
+        x: f64,
+        y: f64,
+        radius: f64,
+        start_angle: f64,
+        end_angle: f64,
+    ) {
+        self.call("arc_negative", (x, y, radius, start_angle, end_angle));
+    }
+
+    fn rectangle(&self, x: f64, y: f64, width: f64, height: f64) {
+        self.call("rectangle", (x, y, width, height));
+    }
+
+    fn fill(&self) {
+        self.call("fill", ());
+    }
+
+    fn stroke(&self) {
+        self.call("stroke", ());
+    }
+
+    fn stroke_preserve(&self) {
+        self.call("stroke_preserve", ());
+    }
+
+    fn new_sub_path(&self) {
+        self.call("new_sub_path", ());
+    }
+
+    fn new_path(&self) {
+        self.call("new_path", ());
+    }
+
+    fn get_line_width(&self) -> f64 {
+        self.ctx
+            .getattr("get_line_width")
+            .and_then(|method| method.call0())
+            .and_then(|value| value.extract::<f64>())
+            .unwrap_or(0.0)
+    }
+
+    fn translate(&self, x: f64, y: f64) {
+        self.call("translate", (x, y));
+    }
+
+    fn rotate(&self, angle: f64) {
+        self.call("rotate", (angle,));
+    }
+}
+
+/// Runs the core [`SketchConstraint::draw`] against the registry
+/// behind the Python binding, replaying the symbol onto the caller's
+/// cairo context.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn constraint_draw(
+    constraint: &dyn SketchConstraint,
+    ctx: &Bound<'_, PyAny>,
+    registry: &PyEntityRegistry,
+    to_screen: &Bound<'_, PyAny>,
+    is_selected: bool,
+    is_hovered: bool,
+    point_radius: f64,
+    status: u8,
+) -> PyResult<()> {
+    let style = DrawStyle {
+        status: ConstraintStatus::from_ordinal(status),
+        is_selected,
+        is_hovered,
+        point_radius,
+    };
+    let to_screen = |point: (f64, f64)| {
+        to_screen
+            .call1((point,))
+            .and_then(|result| result.extract::<(f64, f64)>())
+            .unwrap_or(point)
+    };
+    let adapter = PyCairoAdapter {
+        ctx: ctx.clone(),
+        error: std::cell::RefCell::new(None),
+    };
+    constraint.draw(&registry.inner, &to_screen, &adapter, &style);
+    match adapter.error.into_inner() {
+        Some(err) => Err(err),
+        None => Ok(()),
     }
 }
 

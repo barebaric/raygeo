@@ -1,6 +1,8 @@
 """Port of the reference collinear constraint tests against the
 raygeo bindings."""
 
+from unittest.mock import MagicMock
+
 import pytest
 
 from raygeo.sketch import PointDef, Solver
@@ -136,4 +138,17 @@ def test_collinear_solver_integration(sketch_with_points):
     assert abs(error) < 1e-6
 
 
-# deferred: draw — command/UI layer
+def test_collinear_draw(sketch_with_points):
+    """Test that the draw method can be called without errors."""
+    reg, p1, p2, p3 = sketch_with_points
+    constraint = CollinearConstraint(p1, p2, p3)
+
+    ctx = MagicMock()
+
+    def to_screen(pos):
+        return pos
+
+    constraint.draw(ctx, reg, to_screen)
+    constraint.draw(ctx, reg, to_screen, is_selected=True)
+    constraint.draw(ctx, reg, to_screen, is_hovered=True)
+    constraint.draw(ctx, reg, to_screen, point_radius=10.0)

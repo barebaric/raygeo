@@ -3,6 +3,7 @@ bindings."""
 
 import math
 
+import cairo
 import pytest
 
 from raygeo.sketch import PointDef, Solver
@@ -341,5 +342,27 @@ def test_angle_is_hit(setup_env):
     assert c.is_hit(hit_x, hit_y, threshold, reg) is True
 
 
-# deferred: draw — command/UI layer
 # deferred: get_type_name / can_apply_to — command/UI layer
+
+
+def test_angle_draw(setup_env):
+    reg = setup_env
+    p1 = reg.add_point(0, 0)
+    p2 = reg.add_point(10, 0)
+    reg.add_line(p1, p2)
+
+    p3 = reg.add_point(0, 0)
+    p4 = reg.add_point(0, 10)
+    reg.add_line(p3, p4)
+
+    c = AngleConstraint(p1, p2, p3, p4, 90.0)
+
+    ctx = cairo.Context(cairo.ImageSurface(cairo.FORMAT_ARGB32, 200, 200))
+
+    def to_screen(pos):
+        return pos
+
+    c.draw(ctx, reg, to_screen)
+    c.draw(ctx, reg, to_screen, is_selected=True)
+    c.draw(ctx, reg, to_screen, is_hovered=True)
+    c.draw(ctx, reg, to_screen, point_radius=10.0)

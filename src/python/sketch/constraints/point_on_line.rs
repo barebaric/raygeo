@@ -65,6 +65,9 @@ pub struct PyPointOnLineConstraint {
     pub target: PyPointOnTarget,
     /// Reference user-visibility flag.
     pub user_visible: bool,
+    /// Reference validation status ordinal.
+    #[pyo3(get, set)]
+    pub status: u8,
 }
 
 #[gen_stub_pymethods]
@@ -78,6 +81,7 @@ impl PyPointOnLineConstraint {
             point,
             target,
             user_visible,
+            status: 0,
         }
     }
 
@@ -90,6 +94,31 @@ impl PyPointOnLineConstraint {
     /// Serializes to the reference constraint dictionary shape.
     fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         super::dict_from_value(py, &self.clone().into_constraint().to_json())
+    }
+
+    /// Draws the constraint's symbol onto the cairo context.
+    #[pyo3(signature = (ctx, registry, to_screen, is_selected = false,
+                        is_hovered = false, point_radius = 5.0))]
+    #[allow(clippy::too_many_arguments)]
+    fn draw<'py>(
+        &self,
+        ctx: &Bound<'py, PyAny>,
+        registry: &PyEntityRegistry,
+        to_screen: &Bound<'py, PyAny>,
+        is_selected: bool,
+        is_hovered: bool,
+        point_radius: f64,
+    ) -> PyResult<()> {
+        super::constraint_draw(
+            &self.clone().into_constraint(),
+            ctx,
+            registry,
+            to_screen,
+            is_selected,
+            is_hovered,
+            point_radius,
+            self.status,
+        )
     }
 
     /// Reference user-visibility flag.

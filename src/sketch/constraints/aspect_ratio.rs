@@ -5,6 +5,9 @@ use serde_json::{json, Value};
 use crate::sketch::constraint::{
     JacobianEntry, PointContext, SketchConstraint,
 };
+use crate::sketch::draw::{
+    draw_status_color, CairoLike, ConstraintStatus, DrawStyle, ICON_SIZE,
+};
 use crate::sketch::entities::point::SketchPoint;
 use crate::sketch::registry::EntityRegistry;
 
@@ -88,6 +91,72 @@ impl SketchConstraint for AspectRatioConstraint {
             return false;
         };
         (mx - cx).hypot(my - cy) < threshold
+    }
+
+    fn draw(
+        &self,
+        registry: &EntityRegistry,
+        to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
+        ctx: &dyn CairoLike,
+        style: &DrawStyle,
+    ) {
+        let (Some(p1), Some(p2), Some(p3), Some(p4)) = (
+            registry.get_point(self.p1),
+            registry.get_point(self.p2),
+            registry.get_point(self.p3),
+            registry.get_point(self.p4),
+        ) else {
+            return;
+        };
+        let Some((cx, cy)) = icon_pos(
+            (self.p1, self.p2),
+            (self.p3, self.p4),
+            (&p1, &p2, &p3, &p4),
+            to_screen,
+        ) else {
+            return;
+        };
+
+        let hs = ICON_SIZE / 2.0;
+        let glow_radius = hs + 4.0;
+
+        ctx.save();
+        if style.is_selected {
+            ctx.set_source_rgba(0.2, 0.6, 1.0, 0.4);
+            ctx.arc(cx, cy, glow_radius, 0.0, 2.0 * std::f64::consts::PI);
+            ctx.fill();
+        }
+        if style.status == ConstraintStatus::Conflicting {
+            ctx.set_source_rgba(1.0, 0.2, 0.2, 0.5);
+            ctx.arc(cx, cy, glow_radius, 0.0, 2.0 * std::f64::consts::PI);
+            ctx.fill();
+        }
+
+        // Corner brackets, translated to the icon anchor; the
+        // reference's round cap/join apply at render time.
+        ctx.set_line_width(2.0);
+        ctx.set_line_cap_round();
+        ctx.set_line_join_round();
+
+        // Top-right corner bracket (L-shape pointing into the corner)
+        let (x1, y1) = (cx + hs * 0.4, cy + hs);
+        let (x2, y2) = (cx + hs, cy + hs);
+        let (x3, y3) = (cx + hs, cy + hs * 0.4);
+        ctx.move_to(x1, y1);
+        ctx.line_to(x2, y2);
+        ctx.line_to(x3, y3);
+
+        // Bottom-left corner bracket
+        let (x1, y1) = (cx - hs * 0.4, cy - hs);
+        let (x2, y2) = (cx - hs, cy - hs);
+        let (x3, y3) = (cx - hs, cy - hs * 0.4);
+        ctx.move_to(x1, y1);
+        ctx.line_to(x2, y2);
+        ctx.line_to(x3, y3);
+
+        draw_status_color(ctx, style);
+        ctx.stroke();
+        ctx.restore();
     }
 
     fn gradient(&self, reg: &mut dyn PointContext) -> Vec<JacobianEntry> {

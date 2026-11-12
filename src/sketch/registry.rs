@@ -121,6 +121,16 @@ impl EntityRegistry {
         self.get_entity(id).map(|e| e.get_endpoint_ids())
     }
 
+    /// Whether the point is one of a text box frame's corner points.
+    pub fn point_is_in_text_box_frame(&self, point_id: u64) -> bool {
+        for entity in self.entities.iter() {
+            if entity.get_all_frame_point_ids(self).contains(&point_id) {
+                return true;
+            }
+        }
+        false
+    }
+
     /// Point ids that move rigidly with `point_id` during dragging.
     pub fn get_rigidly_connected_points(&self, point_id: u64) -> Vec<u64> {
         let mut result = Vec::new();

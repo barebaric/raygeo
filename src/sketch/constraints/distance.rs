@@ -9,6 +9,10 @@ use crate::geo::types::Point;
 use crate::sketch::constraint::{
     JacobianEntry, PointContext, SketchConstraint,
 };
+use crate::sketch::draw::{
+    draw_conflict_underlay, draw_label, draw_status_color, format_value,
+    screen_scale, CairoLike, DrawStyle,
+};
 use crate::sketch::registry::EntityRegistry;
 
 /// Enforces a fixed distance between two points.
@@ -127,6 +131,59 @@ impl SketchConstraint for DistanceConstraint {
         let y_max = label_sy + half_h + 4.0;
 
         x_min <= mx && mx <= x_max && y_min <= my && my <= y_max
+    }
+
+    fn draw(
+        &self,
+        registry: &EntityRegistry,
+        to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
+        ctx: &dyn CairoLike,
+        style: &DrawStyle,
+    ) {
+        let (Some(p1), Some(p2)) =
+            (registry.get_point(self.p1), registry.get_point(self.p2))
+        else {
+            return;
+        };
+        let s1 = to_screen((p1.x, p1.y));
+        let s2 = to_screen((p2.x, p2.y));
+        let mx = (s1.0 + s2.0) / 2.0;
+        let my = (s1.1 + s2.1) / 2.0;
+
+        ctx.save();
+        draw_label(
+            ctx,
+            &format_value(self.value),
+            mx,
+            my,
+            style,
+            screen_scale(to_screen),
+        );
+
+        let mut has_geometry = false;
+        let endpoints = HashSet::from([self.p1, self.p2]);
+        for entity_id in registry.entity_ids() {
+            if registry.entity_type(entity_id) != Some("line") {
+                continue;
+            }
+            if let Some(ids) = registry.entity_point_ids(entity_id) {
+                if ids.iter().copied().collect::<HashSet<u64>>() == endpoints {
+                    has_geometry = true;
+                    break;
+                }
+            }
+        }
+
+        if !has_geometry {
+            ctx.set_line_width(1.0);
+            ctx.set_dash(4.0, 4.0);
+            ctx.move_to(s1.0, s1.1);
+            ctx.line_to(s2.0, s2.1);
+            draw_conflict_underlay(ctx, style);
+            draw_status_color(ctx, style);
+            ctx.stroke();
+        }
+        ctx.restore();
     }
 }
 

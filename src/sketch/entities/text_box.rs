@@ -255,6 +255,10 @@ impl Entity for TextBoxEntity {
         "text_box"
     }
 
+    fn get_all_frame_point_ids(&self, model: &EntityRegistry) -> Vec<u64> {
+        TextBoxEntity::get_all_frame_point_ids(self, model)
+    }
+
     fn to_json(&self) -> Value {
         TextBoxEntity::to_json(self)
     }

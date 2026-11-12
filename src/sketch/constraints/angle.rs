@@ -8,6 +8,10 @@ use serde_json::{json, Value};
 use crate::sketch::constraint::{
     JacobianEntry, PointContext, SketchConstraint,
 };
+use crate::sketch::draw::{
+    draw_conflict_underlay, draw_label, draw_selection_underlay,
+    draw_status_color, format_value, screen_scale, CairoLike, DrawStyle,
+};
 use crate::sketch::registry::EntityRegistry;
 
 /// Weight of the angular residual.
@@ -16,6 +20,9 @@ pub const ANGLE_WEIGHT: f64 = 10.0;
 /// Screen-space radius of the angle marker arc, matching the
 /// reference renderer.
 pub const ARC_RADIUS: f64 = 35.0;
+
+/// Screen-space distance of the angle label from the arc center.
+pub const LABEL_RADIUS: f64 = ARC_RADIUS - 10.0;
 
 /// Central-difference step used for the Jacobian.
 const GRAD_FD_EPS: f64 = 1e-6;
@@ -208,6 +215,71 @@ impl SketchConstraint for AngleConstraint {
         let click_from_anchor = normalize_angle(click_ang - anchor_ang);
 
         click_from_anchor <= ccw_diff
+    }
+
+    fn draw(
+        &self,
+        registry: &EntityRegistry,
+        to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
+        ctx: &dyn CairoLike,
+        style: &DrawStyle,
+    ) {
+        let (Some(p1), Some(p2), Some(p3), Some(p4)) = (
+            registry.get_point(self.p1),
+            registry.get_point(self.p2),
+            registry.get_point(self.p3),
+            registry.get_point(self.p4),
+        ) else {
+            return;
+        };
+        let intersection = get_line_line_intersection(
+            Point::new(p1.x, p1.y),
+            Point::new(p2.x, p2.y),
+            Point::new(p3.x, p3.y),
+            Point::new(p4.x, p4.y),
+        );
+        let (ix, iy) = match intersection {
+            Some(point) => (point.x, point.y),
+            None => (
+                (p1.x + p2.x + p3.x + p4.x) / 4.0,
+                (p1.y + p2.y + p3.y + p4.y) / 4.0,
+            ),
+        };
+        let (sx, sy) = to_screen((ix, iy));
+
+        let far1 =
+            self.far_point(self.p1, self.p2, self.e1_far, ix, iy, registry);
+        let far2 =
+            self.far_point(self.p3, self.p4, self.e2_far, ix, iy, registry);
+        let far1_screen = to_screen(far1);
+        let far2_screen = to_screen(far2);
+        let anchor_ang = (far1_screen.1 - sy).atan2(far1_screen.0 - sx);
+        let other_ang = (far2_screen.1 - sy).atan2(far2_screen.0 - sx);
+
+        ctx.save();
+        ctx.set_line_width(1.5);
+        ctx.arc(sx, sy, ARC_RADIUS, anchor_ang, other_ang);
+        if style.is_selected {
+            draw_selection_underlay(ctx);
+        }
+        draw_conflict_underlay(ctx, style);
+        draw_status_color(ctx, style);
+        ctx.stroke();
+
+        let label = format!("{}°", format_value(self.value_deg));
+        let ccw_diff = normalize_angle(other_ang - anchor_ang);
+        let mid = anchor_ang + ccw_diff / 2.0;
+        let label_x = sx + mid.cos() * LABEL_RADIUS;
+        let label_y = sy + mid.sin() * LABEL_RADIUS;
+        draw_label(
+            ctx,
+            &label,
+            label_x,
+            label_y,
+            style,
+            screen_scale(to_screen),
+        );
+        ctx.restore();
     }
 
     fn gradient(&self, reg: &mut dyn PointContext) -> Vec<JacobianEntry> {
