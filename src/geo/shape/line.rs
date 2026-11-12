@@ -29,10 +29,7 @@ pub fn is_point_on_segment(pt: Point, p1: Point, p2: Point) -> bool {
         return false;
     }
     let dot2 = (pt - p2).dot(Point::new(-dx, -dy));
-    if dot2 < 0.0 {
-        return false;
-    }
-    true
+    dot2 >= 0.0
 }
 
 /// Computes the intersection of two infinite lines.

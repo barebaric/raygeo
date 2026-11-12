@@ -24,12 +24,14 @@ pub enum ConstraintStatus {
 }
 
 impl ConstraintStatus {
-    /// Resolves a status from its reference enum ordinal.
+    /// Resolves a status from its reference enum ordinal (the
+    /// reference `ConstraintStatus` enum numbers members from 1:
+    /// valid, expression-based, error, conflicting).
     pub fn from_ordinal(value: u8) -> ConstraintStatus {
         match value {
-            1 => ConstraintStatus::ExpressionBased,
-            2 => ConstraintStatus::Error,
-            3 => ConstraintStatus::Conflicting,
+            2 => ConstraintStatus::ExpressionBased,
+            3 => ConstraintStatus::Error,
+            4 => ConstraintStatus::Conflicting,
             _ => ConstraintStatus::Valid,
         }
     }

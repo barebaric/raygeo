@@ -142,3 +142,37 @@ def test_horizontal_draw(setup_env):
     c.draw(ctx, reg, to_screen, is_selected=True)
     c.draw(ctx, reg, to_screen, is_hovered=True)
     c.draw(ctx, reg, to_screen, point_radius=10.0)
+
+
+def test_horizontal_draw_status_ordinals(setup_env):
+    reg = setup_env
+    p1 = reg.add_point(0, 0)
+    p2 = reg.add_point(10, 5)
+
+    c = HorizontalConstraint(p1, p2)
+
+    def to_screen(pos):
+        return pos
+
+    c.status = 1
+    ctx = MagicMock()
+    c.draw(ctx, reg, to_screen)
+    assert ctx.set_source_rgb.call_args_list[-1].args == (0.0, 0.6, 0.0)
+
+    c.status = 2
+    ctx = MagicMock()
+    c.draw(ctx, reg, to_screen)
+    assert ctx.set_source_rgb.call_args_list[-1].args == (1.0, 0.6, 0.0)
+
+    c.status = 3
+    ctx = MagicMock()
+    c.draw(ctx, reg, to_screen)
+    assert ctx.set_source_rgb.call_args_list[-1].args == (1.0, 0.2, 0.2)
+
+    c.status = 4
+    ctx = MagicMock()
+    c.draw(ctx, reg, to_screen)
+    assert ctx.set_source_rgb.call_args_list[-1].args == (1.0, 0.2, 0.2)
+    assert any(
+        name == "stroke_preserve" for name, _args, _kwargs in ctx.mock_calls
+    )
