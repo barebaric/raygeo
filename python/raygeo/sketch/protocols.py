@@ -7,7 +7,10 @@ solver constraint classes.
 """
 
 from collections.abc import Callable, Sequence
-from typing import Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
+
+if TYPE_CHECKING:
+    from cairo import LineCap, LineJoin
 
 ScreenMap = Callable[[tuple[float, float]], tuple[float, float]]
 
@@ -22,18 +25,18 @@ class Canvas(Protocol):
 
     def set_line_width(self, width: float) -> None: ...
 
-    def set_dash(
-        self, dashes: Sequence[float], offset: float = 0
+    def set_dash(self, dashes: Sequence[float], offset: float = 0) -> None: ...
+
+    def set_line_cap(self, line_cap: LineCap) -> None: ...
+
+    def set_line_join(self, line_join: LineJoin) -> None: ...
+
+    def set_source_rgb(
+        self, red: float, green: float, blue: float
     ) -> None: ...
 
-    def set_line_cap(self, cap: int) -> None: ...
-
-    def set_line_join(self, join: int) -> None: ...
-
-    def set_source_rgb(self, r: float, g: float, b: float) -> None: ...
-
     def set_source_rgba(
-        self, r: float, g: float, b: float, a: float
+        self, red: float, green: float, blue: float, alpha: float
     ) -> None: ...
 
     def move_to(self, x: float, y: float) -> None: ...
@@ -42,20 +45,20 @@ class Canvas(Protocol):
 
     def arc(
         self,
-        x: float,
-        y: float,
+        xc: float,
+        yc: float,
         radius: float,
-        start_angle: float,
-        end_angle: float,
+        angle1: float,
+        angle2: float,
     ) -> None: ...
 
     def arc_negative(
         self,
-        x: float,
-        y: float,
+        xc: float,
+        yc: float,
         radius: float,
-        start_angle: float,
-        end_angle: float,
+        angle1: float,
+        angle2: float,
     ) -> None: ...
 
     def rectangle(
@@ -74,7 +77,7 @@ class Canvas(Protocol):
 
     def get_line_width(self) -> float: ...
 
-    def translate(self, x: float, y: float) -> None: ...
+    def translate(self, tx: float, ty: float) -> None: ...
 
     def rotate(self, angle: float) -> None: ...
 
@@ -116,5 +119,3 @@ class SolverConstraint(Protocol):
         is_hovered: bool = False,
         point_radius: float = 5.0,
     ) -> None: ...
-
-    def error(self, registry: DrawContext) -> list[float]: ...
