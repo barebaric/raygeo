@@ -46,6 +46,16 @@ class PointOnCurveConstraint:
         r"""
         Whether the curve degenerates to a straight segment.
         """
+    @property
+    def status(self) -> builtins.int:
+        r"""
+        Reference validation status ordinal.
+        """
+    @status.setter
+    def status(self, value: builtins.int) -> None:
+        r"""
+        Reference validation status ordinal.
+        """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __new__(cls, point: builtins.int, start: builtins.int, end: builtins.int, cp1_offset: tuple[builtins.float, builtins.float], cp2_offset: tuple[builtins.float, builtins.float], is_line: builtins.bool, user_visible: builtins.bool = True) -> PointOnCurveConstraint:
         r"""
@@ -59,6 +69,10 @@ class PointOnCurveConstraint:
     def to_dict(self) -> dict:
         r"""
         Serializes to the reference constraint dictionary shape.
+        """
+    def draw(self, ctx: typing.Any, registry: registry.EntityRegistry, to_screen: typing.Any, is_selected: builtins.bool = False, is_hovered: builtins.bool = False, point_radius: builtins.float = 5.0) -> None:
+        r"""
+        Draws the constraint's symbol onto the cairo context.
         """
     def user_visible(self) -> builtins.bool:
         r"""

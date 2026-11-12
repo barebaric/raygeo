@@ -8,6 +8,10 @@ use crate::geo::types::Point;
 use crate::sketch::constraint::{
     JacobianEntry, PointContext, SketchConstraint,
 };
+use crate::sketch::draw::{
+    draw_conflict_underlay, draw_selection_underlay, draw_status_color,
+    status_color, CairoLike, DrawStyle,
+};
 use crate::sketch::registry::EntityRegistry;
 
 /// Screen-space radius of the line-line marker arc, matching the
@@ -312,6 +316,158 @@ impl SketchConstraint for PerpendicularConstraint {
                 (mx - sx).hypot(my - sy) < threshold
             }
         }
+    }
+
+    fn draw(
+        &self,
+        registry: &EntityRegistry,
+        to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
+        ctx: &dyn CairoLike,
+        style: &DrawStyle,
+    ) {
+        ctx.save();
+        ctx.set_line_width(1.5);
+        match &self.target {
+            PerpendicularTarget::LineLine { a1, a2, b1, b2 } => {
+                let (Some(p1), Some(p2), Some(p3), Some(p4)) = (
+                    registry.get_point(*a1),
+                    registry.get_point(*a2),
+                    registry.get_point(*b1),
+                    registry.get_point(*b2),
+                ) else {
+                    ctx.restore();
+                    return;
+                };
+                let pt = get_line_line_intersection(
+                    Point::new(p1.x, p1.y),
+                    Point::new(p2.x, p2.y),
+                    Point::new(p3.x, p3.y),
+                    Point::new(p4.x, p4.y),
+                );
+                let (ix, iy) = match pt {
+                    Some(point) => (point.x, point.y),
+                    None => (
+                        (p1.x + p2.x + p3.x + p4.x) / 4.0,
+                        (p1.y + p2.y + p3.y + p4.y) / 4.0,
+                    ),
+                };
+                let (sx, sy) = to_screen((ix, iy));
+                let s_p1 = to_screen((p1.x, p1.y));
+                let s_p2 = to_screen((p2.x, p2.y));
+                let s_p3 = to_screen((p3.x, p3.y));
+                let s_p4 = to_screen((p4.x, p4.y));
+
+                let dist_sq = |a: (f64, f64), b: (f64, f64)| {
+                    (a.0 - b.0) * (a.0 - b.0) + (a.1 - b.1) * (a.1 - b.1)
+                };
+                let here = (sx, sy);
+                let v1p = if dist_sq(s_p1, here) > dist_sq(s_p2, here) {
+                    s_p1
+                } else {
+                    s_p2
+                };
+                let v2p = if dist_sq(s_p3, here) > dist_sq(s_p4, here) {
+                    s_p3
+                } else {
+                    s_p4
+                };
+                let ang1 = (v1p.1 - sy).atan2(v1p.0 - sx);
+                let ang2 = (v2p.1 - sy).atan2(v2p.0 - sx);
+
+                let mut diff = ang2 - ang1;
+                while diff <= -std::f64::consts::PI {
+                    diff += 2.0 * std::f64::consts::PI;
+                }
+                while diff > std::f64::consts::PI {
+                    diff -= 2.0 * std::f64::consts::PI;
+                }
+
+                if diff > 0.0 {
+                    ctx.arc(sx, sy, VISUAL_RADIUS, ang1, ang2);
+                } else {
+                    ctx.arc_negative(sx, sy, VISUAL_RADIUS, ang1, ang2);
+                }
+                if style.is_selected {
+                    draw_selection_underlay(ctx);
+                }
+                draw_conflict_underlay(ctx, style);
+                draw_status_color(ctx, style);
+                ctx.stroke();
+
+                let mid = ang1 + diff / 2.0;
+                let dx = sx + mid.cos() * VISUAL_RADIUS * 0.6;
+                let dy = sy + mid.sin() * VISUAL_RADIUS * 0.6;
+                let (r, g, b) = status_color(style);
+                ctx.set_source_rgba(r, g, b, 1.0);
+                ctx.arc(dx, dy, 2.0, 0.0, 2.0 * std::f64::consts::PI);
+                ctx.fill();
+            }
+            PerpendicularTarget::LineCenter { l1, l2, center } => {
+                // Box-style marker anchored at the center (the
+                // line/circle intersection fallback; see is_hit).
+                let (Some(lp1), Some(lp2), Some(center)) = (
+                    registry.get_point(*l1),
+                    registry.get_point(*l2),
+                    registry.get_point(*center),
+                ) else {
+                    ctx.restore();
+                    return;
+                };
+                if (lp2.x - lp1.x).hypot(lp2.y - lp1.y) < 1e-9 {
+                    ctx.restore();
+                    return;
+                }
+                let (sx, sy) = to_screen((center.x, center.y));
+                let sz = 8.0;
+                ctx.rectangle(sx - sz, sy - sz, sz * 2.0, sz * 2.0);
+                if style.is_selected {
+                    draw_selection_underlay(ctx);
+                }
+                draw_conflict_underlay(ctx, style);
+                draw_status_color(ctx, style);
+                ctx.stroke();
+            }
+            PerpendicularTarget::Circles {
+                c1,
+                r1_point,
+                c2,
+                r2_point,
+            } => {
+                // Box-style marker at the first circle-circle
+                // intersection.
+                let (Some(c1p), Some(r1p), Some(c2p), Some(r2p)) = (
+                    registry.get_point(*c1),
+                    registry.get_point(*r1_point),
+                    registry.get_point(*c2),
+                    registry.get_point(*r2_point),
+                ) else {
+                    ctx.restore();
+                    return;
+                };
+                let r1 = (r1p.x - c1p.x).hypot(r1p.y - c1p.y);
+                let r2 = (r2p.x - c2p.x).hypot(r2p.y - c2p.y);
+                let intersections = get_circle_circle_intersections(
+                    Point::new(c1p.x, c1p.y),
+                    r1,
+                    Point::new(c2p.x, c2p.y),
+                    r2,
+                );
+                let Some(point) = intersections.first() else {
+                    ctx.restore();
+                    return;
+                };
+                let (sx, sy) = to_screen((point.x, point.y));
+                let sz = 8.0;
+                ctx.rectangle(sx - sz, sy - sz, sz * 2.0, sz * 2.0);
+                if style.is_selected {
+                    draw_selection_underlay(ctx);
+                }
+                draw_conflict_underlay(ctx, style);
+                draw_status_color(ctx, style);
+                ctx.stroke();
+            }
+        }
+        ctx.restore();
     }
 }
 

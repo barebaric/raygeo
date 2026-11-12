@@ -1,6 +1,7 @@
 """Port of the reference distance constraint tests against the
 raygeo bindings."""
 
+import cairo
 import pytest
 
 from raygeo.sketch import PointDef, Solver
@@ -199,5 +200,24 @@ def test_distance_is_hit(setup_env):
     assert c.is_hit(50, 20, threshold, reg) is False
 
 
-# deferred: draw — command/UI layer
 # deferred: can_apply_to — command/UI layer
+
+
+@pytest.mark.parametrize(
+    "draw_options",
+    [{}, {"is_selected": True}, {"is_hovered": True}, {"point_radius": 10.0}],
+)
+def test_distance_draw(setup_env, draw_options):
+    reg = setup_env
+    p1 = reg.add_point(0, 0)
+    p2 = reg.add_point(100, 0)
+    c = DistanceConstraint(p1, p2, 100)
+
+    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, 200, 100)
+    ctx = cairo.Context(surface)
+
+    def to_screen(pos):
+        return pos[0] + 50, pos[1] + 50
+
+    c.draw(ctx, reg, to_screen, **draw_options)
+    assert any(surface.get_data())

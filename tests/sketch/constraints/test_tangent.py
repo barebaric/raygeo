@@ -1,6 +1,8 @@
 """Port of the reference tangent constraint tests against the raygeo
 bindings."""
 
+from unittest.mock import MagicMock
+
 import pytest
 
 from raygeo.sketch import PointDef, Solver
@@ -216,5 +218,26 @@ def test_tangent_is_hit(setup_env):
     assert c.is_hit(0, 0, threshold, reg) is False
 
 
-# deferred: draw — command/UI layer
 # deferred: can_apply_to — command/UI layer
+
+
+def test_tangent_draw(setup_env):
+    reg = setup_env
+    center = reg.add_point(50, 50)
+    radius_pt = reg.add_point(50, 60)
+    reg.add_circle(center, radius_pt)
+
+    lp1 = reg.add_point(0, 60)
+    lp2 = reg.add_point(100, 60)
+    reg.add_line(lp1, lp2)
+    c = TangentConstraint(lp1, lp2, center, radius_pt)
+
+    ctx = MagicMock()
+
+    def to_screen(pos):
+        return pos
+
+    c.draw(ctx, reg, to_screen)
+    c.draw(ctx, reg, to_screen, is_selected=True)
+    c.draw(ctx, reg, to_screen, is_hovered=True)
+    c.draw(ctx, reg, to_screen, point_radius=10.0)

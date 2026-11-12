@@ -5,6 +5,10 @@ use serde_json::{json, Value};
 use crate::sketch::constraint::{
     JacobianEntry, PointContext, SketchConstraint,
 };
+use crate::sketch::draw::{
+    draw_conflict_underlay, draw_selection_underlay, draw_status_color,
+    CairoLike, DrawStyle, MARKER_OFFSET, MARKER_SIZE, MARKER_T,
+};
 use crate::sketch::registry::EntityRegistry;
 
 /// Enforces two points have the same Y coordinate.
@@ -68,6 +72,37 @@ impl SketchConstraint for HorizontalConstraint {
         let cx = sym_x;
         let cy = sym_y - 10.0;
         (mx - cx).hypot(my - cy) < threshold
+    }
+
+    fn draw(
+        &self,
+        registry: &EntityRegistry,
+        to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
+        ctx: &dyn CairoLike,
+        style: &DrawStyle,
+    ) {
+        let (Some(p1), Some(p2)) =
+            (registry.get_point(self.p1), registry.get_point(self.p2))
+        else {
+            return;
+        };
+        let s1 = to_screen((p1.x, p1.y));
+        let s2 = to_screen((p2.x, p2.y));
+
+        let mx = s1.0 + (s2.0 - s1.0) * MARKER_T;
+        let my = s1.1 + (s2.1 - s1.1) * MARKER_T;
+
+        ctx.save();
+        ctx.set_line_width(2.0);
+        ctx.move_to(mx - MARKER_SIZE, my - MARKER_OFFSET);
+        ctx.line_to(mx + MARKER_SIZE, my - MARKER_OFFSET);
+        if style.is_selected {
+            draw_selection_underlay(ctx);
+        }
+        draw_conflict_underlay(ctx, style);
+        draw_status_color(ctx, style);
+        ctx.stroke();
+        ctx.restore();
     }
 }
 

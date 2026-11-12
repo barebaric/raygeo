@@ -151,6 +151,12 @@ pub trait Entity: Send + Sync {
         Vec::new()
     }
 
+    /// Returns all frame point ids of a text box frame; other entity
+    /// kinds return none.
+    fn get_all_frame_point_ids(&self, _model: &EntityRegistry) -> Vec<u64> {
+        Vec::new()
+    }
+
     fn get_ignorable_unconstrained_points(&self) -> Vec<u64> {
         Vec::new()
     }

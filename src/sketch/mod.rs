@@ -17,6 +17,7 @@
 pub mod components;
 pub mod constraint;
 pub mod constraints;
+pub mod draw;
 pub mod entities;
 pub mod eval;
 pub mod registry;

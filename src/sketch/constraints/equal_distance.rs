@@ -5,6 +5,9 @@ use serde_json::{json, Value};
 use crate::sketch::constraint::{
     JacobianEntry, PointContext, SketchConstraint,
 };
+use crate::sketch::draw::{
+    draw_equal_symbol, screen_scale, CairoLike, DrawStyle, EQUAL_OFFSET_SCREEN,
+};
 use crate::sketch::registry::EntityRegistry;
 
 use std::f64::consts::FRAC_PI_2;
@@ -117,6 +120,36 @@ impl SketchConstraint for EqualDistanceConstraint {
         let final_y = sym_y + offset_dist_model * normal_angle.sin();
         let (sym_sx, sym_sy) = to_screen((final_x, final_y));
         (mx - sym_sx).hypot(my - sym_sy) < threshold
+    }
+
+    fn draw(
+        &self,
+        registry: &EntityRegistry,
+        to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
+        ctx: &dyn CairoLike,
+        style: &DrawStyle,
+    ) {
+        let (Some(pa), Some(pb), Some(pc), Some(pd)) = (
+            registry.get_point(self.p1),
+            registry.get_point(self.p2),
+            registry.get_point(self.p3),
+            registry.get_point(self.p4),
+        ) else {
+            return;
+        };
+
+        let sym_x = (pa.x + pb.x + pc.x + pd.x) / 4.0;
+        let sym_y = (pa.y + pb.y + pc.y + pd.y) / 4.0;
+
+        let tangent_angle = (pb.y - pa.y).atan2(pb.x - pa.x);
+        let normal_angle = tangent_angle - FRAC_PI_2;
+
+        let scale = screen_scale(to_screen);
+        let offset_dist_model = EQUAL_OFFSET_SCREEN / scale;
+        let final_x = sym_x + offset_dist_model * normal_angle.cos();
+        let final_y = sym_y + offset_dist_model * normal_angle.sin();
+        let (sym_sx, sym_sy) = to_screen((final_x, final_y));
+        draw_equal_symbol(ctx, sym_sx, sym_sy, style, screen_scale(to_screen));
     }
 }
 

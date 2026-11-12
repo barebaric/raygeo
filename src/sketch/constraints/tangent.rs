@@ -8,6 +8,10 @@ use serde_json::{json, Value};
 use crate::sketch::constraint::{
     JacobianEntry, PointContext, SketchConstraint,
 };
+use crate::sketch::draw::{
+    draw_conflict_underlay, draw_selection_underlay, draw_status_color,
+    CairoLike, DrawStyle, TANGENT_OFFSET, TANGENT_RADIUS,
+};
 use crate::sketch::registry::EntityRegistry;
 
 /// Enforces a line is tangent to a circle/arc: the absolute signed
@@ -163,6 +167,61 @@ impl SketchConstraint for TangentConstraint {
         let symbol_sy = sy_tangent + offset * angle.sin();
 
         (mx - symbol_sx).hypot(my - symbol_sy) < threshold
+    }
+
+    fn draw(
+        &self,
+        registry: &EntityRegistry,
+        to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
+        ctx: &dyn CairoLike,
+        style: &DrawStyle,
+    ) {
+        let (Some(p1), Some(p2), Some(center)) = (
+            registry.get_point(self.l1),
+            registry.get_point(self.l2),
+            registry.get_point(self.center),
+        ) else {
+            return;
+        };
+
+        // Closest point on the infinite line from the center, in
+        // model space.
+        let tangent = get_line_closest_point(
+            crate::geo::types::Point::new(p1.x, p1.y),
+            crate::geo::types::Point::new(p2.x, p2.y),
+            center.x,
+            center.y,
+        );
+
+        let (sx_tangent, sy_tangent) = to_screen((tangent.x, tangent.y));
+        let (sx_center, sy_center) = to_screen((center.x, center.y));
+        let angle = (sy_tangent - sy_center).atan2(sx_tangent - sx_center);
+        let sx = sx_tangent + TANGENT_OFFSET * angle.cos();
+        let sy = sy_tangent + TANGENT_OFFSET * angle.sin();
+
+        let rotation = angle + std::f64::consts::FRAC_PI_2;
+        let radius = TANGENT_RADIUS;
+
+        ctx.save();
+        ctx.set_line_width(1.5);
+        ctx.translate(sx, sy);
+        ctx.rotate(rotation);
+        ctx.arc(
+            0.0,
+            -radius,
+            radius,
+            std::f64::consts::FRAC_PI_2 - std::f64::consts::FRAC_PI_3,
+            std::f64::consts::FRAC_PI_2 + std::f64::consts::FRAC_PI_3,
+        );
+        ctx.move_to(-radius * 1.2, 0.0);
+        ctx.line_to(radius * 1.2, 0.0);
+        if style.is_selected {
+            draw_selection_underlay(ctx);
+        }
+        draw_conflict_underlay(ctx, style);
+        draw_status_color(ctx, style);
+        ctx.stroke();
+        ctx.restore();
     }
 }
 

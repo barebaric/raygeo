@@ -2,6 +2,7 @@
 raygeo bindings."""
 
 import math
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -286,5 +287,26 @@ def test_perpendicular_is_hit(setup_env):
     assert c_lc.is_hit(0, 0, threshold, reg) is False
 
 
-# deferred: draw — command/UI layer
 # deferred: can_apply_to — command/UI layer
+
+
+def test_perpendicular_draw(setup_env):
+    reg = setup_env
+    p1 = reg.add_point(0, 0)
+    p2 = reg.add_point(10, 0)
+    p3 = reg.add_point(5, 5)
+    p4 = reg.add_point(5, 15)
+    reg.add_line(p1, p2)
+    reg.add_line(p3, p4)
+
+    c = PerpendicularConstraint(PerpendicularTarget.LineLine(p1, p2, p3, p4))
+
+    ctx = MagicMock()
+
+    def to_screen(pos):
+        return pos
+
+    c.draw(ctx, reg, to_screen)
+    c.draw(ctx, reg, to_screen, is_selected=True)
+    c.draw(ctx, reg, to_screen, is_hovered=True)
+    c.draw(ctx, reg, to_screen, point_radius=10.0)

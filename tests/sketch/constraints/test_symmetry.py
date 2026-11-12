@@ -1,6 +1,8 @@
 """Port of the reference symmetry constraint tests against the raygeo
 bindings."""
 
+from unittest.mock import MagicMock
+
 import pytest
 
 from raygeo.sketch import PointDef, Solver
@@ -177,4 +179,21 @@ def test_symmetry_is_hit(setup_env):
 
 
 # deferred: can_apply_to — command/UI layer
-# deferred: draw — command/UI layer
+
+
+def test_symmetry_draw(setup_env):
+    reg = setup_env
+    p1 = reg.add_point(-50, 0)
+    p2 = reg.add_point(50, 0)
+    center = reg.add_point(0, 0)
+    c = SymmetryConstraint(p1, p2, SymmetryTarget.Point(center))
+
+    ctx = MagicMock()
+
+    def to_screen(pos):
+        return pos
+
+    c.draw(ctx, reg, to_screen)
+    c.draw(ctx, reg, to_screen, is_selected=True)
+    c.draw(ctx, reg, to_screen, is_hovered=True)
+    c.draw(ctx, reg, to_screen, point_radius=10.0)

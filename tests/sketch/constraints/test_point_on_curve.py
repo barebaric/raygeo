@@ -1,6 +1,8 @@
 """Port of the reference point-on-curve constraint tests against the
 raygeo bindings."""
 
+from unittest.mock import MagicMock
+
 import pytest
 
 from raygeo.geo.shape.bezier import get_bezier_closest_point
@@ -219,9 +221,6 @@ def test_point_on_curve_is_hit(setup_env):
     assert c.is_hit(30, 20, threshold, reg) is False
 
 
-# deferred: draw — command/UI layer
-
-
 def test_point_on_curve_sketch_end_to_end(setup_env):
     reg = setup_env
     p_start = reg.add_point(0, 0, fixed=True)
@@ -240,3 +239,23 @@ def test_point_on_curve_sketch_end_to_end(setup_env):
 
 # deferred: ignores missing shape — the constraint references
 # resolved points, so a missing entity cannot be represented.
+
+
+def test_point_on_curve_draw(setup_env):
+    reg = setup_env
+    _bez_id, p_start, p_end = _add_hump_bezier(reg)
+    pt = reg.add_point(0, 0)
+
+    c = PointOnCurveConstraint(
+        pt, p_start, p_end, CP1_OFFSET, CP2_OFFSET, False
+    )
+
+    ctx = MagicMock()
+
+    def to_screen(pos):
+        return pos
+
+    c.draw(ctx, reg, to_screen)
+    c.draw(ctx, reg, to_screen, is_selected=True)
+    c.draw(ctx, reg, to_screen, is_hovered=True)
+    c.draw(ctx, reg, to_screen, point_radius=10.0)

@@ -7,6 +7,7 @@ use serde_json::{json, Value};
 use crate::sketch::constraint::{
     JacobianEntry, PointContext, SketchConstraint,
 };
+use crate::sketch::draw::{draw_point_marker, CairoLike, DrawStyle};
 use crate::sketch::registry::EntityRegistry;
 
 /// The resolved target geometry, mirroring the reference constraint's
@@ -169,6 +170,24 @@ impl SketchConstraint for PointOnLineConstraint {
         };
         let s_pt = to_screen((pt.x, pt.y));
         (mx - s_pt.0).hypot(my - s_pt.1) < threshold
+    }
+
+    fn draw(
+        &self,
+        registry: &EntityRegistry,
+        to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
+        ctx: &dyn CairoLike,
+        style: &DrawStyle,
+    ) {
+        // Hide the constraint if its point is part of a text box.
+        if registry.point_is_in_text_box_frame(self.point) {
+            return;
+        }
+        let Some(pt) = registry.get_point(self.point) else {
+            return;
+        };
+        let (sx, sy) = to_screen((pt.x, pt.y));
+        draw_point_marker(ctx, sx, sy, style);
     }
 }
 

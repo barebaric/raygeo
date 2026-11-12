@@ -5,6 +5,7 @@ use serde_json::{json, Value};
 use crate::sketch::constraint::{
     JacobianEntry, PointContext, SketchConstraint,
 };
+use crate::sketch::draw::{draw_point_marker, CairoLike, DrawStyle};
 use crate::sketch::registry::EntityRegistry;
 
 /// Enforces two points are at the same location.
@@ -79,6 +80,32 @@ impl SketchConstraint for CoincidentConstraint {
         };
         let s_point = to_screen((point.x, point.y));
         (mx - s_point.0).hypot(my - s_point.1) < threshold
+    }
+
+    fn draw(
+        &self,
+        registry: &EntityRegistry,
+        to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
+        ctx: &dyn CairoLike,
+        style: &DrawStyle,
+    ) {
+        // Prefer the non-fixed point if one is the origin, to avoid
+        // clutter on the origin.
+        let p1 = registry.get_point(self.p1);
+        let p2 = registry.get_point(self.p2);
+        let (Some(p1), Some(p2)) = (p1, p2) else {
+            return;
+        };
+        let pid = if p1.fixed && !p2.fixed {
+            self.p2
+        } else {
+            self.p1
+        };
+        let Some(point) = registry.get_point(pid) else {
+            return;
+        };
+        let (sx, sy) = to_screen((point.x, point.y));
+        draw_point_marker(ctx, sx, sy, style);
     }
 }
 

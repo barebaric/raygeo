@@ -5,6 +5,10 @@ use serde_json::{json, Value};
 use crate::sketch::constraint::{
     JacobianEntry, PointContext, SketchConstraint,
 };
+use crate::sketch::draw::{
+    draw_conflict_underlay, draw_label, draw_status_color, format_value,
+    screen_scale, CairoLike, DrawStyle, LABEL_DIST_SCREEN,
+};
 use crate::sketch::registry::EntityRegistry;
 
 /// Enforces the diameter of a circle: twice the distance between the
@@ -115,6 +119,50 @@ impl SketchConstraint for DiameterConstraint {
         let y_max = label_sy + half_h + 4.0;
 
         x_min <= mx && mx <= x_max && y_min <= my && my <= y_max
+    }
+
+    fn draw(
+        &self,
+        registry: &EntityRegistry,
+        to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
+        ctx: &dyn CairoLike,
+        style: &DrawStyle,
+    ) {
+        // Label position mirroring the reference circle branch (see
+        // the radius constraint's draw for the arc caveat).
+        let (Some(center), Some(radius_pt)) = (
+            registry.get_point(self.center),
+            registry.get_point(self.radius_point),
+        ) else {
+            return;
+        };
+        let radius = (radius_pt.x - center.x).hypot(radius_pt.y - center.y);
+        if radius == 0.0 {
+            return;
+        }
+        let scale = screen_scale(to_screen);
+        let mid_angle = (radius_pt.y - center.y).atan2(radius_pt.x - center.x);
+        let label_dist = radius + LABEL_DIST_SCREEN / scale;
+        let (sx, sy) = to_screen((
+            center.x + label_dist * mid_angle.cos(),
+            center.y + label_dist * mid_angle.sin(),
+        ));
+        let (arc_mid_sx, arc_mid_sy) = to_screen((
+            center.x + radius * mid_angle.cos(),
+            center.y + radius * mid_angle.sin(),
+        ));
+
+        let label = format!("Ø{}", format_value(self.value));
+        ctx.save();
+        draw_label(ctx, &label, sx, sy, style, screen_scale(to_screen));
+        ctx.set_line_width(1.0);
+        ctx.set_dash(4.0, 4.0);
+        ctx.move_to(sx, sy);
+        ctx.line_to(arc_mid_sx, arc_mid_sy);
+        draw_conflict_underlay(ctx, style);
+        draw_status_color(ctx, style);
+        ctx.stroke();
+        ctx.restore();
     }
 }
 
