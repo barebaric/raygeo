@@ -2,9 +2,12 @@
 
 use crate::geo::shape::line::get_point_line_signed_distance;
 use crate::geo::types::Point;
+use serde_json::{json, Value};
+
 use crate::sketch::constraint::{
     JacobianEntry, PointContext, SketchConstraint,
 };
+use crate::sketch::registry::EntityRegistry;
 
 /// The resolved target geometry, mirroring the reference constraint's
 /// entity cases: an infinite line, or a circle/arc circumference.
@@ -23,12 +26,18 @@ pub struct PointOnLineConstraint {
     pub point: u64,
     /// Resolved target geometry.
     pub target: PointOnTarget,
+    /// Reference user-visibility flag.
+    pub user_visible: bool,
 }
 
 impl PointOnLineConstraint {
     /// Creates a point-on-line/curve constraint.
     pub fn new(point: u64, target: PointOnTarget) -> Self {
-        PointOnLineConstraint { point, target }
+        PointOnLineConstraint {
+            user_visible: true,
+            point,
+            target,
+        }
     }
 }
 
@@ -145,5 +154,42 @@ impl SketchConstraint for PointOnLineConstraint {
             }
         }
         entries
+    }
+
+    fn is_hit(
+        &self,
+        mx: f64,
+        my: f64,
+        threshold: f64,
+        model: &EntityRegistry,
+        to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
+    ) -> bool {
+        let Some(pt) = model.get_point(self.point) else {
+            return false;
+        };
+        let s_pt = to_screen((pt.x, pt.y));
+        (mx - s_pt.0).hypot(my - s_pt.1) < threshold
+    }
+}
+
+impl PointOnLineConstraint {
+    /// Reference user-visibility flag.
+    pub fn user_visible(&self) -> bool {
+        self.user_visible
+    }
+
+    /// Sets the reference user-visibility flag.
+    pub fn set_user_visible(&mut self, value: bool) {
+        self.user_visible = value;
+    }
+
+    /// Serializes to the reference constraint dictionary shape.
+    pub fn to_json(&self) -> Value {
+        let data = json!({
+            "type": "PointOnLineConstraint",
+            "user_visible": self.user_visible,
+        });
+        let _ = (self.point, &self.target);
+        data
     }
 }

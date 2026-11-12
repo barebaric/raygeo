@@ -1,14 +1,16 @@
-//! Bindings for the aspect_ratio constraint.
+//! Bindings for the aspect-ratio constraint.
 
 use pyo3::prelude::*;
+use pyo3::types::PyDict;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
+use crate::python::sketch::registry::PyEntityRegistry;
+use crate::sketch::constraint::SketchConstraint;
 use crate::sketch::constraints::aspect_ratio::AspectRatioConstraint as CoreConstraint;
 
 /// Enforces dist(p1, p2) == ratio * dist(p3, p4).
 #[gen_stub_pyclass]
 #[pyclass(
-    frozen,
     eq,
     from_py_object,
     module = "raygeo.sketch.constraints.aspect_ratio",
@@ -31,28 +33,65 @@ pub struct PyAspectRatioConstraint {
     /// Resolved ratio value.
     #[pyo3(get)]
     pub ratio: f64,
+    /// Reference user-visibility flag.
+    pub user_visible: bool,
 }
 
 #[gen_stub_pymethods]
 #[pymethods]
 impl PyAspectRatioConstraint {
-    /// Creates the constraint from its resolved points and values.
+    /// Creates the aspect-ratio constraint from its resolved points
+    /// and ratio.
     #[new]
-    #[pyo3(signature = (p1, p2, p3, p4, ratio))]
-    fn new(p1: u64, p2: u64, p3: u64, p4: u64, ratio: f64) -> Self {
+    #[pyo3(signature = (p1, p2, p3, p4, ratio, user_visible = true))]
+    fn new(
+        p1: u64,
+        p2: u64,
+        p3: u64,
+        p4: u64,
+        ratio: f64,
+        user_visible: bool,
+    ) -> Self {
         PyAspectRatioConstraint {
             p1,
             p2,
             p3,
             p4,
             ratio,
+            user_visible,
         }
+    }
+
+    /// Returns the constraint error at the registry's point
+    /// positions.
+    fn error(&self, registry: &PyEntityRegistry) -> Vec<f64> {
+        self.clone().into_constraint().error(&registry.inner)
+    }
+
+    /// Serializes to the reference constraint dictionary shape.
+    fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
+        super::dict_from_value(py, &self.clone().into_constraint().to_json())
+    }
+
+    /// Reference user-visibility flag.
+    fn user_visible(&self) -> bool {
+        self.user_visible
+    }
+
+    /// Sets the reference user-visibility flag.
+    fn set_user_visible(&mut self, value: bool) {
+        self.user_visible = value;
     }
 }
 
 impl PyAspectRatioConstraint {
     pub(crate) fn into_constraint(self) -> CoreConstraint {
-        CoreConstraint::new(self.p1, self.p2, self.p3, self.p4, self.ratio)
+        CoreConstraint {
+            user_visible: self.user_visible,
+            ..CoreConstraint::new(
+                self.p1, self.p2, self.p3, self.p4, self.ratio,
+            )
+        }
     }
 }
 

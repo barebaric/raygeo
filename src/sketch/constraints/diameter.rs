@@ -1,8 +1,11 @@
 //! Diameter constraint: diameter of a circle.
 
+use serde_json::{json, Value};
+
 use crate::sketch::constraint::{
     JacobianEntry, PointContext, SketchConstraint,
 };
+use crate::sketch::registry::EntityRegistry;
 
 /// Enforces the diameter of a circle: twice the distance between the
 /// center point and the radius point equals `value`.
@@ -14,6 +17,10 @@ pub struct DiameterConstraint {
     pub radius_point: u64,
     /// Resolved diameter value.
     pub value: f64,
+    /// Reference user-visibility flag.
+    pub user_visible: bool,
+    /// Stored expression string (evaluated caller-side).
+    pub expression: Option<String>,
 }
 
 impl DiameterConstraint {
@@ -23,6 +30,8 @@ impl DiameterConstraint {
             center,
             radius_point,
             value,
+            user_visible: true,
+            expression: None,
         }
     }
 }
@@ -57,5 +66,91 @@ impl SketchConstraint for DiameterConstraint {
             (self.radius_point, 0, 2.0 * ux, 2.0 * uy),
             (self.center, 0, -2.0 * ux, -2.0 * uy),
         ]
+    }
+
+    fn is_hit(
+        &self,
+        mx: f64,
+        my: f64,
+        _threshold: f64,
+        model: &EntityRegistry,
+        to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
+    ) -> bool {
+        // The reference delegates to the radius constraint's label
+        // position; mirror that circle-branch math here (see the
+        // radius constraint's is_hit for the arc caveat).
+        let (Some(center), Some(radius_pt)) = (
+            model.get_point(self.center),
+            model.get_point(self.radius_point),
+        ) else {
+            return false;
+        };
+        let radius = (radius_pt.x - center.x).hypot(radius_pt.y - center.y);
+        if radius == 0.0 {
+            return false;
+        }
+
+        let p0 = to_screen((0.0, 0.0));
+        let p1 = to_screen((1.0, 0.0));
+        let mut scale = (p1.0 - p0.0).hypot(p1.1 - p0.1);
+        if scale < 1e-9 {
+            scale = 1.0;
+        }
+
+        let mid_angle = (radius_pt.y - center.y).atan2(radius_pt.x - center.x);
+        let label_dist = radius + 20.0 / scale;
+        let (label_sx, label_sy) = to_screen((
+            center.x + label_dist * mid_angle.cos(),
+            center.y + label_dist * mid_angle.sin(),
+        ));
+
+        let label_width = 20.0;
+        let label_height = 20.0;
+        let half_w = label_width / 2.0;
+        let half_h = label_height / 2.0;
+
+        let x_min = label_sx - half_w - 4.0;
+        let x_max = label_sx + half_w + 4.0;
+        let y_min = label_sy - half_h - 4.0;
+        let y_max = label_sy + half_h + 4.0;
+
+        x_min <= mx && mx <= x_max && y_min <= my && my <= y_max
+    }
+}
+
+impl DiameterConstraint {
+    /// Reference user-visibility flag.
+    pub fn user_visible(&self) -> bool {
+        self.user_visible
+    }
+
+    /// Sets the reference user-visibility flag.
+    pub fn set_user_visible(&mut self, value: bool) {
+        self.user_visible = value;
+    }
+
+    /// The stored expression string, if any (evaluated caller-side).
+    pub fn expression(&self) -> Option<&str> {
+        self.expression.as_deref()
+    }
+
+    /// Sets the expression string (evaluated caller-side).
+    pub fn set_expression(&mut self, expression: Option<String>) {
+        self.expression = expression;
+    }
+
+    /// Serializes to the reference constraint dictionary shape.
+    pub fn to_json(&self) -> Value {
+        let mut data = json!({
+            "type": "DiameterConstraint",
+            "user_visible": self.user_visible,
+        });
+        data["center_idx"] = json!(self.center);
+        data["radius_pt_idx"] = json!(self.radius_point);
+        data["value"] = json!(self.value);
+        if let Some(expression) = &self.expression {
+            data["expression"] = json!(expression);
+        }
+        data
     }
 }

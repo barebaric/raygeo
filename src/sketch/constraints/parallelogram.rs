@@ -1,5 +1,7 @@
 //! Parallelogram constraint for four points.
 
+use serde_json::{json, Value};
+
 use crate::sketch::constraint::{
     JacobianEntry, PointContext, SketchConstraint,
 };
@@ -15,6 +17,8 @@ pub struct ParallelogramConstraint {
     pub p_height: u64,
     /// Fourth corner.
     pub p4: u64,
+    /// Reference user-visibility flag.
+    pub user_visible: bool,
 }
 
 impl ParallelogramConstraint {
@@ -25,6 +29,7 @@ impl ParallelogramConstraint {
             p_width,
             p_height,
             p4,
+            user_visible: true,
         }
     }
 }
@@ -57,5 +62,30 @@ impl SketchConstraint for ParallelogramConstraint {
             (self.p4, 0, -1.0, 0.0),
             (self.p4, 1, 0.0, -1.0),
         ]
+    }
+}
+
+impl ParallelogramConstraint {
+    /// Reference user-visibility flag.
+    pub fn user_visible(&self) -> bool {
+        self.user_visible
+    }
+
+    /// Sets the reference user-visibility flag.
+    pub fn set_user_visible(&mut self, value: bool) {
+        self.user_visible = value;
+    }
+
+    /// Serializes to the reference constraint dictionary shape.
+    pub fn to_json(&self) -> Value {
+        let mut data = json!({
+            "type": "ParallelogramConstraint",
+            "user_visible": self.user_visible,
+        });
+        data["p_origin"] = json!(self.p_origin);
+        data["p_width"] = json!(self.p_width);
+        data["p_height"] = json!(self.p_height);
+        data["p4"] = json!(self.p4);
+        data
     }
 }

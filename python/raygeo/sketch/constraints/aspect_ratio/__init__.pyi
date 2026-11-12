@@ -2,6 +2,7 @@
 # ruff: noqa: E501, F401, F403, F405
 
 import builtins
+from raygeo.sketch import registry
 import typing
 __all__ = [
     "AspectRatioConstraint",
@@ -38,8 +39,26 @@ class AspectRatioConstraint:
         Resolved ratio value.
         """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __new__(cls, p1: builtins.int, p2: builtins.int, p3: builtins.int, p4: builtins.int, ratio: builtins.float) -> AspectRatioConstraint:
+    def __new__(cls, p1: builtins.int, p2: builtins.int, p3: builtins.int, p4: builtins.int, ratio: builtins.float, user_visible: builtins.bool = True) -> AspectRatioConstraint:
         r"""
-        Creates the constraint from its resolved points and values.
+        Creates the aspect-ratio constraint from its resolved points
+        and ratio.
+        """
+    def error(self, registry: registry.EntityRegistry) -> builtins.list[builtins.float]:
+        r"""
+        Returns the constraint error at the registry's point
+        positions.
+        """
+    def to_dict(self) -> dict:
+        r"""
+        Serializes to the reference constraint dictionary shape.
+        """
+    def user_visible(self) -> builtins.bool:
+        r"""
+        Reference user-visibility flag.
+        """
+    def set_user_visible(self, value: builtins.bool) -> None:
+        r"""
+        Sets the reference user-visibility flag.
         """
 

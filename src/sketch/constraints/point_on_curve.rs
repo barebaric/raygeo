@@ -3,9 +3,12 @@
 use crate::geo::shape::bezier::get_bezier_closest_point;
 use crate::geo::shape::line::get_line_segment_closest_point;
 use crate::geo::types::{Point, Point3D};
+use serde_json::{json, Value};
+
 use crate::sketch::constraint::{
     JacobianEntry, PointContext, SketchConstraint,
 };
+use crate::sketch::registry::EntityRegistry;
 
 /// Minimum distance below which the closest-point direction is
 /// considered degenerate and the gradient empty.
@@ -44,6 +47,8 @@ pub struct PointOnCurveConstraint {
     pub cp2_offset: [f64; 2],
     /// Whether the curve degenerates to a straight segment.
     pub is_line: bool,
+    /// Reference user-visibility flag.
+    pub user_visible: bool,
 }
 
 impl PointOnCurveConstraint {
@@ -63,6 +68,7 @@ impl PointOnCurveConstraint {
             cp1_offset,
             cp2_offset,
             is_line,
+            user_visible: true,
         }
     }
 
@@ -164,5 +170,42 @@ impl SketchConstraint for PointOnCurveConstraint {
             (self.start, 0, w_start * ux, w_start * uy),
             (self.end, 0, w_end * ux, w_end * uy),
         ]
+    }
+
+    fn is_hit(
+        &self,
+        mx: f64,
+        my: f64,
+        threshold: f64,
+        model: &EntityRegistry,
+        to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
+    ) -> bool {
+        let Some(pt) = model.get_point(self.point) else {
+            return false;
+        };
+        let s_pt = to_screen((pt.x, pt.y));
+        (mx - s_pt.0).hypot(my - s_pt.1) < threshold
+    }
+}
+
+impl PointOnCurveConstraint {
+    /// Reference user-visibility flag.
+    pub fn user_visible(&self) -> bool {
+        self.user_visible
+    }
+
+    /// Sets the reference user-visibility flag.
+    pub fn set_user_visible(&mut self, value: bool) {
+        self.user_visible = value;
+    }
+
+    /// Serializes to the reference constraint dictionary shape.
+    pub fn to_json(&self) -> Value {
+        let data = json!({
+            "type": "PointOnCurveConstraint",
+            "user_visible": self.user_visible,
+        });
+        let _ = (self.point, self.start, self.end);
+        data
     }
 }

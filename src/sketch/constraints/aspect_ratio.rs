@@ -1,8 +1,12 @@
 //! Aspect-ratio constraint between two segment lengths.
 
+use serde_json::{json, Value};
+
 use crate::sketch::constraint::{
     JacobianEntry, PointContext, SketchConstraint,
 };
+use crate::sketch::entities::point::SketchPoint;
+use crate::sketch::registry::EntityRegistry;
 
 /// Enforces `dist(p1, p2) == ratio * dist(p3, p4)`.
 #[derive(Clone, Debug, PartialEq)]
@@ -17,6 +21,8 @@ pub struct AspectRatioConstraint {
     pub p4: u64,
     /// Resolved ratio value.
     pub ratio: f64,
+    /// Reference user-visibility flag.
+    pub user_visible: bool,
 }
 
 impl AspectRatioConstraint {
@@ -28,6 +34,7 @@ impl AspectRatioConstraint {
             p3,
             p4,
             ratio,
+            user_visible: true,
         }
     }
 }
@@ -54,6 +61,35 @@ impl SketchConstraint for AspectRatioConstraint {
         vec![dist1 - dist2 * self.ratio]
     }
 
+    fn is_hit(
+        &self,
+        mx: f64,
+        my: f64,
+        threshold: f64,
+        model: &EntityRegistry,
+        to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
+    ) -> bool {
+        let (Some(p1), Some(p2), Some(p3), Some(p4)) = (
+            model.get_point(self.p1),
+            model.get_point(self.p2),
+            model.get_point(self.p3),
+            model.get_point(self.p4),
+        ) else {
+            return false;
+        };
+
+        let icon_pos = icon_pos(
+            (self.p1, self.p2),
+            (self.p3, self.p4),
+            (&p1, &p2, &p3, &p4),
+            to_screen,
+        );
+        let Some((cx, cy)) = icon_pos else {
+            return false;
+        };
+        (mx - cx).hypot(my - cy) < threshold
+    }
+
     fn gradient(&self, reg: &mut dyn PointContext) -> Vec<JacobianEntry> {
         let (x1, y1) = reg.xy(self.p1);
         let (x2, y2) = reg.xy(self.p2);
@@ -78,5 +114,94 @@ impl SketchConstraint for AspectRatioConstraint {
             entries.push((self.p4, 0, -self.ratio * ux, -self.ratio * uy));
         }
         entries
+    }
+}
+
+/// Screen position of the constraint icon: near the shared junction
+/// point along the external angle bisector when the segments adjoin,
+/// otherwise at the center of the two segment midpoints.
+fn icon_pos(
+    ids1: (u64, u64),
+    ids2: (u64, u64),
+    points: (&SketchPoint, &SketchPoint, &SketchPoint, &SketchPoint),
+    to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
+) -> Option<(f64, f64)> {
+    let (p1, p2, p3, p4) = points;
+    let mut junction_ids: Vec<u64> = Vec::new();
+    for id in [ids1.0, ids1.1] {
+        if (id == ids2.0 || id == ids2.1) && !junction_ids.contains(&id) {
+            junction_ids.push(id);
+        }
+    }
+
+    if junction_ids.len() == 1 {
+        let junction_id = junction_ids[0];
+        let p_junc = if ids1.0 == junction_id { p1 } else { p2 };
+        let p_other1 = if ids1.1 == junction_id { p1 } else { p2 };
+        let p_other2 = if ids2.1 == junction_id { p3 } else { p4 };
+
+        let s_junc = to_screen((p_junc.x, p_junc.y));
+        let s_other1 = to_screen((p_other1.x, p_other1.y));
+        let s_other2 = to_screen((p_other2.x, p_other2.y));
+
+        let sv1 = (s_other1.0 - s_junc.0, s_other1.1 - s_junc.1);
+        let sv2 = (s_other2.0 - s_junc.0, s_other2.1 - s_junc.1);
+        let slen1 = sv1.0.hypot(sv1.1);
+        let slen2 = sv2.0.hypot(sv2.1);
+
+        if slen1 < 1e-9 || slen2 < 1e-9 {
+            return Some(s_junc);
+        }
+
+        let su1 = (sv1.0 / slen1, sv1.1 / slen1);
+        let su2 = (sv2.0 / slen2, sv2.1 / slen2);
+
+        let mut s_bisector = (-(su1.0 + su2.0), -(su1.1 + su2.1));
+        let mut len_sb = s_bisector.0.hypot(s_bisector.1);
+
+        if len_sb < 1e-9 {
+            s_bisector = (-su1.1, su1.0);
+            len_sb = 1.0;
+        }
+
+        let su_bisector = (s_bisector.0 / len_sb, s_bisector.1 / len_sb);
+
+        let offset = 18.0;
+        return Some((
+            s_junc.0 + offset * su_bisector.0,
+            s_junc.1 + offset * su_bisector.1,
+        ));
+    }
+
+    let m1_x = (p1.x + p2.x) / 2.0;
+    let m1_y = (p1.y + p2.y) / 2.0;
+    let m2_x = (p3.x + p4.x) / 2.0;
+    let m2_y = (p3.y + p4.y) / 2.0;
+    Some(to_screen(((m1_x + m2_x) / 2.0, (m1_y + m2_y) / 2.0)))
+}
+
+impl AspectRatioConstraint {
+    /// Reference user-visibility flag.
+    pub fn user_visible(&self) -> bool {
+        self.user_visible
+    }
+
+    /// Sets the reference user-visibility flag.
+    pub fn set_user_visible(&mut self, value: bool) {
+        self.user_visible = value;
+    }
+
+    /// Serializes to the reference constraint dictionary shape.
+    pub fn to_json(&self) -> Value {
+        let mut data = json!({
+            "type": "AspectRatioConstraint",
+            "user_visible": self.user_visible,
+        });
+        data["p1"] = json!(self.p1);
+        data["p2"] = json!(self.p2);
+        data["p3"] = json!(self.p3);
+        data["p4"] = json!(self.p4);
+        data["ratio"] = json!(self.ratio);
+        data
     }
 }

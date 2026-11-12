@@ -2,6 +2,7 @@
 # ruff: noqa: E501, F401, F403, F405
 
 import builtins
+from raygeo.sketch import registry
 import typing
 __all__ = [
     "AngleConstraint",
@@ -51,9 +52,44 @@ class AngleConstraint:
         Resolved angle value in degrees.
         """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __new__(cls, p1: builtins.int, p2: builtins.int, p3: builtins.int, p4: builtins.int, value_deg: builtins.float, e1_far: typing.Optional[builtins.int] = None, e2_far: typing.Optional[builtins.int] = None) -> AngleConstraint:
+    def __new__(cls, p1: builtins.int, p2: builtins.int, p3: builtins.int, p4: builtins.int, value_deg: builtins.float, e1_far: typing.Optional[builtins.int] = None, e2_far: typing.Optional[builtins.int] = None, user_visible: builtins.bool = True) -> AngleConstraint:
         r"""
         Creates the angle constraint from its resolved points and
         value.
+        """
+    def error(self, registry: registry.EntityRegistry) -> builtins.list[builtins.float]:
+        r"""
+        Returns the constraint error at the registry's point
+        positions.
+        """
+    def to_dict(self) -> dict:
+        r"""
+        Serializes to the reference constraint dictionary shape.
+        """
+    def user_visible(self) -> builtins.bool:
+        r"""
+        Reference user-visibility flag.
+        """
+    def set_user_visible(self, value: builtins.bool) -> None:
+        r"""
+        Sets the reference user-visibility flag.
+        """
+    def expression(self) -> typing.Optional[builtins.str]:
+        r"""
+        The stored expression string, if any (evaluated caller-side).
+        """
+    def set_expression(self, expression: typing.Optional[builtins.str]) -> None:
+        r"""
+        Sets the expression string (evaluated caller-side).
+        """
+    def is_mirror_compatible(self) -> builtins.bool:
+        r"""
+        Whether the constraint survives mirroring of all referenced
+        geometry.  An expression-based angle encodes user intent that
+        does not auto-flip under reflection.
+        """
+    def is_hit(self, mx: builtins.float, my: builtins.float, threshold: builtins.float, registry: registry.EntityRegistry, to_screen: typing.Optional[typing.Any] = None) -> builtins.bool:
+        r"""
+        Whether the constraint's rendered symbol is hit at (mx, my).
         """
 

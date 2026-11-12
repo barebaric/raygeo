@@ -2,6 +2,7 @@
 # ruff: noqa: E501, F401, F403, F405
 
 import builtins
+from raygeo.sketch import registry
 import typing
 __all__ = [
     "EqualDistanceConstraint",
@@ -33,8 +34,30 @@ class EqualDistanceConstraint:
         Second point of the second pair.
         """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __new__(cls, p1: builtins.int, p2: builtins.int, p3: builtins.int, p4: builtins.int) -> EqualDistanceConstraint:
+    def __new__(cls, p1: builtins.int, p2: builtins.int, p3: builtins.int, p4: builtins.int, user_visible: builtins.bool = True) -> EqualDistanceConstraint:
         r"""
         Creates the constraint from its resolved points and values.
+        """
+    def error(self, registry: registry.EntityRegistry) -> builtins.list[builtins.float]:
+        r"""
+        Returns the constraint error at the registry's point
+        positions.
+        """
+    def to_dict(self) -> dict:
+        r"""
+        Serializes to the reference constraint dictionary shape.
+        """
+    def user_visible(self) -> builtins.bool:
+        r"""
+        Reference user-visibility flag.
+        """
+    def set_user_visible(self, value: builtins.bool) -> None:
+        r"""
+        Sets the reference user-visibility flag.
+        """
+    def targets_segment(self, p1: builtins.int, p2: builtins.int, entity_id: typing.Optional[builtins.int], registry: registry.EntityRegistry) -> builtins.bool:
+        r"""
+        Whether this constraint defines the length/distance of the
+        segment (p1, p2), for either pair (order independent).
         """
 

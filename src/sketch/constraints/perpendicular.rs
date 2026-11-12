@@ -1,8 +1,18 @@
 //! Perpendicular constraint between two entities.
 
+use serde_json::{json, Value};
+
+use crate::geo::shape::circle::get_circle_circle_intersections;
+use crate::geo::shape::line::get_line_line_intersection;
+use crate::geo::types::Point;
 use crate::sketch::constraint::{
     JacobianEntry, PointContext, SketchConstraint,
 };
+use crate::sketch::registry::EntityRegistry;
+
+/// Screen-space radius of the line-line marker arc, matching the
+/// reference renderer.
+const VISUAL_RADIUS: f64 = 16.0;
 
 /// The resolved geometry of the two perpendicular operands, mirroring
 /// the reference constraint's entity-type cases: two lines, a line
@@ -28,12 +38,17 @@ pub enum PerpendicularTarget {
 pub struct PerpendicularConstraint {
     /// Resolved operand geometry.
     pub target: PerpendicularTarget,
+    /// Reference user-visibility flag.
+    pub user_visible: bool,
 }
 
 impl PerpendicularConstraint {
     /// Creates a perpendicular constraint from resolved operands.
     pub fn new(target: PerpendicularTarget) -> Self {
-        PerpendicularConstraint { target }
+        PerpendicularConstraint {
+            user_visible: true,
+            target,
+        }
     }
 }
 
@@ -179,5 +194,168 @@ impl SketchConstraint for PerpendicularConstraint {
             }
         }
         entries
+    }
+
+    fn is_hit(
+        &self,
+        mx: f64,
+        my: f64,
+        threshold: f64,
+        model: &EntityRegistry,
+        to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
+    ) -> bool {
+        match &self.target {
+            PerpendicularTarget::LineLine { a1, a2, b1, b2 } => {
+                let (Some(p1), Some(p2), Some(p3), Some(p4)) = (
+                    model.get_point(*a1),
+                    model.get_point(*a2),
+                    model.get_point(*b1),
+                    model.get_point(*b2),
+                ) else {
+                    return false;
+                };
+                let pt = get_line_line_intersection(
+                    Point::new(p1.x, p1.y),
+                    Point::new(p2.x, p2.y),
+                    Point::new(p3.x, p3.y),
+                    Point::new(p4.x, p4.y),
+                );
+                let (ix, iy) = match pt {
+                    Some(point) => (point.x, point.y),
+                    None => (
+                        (p1.x + p2.x + p3.x + p4.x) / 4.0,
+                        (p1.y + p2.y + p3.y + p4.y) / 4.0,
+                    ),
+                };
+                let (sx, sy) = to_screen((ix, iy));
+                let s_p1 = to_screen((p1.x, p1.y));
+                let s_p2 = to_screen((p2.x, p2.y));
+                let s_p3 = to_screen((p3.x, p3.y));
+                let s_p4 = to_screen((p4.x, p4.y));
+
+                let dist_sq = |a: (f64, f64), b: (f64, f64)| {
+                    (a.0 - b.0) * (a.0 - b.0) + (a.1 - b.1) * (a.1 - b.1)
+                };
+                let here = (sx, sy);
+                let v1p = if dist_sq(s_p1, here) > dist_sq(s_p2, here) {
+                    s_p1
+                } else {
+                    s_p2
+                };
+                let v2p = if dist_sq(s_p3, here) > dist_sq(s_p4, here) {
+                    s_p3
+                } else {
+                    s_p4
+                };
+                let ang1 = (v1p.1 - sy).atan2(v1p.0 - sx);
+                let ang2 = (v2p.1 - sy).atan2(v2p.0 - sx);
+
+                let mut diff = ang2 - ang1;
+                while diff <= -std::f64::consts::PI {
+                    diff += 2.0 * std::f64::consts::PI;
+                }
+                while diff > std::f64::consts::PI {
+                    diff -= 2.0 * std::f64::consts::PI;
+                }
+                let mid_angle = ang1 + diff / 2.0;
+                let target_x = sx + mid_angle.cos() * VISUAL_RADIUS * 0.6;
+                let target_y = sy + mid_angle.sin() * VISUAL_RADIUS * 0.6;
+                (mx - target_x).hypot(my - target_y) < threshold
+            }
+            PerpendicularTarget::LineCenter { l1, l2, center } => {
+                // Box-style marker.  The reference anchors it at the
+                // line/circle intersection when one lies on the
+                // segment and falls back to the center otherwise; the
+                // circle radius is not resolvable from the resolved
+                // points alone, so the center fallback always applies.
+                let (Some(lp1), Some(lp2), Some(center)) = (
+                    model.get_point(*l1),
+                    model.get_point(*l2),
+                    model.get_point(*center),
+                ) else {
+                    return false;
+                };
+                let dx = lp2.x - lp1.x;
+                let dy = lp2.y - lp1.y;
+                if dx.hypot(dy) < 1e-9 {
+                    return false;
+                }
+                let (sx, sy) = to_screen((center.x, center.y));
+                (mx - sx).hypot(my - sy) < threshold
+            }
+            PerpendicularTarget::Circles {
+                c1,
+                r1_point,
+                c2,
+                r2_point,
+            } => {
+                let (Some(c1p), Some(r1p), Some(c2p), Some(r2p)) = (
+                    model.get_point(*c1),
+                    model.get_point(*r1_point),
+                    model.get_point(*c2),
+                    model.get_point(*r2_point),
+                ) else {
+                    return false;
+                };
+                let r1 = (r1p.x - c1p.x).hypot(r1p.y - c1p.y);
+                let r2 = (r2p.x - c2p.x).hypot(r2p.y - c2p.y);
+                let intersections = get_circle_circle_intersections(
+                    Point::new(c1p.x, c1p.y),
+                    r1,
+                    Point::new(c2p.x, c2p.y),
+                    r2,
+                );
+                let Some(point) = intersections.first() else {
+                    return false;
+                };
+                let (sx, sy) = to_screen((point.x, point.y));
+                (mx - sx).hypot(my - sy) < threshold
+            }
+        }
+    }
+}
+
+impl PerpendicularConstraint {
+    /// Reference user-visibility flag.
+    pub fn user_visible(&self) -> bool {
+        self.user_visible
+    }
+
+    /// Sets the reference user-visibility flag.
+    pub fn set_user_visible(&mut self, value: bool) {
+        self.user_visible = value;
+    }
+
+    /// Serializes to the reference constraint dictionary shape.
+    pub fn to_json(&self) -> Value {
+        let mut data = json!({
+            "type": "PerpendicularConstraint",
+            "user_visible": self.user_visible,
+        });
+        match &self.target {
+            PerpendicularTarget::LineLine { a1, a2, b1, b2 } => {
+                data["a1_idx"] = json!(a1);
+                data["a2_idx"] = json!(a2);
+                data["b1_idx"] = json!(b1);
+                data["b2_idx"] = json!(b2);
+            }
+            PerpendicularTarget::LineCenter { l1, l2, center } => {
+                data["l1_idx"] = json!(l1);
+                data["l2_idx"] = json!(l2);
+                data["center_idx"] = json!(center);
+            }
+            PerpendicularTarget::Circles {
+                c1,
+                r1_point,
+                c2,
+                r2_point,
+            } => {
+                data["c1_idx"] = json!(c1);
+                data["r1_pt_idx"] = json!(r1_point);
+                data["c2_idx"] = json!(c2);
+                data["r2_pt_idx"] = json!(r2_point);
+            }
+        }
+        data
     }
 }

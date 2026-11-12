@@ -2,6 +2,7 @@
 # ruff: noqa: E501, F401, F403, F405
 
 import builtins
+from raygeo.sketch import registry
 import typing
 __all__ = [
     "PointOnLineConstraint",
@@ -24,9 +25,36 @@ class PointOnLineConstraint:
         Resolved target geometry.
         """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __new__(cls, point: builtins.int, target: PointOnTarget) -> PointOnLineConstraint:
+    def __new__(cls, point: builtins.int, target: PointOnTarget, user_visible: builtins.bool = True) -> PointOnLineConstraint:
         r"""
         Creates the point-on-line/curve constraint.
+        """
+    def error(self, registry: registry.EntityRegistry) -> builtins.list[builtins.float]:
+        r"""
+        Returns the constraint error at the registry's point
+        positions.
+        """
+    def to_dict(self) -> dict:
+        r"""
+        Serializes to the reference constraint dictionary shape.
+        """
+    def user_visible(self) -> builtins.bool:
+        r"""
+        Reference user-visibility flag.
+        """
+    def set_user_visible(self, value: builtins.bool) -> None:
+        r"""
+        Sets the reference user-visibility flag.
+        """
+    def constrains_radius(self, registry: registry.EntityRegistry, entity_id: builtins.int) -> builtins.bool:
+        r"""
+        Whether this constraint determines the target's radius: true
+        when the target is a circle/arc circumference and the
+        constrained point is itself solver-constrained.
+        """
+    def is_hit(self, mx: builtins.float, my: builtins.float, threshold: builtins.float, registry: registry.EntityRegistry, to_screen: typing.Optional[typing.Any] = None) -> builtins.bool:
+        r"""
+        Whether the constraint's rendered symbol is hit at (mx, my).
         """
 
 class PointOnTarget:

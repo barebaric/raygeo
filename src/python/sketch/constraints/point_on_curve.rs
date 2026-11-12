@@ -1,8 +1,11 @@
 //! Bindings for the point-on-curve constraint.
 
 use pyo3::prelude::*;
+use pyo3::types::PyDict;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
+use crate::python::sketch::registry::PyEntityRegistry;
+use crate::sketch::constraint::SketchConstraint;
 use crate::sketch::constraints::point_on_curve::PointOnCurveConstraint as CoreConstraint;
 
 /// Enforces a point lies on a cubic Bezier curve.  The control
@@ -11,7 +14,6 @@ use crate::sketch::constraints::point_on_curve::PointOnCurveConstraint as CoreCo
 /// (`is_line`).
 #[gen_stub_pyclass]
 #[pyclass(
-    frozen,
     eq,
     from_py_object,
     module = "raygeo.sketch.constraints.point_on_curve",
@@ -37,6 +39,8 @@ pub struct PyPointOnCurveConstraint {
     /// Whether the curve degenerates to a straight segment.
     #[pyo3(get)]
     pub is_line: bool,
+    /// Reference user-visibility flag.
+    pub user_visible: bool,
 }
 
 #[gen_stub_pymethods]
@@ -44,7 +48,15 @@ pub struct PyPointOnCurveConstraint {
 impl PyPointOnCurveConstraint {
     /// Creates the point-on-curve constraint.
     #[new]
-    #[pyo3(signature = (point, start, end, cp1_offset, cp2_offset, is_line))]
+    #[pyo3(signature = (
+        point,
+        start,
+        end,
+        cp1_offset,
+        cp2_offset,
+        is_line,
+        user_visible = true,
+    ))]
     fn new(
         point: u64,
         start: u64,
@@ -52,6 +64,7 @@ impl PyPointOnCurveConstraint {
         cp1_offset: (f64, f64),
         cp2_offset: (f64, f64),
         is_line: bool,
+        user_visible: bool,
     ) -> Self {
         PyPointOnCurveConstraint {
             point,
@@ -60,20 +73,65 @@ impl PyPointOnCurveConstraint {
             cp1_offset,
             cp2_offset,
             is_line,
+            user_visible,
         }
+    }
+
+    /// Returns the constraint error at the registry's point
+    /// positions.
+    fn error(&self, registry: &PyEntityRegistry) -> Vec<f64> {
+        self.clone().into_constraint().error(&registry.inner)
+    }
+
+    /// Serializes to the reference constraint dictionary shape.
+    fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
+        super::dict_from_value(py, &self.clone().into_constraint().to_json())
+    }
+
+    /// Reference user-visibility flag.
+    fn user_visible(&self) -> bool {
+        self.user_visible
+    }
+
+    /// Sets the reference user-visibility flag.
+    fn set_user_visible(&mut self, value: bool) {
+        self.user_visible = value;
+    }
+
+    /// Whether the constraint's rendered symbol is hit at (mx, my).
+    #[pyo3(signature = (mx, my, threshold, registry, to_screen = None))]
+    fn is_hit(
+        &self,
+        mx: f64,
+        my: f64,
+        threshold: f64,
+        registry: &PyEntityRegistry,
+        to_screen: Option<Bound<'_, PyAny>>,
+    ) -> bool {
+        let constraint = self.clone().into_constraint();
+        super::constraint_is_hit(
+            &constraint,
+            mx,
+            my,
+            threshold,
+            registry,
+            to_screen.as_ref(),
+        )
     }
 }
 
 impl PyPointOnCurveConstraint {
     pub(crate) fn into_constraint(self) -> CoreConstraint {
-        CoreConstraint::new(
+        let mut core = CoreConstraint::new(
             self.point,
             self.start,
             self.end,
             [self.cp1_offset.0, self.cp1_offset.1],
             [self.cp2_offset.0, self.cp2_offset.1],
             self.is_line,
-        )
+        );
+        core.user_visible = self.user_visible;
+        core
     }
 }
 

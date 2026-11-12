@@ -1,8 +1,13 @@
 //! Equal-distance constraint between two point pairs.
 
+use serde_json::{json, Value};
+
 use crate::sketch::constraint::{
     JacobianEntry, PointContext, SketchConstraint,
 };
+use crate::sketch::registry::EntityRegistry;
+
+use std::f64::consts::FRAC_PI_2;
 
 /// Enforces `dist(p1, p2) == dist(p3, p4)`.
 #[derive(Clone, Debug, PartialEq)]
@@ -15,12 +20,20 @@ pub struct EqualDistanceConstraint {
     pub p3: u64,
     /// Second point of the second pair.
     pub p4: u64,
+    /// Reference user-visibility flag.
+    pub user_visible: bool,
 }
 
 impl EqualDistanceConstraint {
     /// Creates an equal-distance constraint.
     pub fn new(p1: u64, p2: u64, p3: u64, p4: u64) -> Self {
-        EqualDistanceConstraint { p1, p2, p3, p4 }
+        EqualDistanceConstraint {
+            user_visible: true,
+            p1,
+            p2,
+            p3,
+            p4,
+        }
     }
 }
 
@@ -67,5 +80,67 @@ impl SketchConstraint for EqualDistanceConstraint {
             entries.push((self.p4, 0, -ux, -uy));
         }
         entries
+    }
+
+    fn is_hit(
+        &self,
+        mx: f64,
+        my: f64,
+        threshold: f64,
+        model: &EntityRegistry,
+        to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
+    ) -> bool {
+        let (Some(pa), Some(pb), Some(pc), Some(pd)) = (
+            model.get_point(self.p1),
+            model.get_point(self.p2),
+            model.get_point(self.p3),
+            model.get_point(self.p4),
+        ) else {
+            return false;
+        };
+
+        let sym_x = (pa.x + pb.x + pc.x + pd.x) / 4.0;
+        let sym_y = (pa.y + pb.y + pc.y + pd.y) / 4.0;
+
+        let tangent_angle = (pb.y - pa.y).atan2(pb.x - pa.x);
+        let normal_angle = tangent_angle - FRAC_PI_2;
+
+        let p0 = to_screen((0.0, 0.0));
+        let p1 = to_screen((1.0, 0.0));
+        let mut scale = (p1.0 - p0.0).hypot(p1.1 - p0.1);
+        if scale < 1e-9 {
+            scale = 1.0;
+        }
+
+        let offset_dist_model = 15.0 / scale;
+        let final_x = sym_x + offset_dist_model * normal_angle.cos();
+        let final_y = sym_y + offset_dist_model * normal_angle.sin();
+        let (sym_sx, sym_sy) = to_screen((final_x, final_y));
+        (mx - sym_sx).hypot(my - sym_sy) < threshold
+    }
+}
+
+impl EqualDistanceConstraint {
+    /// Reference user-visibility flag.
+    pub fn user_visible(&self) -> bool {
+        self.user_visible
+    }
+
+    /// Sets the reference user-visibility flag.
+    pub fn set_user_visible(&mut self, value: bool) {
+        self.user_visible = value;
+    }
+
+    /// Serializes to the reference constraint dictionary shape.
+    pub fn to_json(&self) -> Value {
+        let mut data = json!({
+            "type": "EqualDistanceConstraint",
+            "user_visible": self.user_visible,
+        });
+        data["p1"] = json!(self.p1);
+        data["p2"] = json!(self.p2);
+        data["p3"] = json!(self.p3);
+        data["p4"] = json!(self.p4);
+        data
     }
 }

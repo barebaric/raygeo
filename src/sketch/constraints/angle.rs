@@ -3,12 +3,19 @@
 use crate::geo::shape::arc::normalize_angle;
 use crate::geo::shape::line::get_line_line_intersection;
 use crate::geo::types::Point;
+use serde_json::{json, Value};
+
 use crate::sketch::constraint::{
     JacobianEntry, PointContext, SketchConstraint,
 };
+use crate::sketch::registry::EntityRegistry;
 
 /// Weight of the angular residual.
 pub const ANGLE_WEIGHT: f64 = 10.0;
+
+/// Screen-space radius of the angle marker arc, matching the
+/// reference renderer.
+pub const ARC_RADIUS: f64 = 35.0;
 
 /// Central-difference step used for the Jacobian.
 const GRAD_FD_EPS: f64 = 1e-6;
@@ -36,6 +43,10 @@ pub struct AngleConstraint {
     pub e2_far: Option<u64>,
     /// Resolved angle value in degrees.
     pub value_deg: f64,
+    /// Reference user-visibility flag.
+    pub user_visible: bool,
+    /// Stored expression string (evaluated caller-side).
+    pub expression: Option<String>,
 }
 
 impl AngleConstraint {
@@ -57,6 +68,8 @@ impl AngleConstraint {
             e1_far,
             e2_far,
             value_deg,
+            user_visible: true,
+            expression: None,
         }
     }
 
@@ -143,6 +156,60 @@ impl SketchConstraint for AngleConstraint {
         vec![diff * ANGLE_WEIGHT]
     }
 
+    fn is_hit(
+        &self,
+        mx: f64,
+        my: f64,
+        threshold: f64,
+        model: &EntityRegistry,
+        to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
+    ) -> bool {
+        let (Some(p1), Some(p2), Some(p3), Some(p4)) = (
+            model.get_point(self.p1),
+            model.get_point(self.p2),
+            model.get_point(self.p3),
+            model.get_point(self.p4),
+        ) else {
+            return false;
+        };
+
+        let intersection = get_line_line_intersection(
+            Point::new(p1.x, p1.y),
+            Point::new(p2.x, p2.y),
+            Point::new(p3.x, p3.y),
+            Point::new(p4.x, p4.y),
+        );
+        let (ix, iy) = match intersection {
+            Some(point) => (point.x, point.y),
+            None => (
+                (p1.x + p2.x + p3.x + p4.x) / 4.0,
+                (p1.y + p2.y + p3.y + p4.y) / 4.0,
+            ),
+        };
+        let (sx, sy) = to_screen((ix, iy));
+
+        let far1 = self.far_point(self.p1, self.p2, self.e1_far, ix, iy, model);
+        let far2 = self.far_point(self.p3, self.p4, self.e2_far, ix, iy, model);
+        let far1_screen = to_screen(far1);
+        let far2_screen = to_screen(far2);
+
+        let anchor_ang = (far1_screen.1 - sy).atan2(far1_screen.0 - sx);
+        let other_ang = (far2_screen.1 - sy).atan2(far2_screen.0 - sx);
+
+        let dist = (mx - sx).hypot(my - sy);
+        if (dist - ARC_RADIUS).abs() > threshold {
+            return false;
+        }
+
+        let click_ang = (my - sy).atan2(mx - sx);
+
+        let ccw_diff = normalize_angle(other_ang - anchor_ang);
+
+        let click_from_anchor = normalize_angle(click_ang - anchor_ang);
+
+        click_from_anchor <= ccw_diff
+    }
+
     fn gradient(&self, reg: &mut dyn PointContext) -> Vec<JacobianEntry> {
         let mut entries = Vec::new();
         let mut seen: Vec<u64> = Vec::new();
@@ -169,5 +236,46 @@ impl SketchConstraint for AngleConstraint {
             entries.push((pid, 0, gx, gy));
         }
         entries
+    }
+}
+
+impl AngleConstraint {
+    /// Reference user-visibility flag.
+    pub fn user_visible(&self) -> bool {
+        self.user_visible
+    }
+
+    /// Sets the reference user-visibility flag.
+    pub fn set_user_visible(&mut self, value: bool) {
+        self.user_visible = value;
+    }
+
+    /// The stored expression string, if any (evaluated caller-side).
+    pub fn expression(&self) -> Option<&str> {
+        self.expression.as_deref()
+    }
+
+    /// Sets the expression string (evaluated caller-side).
+    pub fn set_expression(&mut self, expression: Option<String>) {
+        self.expression = expression;
+    }
+
+    /// Serializes to the reference constraint dictionary shape.
+    pub fn to_json(&self) -> Value {
+        let mut data = json!({
+            "type": "AngleConstraint",
+            "user_visible": self.user_visible,
+        });
+        data["p1_idx"] = json!(self.p1);
+        data["p2_idx"] = json!(self.p2);
+        data["p3_idx"] = json!(self.p3);
+        data["p4_idx"] = json!(self.p4);
+        data["value"] = json!(self.value_deg);
+        data["e1_far_idx"] = json!(self.e1_far);
+        data["e2_far_idx"] = json!(self.e2_far);
+        if let Some(expression) = &self.expression {
+            data["expression"] = json!(expression);
+        }
+        data
     }
 }

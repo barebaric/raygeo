@@ -1,14 +1,16 @@
-//! Bindings for the equal_distance constraint.
+//! Bindings for the equal-distance constraint.
 
 use pyo3::prelude::*;
+use pyo3::types::PyDict;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
+use crate::python::sketch::registry::PyEntityRegistry;
+use crate::sketch::constraint::SketchConstraint;
 use crate::sketch::constraints::equal_distance::EqualDistanceConstraint as CoreConstraint;
 
 /// Enforces dist(p1, p2) == dist(p3, p4).
 #[gen_stub_pyclass]
 #[pyclass(
-    frozen,
     eq,
     from_py_object,
     module = "raygeo.sketch.constraints.equal_distance",
@@ -28,6 +30,8 @@ pub struct PyEqualDistanceConstraint {
     /// Second point of the second pair.
     #[pyo3(get)]
     pub p4: u64,
+    /// Reference user-visibility flag.
+    pub user_visible: bool,
 }
 
 #[gen_stub_pymethods]
@@ -35,15 +39,61 @@ pub struct PyEqualDistanceConstraint {
 impl PyEqualDistanceConstraint {
     /// Creates the constraint from its resolved points and values.
     #[new]
-    #[pyo3(signature = (p1, p2, p3, p4))]
-    fn new(p1: u64, p2: u64, p3: u64, p4: u64) -> Self {
-        PyEqualDistanceConstraint { p1, p2, p3, p4 }
+    #[pyo3(signature = (p1, p2, p3, p4, user_visible = true))]
+    fn new(p1: u64, p2: u64, p3: u64, p4: u64, user_visible: bool) -> Self {
+        PyEqualDistanceConstraint {
+            p1,
+            p2,
+            p3,
+            p4,
+            user_visible,
+        }
+    }
+
+    /// Returns the constraint error at the registry's point
+    /// positions.
+    fn error(&self, registry: &PyEntityRegistry) -> Vec<f64> {
+        self.clone().into_constraint().error(&registry.inner)
+    }
+
+    /// Serializes to the reference constraint dictionary shape.
+    fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
+        super::dict_from_value(py, &self.clone().into_constraint().to_json())
+    }
+
+    /// Reference user-visibility flag.
+    fn user_visible(&self) -> bool {
+        self.user_visible
+    }
+
+    /// Sets the reference user-visibility flag.
+    fn set_user_visible(&mut self, value: bool) {
+        self.user_visible = value;
+    }
+
+    /// Whether this constraint defines the length/distance of the
+    /// segment (p1, p2), for either pair (order independent).
+    #[pyo3(signature = (p1, p2, entity_id, registry))]
+    fn targets_segment(
+        &self,
+        p1: u64,
+        p2: u64,
+        entity_id: Option<u64>,
+        registry: &PyEntityRegistry,
+    ) -> bool {
+        let _ = (entity_id, registry);
+        let matches =
+            |a: u64, b: u64| (p1 == a && p2 == b) || (p1 == b && p2 == a);
+        matches(self.p1, self.p2) || matches(self.p3, self.p4)
     }
 }
 
 impl PyEqualDistanceConstraint {
     pub(crate) fn into_constraint(self) -> CoreConstraint {
-        CoreConstraint::new(self.p1, self.p2, self.p3, self.p4)
+        CoreConstraint {
+            user_visible: self.user_visible,
+            ..CoreConstraint::new(self.p1, self.p2, self.p3, self.p4)
+        }
     }
 }
 

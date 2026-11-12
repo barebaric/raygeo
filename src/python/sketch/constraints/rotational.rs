@@ -1,14 +1,16 @@
 //! Bindings for the rotational constraint.
 
 use pyo3::prelude::*;
+use pyo3::types::PyDict;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
+use crate::python::sketch::registry::PyEntityRegistry;
+use crate::sketch::constraint::SketchConstraint;
 use crate::sketch::constraints::rotational::RotationalConstraint as CoreConstraint;
 
 /// Enforces p2 is p1 rotated by angle_rad about center.
 #[gen_stub_pyclass]
 #[pyclass(
-    frozen,
     eq,
     from_py_object,
     module = "raygeo.sketch.constraints.rotational",
@@ -28,6 +30,10 @@ pub struct PyRotationalConstraint {
     /// Resolved rotation angle in radians.
     #[pyo3(get)]
     pub angle_rad: f64,
+    /// Reference user-visibility flag.
+    pub user_visible: bool,
+    /// Stored expression string (evaluated caller-side).
+    pub expression: Option<String>,
 }
 
 #[gen_stub_pymethods]
@@ -35,20 +41,63 @@ pub struct PyRotationalConstraint {
 impl PyRotationalConstraint {
     /// Creates the constraint from its resolved points and values.
     #[new]
-    #[pyo3(signature = (center, p1, p2, angle_rad))]
-    fn new(center: u64, p1: u64, p2: u64, angle_rad: f64) -> Self {
+    #[pyo3(signature = (center, p1, p2, angle_rad, user_visible = true))]
+    fn new(
+        center: u64,
+        p1: u64,
+        p2: u64,
+        angle_rad: f64,
+        user_visible: bool,
+    ) -> Self {
         PyRotationalConstraint {
             center,
             p1,
             p2,
             angle_rad,
+            user_visible,
+            expression: None,
         }
+    }
+
+    /// Returns the constraint error at the registry's point
+    /// positions.
+    fn error(&self, registry: &PyEntityRegistry) -> Vec<f64> {
+        self.clone().into_constraint().error(&registry.inner)
+    }
+
+    /// Serializes to the reference constraint dictionary shape.
+    fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
+        super::dict_from_value(py, &self.clone().into_constraint().to_json())
+    }
+
+    /// Reference user-visibility flag.
+    fn user_visible(&self) -> bool {
+        self.user_visible
+    }
+
+    /// Sets the reference user-visibility flag.
+    fn set_user_visible(&mut self, value: bool) {
+        self.user_visible = value;
+    }
+
+    /// The stored expression string, if any (evaluated caller-side).
+    fn expression(&self) -> Option<String> {
+        self.expression.clone()
+    }
+
+    /// Sets the expression string (evaluated caller-side).
+    fn set_expression(&mut self, expression: Option<String>) {
+        self.expression = expression;
     }
 }
 
 impl PyRotationalConstraint {
     pub(crate) fn into_constraint(self) -> CoreConstraint {
-        CoreConstraint::new(self.center, self.p1, self.p2, self.angle_rad)
+        let mut core =
+            CoreConstraint::new(self.center, self.p1, self.p2, self.angle_rad);
+        core.user_visible = self.user_visible;
+        core.set_expression(self.expression);
+        core
     }
 }
 

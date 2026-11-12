@@ -102,7 +102,7 @@ fn value_to_py<'py>(
     skip_from_py_object
 )]
 pub struct PyEntityRegistry {
-    inner: EntityRegistry,
+    pub(crate) inner: EntityRegistry,
 }
 
 #[gen_stub_pymethods]

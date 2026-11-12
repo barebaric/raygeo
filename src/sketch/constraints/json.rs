@@ -136,9 +136,16 @@ pub fn constraint_from_dict(
             f64_field(data, "value")?,
         ))),
         "RadiusConstraint" => {
-            let entity_id = u64_field(data, "entity_id")?;
-            let center = center_point_id(model, entity_id)?;
-            let radius_point = radius_point_id(model, entity_id)?;
+            // Round trip uses the resolved keys from to_json; entity
+            // references resolve through the registry as fallback.
+            let center = match u64_field(data, "center_idx") {
+                Some(center) => center,
+                None => center_point_id(model, u64_field(data, "entity_id")?)?,
+            };
+            let radius_point = match u64_field(data, "radius_pt_idx") {
+                Some(radius_point) => radius_point,
+                None => radius_point_id(model, u64_field(data, "entity_id")?)?,
+            };
             Some(Box::new(RadiusConstraint::new(
                 center,
                 radius_point,
@@ -146,9 +153,14 @@ pub fn constraint_from_dict(
             )))
         }
         "DiameterConstraint" => {
-            let entity_id = u64_field(data, "circle_id")?;
-            let center = center_point_id(model, entity_id)?;
-            let radius_point = radius_point_id(model, entity_id)?;
+            let center = match u64_field(data, "center_idx") {
+                Some(center) => center,
+                None => center_point_id(model, u64_field(data, "circle_id")?)?,
+            };
+            let radius_point = match u64_field(data, "radius_pt_idx") {
+                Some(radius_point) => radius_point,
+                None => radius_point_id(model, u64_field(data, "circle_id")?)?,
+            };
             Some(Box::new(DiameterConstraint::new(
                 center,
                 radius_point,
@@ -156,37 +168,63 @@ pub fn constraint_from_dict(
             )))
         }
         "PerpendicularConstraint" => {
-            let e1 = u64_field(data, "e1_id")?;
-            let e2 = u64_field(data, "e2_id")?;
-            let t1 = model.entity_type(e1)?;
-            let t2 = model.entity_type(e2)?;
-            let target = match (t1, t2) {
-                ("line", "line") => {
-                    let (a1, a2) = line_endpoints(model, e1)?;
-                    let (b1, b2) = line_endpoints(model, e2)?;
-                    PerpendicularTarget::LineLine { a1, a2, b1, b2 }
+            // Two dict shapes are accepted: resolved keys from the
+            // round trip (a1_idx/l1_idx/c1_idx families), or entity
+            // references (e1_id/e2_id) resolved through the registry
+            // like the reference to_solver_constraint.
+            let target = if let Some(a1) = u64_field(data, "a1_idx") {
+                PerpendicularTarget::LineLine {
+                    a1,
+                    a2: u64_field(data, "a2_idx")?,
+                    b1: u64_field(data, "b1_idx")?,
+                    b2: u64_field(data, "b2_idx")?,
                 }
-                ("line", other) => {
-                    let (l1, l2) = line_endpoints(model, e1)?;
-                    let center = center_point_id(model, e2)?;
-                    let _ = other;
-                    PerpendicularTarget::LineCenter { l1, l2, center }
+            } else if let Some(l1) = u64_field(data, "l1_idx") {
+                PerpendicularTarget::LineCenter {
+                    l1,
+                    l2: u64_field(data, "l2_idx")?,
+                    center: u64_field(data, "center_idx")?,
                 }
-                (_, "line") => {
-                    let (l1, l2) = line_endpoints(model, e2)?;
-                    let center = center_point_id(model, e1)?;
-                    PerpendicularTarget::LineCenter { l1, l2, center }
+            } else if let Some(c1) = u64_field(data, "c1_idx") {
+                PerpendicularTarget::Circles {
+                    c1,
+                    r1_point: u64_field(data, "r1_pt_idx")?,
+                    c2: u64_field(data, "c2_idx")?,
+                    r2_point: u64_field(data, "r2_pt_idx")?,
                 }
-                _ => {
-                    let c1 = center_point_id(model, e1)?;
-                    let r1 = radius_point_id(model, e1)?;
-                    let c2 = center_point_id(model, e2)?;
-                    let r2 = radius_point_id(model, e2)?;
-                    PerpendicularTarget::Circles {
-                        c1,
-                        r1_point: r1,
-                        c2,
-                        r2_point: r2,
+            } else {
+                let e1 = u64_field(data, "e1_id")?;
+                let e2 = u64_field(data, "e2_id")?;
+                let t1 = model.entity_type(e1)?;
+                let t2 = model.entity_type(e2)?;
+                match (t1, t2) {
+                    ("line", "line") => {
+                        let (a1, a2) = line_endpoints(model, e1)?;
+                        let (b1, b2) = line_endpoints(model, e2)?;
+                        PerpendicularTarget::LineLine { a1, a2, b1, b2 }
+                    }
+                    ("line", other) => {
+                        let (l1, l2) = line_endpoints(model, e1)?;
+                        let center = center_point_id(model, e2)?;
+                        let _ = other;
+                        PerpendicularTarget::LineCenter { l1, l2, center }
+                    }
+                    (_, "line") => {
+                        let (l1, l2) = line_endpoints(model, e2)?;
+                        let center = center_point_id(model, e1)?;
+                        PerpendicularTarget::LineCenter { l1, l2, center }
+                    }
+                    _ => {
+                        let c1 = center_point_id(model, e1)?;
+                        let r1 = radius_point_id(model, e1)?;
+                        let c2 = center_point_id(model, e2)?;
+                        let r2 = radius_point_id(model, e2)?;
+                        PerpendicularTarget::Circles {
+                            c1,
+                            r1_point: r1,
+                            c2,
+                            r2_point: r2,
+                        }
                     }
                 }
             };
@@ -231,19 +269,36 @@ pub fn constraint_from_dict(
         }
         "PointOnLineConstraint" => {
             let point = u64_field(data, "point_id")?;
-            let shape = u64_field(data, "shape_id")?;
-            let target = match model.entity_type(shape)? {
-                "line" => {
-                    let (l1, l2) = line_endpoints(model, shape)?;
-                    PointOnTarget::Line { l1, l2 }
+            // Two dict shapes: resolved keys (l1_idx/l2_idx for a
+            // line, center_idx/radius_pt_idx for a circle/arc), or
+            // entity references (shape_id) resolved through the
+            // registry.
+            let target = if let (Some(l1), Some(l2)) =
+                (u64_field(data, "l1_idx"), u64_field(data, "l2_idx"))
+            {
+                PointOnTarget::Line { l1, l2 }
+            } else if let (Some(center), Some(radius_point)) = (
+                u64_field(data, "center_idx"),
+                u64_field(data, "radius_pt_idx"),
+            ) {
+                PointOnTarget::RadiusCurve {
+                    center,
+                    radius_point,
                 }
-                _ => {
-                    let center = center_point_id(model, shape)?;
-                    let radius_point = radius_point_id(model, shape)?;
-                    PointOnTarget::RadiusCurve {
-                        center,
-                        radius_point,
+            } else {
+                let shape = u64_field(data, "shape_id")?;
+                match model.entity_type(shape)? {
+                    "line" => {
+                        let ids = model.entity_point_ids(shape)?;
+                        PointOnTarget::Line {
+                            l1: *ids.first()?,
+                            l2: *ids.get(1)?,
+                        }
                     }
+                    _ => PointOnTarget::RadiusCurve {
+                        center: center_point_id(model, shape)?,
+                        radius_point: radius_point_id(model, shape)?,
+                    },
                 }
             };
             Some(Box::new(PointOnLineConstraint::new(point, target)))
@@ -254,9 +309,7 @@ pub fn constraint_from_dict(
             if model.entity_type(shape)? != "bezier" {
                 return None;
             }
-            let Some(bezier) = model.get_entity(shape) else {
-                return None;
-            };
+            let bezier = model.get_entity(shape)?;
             let dict = bezier.to_json();
             let start = u64_field(&dict, "start_idx")?;
             let end = u64_field(&dict, "end_idx")?;
