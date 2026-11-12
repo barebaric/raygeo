@@ -6,6 +6,7 @@ use pyo3_stub_gen::derive::{
     gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pymethods,
 };
 
+use crate::python::sketch::protocols::{Canvas, DrawContext, ScreenMap};
 use crate::python::sketch::registry::PyEntityRegistry;
 use crate::sketch::constraint::SketchConstraint;
 use crate::sketch::constraints::perpendicular::{
@@ -122,18 +123,18 @@ impl PyPerpendicularConstraint {
     #[allow(clippy::too_many_arguments)]
     fn draw<'py>(
         &self,
-        ctx: &Bound<'py, PyAny>,
-        registry: &Bound<'py, PyAny>,
-        to_screen: &Bound<'py, PyAny>,
+        ctx: Canvas<'py>,
+        registry: DrawContext<'py>,
+        to_screen: ScreenMap<'py>,
         is_selected: bool,
         is_hovered: bool,
         point_radius: f64,
     ) -> PyResult<()> {
         super::constraint_draw(
             &self.clone().into_constraint(),
-            ctx,
-            registry,
-            to_screen,
+            &ctx,
+            &registry,
+            &to_screen,
             is_selected,
             is_hovered,
             point_radius,
@@ -159,7 +160,7 @@ impl PyPerpendicularConstraint {
         my: f64,
         threshold: f64,
         registry: &PyEntityRegistry,
-        to_screen: Option<Bound<'_, PyAny>>,
+        to_screen: Option<ScreenMap<'_>>,
     ) -> bool {
         let constraint = self.clone().into_constraint();
         super::constraint_is_hit(

@@ -2,6 +2,7 @@
 
 pub(crate) mod constraints;
 pub(crate) mod point;
+pub(crate) mod protocols;
 pub(crate) mod registry;
 pub(crate) mod solver;
 pub(crate) mod topology;

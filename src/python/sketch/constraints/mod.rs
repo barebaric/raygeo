@@ -26,10 +26,14 @@ use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyDict};
 use serde_json::Value;
 
+use crate::python::sketch::protocols::{
+    Canvas, DrawContext as RegistryContext, ScreenMap,
+};
 use crate::python::sketch::registry::PyEntityRegistry;
 use crate::sketch::constraint::SketchConstraint;
 use crate::sketch::draw::{
-    CairoLike, ConstraintStatus, DrawContext, DrawPoint, DrawStyle,
+    CairoLike, ConstraintStatus, DrawContext as DrawContextContract, DrawPoint,
+    DrawStyle,
 };
 
 /// Type of a leaf-module registration function.
@@ -121,7 +125,7 @@ impl<'a> PyDrawContext<'a> {
     }
 }
 
-impl DrawContext for PyDrawContext<'_> {
+impl DrawContextContract for PyDrawContext<'_> {
     fn get_point(&self, id: u64) -> Option<DrawPoint> {
         let value = self.call("get_point", id)?;
         let xy: (f64, f64) = value.extract().ok()?;
@@ -295,9 +299,9 @@ impl CairoLike for PyCairoAdapter<'_> {
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn constraint_draw(
     constraint: &dyn SketchConstraint,
-    ctx: &Bound<'_, PyAny>,
-    registry: &Bound<'_, PyAny>,
-    to_screen: &Bound<'_, PyAny>,
+    ctx: &Canvas<'_>,
+    registry: &RegistryContext<'_>,
+    to_screen: &ScreenMap<'_>,
     is_selected: bool,
     is_hovered: bool,
     point_radius: f64,
@@ -311,16 +315,17 @@ pub(crate) fn constraint_draw(
     };
     let to_screen = |point: (f64, f64)| {
         to_screen
+            .0
             .call1((point,))
             .and_then(|result| result.extract::<(f64, f64)>())
             .unwrap_or(point)
     };
     let canvas = PyCairoAdapter {
-        ctx: ctx.clone(),
+        ctx: ctx.0.clone(),
         error: std::cell::RefCell::new(None),
     };
     let context = PyDrawContext {
-        registry: registry.clone(),
+        registry: registry.0.clone(),
         error: std::cell::RefCell::new(None),
     };
     constraint.draw(&context, &to_screen, &canvas, &style);
@@ -343,7 +348,7 @@ pub(crate) fn constraint_is_hit(
     my: f64,
     threshold: f64,
     registry: &PyEntityRegistry,
-    to_screen: Option<&Bound<'_, PyAny>>,
+    to_screen: Option<&ScreenMap<'_>>,
 ) -> bool {
     match to_screen {
         None => {
@@ -353,6 +358,7 @@ pub(crate) fn constraint_is_hit(
         Some(function) => {
             let to_screen = |point: (f64, f64)| {
                 function
+                    .0
                     .call1((point,))
                     .and_then(|result| result.extract::<(f64, f64)>())
                     .unwrap_or(point)

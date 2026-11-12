@@ -4,6 +4,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
+use crate::python::sketch::protocols::{Canvas, DrawContext, ScreenMap};
 use crate::python::sketch::registry::PyEntityRegistry;
 use crate::sketch::constraint::SketchConstraint;
 use crate::sketch::constraints::collinear::CollinearConstraint as CoreConstraint;
@@ -67,18 +68,18 @@ impl PyCollinearConstraint {
     #[allow(clippy::too_many_arguments)]
     fn draw<'py>(
         &self,
-        ctx: &Bound<'py, PyAny>,
-        registry: &Bound<'py, PyAny>,
-        to_screen: &Bound<'py, PyAny>,
+        ctx: Canvas<'py>,
+        registry: DrawContext<'py>,
+        to_screen: ScreenMap<'py>,
         is_selected: bool,
         is_hovered: bool,
         point_radius: f64,
     ) -> PyResult<()> {
         super::constraint_draw(
             &self.clone().into_constraint(),
-            ctx,
-            registry,
-            to_screen,
+            &ctx,
+            &registry,
+            &to_screen,
             is_selected,
             is_hovered,
             point_radius,
