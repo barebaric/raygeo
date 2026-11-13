@@ -55,6 +55,7 @@ pub struct EntityBase {
     pub invisible: bool,
     pub array_copy: bool,
     pub constrained: bool,
+    pub fill_color: Option<ColorRgba>,
 }
 
 impl EntityBase {
@@ -70,6 +71,9 @@ impl EntityBase {
         }
         if self.array_copy {
             data["array_copy"] = json!(true);
+        }
+        if let Some(color) = self.fill_color {
+            data["fill_color"] = json!(color);
         }
         data
     }
@@ -345,12 +349,10 @@ pub trait Entity: Send + Sync {
 
     // ── fill color ─────────────────────────────────────────────
 
-    /// Sets the fill color; `Err` for entities that do not support
-    /// fills (the reference raises `NotImplementedError`).
-    /// Returns `false` when the entity does not support fills (the
-    /// reference raises `NotImplementedError`).
-    fn set_fill_color(&mut self, _color: Option<ColorRgba>) -> bool {
-        false
+    /// Sets the fill color.
+    fn set_fill_color(&mut self, color: Option<ColorRgba>) -> bool {
+        self.base_mut().fill_color = color;
+        true
     }
 
     // ── solver status ──────────────────────────────────────────
@@ -414,6 +416,15 @@ pub(crate) fn base_from_json(data: &Value) -> EntityBase {
             .and_then(Value::as_bool)
             .unwrap_or(false),
         constrained: false,
+        fill_color: data.get("fill_color").and_then(|value| {
+            let array = value.as_array()?;
+            Some([
+                array.first()?.as_f64()?,
+                array.get(1)?.as_f64()?,
+                array.get(2)?.as_f64()?,
+                array.get(3)?.as_f64()?,
+            ])
+        }),
     }
 }
 

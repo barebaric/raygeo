@@ -80,6 +80,11 @@ class TextBox:
         Whether the entity is fully constrained, as computed by the
         solver.
         """
+    @property
+    def fill_color(self) -> typing.Optional[tuple[builtins.float, builtins.float, builtins.float, builtins.float]]:
+        r"""
+        Fill color as (r, g, b, a), or None.
+        """
     def __new__(cls, origin: builtins.int, width: builtins.int, height: builtins.int, content: builtins.str = '', font_family: builtins.str = 'sans-serif', font_size: builtins.float = 10.0, bold: builtins.bool = False, italic: builtins.bool = False) -> TextBox:
         r"""
         Creates an unattached text box; an id is assigned on

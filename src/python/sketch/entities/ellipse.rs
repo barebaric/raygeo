@@ -92,6 +92,12 @@ impl PyEllipse {
         self.inner.base.constrained
     }
 
+    /// Fill color as (r, g, b, a), or None.
+    #[getter]
+    fn fill_color(&self) -> Option<(f64, f64, f64, f64)> {
+        self.inner.base.fill_color.map(|c| (c[0], c[1], c[2], c[3]))
+    }
+
     /// The entity type name.
     fn type_name(&self) -> &'static str {
         self.inner.type_name()

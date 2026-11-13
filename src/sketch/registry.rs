@@ -200,6 +200,21 @@ impl EntityRegistry {
         self.push_constraint(constraint, dict)
     }
 
+    /// Replaces the stored constraint at the given handle.
+    pub fn replace_constraint(
+        &mut self,
+        index: u64,
+        constraint: Box<dyn SketchConstraint>,
+    ) -> Result<(), String> {
+        let Some(entry) = self.constraints.get_mut(index as usize) else {
+            return Err("constraint index out of range".to_string());
+        };
+        let dict = constraint.to_json();
+        let referenced = constraint.referenced_points();
+        *entry = ConstraintEntry::new(constraint, dict, referenced);
+        Ok(())
+    }
+
     fn push_constraint(
         &mut self,
         constraint: Box<dyn SketchConstraint>,

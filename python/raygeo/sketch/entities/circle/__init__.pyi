@@ -50,6 +50,11 @@ class Circle:
         Whether the entity is fully constrained, as computed by the
         solver.
         """
+    @property
+    def fill_color(self) -> typing.Optional[tuple[builtins.float, builtins.float, builtins.float, builtins.float]]:
+        r"""
+        Fill color as (r, g, b, a), or None.
+        """
     def __new__(cls, center: builtins.int, radius_point: builtins.int, construction: builtins.bool = False) -> Circle:
         r"""
         Creates an unattached circle; an id is assigned on insertion.

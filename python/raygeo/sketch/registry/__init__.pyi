@@ -219,6 +219,10 @@ class EntityRegistry:
         Adds a constraint object to the registry and returns its
         handle.
         """
+    def replace_constraint(self, index: builtins.int, obj: typing.Any) -> None:
+        r"""
+        Replaces the stored constraint at the given handle.
+        """
     def point_constrained(self, id: builtins.int) -> builtins.bool:
         r"""
         Whether the point is solver-constrained.

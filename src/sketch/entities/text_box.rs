@@ -25,7 +25,6 @@ pub struct TextBoxEntity {
     pub content: String,
     pub font_config: CoreFontConfig,
     pub construction_line_ids: Vec<u64>,
-    pub fill_color: Option<super::entity::ColorRgba>,
     /// Unknown `font_config` keys preserved for forward compat.
     pub font_extra: serde_json::Map<String, Value>,
 }
@@ -46,6 +45,7 @@ impl TextBoxEntity {
                 invisible: false,
                 array_copy: false,
                 constrained: false,
+                fill_color: None,
             },
             origin,
             width,
@@ -53,21 +53,11 @@ impl TextBoxEntity {
             content,
             font_config: CoreFontConfig::new("sans-serif", 10.0),
             construction_line_ids: Vec::new(),
-            fill_color: None,
             font_extra: serde_json::Map::new(),
         }
     }
 
     pub fn from_json(data: &Value) -> Option<TextBoxEntity> {
-        let fill_color = data.get("fill_color").and_then(|value| {
-            let array = value.as_array()?;
-            Some([
-                array.first()?.as_f64()?,
-                array.get(1)?.as_f64()?,
-                array.get(2)?.as_f64()?,
-                array.get(3)?.as_f64()?,
-            ])
-        });
         Some(TextBoxEntity {
             base: super::entity::base_from_json(data),
             origin: data.get("origin_id")?.as_u64()?,
@@ -98,7 +88,6 @@ impl TextBoxEntity {
                 .and_then(Value::as_array)
                 .map(|array| array.iter().filter_map(Value::as_u64).collect())
                 .unwrap_or_default(),
-            fill_color,
         })
     }
 
@@ -115,7 +104,7 @@ impl TextBoxEntity {
                 map.insert(key.clone(), value.clone());
             }
         }
-        let mut extra = json!({
+        let extra = json!({
             "type": self.type_name(),
             "origin_id": self.origin,
             "width_id": self.width,
@@ -124,9 +113,6 @@ impl TextBoxEntity {
             "font_config": font,
             "construction_line_ids": self.construction_line_ids,
         });
-        if let Some(color) = self.fill_color {
-            extra["fill_color"] = json!(color);
-        }
         EntityBase::combined_json(&base, extra)
     }
 
@@ -287,14 +273,6 @@ impl Entity for TextBoxEntity {
         true
     }
 
-    fn set_fill_color(
-        &mut self,
-        color: Option<super::entity::ColorRgba>,
-    ) -> bool {
-        self.fill_color = color;
-        true
-    }
-
     fn hit_test(
         &self,
         mx: f64,
@@ -312,7 +290,7 @@ impl Entity for TextBoxEntity {
     }
 
     fn get_state(&self) -> Option<Value> {
-        let fill = self.fill_color.map(|c| json!(c));
+        let fill = self.base.fill_color.map(|c| json!(c));
         Some(json!({
             "construction": self.base.construction,
             "fill_color": fill,
@@ -325,7 +303,7 @@ impl Entity for TextBoxEntity {
         }
         if let Some(array) = state.get("fill_color").and_then(Value::as_array) {
             if array.len() == 4 {
-                self.fill_color = Some([
+                self.base.fill_color = Some([
                     array[0].as_f64().unwrap_or(0.0),
                     array[1].as_f64().unwrap_or(0.0),
                     array[2].as_f64().unwrap_or(0.0),
@@ -333,7 +311,7 @@ impl Entity for TextBoxEntity {
                 ]);
             }
         } else {
-            self.fill_color = None;
+            self.base.fill_color = None;
         }
     }
 

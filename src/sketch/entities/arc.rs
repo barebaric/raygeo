@@ -42,6 +42,7 @@ impl Arc {
                 invisible: false,
                 array_copy: false,
                 constrained: false,
+                fill_color: None,
             },
             start,
             end,

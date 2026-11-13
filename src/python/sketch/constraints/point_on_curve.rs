@@ -88,6 +88,11 @@ impl PyPointOnCurveConstraint {
         self.clone().into_constraint().error(&registry.inner)
     }
 
+    /// Point ids the constraint references.
+    fn referenced_points(&self) -> Vec<u64> {
+        self.clone().into_constraint().referenced_points()
+    }
+
     /// Serializes to the reference constraint dictionary shape.
     fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         super::dict_from_value(py, &self.clone().into_constraint().to_json())

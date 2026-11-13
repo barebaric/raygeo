@@ -4,6 +4,7 @@ use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::python::sketch::protocols::{Canvas, DrawContext, ScreenMap};
+use crate::sketch::constraint::SketchConstraint;
 use crate::sketch::constraints::drag::DragConstraint as CoreConstraint;
 
 /// Softly pulls a point towards a target coordinate.
@@ -47,6 +48,18 @@ impl PyDragConstraint {
             weight,
             status: 0,
         }
+    }
+
+    /// Point ids the constraint references.
+    fn referenced_points(&self) -> Vec<u64> {
+        self.clone().into_constraint().referenced_points()
+    }
+
+    /// Sets the target coordinates and pull strength.
+    fn set_target(&mut self, target_x: f64, target_y: f64, weight: f64) {
+        self.target_x = target_x;
+        self.target_y = target_y;
+        self.weight = weight;
     }
 
     /// Draws the constraint's symbol onto the cairo context.

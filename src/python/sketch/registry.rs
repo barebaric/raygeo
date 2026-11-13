@@ -493,6 +493,18 @@ impl PyEntityRegistry {
         Ok(self.inner.add_constraint_object(constraint))
     }
 
+    /// Replaces the stored constraint at the given handle.
+    fn replace_constraint(
+        &mut self,
+        index: u64,
+        obj: &Bound<'_, PyAny>,
+    ) -> PyResult<()> {
+        let constraint = extract_constraint(obj)?;
+        self.inner
+            .replace_constraint(index, constraint)
+            .map_err(PyValueError::new_err)
+    }
+
     /// Whether the point is solver-constrained.
     fn point_constrained(&self, id: u64) -> bool {
         self.inner
