@@ -159,6 +159,24 @@ impl EntityRegistry {
     }
 
     /// Monotonic version bumped on every entity-list mutation.
+    /// All sketch points, in storage order.
+    pub fn all_points(&self) -> &[SketchPoint] {
+        &self.points
+    }
+
+    /// All entities, in storage order.
+    pub fn all_entities(&self) -> &[Box<dyn Entity>] {
+        &self.entities
+    }
+
+    /// Appends a pre-built entity object, assigning the next free
+    /// id, and returns it.
+    pub fn add_entity_object(&mut self, mut entity: Box<dyn Entity>) -> u64 {
+        let id = self.next_id();
+        entity.base_mut().id = id;
+        self.push_entity(entity)
+    }
+
     pub fn entity_version(&self) -> u64 {
         self.entity_version
     }

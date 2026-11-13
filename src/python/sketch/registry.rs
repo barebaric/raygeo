@@ -8,6 +8,9 @@ use serde_json::Value;
 
 use crate::geo::types::Rect;
 use crate::python::geo::geometry::Geometry as PyGeometry;
+use crate::python::sketch::entities::{
+    entity_to_py, extract_entity, line::PyLine, point::PySketchPoint, AnyEntity,
+};
 use crate::sketch::entities::mirror::{MirrorAxis, MirrorDirection};
 use crate::sketch::entities::point::{SketchPoint, WaypointType};
 use crate::sketch::registry::EntityRegistry;
@@ -735,6 +738,47 @@ impl PyEntityRegistry {
             position,
         });
         Ok(())
+    }
+
+    /// All sketch points, in id order.
+    fn points(&self) -> Vec<PySketchPoint> {
+        self.inner
+            .all_points()
+            .iter()
+            .map(|point| PySketchPoint {
+                inner: point.clone(),
+            })
+            .collect()
+    }
+
+    /// All entities as their concrete classes.
+    fn entities<'py>(
+        &self,
+        py: Python<'py>,
+    ) -> PyResult<Vec<Bound<'py, PyAny>>> {
+        self.inner
+            .all_entities()
+            .iter()
+            .map(|entity| entity_to_py(py, entity.as_ref()))
+            .collect()
+    }
+
+    /// The entity object for an id, or None.
+    fn get_entity_object<'py>(
+        &self,
+        py: Python<'py>,
+        id: u64,
+    ) -> PyResult<Option<Bound<'py, PyAny>>> {
+        match self.inner.get_entity(id) {
+            Some(entity) => entity_to_py(py, entity).map(Some),
+            None => Ok(None),
+        }
+    }
+
+    /// Adds an entity object to the registry and returns its id.
+    fn add_entity(&mut self, obj: &Bound<'_, PyAny>) -> PyResult<u64> {
+        let entity = extract_entity(obj)?;
+        Ok(self.inner.add_entity_object(entity))
     }
 
     /// Serializes the entity to a reference entity dictionary.

@@ -14,6 +14,7 @@ polymorphic queries.
 
 import builtins
 from raygeo import geo
+from raygeo.sketch.entities import point
 import typing
 __all__ = [
     "EntityRegistry",
@@ -303,6 +304,22 @@ class EntityRegistry:
         r"""
         Mirrors entity-internal state across the axis (arc chirality,
         bezier offsets, polygon winding).
+        """
+    def points(self) -> builtins.list[point.SketchPoint]:
+        r"""
+        All sketch points, in id order.
+        """
+    def entities(self) -> builtins.list[typing.Any]:
+        r"""
+        All entities as their concrete classes.
+        """
+    def get_entity_object(self, id: builtins.int) -> typing.Optional[typing.Any]:
+        r"""
+        The entity object for an id, or None.
+        """
+    def add_entity(self, obj: typing.Any) -> builtins.int:
+        r"""
+        Adds an entity object to the registry and returns its id.
         """
     def entity_to_dict(self, id: builtins.int) -> dict:
         r"""

@@ -251,6 +251,10 @@ impl Entity for TextBoxEntity {
         &mut self.base
     }
 
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
     fn type_name(&self) -> &'static str {
         "text_box"
     }

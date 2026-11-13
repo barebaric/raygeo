@@ -64,7 +64,7 @@ pub(crate) fn dict_from_value<'py>(
     Ok(dict)
 }
 
-fn value_to_py<'py>(
+pub(crate) fn value_to_py<'py>(
     py: Python<'py>,
     value: &Value,
 ) -> PyResult<Bound<'py, PyAny>> {

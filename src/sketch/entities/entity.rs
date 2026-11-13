@@ -112,6 +112,9 @@ pub trait Entity: Send + Sync {
     fn base(&self) -> &EntityBase;
     fn base_mut(&mut self) -> &mut EntityBase;
 
+    /// Downcast hook for the binding layer.
+    fn as_any(&self) -> &dyn std::any::Any;
+
     /// The reference serialization type string.
     fn type_name(&self) -> &'static str;
 
