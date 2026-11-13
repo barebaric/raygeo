@@ -38,6 +38,14 @@ impl RotationalConstraint {
 }
 
 impl SketchConstraint for RotationalConstraint {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn to_json(&self) -> Value {
+        RotationalConstraint::to_json(self)
+    }
+
     fn referenced_points(&self) -> Vec<u64> {
         vec![self.center, self.p1, self.p2]
     }

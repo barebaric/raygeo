@@ -1,5 +1,7 @@
 //! Drag constraint: soft pull towards a target coordinate.
 
+use serde_json::{json, Value};
+
 use crate::sketch::constraint::{
     JacobianEntry, PointContext, SketchConstraint,
 };
@@ -29,9 +31,28 @@ impl DragConstraint {
             weight,
         }
     }
+
+    /// Serializes to the reference constraint dictionary shape.
+    pub fn to_json(&self) -> Value {
+        json!({
+            "type": "DragConstraint",
+            "point": self.point,
+            "target_x": self.target_x,
+            "target_y": self.target_y,
+            "weight": self.weight,
+        })
+    }
 }
 
 impl SketchConstraint for DragConstraint {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn to_json(&self) -> Value {
+        DragConstraint::to_json(self)
+    }
+
     fn referenced_points(&self) -> Vec<u64> {
         vec![self.point]
     }

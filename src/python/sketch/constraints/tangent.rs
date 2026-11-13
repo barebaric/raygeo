@@ -141,6 +141,17 @@ impl PyTangentConstraint {
             )
         }
     }
+
+    pub(crate) fn from_core(core: CoreConstraint) -> Self {
+        PyTangentConstraint {
+            l1: core.l1,
+            l2: core.l2,
+            center: core.center,
+            radius_point: core.radius_point,
+            user_visible: core.user_visible,
+            status: 0,
+        }
+    }
 }
 
 /// Registers the constraint class with the given module.

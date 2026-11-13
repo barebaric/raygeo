@@ -163,6 +163,19 @@ impl PyPointOnCurveConstraint {
         core.user_visible = self.user_visible;
         core
     }
+
+    pub(crate) fn from_core(core: CoreConstraint) -> Self {
+        PyPointOnCurveConstraint {
+            point: core.point,
+            start: core.start,
+            end: core.end,
+            cp1_offset: (core.cp1_offset[0], core.cp1_offset[1]),
+            cp2_offset: (core.cp2_offset[0], core.cp2_offset[1]),
+            is_line: core.is_line,
+            user_visible: core.user_visible,
+            status: 0,
+        }
+    }
 }
 
 /// Registers the constraint class with the given module.

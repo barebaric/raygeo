@@ -44,6 +44,19 @@ impl From<&PySymmetryTarget> for SymmetryTarget {
     }
 }
 
+impl From<&SymmetryTarget> for PySymmetryTarget {
+    fn from(value: &SymmetryTarget) -> Self {
+        match value {
+            SymmetryTarget::Point { center } => {
+                PySymmetryTarget::Point { center: *center }
+            }
+            SymmetryTarget::Line { l1, l2 } => {
+                PySymmetryTarget::Line { l1: *l1, l2: *l2 }
+            }
+        }
+    }
+}
+
 /// Enforces two points are symmetric about a point or a line.
 #[gen_stub_pyclass]
 #[pyclass(
@@ -168,6 +181,16 @@ impl PySymmetryConstraint {
                 self.p2,
                 SymmetryTarget::from(&self.target),
             )
+        }
+    }
+
+    pub(crate) fn from_core(core: CoreConstraint) -> Self {
+        PySymmetryConstraint {
+            p1: core.p1,
+            p2: core.p2,
+            target: PySymmetryTarget::from(&core.target),
+            user_visible: core.user_visible,
+            status: 0,
         }
     }
 }

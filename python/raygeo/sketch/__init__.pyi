@@ -16,12 +16,14 @@ conflict indices.
 import builtins
 import typing
 from . import constraints
+from . import entities
 from . import registry
 from . import topology
 __all__ = [
     "PointDef",
     "Solver",
     "constraints",
+    "entities",
     "registry",
     "topology",
 ]

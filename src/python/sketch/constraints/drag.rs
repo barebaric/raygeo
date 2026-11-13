@@ -84,6 +84,16 @@ impl PyDragConstraint {
             self.weight,
         )
     }
+
+    pub(crate) fn from_core(core: CoreConstraint) -> Self {
+        PyDragConstraint {
+            status: 0,
+            point: core.point,
+            target_x: core.target_x,
+            target_y: core.target_y,
+            weight: core.weight,
+        }
+    }
 }
 
 /// Registers the constraint class with the given module.

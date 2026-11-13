@@ -1,6 +1,7 @@
 //! Python bindings for the sketch module.
 
 pub(crate) mod constraints;
+pub(crate) mod entities;
 pub(crate) mod point;
 pub(crate) mod protocols;
 pub(crate) mod registry;
@@ -40,6 +41,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     constraints::register(&sketch_mod)?;
     topology::register(&sketch_mod)?;
     registry::register(&sketch_mod)?;
+    entities::register(&sketch_mod)?;
 
     m.add_submodule(&sketch_mod)?;
 

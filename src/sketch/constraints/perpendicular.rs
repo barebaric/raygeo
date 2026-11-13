@@ -57,6 +57,14 @@ impl PerpendicularConstraint {
 }
 
 impl SketchConstraint for PerpendicularConstraint {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn to_json(&self) -> Value {
+        PerpendicularConstraint::to_json(self)
+    }
+
     fn referenced_points(&self) -> Vec<u64> {
         let mut ids = Vec::new();
         let mut push = |id: u64| {

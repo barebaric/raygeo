@@ -7,6 +7,8 @@
 //! constraint sees only a point context and never entity or parameter
 //! knowledge.
 
+use serde_json::Value;
+
 use crate::sketch::draw::{CairoLike, DrawContext, DrawStyle};
 use crate::sketch::registry::EntityRegistry;
 
@@ -31,6 +33,12 @@ pub type JacobianEntry = (u64, usize, f64, f64);
 /// Base contract of all sketch constraints, mirroring the reference
 /// implementation's constraint base class.
 pub trait SketchConstraint: Send + Sync {
+    /// Downcast hook for the binding layer.
+    fn as_any(&self) -> &dyn std::any::Any;
+
+    /// Serialization to the reference constraint dictionary shape.
+    fn to_json(&self) -> Value;
+
     /// Returns all point ids this constraint couples.
     fn referenced_points(&self) -> Vec<u64>;
 

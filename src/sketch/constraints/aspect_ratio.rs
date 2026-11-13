@@ -43,6 +43,14 @@ impl AspectRatioConstraint {
 }
 
 impl SketchConstraint for AspectRatioConstraint {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn to_json(&self) -> Value {
+        AspectRatioConstraint::to_json(self)
+    }
+
     fn referenced_points(&self) -> Vec<u64> {
         vec![self.p1, self.p2, self.p3, self.p4]
     }

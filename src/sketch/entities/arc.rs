@@ -129,6 +129,10 @@ impl Entity for Arc {
         &mut self.base
     }
 
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
     fn type_name(&self) -> &'static str {
         "arc"
     }

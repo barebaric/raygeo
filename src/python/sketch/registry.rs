@@ -8,6 +8,12 @@ use serde_json::Value;
 
 use crate::geo::types::Rect;
 use crate::python::geo::geometry::Geometry as PyGeometry;
+use crate::python::sketch::constraints::{
+    constraint_to_py, extract_constraint, AnyConstraint,
+};
+use crate::python::sketch::entities::{
+    entity_to_py, extract_entity, point::PySketchPoint, AnyEntity,
+};
 use crate::sketch::entities::mirror::{MirrorAxis, MirrorDirection};
 use crate::sketch::entities::point::{SketchPoint, WaypointType};
 use crate::sketch::registry::EntityRegistry;
@@ -452,6 +458,41 @@ impl PyEntityRegistry {
         self.inner.constraint_residuals()
     }
 
+    /// All stored constraints as their concrete classes.
+    fn constraints<'py>(
+        &self,
+        py: Python<'py>,
+    ) -> PyResult<Vec<AnyConstraint<'py>>> {
+        self.inner
+            .all_constraints()
+            .iter()
+            .map(|entry| {
+                constraint_to_py(py, entry.constraint.as_ref())
+                    .map(AnyConstraint)
+            })
+            .collect()
+    }
+
+    /// The constraint object for a handle, or None.
+    fn get_constraint_object<'py>(
+        &self,
+        py: Python<'py>,
+        index: u64,
+    ) -> PyResult<Option<AnyConstraint<'py>>> {
+        match self.inner.get_constraint(index) {
+            Some(constraint) => constraint_to_py(py, constraint)
+                .map(|object| Some(AnyConstraint(object))),
+            None => Ok(None),
+        }
+    }
+
+    /// Adds a constraint object to the registry and returns its
+    /// handle.
+    fn add_constraint(&mut self, obj: &Bound<'_, PyAny>) -> PyResult<u64> {
+        let constraint = extract_constraint(obj)?;
+        Ok(self.inner.add_constraint_object(constraint))
+    }
+
     /// Whether the point is solver-constrained.
     fn point_constrained(&self, id: u64) -> bool {
         self.inner
@@ -735,6 +776,46 @@ impl PyEntityRegistry {
             position,
         });
         Ok(())
+    }
+
+    /// All sketch points, in id order.
+    fn points(&self) -> Vec<PySketchPoint> {
+        self.inner
+            .all_points()
+            .iter()
+            .map(|point| PySketchPoint {
+                inner: point.clone(),
+            })
+            .collect()
+    }
+
+    /// All entities as their concrete classes.
+    fn entities<'py>(&self, py: Python<'py>) -> PyResult<Vec<AnyEntity<'py>>> {
+        self.inner
+            .all_entities()
+            .iter()
+            .map(|entity| entity_to_py(py, entity.as_ref()).map(AnyEntity))
+            .collect()
+    }
+
+    /// The entity object for an id, or None.
+    fn get_entity_object<'py>(
+        &self,
+        py: Python<'py>,
+        id: u64,
+    ) -> PyResult<Option<AnyEntity<'py>>> {
+        match self.inner.get_entity(id) {
+            Some(entity) => {
+                entity_to_py(py, entity).map(|object| Some(AnyEntity(object)))
+            }
+            None => Ok(None),
+        }
+    }
+
+    /// Adds an entity object to the registry and returns its id.
+    fn add_entity(&mut self, obj: &Bound<'_, PyAny>) -> PyResult<u64> {
+        let entity = extract_entity(obj)?;
+        Ok(self.inner.add_entity_object(entity))
     }
 
     /// Serializes the entity to a reference entity dictionary.

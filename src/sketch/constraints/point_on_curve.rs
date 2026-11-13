@@ -108,6 +108,14 @@ impl PointOnCurveConstraint {
 }
 
 impl SketchConstraint for PointOnCurveConstraint {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn to_json(&self) -> Value {
+        PointOnCurveConstraint::to_json(self)
+    }
+
     fn referenced_points(&self) -> Vec<u64> {
         vec![self.point, self.start, self.end]
     }

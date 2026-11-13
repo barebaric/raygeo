@@ -127,6 +127,15 @@ impl PyHorizontalConstraint {
             ..CoreConstraint::new(self.p1, self.p2)
         }
     }
+
+    pub(crate) fn from_core(core: CoreConstraint) -> Self {
+        PyHorizontalConstraint {
+            p1: core.p1,
+            p2: core.p2,
+            user_visible: core.user_visible,
+            status: 0,
+        }
+    }
 }
 
 /// Registers the constraint class with the given module.

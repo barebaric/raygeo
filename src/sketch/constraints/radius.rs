@@ -41,6 +41,14 @@ impl RadiusConstraint {
 }
 
 impl SketchConstraint for RadiusConstraint {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn to_json(&self) -> Value {
+        RadiusConstraint::to_json(self)
+    }
+
     fn referenced_points(&self) -> Vec<u64> {
         vec![self.center, self.radius_point]
     }

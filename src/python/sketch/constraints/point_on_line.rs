@@ -48,6 +48,23 @@ impl From<&PyPointOnTarget> for PointOnTarget {
     }
 }
 
+impl From<&PointOnTarget> for PyPointOnTarget {
+    fn from(value: &PointOnTarget) -> Self {
+        match value {
+            PointOnTarget::Line { l1, l2 } => {
+                PyPointOnTarget::Line { l1: *l1, l2: *l2 }
+            }
+            PointOnTarget::RadiusCurve {
+                center,
+                radius_point,
+            } => PyPointOnTarget::RadiusCurve {
+                center: *center,
+                radius_point: *radius_point,
+            },
+        }
+    }
+}
+
 /// Enforces a point lies on a line or circle/arc circumference.
 #[gen_stub_pyclass]
 #[pyclass(
@@ -187,6 +204,15 @@ impl PyPointOnLineConstraint {
         CoreConstraint {
             user_visible: self.user_visible,
             ..CoreConstraint::new(self.point, PointOnTarget::from(&self.target))
+        }
+    }
+
+    pub(crate) fn from_core(core: CoreConstraint) -> Self {
+        PyPointOnLineConstraint {
+            point: core.point,
+            target: PyPointOnTarget::from(&core.target),
+            user_visible: core.user_visible,
+            status: 0,
         }
     }
 }

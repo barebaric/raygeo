@@ -32,6 +32,14 @@ impl CollinearConstraint {
 }
 
 impl SketchConstraint for CollinearConstraint {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn to_json(&self) -> Value {
+        CollinearConstraint::to_json(self)
+    }
+
     fn referenced_points(&self) -> Vec<u64> {
         vec![self.p1, self.p2, self.p3]
     }
