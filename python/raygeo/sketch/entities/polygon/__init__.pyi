@@ -66,6 +66,11 @@ class Polygon:
         Whether the entity is fully constrained, as computed by the
         solver.
         """
+    @property
+    def fill_color(self) -> typing.Optional[tuple[builtins.float, builtins.float, builtins.float, builtins.float]]:
+        r"""
+        Fill color as (r, g, b, a), or None.
+        """
     def __new__(cls, center: builtins.int, handle: builtins.int, vertices: typing.Sequence[tuple[builtins.float, builtins.float]], closed: builtins.bool = False, construction: builtins.bool = False, rings: typing.Optional[typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]] = None) -> Polygon:
         r"""
         Creates an unattached polygon; an id is assigned on

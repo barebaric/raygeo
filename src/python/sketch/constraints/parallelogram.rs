@@ -4,6 +4,7 @@ use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::python::sketch::protocols::{Canvas, DrawContext, ScreenMap};
+use crate::sketch::constraint::SketchConstraint;
 use crate::sketch::constraints::parallelogram::ParallelogramConstraint as CoreConstraint;
 
 /// Enforces (p_width - p_origin) == (p4 - p_height).
@@ -47,6 +48,11 @@ impl PyParallelogramConstraint {
             p4,
             status: 0,
         }
+    }
+
+    /// Point ids the constraint references.
+    fn referenced_points(&self) -> Vec<u64> {
+        self.clone().into_constraint().referenced_points()
     }
 
     /// Draws the constraint's symbol onto the cairo context.

@@ -63,6 +63,11 @@ class AngleConstraint:
         r"""
         Reference validation status ordinal.
         """
+    @property
+    def value(self) -> builtins.float:
+        r"""
+        The angle value in degrees (alias of ``value_deg``).
+        """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __new__(cls, p1: builtins.int, p2: builtins.int, p3: builtins.int, p4: builtins.int, value_deg: builtins.float, e1_far: typing.Optional[builtins.int] = None, e2_far: typing.Optional[builtins.int] = None, user_visible: builtins.bool = True) -> AngleConstraint:
         r"""
@@ -73,6 +78,14 @@ class AngleConstraint:
         r"""
         Returns the constraint error at the registry's point
         positions.
+        """
+    def referenced_points(self) -> builtins.list[builtins.int]:
+        r"""
+        Point ids the constraint references.
+        """
+    def set_value(self, value_deg: builtins.float) -> None:
+        r"""
+        Sets the angle value in degrees.
         """
     def to_dict(self) -> dict:
         r"""

@@ -60,6 +60,11 @@ class Arc:
         Whether the entity is fully constrained, as computed by the
         solver.
         """
+    @property
+    def fill_color(self) -> typing.Optional[tuple[builtins.float, builtins.float, builtins.float, builtins.float]]:
+        r"""
+        Fill color as (r, g, b, a), or None.
+        """
     def __new__(cls, start: builtins.int, end: builtins.int, center: builtins.int, clockwise: builtins.bool = False, construction: builtins.bool = False) -> Arc:
         r"""
         Creates an unattached arc; an id is assigned on insertion.

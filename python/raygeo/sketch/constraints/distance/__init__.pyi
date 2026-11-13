@@ -50,6 +50,14 @@ class DistanceConstraint:
         Returns the constraint error at the registry's point
         positions.
         """
+    def referenced_points(self) -> builtins.list[builtins.int]:
+        r"""
+        Point ids the constraint references.
+        """
+    def set_value(self, value: builtins.float) -> None:
+        r"""
+        Sets the resolved distance value.
+        """
     def to_dict(self) -> dict:
         r"""
         Serializes to the reference constraint dictionary shape.

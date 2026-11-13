@@ -51,6 +51,10 @@ class SymmetryConstraint:
         Returns the constraint error at the registry's point
         positions.
         """
+    def referenced_points(self) -> builtins.list[builtins.int]:
+        r"""
+        Point ids the constraint references.
+        """
     def to_dict(self) -> dict:
         r"""
         Serializes to the reference constraint dictionary shape.

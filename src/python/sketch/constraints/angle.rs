@@ -99,6 +99,22 @@ impl PyAngleConstraint {
         self.clone().into_constraint().error(&registry.inner)
     }
 
+    /// Point ids the constraint references.
+    fn referenced_points(&self) -> Vec<u64> {
+        self.clone().into_constraint().referenced_points()
+    }
+
+    /// The angle value in degrees (alias of ``value_deg``).
+    #[getter]
+    fn value(&self) -> f64 {
+        self.value_deg
+    }
+
+    /// Sets the angle value in degrees.
+    fn set_value(&mut self, value_deg: f64) {
+        self.value_deg = value_deg;
+    }
+
     /// Serializes to the reference constraint dictionary shape.
     fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         super::dict_from_value(py, &self.clone().into_constraint().to_json())

@@ -50,6 +50,11 @@ class Line:
         Whether the entity is fully constrained, as computed by the
         solver.
         """
+    @property
+    def fill_color(self) -> typing.Optional[tuple[builtins.float, builtins.float, builtins.float, builtins.float]]:
+        r"""
+        Fill color as (r, g, b, a), or None.
+        """
     def __new__(cls, p1: builtins.int, p2: builtins.int, construction: builtins.bool = False) -> Line:
         r"""
         Creates an unattached line; an id is assigned on insertion.

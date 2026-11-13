@@ -34,6 +34,7 @@ impl Circle {
                 invisible: false,
                 array_copy: false,
                 constrained: false,
+                fill_color: None,
             },
             center,
             radius_point,

@@ -28,6 +28,7 @@ impl Line {
                 invisible: false,
                 array_copy: false,
                 constrained: false,
+                fill_color: None,
             },
             p1,
             p2,
