@@ -9,7 +9,7 @@ use serde_json::Value;
 use crate::geo::types::Rect;
 use crate::python::geo::geometry::Geometry as PyGeometry;
 use crate::python::sketch::entities::{
-    entity_to_py, extract_entity, line::PyLine, point::PySketchPoint, AnyEntity,
+    entity_to_py, extract_entity, point::PySketchPoint, AnyEntity,
 };
 use crate::sketch::entities::mirror::{MirrorAxis, MirrorDirection};
 use crate::sketch::entities::point::{SketchPoint, WaypointType};
@@ -752,14 +752,11 @@ impl PyEntityRegistry {
     }
 
     /// All entities as their concrete classes.
-    fn entities<'py>(
-        &self,
-        py: Python<'py>,
-    ) -> PyResult<Vec<Bound<'py, PyAny>>> {
+    fn entities<'py>(&self, py: Python<'py>) -> PyResult<Vec<AnyEntity<'py>>> {
         self.inner
             .all_entities()
             .iter()
-            .map(|entity| entity_to_py(py, entity.as_ref()))
+            .map(|entity| entity_to_py(py, entity.as_ref()).map(AnyEntity))
             .collect()
     }
 
@@ -768,9 +765,11 @@ impl PyEntityRegistry {
         &self,
         py: Python<'py>,
         id: u64,
-    ) -> PyResult<Option<Bound<'py, PyAny>>> {
+    ) -> PyResult<Option<AnyEntity<'py>>> {
         match self.inner.get_entity(id) {
-            Some(entity) => entity_to_py(py, entity).map(Some),
+            Some(entity) => {
+                entity_to_py(py, entity).map(|object| Some(AnyEntity(object)))
+            }
             None => Ok(None),
         }
     }

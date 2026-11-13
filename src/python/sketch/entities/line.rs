@@ -86,10 +86,7 @@ impl PyLine {
 
     /// Serializes the entity to the reference dictionary shape.
     fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
-        crate::python::sketch::constraints::dict_from_value(
-            py,
-            &self.inner.to_json(),
-        )
+        dict_from_value(py, &self.inner.to_json())
     }
 
     /// Returns the geometry signature used for change detection.
@@ -98,10 +95,7 @@ impl PyLine {
         py: Python<'py>,
         registry: &PyEntityRegistry,
     ) -> PyResult<Bound<'py, PyDict>> {
-        crate::python::sketch::constraints::dict_from_value(
-            py,
-            &self.inner.geometry_signature(&registry.inner),
-        )
+        dict_from_value(py, &self.inner.geometry_signature(&registry.inner))
     }
 
     /// Returns the entity's toolpath geometry in model coordinates.

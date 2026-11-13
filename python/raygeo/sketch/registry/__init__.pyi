@@ -14,7 +14,14 @@ polymorphic queries.
 
 import builtins
 from raygeo import geo
+from raygeo.sketch.entities import arc
+from raygeo.sketch.entities import bezier
+from raygeo.sketch.entities import circle
+from raygeo.sketch.entities import ellipse
+from raygeo.sketch.entities import line
 from raygeo.sketch.entities import point
+from raygeo.sketch.entities import polygon
+from raygeo.sketch.entities import text_box
 import typing
 __all__ = [
     "EntityRegistry",
@@ -309,11 +316,11 @@ class EntityRegistry:
         r"""
         All sketch points, in id order.
         """
-    def entities(self) -> builtins.list[typing.Any]:
+    def entities(self) -> builtins.list[typing.Union[line.Line, arc.Arc, circle.Circle, ellipse.Ellipse, bezier.Bezier, polygon.Polygon, text_box.TextBox]]:
         r"""
         All entities as their concrete classes.
         """
-    def get_entity_object(self, id: builtins.int) -> typing.Optional[typing.Any]:
+    def get_entity_object(self, id: builtins.int) -> typing.Optional[typing.Union[line.Line, arc.Arc, circle.Circle, ellipse.Ellipse, bezier.Bezier, polygon.Polygon, text_box.TextBox]]:
         r"""
         The entity object for an id, or None.
         """

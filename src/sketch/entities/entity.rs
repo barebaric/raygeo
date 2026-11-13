@@ -329,10 +329,10 @@ pub trait Entity: Send + Sync {
         model: &EntityRegistry,
         tolerance: f64,
     ) -> Vec<(f64, f64)> {
-        self.to_polylines(model, tolerance)
-            .into_iter()
-            .next()
-            .unwrap_or_default()
+        match self.to_geometry(model).to_polygons(tolerance).first() {
+            Some(polygon) => polygon.iter().map(|p| (p.x, p.y)).collect(),
+            None => Vec::new(),
+        }
     }
 
     fn to_polylines(
