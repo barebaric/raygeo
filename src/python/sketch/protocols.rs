@@ -7,17 +7,27 @@
 use std::collections::HashMap;
 
 use pyo3::prelude::*;
-use pyo3_stub_gen::{ImportRef, ModuleRef, PyStubType, TypeInfo};
+use pyo3_stub_gen::{
+    ImportKind, ImportRef, ModuleRef, PyStubType, TypeIdentifierRef, TypeInfo,
+};
 
 fn protocol_type(name: &str) -> TypeInfo {
-    let module = ModuleRef::Named("raygeo.sketch".to_string());
+    let module = ModuleRef::Named("raygeo.sketch.protocols".to_string());
     let mut import = std::collections::HashSet::new();
     import.insert(ImportRef::Module(module.clone()));
+    let mut type_refs = HashMap::new();
+    type_refs.insert(
+        name.to_string(),
+        TypeIdentifierRef {
+            module: module.clone(),
+            import_kind: ImportKind::Module,
+        },
+    );
     TypeInfo {
-        name: format!("protocols.{}", name),
+        name: name.to_string(),
         source_module: Some(module),
         import,
-        type_refs: HashMap::new(),
+        type_refs,
     }
 }
 
