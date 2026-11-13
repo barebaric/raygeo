@@ -6,6 +6,8 @@ replay onto, the document the symbol layout reads through, and the
 solver constraint classes.
 """
 
+from __future__ import annotations
+
 from collections.abc import Callable, Sequence
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
