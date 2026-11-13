@@ -35,6 +35,14 @@ impl ParallelogramConstraint {
 }
 
 impl SketchConstraint for ParallelogramConstraint {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn to_json(&self) -> Value {
+        ParallelogramConstraint::to_json(self)
+    }
+
     fn referenced_points(&self) -> Vec<u64> {
         vec![self.p_origin, self.p_width, self.p_height, self.p4]
     }

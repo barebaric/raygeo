@@ -50,6 +50,15 @@ impl PyParallelogramConstraint {
     pub(crate) fn into_constraint(self) -> CoreConstraint {
         CoreConstraint::new(self.p_origin, self.p_width, self.p_height, self.p4)
     }
+
+    pub(crate) fn from_core(core: CoreConstraint) -> Self {
+        PyParallelogramConstraint {
+            p_origin: core.p_origin,
+            p_width: core.p_width,
+            p_height: core.p_height,
+            p4: core.p4,
+        }
+    }
 }
 
 /// Registers the constraint class with the given module.

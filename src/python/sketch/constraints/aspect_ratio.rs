@@ -123,6 +123,18 @@ impl PyAspectRatioConstraint {
             )
         }
     }
+
+    pub(crate) fn from_core(core: CoreConstraint) -> Self {
+        PyAspectRatioConstraint {
+            p1: core.p1,
+            p2: core.p2,
+            p3: core.p3,
+            p4: core.p4,
+            ratio: core.ratio,
+            user_visible: core.user_visible,
+            status: 0,
+        }
+    }
 }
 
 /// Registers the constraint class with the given module.

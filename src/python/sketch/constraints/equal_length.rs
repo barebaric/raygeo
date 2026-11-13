@@ -168,6 +168,14 @@ impl PyEqualLengthConstraint {
         core.user_visible = self.user_visible;
         core
     }
+
+    pub(crate) fn from_core(core: CoreConstraint) -> Self {
+        PyEqualLengthConstraint {
+            pairs: core.pairs,
+            user_visible: core.user_visible,
+            status: 0,
+        }
+    }
 }
 
 /// Registers the constraint class with the given module.

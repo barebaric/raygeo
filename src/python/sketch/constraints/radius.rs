@@ -183,6 +183,17 @@ impl PyRadiusConstraint {
         core.set_expression(self.expression);
         core
     }
+
+    pub(crate) fn from_core(core: CoreConstraint) -> Self {
+        PyRadiusConstraint {
+            center: core.center,
+            radius_point: core.radius_point,
+            value: core.value,
+            user_visible: core.user_visible,
+            status: 0,
+            expression: core.expression,
+        }
+    }
 }
 
 /// Registers the constraint class with the given module.

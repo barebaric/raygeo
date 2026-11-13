@@ -129,6 +129,18 @@ impl PyRotationalConstraint {
         core.set_expression(self.expression);
         core
     }
+
+    pub(crate) fn from_core(core: CoreConstraint) -> Self {
+        PyRotationalConstraint {
+            center: core.center,
+            p1: core.p1,
+            p2: core.p2,
+            angle_rad: core.angle_rad,
+            user_visible: core.user_visible,
+            status: 0,
+            expression: core.expression,
+        }
+    }
 }
 
 /// Registers the constraint class with the given module.

@@ -111,6 +111,14 @@ impl AngleConstraint {
 }
 
 impl SketchConstraint for AngleConstraint {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn to_json(&self) -> Value {
+        AngleConstraint::to_json(self)
+    }
+
     fn referenced_points(&self) -> Vec<u64> {
         let mut ids = vec![self.p1, self.p2, self.p3, self.p4];
         for far in [self.e1_far, self.e2_far].into_iter().flatten() {

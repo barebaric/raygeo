@@ -8,6 +8,9 @@ use serde_json::Value;
 
 use crate::geo::types::Rect;
 use crate::python::geo::geometry::Geometry as PyGeometry;
+use crate::python::sketch::constraints::{
+    constraint_to_py, extract_constraint, AnyConstraint,
+};
 use crate::python::sketch::entities::{
     entity_to_py, extract_entity, point::PySketchPoint, AnyEntity,
 };
@@ -453,6 +456,41 @@ impl PyEntityRegistry {
     /// point positions.
     fn constraint_residuals(&self) -> Vec<f64> {
         self.inner.constraint_residuals()
+    }
+
+    /// All stored constraints as their concrete classes.
+    fn constraints<'py>(
+        &self,
+        py: Python<'py>,
+    ) -> PyResult<Vec<AnyConstraint<'py>>> {
+        self.inner
+            .all_constraints()
+            .iter()
+            .map(|entry| {
+                constraint_to_py(py, entry.constraint.as_ref())
+                    .map(AnyConstraint)
+            })
+            .collect()
+    }
+
+    /// The constraint object for a handle, or None.
+    fn get_constraint_object<'py>(
+        &self,
+        py: Python<'py>,
+        index: u64,
+    ) -> PyResult<Option<AnyConstraint<'py>>> {
+        match self.inner.get_constraint(index) {
+            Some(constraint) => constraint_to_py(py, constraint)
+                .map(|object| Some(AnyConstraint(object))),
+            None => Ok(None),
+        }
+    }
+
+    /// Adds a constraint object to the registry and returns its
+    /// handle.
+    fn add_constraint(&mut self, obj: &Bound<'_, PyAny>) -> PyResult<u64> {
+        let constraint = extract_constraint(obj)?;
+        Ok(self.inner.add_constraint_object(constraint))
     }
 
     /// Whether the point is solver-constrained.

@@ -44,6 +44,14 @@ impl TangentConstraint {
 }
 
 impl SketchConstraint for TangentConstraint {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn to_json(&self) -> Value {
+        TangentConstraint::to_json(self)
+    }
+
     fn referenced_points(&self) -> Vec<u64> {
         vec![self.l1, self.l2, self.center, self.radius_point]
     }

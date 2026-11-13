@@ -193,6 +193,21 @@ impl PyAngleConstraint {
         core.set_expression(self.expression);
         core
     }
+
+    pub(crate) fn from_core(core: CoreConstraint) -> Self {
+        PyAngleConstraint {
+            p1: core.p1,
+            p2: core.p2,
+            p3: core.p3,
+            p4: core.p4,
+            e1_far: core.e1_far,
+            e2_far: core.e2_far,
+            value_deg: core.value_deg,
+            user_visible: core.user_visible,
+            status: 0,
+            expression: core.expression,
+        }
+    }
 }
 
 /// Registers the constraint class with the given module.

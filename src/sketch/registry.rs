@@ -6,13 +6,13 @@ use std::collections::HashMap;
 
 use serde_json::Value;
 
-use crate::sketch::constraints::json::constraint_from_dict;
+use crate::sketch::constraints::json::{constraint_from_dict, ConstraintEntry};
 use crate::sketch::entities::entity::Entity;
 pub use crate::sketch::entities::entity::FontConfig;
 use crate::sketch::entities::entity_from_json;
 use crate::sketch::entities::point::SketchPoint;
 
-use crate::sketch::constraint::PointContext;
+use crate::sketch::constraint::{PointContext, SketchConstraint};
 
 /// Stores all points and entities of a sketch document.
 #[derive(Default)]
@@ -21,7 +21,7 @@ pub struct EntityRegistry {
     point_index: HashMap<u64, usize>,
     entities: Vec<Box<dyn Entity>>,
     entity_index: HashMap<u64, usize>,
-    constraints: Vec<crate::sketch::constraints::json::ConstraintEntry>,
+    constraints: Vec<ConstraintEntry>,
     id_counter: u64,
     entity_version: u64,
     point_usage: HashMap<u64, u64>,
@@ -187,16 +187,41 @@ impl EntityRegistry {
     pub fn add_constraint_json(&mut self, dict: &Value) -> Result<u64, String> {
         let constraint = constraint_from_dict(dict, self)
             .ok_or_else(|| "unsupported constraint dict".to_string())?;
+        Ok(self.push_constraint(constraint, dict.clone()))
+    }
+
+    /// Appends a pre-built constraint object, storing its reference
+    /// dictionary, and returns the constraint handle (list index).
+    pub fn add_constraint_object(
+        &mut self,
+        constraint: Box<dyn SketchConstraint>,
+    ) -> u64 {
+        let dict = constraint.to_json();
+        self.push_constraint(constraint, dict)
+    }
+
+    fn push_constraint(
+        &mut self,
+        constraint: Box<dyn SketchConstraint>,
+        dict: Value,
+    ) -> u64 {
         let referenced = constraint.referenced_points();
         let index = self.constraints.len();
-        self.constraints.push(
-            crate::sketch::constraints::json::ConstraintEntry::new(
-                constraint,
-                dict.clone(),
-                referenced,
-            ),
-        );
-        Ok(index as u64)
+        self.constraints
+            .push(ConstraintEntry::new(constraint, dict, referenced));
+        index as u64
+    }
+
+    /// All stored constraints, in insertion order.
+    pub fn all_constraints(&self) -> &[ConstraintEntry] {
+        &self.constraints
+    }
+
+    /// The stored constraint at the given handle.
+    pub fn get_constraint(&self, index: u64) -> Option<&dyn SketchConstraint> {
+        self.constraints
+            .get(index as usize)
+            .map(|e| e.constraint.as_ref())
     }
 
     /// Number of stored constraints.
@@ -469,6 +494,9 @@ impl EntityRegistry {
             "entities": self.entities.iter()
                 .map(|e| e.to_json())
                 .collect::<Vec<_>>(),
+            "constraints": self.constraints.iter()
+                .map(|e| e.dict.clone())
+                .collect::<Vec<_>>(),
             "id_counter": self.id_counter,
         })
     }
@@ -493,6 +521,14 @@ impl EntityRegistry {
                 model.entity_index.insert(eid, model.entities.len());
                 model.entities.push(entity);
             }
+        }
+        let empty_constraints: Vec<Value> = Vec::new();
+        let constraints_data = data
+            .get("constraints")
+            .and_then(Value::as_array)
+            .unwrap_or(&empty_constraints);
+        for constraint_data in constraints_data {
+            let _ = model.add_constraint_json(constraint_data);
         }
         model.id_counter =
             data.get("id_counter").and_then(Value::as_u64).unwrap_or(0);

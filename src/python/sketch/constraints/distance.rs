@@ -165,6 +165,17 @@ impl PyDistanceConstraint {
         core.set_expression(self.expression);
         core
     }
+
+    pub(crate) fn from_core(core: CoreConstraint) -> Self {
+        PyDistanceConstraint {
+            p1: core.p1,
+            p2: core.p2,
+            value: core.value,
+            user_visible: core.user_visible,
+            status: 0,
+            expression: core.expression,
+        }
+    }
 }
 
 /// Registers the constraint class with the given module.

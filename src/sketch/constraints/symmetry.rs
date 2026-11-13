@@ -48,6 +48,14 @@ impl SymmetryConstraint {
 }
 
 impl SketchConstraint for SymmetryConstraint {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn to_json(&self) -> Value {
+        SymmetryConstraint::to_json(self)
+    }
+
     fn referenced_points(&self) -> Vec<u64> {
         let mut ids = vec![self.p1, self.p2];
         match &self.target {

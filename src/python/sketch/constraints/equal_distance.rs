@@ -125,6 +125,17 @@ impl PyEqualDistanceConstraint {
             ..CoreConstraint::new(self.p1, self.p2, self.p3, self.p4)
         }
     }
+
+    pub(crate) fn from_core(core: CoreConstraint) -> Self {
+        PyEqualDistanceConstraint {
+            p1: core.p1,
+            p2: core.p2,
+            p3: core.p3,
+            p4: core.p4,
+            user_visible: core.user_visible,
+            status: 0,
+        }
+    }
 }
 
 /// Registers the constraint class with the given module.

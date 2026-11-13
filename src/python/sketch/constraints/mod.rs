@@ -22,9 +22,12 @@ pub(crate) mod tangent;
 pub(crate) mod vertical;
 
 use pyo3::call::PyCallArgs;
+use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyDict};
+use pyo3_stub_gen::{ImportKind, ImportRef, ModuleRef, PyStubType, TypeInfo};
 use serde_json::Value;
+use std::collections::HashMap;
 
 use crate::python::sketch::protocols::{
     Canvas, DrawContext as RegistryContext, ScreenMap,
@@ -377,6 +380,215 @@ pub(crate) fn entity_contains_points(
     match registry.inner.entity_point_ids(entity_id) {
         Some(ids) => points.iter().all(|point| ids.contains(point)),
         None => false,
+    }
+}
+
+/// Builds the Python object for a stored constraint by downcasting
+/// through the trait's `as_any` hook and converting field-wise.
+pub(crate) fn constraint_to_py<'py>(
+    py: Python<'py>,
+    constraint: &dyn SketchConstraint,
+) -> PyResult<Bound<'py, PyAny>> {
+    use crate::sketch::constraints::angle::AngleConstraint;
+    use crate::sketch::constraints::aspect_ratio::AspectRatioConstraint;
+    use crate::sketch::constraints::coincident::CoincidentConstraint;
+    use crate::sketch::constraints::collinear::CollinearConstraint;
+    use crate::sketch::constraints::diameter::DiameterConstraint;
+    use crate::sketch::constraints::distance::DistanceConstraint;
+    use crate::sketch::constraints::drag::DragConstraint;
+    use crate::sketch::constraints::equal_distance::EqualDistanceConstraint;
+    use crate::sketch::constraints::equal_length::EqualLengthConstraint;
+    use crate::sketch::constraints::horizontal::HorizontalConstraint;
+    use crate::sketch::constraints::parallelogram::ParallelogramConstraint;
+    use crate::sketch::constraints::perpendicular::PerpendicularConstraint;
+    use crate::sketch::constraints::point_on_curve::PointOnCurveConstraint;
+    use crate::sketch::constraints::point_on_line::PointOnLineConstraint;
+    use crate::sketch::constraints::radius::RadiusConstraint;
+    use crate::sketch::constraints::rotational::RotationalConstraint;
+    use crate::sketch::constraints::symmetry::SymmetryConstraint;
+    use crate::sketch::constraints::tangent::TangentConstraint;
+    use crate::sketch::constraints::vertical::VerticalConstraint;
+
+    macro_rules! try_downcast {
+        ($any:ident, $core:ty, $pyclass:path) => {
+            if let Some(core) = $any.downcast_ref::<$core>() {
+                let core = core.clone();
+                let object = Py::new(py, <$pyclass>::from_core(core))?;
+                return Ok(object.bind(py).clone().into_any());
+            }
+        };
+    }
+
+    let any = constraint.as_any();
+    try_downcast!(any, AngleConstraint, angle::PyAngleConstraint);
+    try_downcast!(
+        any,
+        AspectRatioConstraint,
+        aspect_ratio::PyAspectRatioConstraint
+    );
+    try_downcast!(
+        any,
+        CoincidentConstraint,
+        coincident::PyCoincidentConstraint
+    );
+    try_downcast!(any, CollinearConstraint, collinear::PyCollinearConstraint);
+    try_downcast!(any, DiameterConstraint, diameter::PyDiameterConstraint);
+    try_downcast!(any, DistanceConstraint, distance::PyDistanceConstraint);
+    try_downcast!(any, DragConstraint, drag::PyDragConstraint);
+    try_downcast!(
+        any,
+        EqualDistanceConstraint,
+        equal_distance::PyEqualDistanceConstraint
+    );
+    try_downcast!(
+        any,
+        EqualLengthConstraint,
+        equal_length::PyEqualLengthConstraint
+    );
+    try_downcast!(
+        any,
+        HorizontalConstraint,
+        horizontal::PyHorizontalConstraint
+    );
+    try_downcast!(
+        any,
+        ParallelogramConstraint,
+        parallelogram::PyParallelogramConstraint
+    );
+    try_downcast!(
+        any,
+        PerpendicularConstraint,
+        perpendicular::PyPerpendicularConstraint
+    );
+    try_downcast!(
+        any,
+        PointOnCurveConstraint,
+        point_on_curve::PyPointOnCurveConstraint
+    );
+    try_downcast!(
+        any,
+        PointOnLineConstraint,
+        point_on_line::PyPointOnLineConstraint
+    );
+    try_downcast!(any, RadiusConstraint, radius::PyRadiusConstraint);
+    try_downcast!(
+        any,
+        RotationalConstraint,
+        rotational::PyRotationalConstraint
+    );
+    try_downcast!(any, SymmetryConstraint, symmetry::PySymmetryConstraint);
+    try_downcast!(any, TangentConstraint, tangent::PyTangentConstraint);
+    try_downcast!(any, VerticalConstraint, vertical::PyVerticalConstraint);
+    Err(PyTypeError::new_err("unsupported constraint kind"))
+}
+
+/// Extracts an owned constraint from a Python constraint object.
+pub(crate) fn extract_constraint(
+    obj: &Bound<'_, PyAny>,
+) -> PyResult<Box<dyn SketchConstraint>> {
+    macro_rules! try_extract {
+        ($pyclass:ty) => {
+            if let Ok(constraint) = obj.extract::<PyRef<'_, $pyclass>>() {
+                return Ok(Box::new(constraint.clone().into_constraint()));
+            }
+        };
+    }
+
+    try_extract!(angle::PyAngleConstraint);
+    try_extract!(aspect_ratio::PyAspectRatioConstraint);
+    try_extract!(coincident::PyCoincidentConstraint);
+    try_extract!(collinear::PyCollinearConstraint);
+    try_extract!(diameter::PyDiameterConstraint);
+    try_extract!(distance::PyDistanceConstraint);
+    try_extract!(drag::PyDragConstraint);
+    try_extract!(equal_distance::PyEqualDistanceConstraint);
+    try_extract!(equal_length::PyEqualLengthConstraint);
+    try_extract!(horizontal::PyHorizontalConstraint);
+    try_extract!(parallelogram::PyParallelogramConstraint);
+    try_extract!(perpendicular::PyPerpendicularConstraint);
+    try_extract!(point_on_curve::PyPointOnCurveConstraint);
+    try_extract!(point_on_line::PyPointOnLineConstraint);
+    try_extract!(radius::PyRadiusConstraint);
+    try_extract!(rotational::PyRotationalConstraint);
+    try_extract!(symmetry::PySymmetryConstraint);
+    try_extract!(tangent::PyTangentConstraint);
+    try_extract!(vertical::PyVerticalConstraint);
+    Err(PyTypeError::new_err("expected a sketch constraint object"))
+}
+
+/// The union of all constraint classes, for typed registry returns.
+pub struct AnyConstraint<'py>(pub Bound<'py, PyAny>);
+
+impl<'a, 'py> FromPyObject<'a, 'py> for AnyConstraint<'py> {
+    type Error = PyErr;
+
+    fn extract(ob: pyo3::Borrowed<'_, 'py, PyAny>) -> PyResult<Self> {
+        Ok(AnyConstraint(ob.to_owned()))
+    }
+}
+
+impl<'py> IntoPyObject<'py> for AnyConstraint<'py> {
+    type Target = PyAny;
+    type Output = Bound<'py, PyAny>;
+    type Error = PyErr;
+
+    fn into_pyobject(
+        self,
+        _py: Python<'py>,
+    ) -> Result<Self::Output, Self::Error> {
+        Ok(self.0)
+    }
+}
+
+impl PyStubType for AnyConstraint<'_> {
+    fn type_output() -> TypeInfo {
+        const KINDS: [(&str, &str); 19] = [
+            ("angle", "AngleConstraint"),
+            ("aspect_ratio", "AspectRatioConstraint"),
+            ("coincident", "CoincidentConstraint"),
+            ("collinear", "CollinearConstraint"),
+            ("diameter", "DiameterConstraint"),
+            ("distance", "DistanceConstraint"),
+            ("drag", "DragConstraint"),
+            ("equal_distance", "EqualDistanceConstraint"),
+            ("equal_length", "EqualLengthConstraint"),
+            ("horizontal", "HorizontalConstraint"),
+            ("parallelogram", "ParallelogramConstraint"),
+            ("perpendicular", "PerpendicularConstraint"),
+            ("point_on_curve", "PointOnCurveConstraint"),
+            ("point_on_line", "PointOnLineConstraint"),
+            ("radius", "RadiusConstraint"),
+            ("rotational", "RotationalConstraint"),
+            ("symmetry", "SymmetryConstraint"),
+            ("tangent", "TangentConstraint"),
+            ("vertical", "VerticalConstraint"),
+        ];
+
+        let mut import = std::collections::HashSet::new();
+        let mut type_refs = HashMap::new();
+        let qualified: Vec<String> = KINDS
+            .iter()
+            .map(|(module_name, class_name)| {
+                let module = ModuleRef::Named(format!(
+                    "raygeo.sketch.constraints.{module_name}"
+                ));
+                import.insert(ImportRef::Module(module.clone()));
+                type_refs.insert(
+                    class_name.to_string(),
+                    pyo3_stub_gen::TypeIdentifierRef {
+                        module: module.clone(),
+                        import_kind: ImportKind::Module,
+                    },
+                );
+                format!("{module_name}.{class_name}")
+            })
+            .collect();
+        TypeInfo {
+            name: format!("typing.Union[{}]", qualified.join(", ")),
+            source_module: None,
+            import,
+            type_refs,
+        }
     }
 }
 

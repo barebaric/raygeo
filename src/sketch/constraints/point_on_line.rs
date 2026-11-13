@@ -45,6 +45,14 @@ impl PointOnLineConstraint {
 }
 
 impl SketchConstraint for PointOnLineConstraint {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn to_json(&self) -> Value {
+        PointOnLineConstraint::to_json(self)
+    }
+
     fn referenced_points(&self) -> Vec<u64> {
         let mut ids = vec![self.point];
         match &self.target {

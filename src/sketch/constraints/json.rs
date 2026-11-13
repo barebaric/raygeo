@@ -12,6 +12,7 @@ use super::coincident::CoincidentConstraint;
 use super::collinear::CollinearConstraint;
 use super::diameter::DiameterConstraint;
 use super::distance::DistanceConstraint;
+use super::drag::DragConstraint;
 use super::equal_distance::EqualDistanceConstraint;
 use super::equal_length::EqualLengthConstraint;
 use super::horizontal::HorizontalConstraint;
@@ -134,6 +135,12 @@ pub fn constraint_from_dict(
             u64_field(data, "p1")?,
             u64_field(data, "p2")?,
             f64_field(data, "value")?,
+        ))),
+        "DragConstraint" => Some(Box::new(DragConstraint::new(
+            u64_field(data, "point")?,
+            f64_field(data, "target_x")?,
+            f64_field(data, "target_y")?,
+            f64_field(data, "weight")?,
         ))),
         "RadiusConstraint" => {
             // Round trip uses the resolved keys from to_json; entity

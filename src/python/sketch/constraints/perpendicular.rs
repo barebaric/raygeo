@@ -72,6 +72,39 @@ impl From<&PyPerpendicularTarget> for PerpendicularTarget {
     }
 }
 
+impl From<&PerpendicularTarget> for PyPerpendicularTarget {
+    fn from(value: &PerpendicularTarget) -> Self {
+        match value {
+            PerpendicularTarget::LineLine { a1, a2, b1, b2 } => {
+                PyPerpendicularTarget::LineLine {
+                    a1: *a1,
+                    a2: *a2,
+                    b1: *b1,
+                    b2: *b2,
+                }
+            }
+            PerpendicularTarget::LineCenter { l1, l2, center } => {
+                PyPerpendicularTarget::LineCenter {
+                    l1: *l1,
+                    l2: *l2,
+                    center: *center,
+                }
+            }
+            PerpendicularTarget::Circles {
+                c1,
+                r1_point,
+                c2,
+                r2_point,
+            } => PyPerpendicularTarget::Circles {
+                c1: *c1,
+                r1_point: *r1_point,
+                c2: *c2,
+                r2_point: *r2_point,
+            },
+        }
+    }
+}
+
 /// Enforces perpendicularity between two entities.
 #[gen_stub_pyclass]
 #[pyclass(
@@ -179,6 +212,14 @@ impl PyPerpendicularConstraint {
         CoreConstraint {
             user_visible: self.user_visible,
             ..CoreConstraint::new(PerpendicularTarget::from(&self.target))
+        }
+    }
+
+    pub(crate) fn from_core(core: CoreConstraint) -> Self {
+        PyPerpendicularConstraint {
+            target: PyPerpendicularTarget::from(&core.target),
+            user_visible: core.user_visible,
+            status: 0,
         }
     }
 }

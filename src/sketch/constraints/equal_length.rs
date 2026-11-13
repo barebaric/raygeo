@@ -42,6 +42,14 @@ impl EqualLengthConstraint {
 }
 
 impl SketchConstraint for EqualLengthConstraint {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn to_json(&self) -> Value {
+        EqualLengthConstraint::to_json(self)
+    }
+
     fn referenced_points(&self) -> Vec<u64> {
         let mut ids = Vec::new();
         for pair in &self.pairs {

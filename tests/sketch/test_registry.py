@@ -93,6 +93,7 @@ def _rect_registry_dict():
                 "fill_color": [1.0, 0.5, 0.0, 1.0],
             },
         ],
+        "constraints": [],
         "id_counter": 11,
     }
 
@@ -193,6 +194,37 @@ def test_build_and_serialize_matches_reference_shape():
                 "p2_idx": p1,
             }
         ],
+        "constraints": [],
         "id_counter": 3,
     }
     assert model.to_dict() == expected
+
+
+def test_constraints_round_trip():
+    model = EntityRegistry()
+    p0 = model.add_point(0.0, 0.0, True)
+    p1 = model.add_point(100.0, 0.0)
+    model.add_line(p0, p1)
+    horizontal = {
+        "type": "HorizontalConstraint",
+        "p1": p0,
+        "p2": p1,
+        "user_visible": True,
+    }
+    distance = {
+        "type": "DistanceConstraint",
+        "p1": p0,
+        "p2": p1,
+        "value": 100.0,
+    }
+    h_index = model.add_constraint_json(horizontal)
+    d_index = model.add_constraint_json(distance)
+    assert h_index == 0
+    assert d_index == 1
+    assert model.constraint_count() == 2
+
+    restored = EntityRegistry.from_dict(model.to_dict())
+    assert restored.constraint_count() == 2
+    assert restored.constraint_dict(h_index) == horizontal
+    assert restored.constraint_dict(d_index) == distance
+    assert restored.to_dict()["constraints"] == [horizontal, distance]
