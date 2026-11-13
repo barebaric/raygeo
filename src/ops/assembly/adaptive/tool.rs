@@ -73,8 +73,8 @@ impl Tool {
             return self.heading;
         }
         let mut sum = Point::ZERO;
-        for i in 0..self.gyro_count {
-            sum += self.gyro[i];
+        for sample in &self.gyro[..self.gyro_count] {
+            sum += *sample;
         }
         let avg = sum / self.gyro_count as f64;
         let len = avg.length();

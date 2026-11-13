@@ -589,11 +589,7 @@ pub fn does_arc_intersect_circle(
 
     // Check midpoint of arc as fallback
     let mid = get_arc_midpoint(start_pos, end_pos, center, clockwise);
-    if mid.distance(circle_center) <= circle_radius {
-        return true;
-    }
-
-    false
+    mid.distance(circle_center) <= circle_radius
 }
 
 /// Tests if an arc is fully contained within all specified regions.

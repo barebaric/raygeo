@@ -126,7 +126,6 @@ pub(crate) fn run_profile(
     let mut dist_traveled = 0.0;
     let max_steps = (perimeter / common.step_length + 10.0) as usize;
     #[allow(unused_assignments)]
-    #[allow(unused_assignments)]
     let mut _last_eng: Engagement = unsafe { std::mem::zeroed() };
     let mut first_step = true;
     // Travel-skips in a row; a long run means the skip heuristic has

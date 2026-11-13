@@ -266,8 +266,8 @@ impl<'a> GcodeEncoder<'a> {
         });
         self.machine_code_to_op
             .resize(end_line, MACHINE_CODE_TO_OP_NONE);
-        for ln in start_line..end_line {
-            self.machine_code_to_op[ln] = op_idx;
+        for slot in &mut self.machine_code_to_op[start_line..end_line] {
+            *slot = op_idx;
         }
     }
 

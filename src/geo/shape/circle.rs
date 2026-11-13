@@ -98,11 +98,7 @@ pub fn does_circle_intersect_rect(
     let dx_far = (rect.min.x - cx).abs().max((rect.max.x - cx).abs());
     let dy_far = (rect.min.y - cy).abs().max((rect.max.y - cy).abs());
     let dist_sq_farthest = dx_far * dx_far + dy_far * dy_far;
-    if dist_sq_farthest < radius * radius {
-        return false;
-    }
-
-    true
+    dist_sq_farthest >= radius * radius
 }
 
 /// Computes intersection points between a line segment and a circle.
