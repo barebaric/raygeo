@@ -55,6 +55,11 @@ impl PyParallelogramConstraint {
         self.clone().into_constraint().referenced_points()
     }
 
+    /// Alias for referenced_points (reference naming).
+    fn get_referenced_point_ids(&self) -> Vec<u64> {
+        self.referenced_points()
+    }
+
     /// Draws the constraint's symbol onto the cairo context.
     #[pyo3(signature = (ctx, registry, to_screen, is_selected = false,
                         is_hovered = false, point_radius = 5.0))]

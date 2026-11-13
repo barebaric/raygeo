@@ -65,6 +65,11 @@ impl PyDistanceConstraint {
         self.clone().into_constraint().referenced_points()
     }
 
+    /// Alias for referenced_points (reference naming).
+    fn get_referenced_point_ids(&self) -> Vec<u64> {
+        self.referenced_points()
+    }
+
     /// Sets the resolved distance value.
     fn set_value(&mut self, value: f64) {
         self.value = value;

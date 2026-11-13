@@ -55,6 +55,11 @@ impl PyDragConstraint {
         self.clone().into_constraint().referenced_points()
     }
 
+    /// Alias for referenced_points (reference naming).
+    fn get_referenced_point_ids(&self) -> Vec<u64> {
+        self.referenced_points()
+    }
+
     /// Sets the target coordinates and pull strength.
     fn set_target(&mut self, target_x: f64, target_y: f64, weight: f64) {
         self.target_x = target_x;

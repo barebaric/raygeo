@@ -25,6 +25,13 @@ class Ellipse:
         Center point id.
         """
     @property
+    def helper_line_ids(self) -> builtins.list[builtins.int]:
+        r"""
+        Helper construction line ids.
+        """
+    @helper_line_ids.setter
+    def helper_line_ids(self, value: typing.Sequence[builtins.int]) -> None: ...
+    @property
     def radius_x_point_idx(self) -> builtins.int:
         r"""
         X-radius point id.
@@ -39,11 +46,15 @@ class Ellipse:
         r"""
         Whether the entity is construction geometry.
         """
+    @construction.setter
+    def construction(self, value: builtins.bool) -> None: ...
     @property
     def invisible(self) -> builtins.bool:
         r"""
         Whether the entity is excluded from toolpath output.
         """
+    @invisible.setter
+    def invisible(self, value: builtins.bool) -> None: ...
     @property
     def array_copy(self) -> builtins.bool:
         r"""
@@ -59,6 +70,11 @@ class Ellipse:
     def fill_color(self) -> typing.Optional[tuple[builtins.float, builtins.float, builtins.float, builtins.float]]:
         r"""
         Fill color as (r, g, b, a), or None.
+        """
+    @property
+    def r#type(self) -> builtins.str:
+        r"""
+        The entity type name (attribute alias).
         """
     def __new__(cls, center: builtins.int, radius_x_point: builtins.int, radius_y_point: builtins.int, construction: builtins.bool = False) -> Ellipse:
         r"""

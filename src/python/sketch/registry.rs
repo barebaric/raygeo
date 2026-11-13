@@ -169,6 +169,23 @@ impl PyEntityRegistry {
         );
     }
 
+    /// Replaces the point list with ``(id, x, y, fixed)`` tuples.
+    fn set_points(&mut self, points: Vec<(u64, f64, f64, bool)>) {
+        self.inner.set_points(
+            points
+                .into_iter()
+                .map(|(id, x, y, fixed)| SketchPoint {
+                    id,
+                    x,
+                    y,
+                    fixed,
+                    waypoint_type: WaypointType::Sharp,
+                    constrained: false,
+                })
+                .collect(),
+        );
+    }
+
     /// Removes the given points.
     fn remove_points(&mut self, point_ids: Vec<u64>) {
         self.inner.remove_points(&point_ids);
@@ -523,6 +540,13 @@ impl PyEntityRegistry {
     /// Coordinates of a point as ``(x, y)``, or ``None``.
     fn get_point(&self, id: u64) -> Option<(f64, f64)> {
         self.inner.point_position(id)
+    }
+
+    /// The point object for an id (with id/coords/flags), or None.
+    fn get_point_object(&self, id: u64) -> Option<PySketchPoint> {
+        self.inner
+            .get_point(id)
+            .map(|point| PySketchPoint { inner: point })
     }
 
     /// Whether a point carries the fixed flag.

@@ -75,6 +75,10 @@ class EntityRegistry:
         r"""
         Appends pre-built points given as ``(id, x, y, fixed)`` tuples.
         """
+    def set_points(self, points: typing.Sequence[tuple[builtins.int, builtins.float, builtins.float, builtins.bool]]) -> None:
+        r"""
+        Replaces the point list with ``(id, x, y, fixed)`` tuples.
+        """
     def remove_points(self, point_ids: typing.Sequence[builtins.int]) -> None:
         r"""
         Removes the given points.
@@ -234,6 +238,10 @@ class EntityRegistry:
     def get_point(self, id: builtins.int) -> typing.Optional[tuple[builtins.float, builtins.float]]:
         r"""
         Coordinates of a point as ``(x, y)``, or ``None``.
+        """
+    def get_point_object(self, id: builtins.int) -> typing.Optional[point.SketchPoint]:
+        r"""
+        The point object for an id (with id/coords/flags), or None.
         """
     def point_is_fixed(self, id: builtins.int) -> builtins.bool:
         r"""

@@ -50,6 +50,10 @@ class PointOnLineConstraint:
         r"""
         Point ids the constraint references.
         """
+    def get_referenced_point_ids(self) -> builtins.list[builtins.int]:
+        r"""
+        Alias for referenced_points (reference naming).
+        """
     def to_dict(self) -> dict:
         r"""
         Serializes to the reference constraint dictionary shape.

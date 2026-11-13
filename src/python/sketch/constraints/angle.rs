@@ -104,6 +104,11 @@ impl PyAngleConstraint {
         self.clone().into_constraint().referenced_points()
     }
 
+    /// Alias for referenced_points (reference naming).
+    fn get_referenced_point_ids(&self) -> Vec<u64> {
+        self.referenced_points()
+    }
+
     /// The angle value in degrees (alias of ``value_deg``).
     #[getter]
     fn value(&self) -> f64 {

@@ -69,10 +69,20 @@ impl PyBezier {
         self.inner.cp1.map(|c| (c[0], c[1]))
     }
 
+    #[setter]
+    fn set_cp1_offset(&mut self, value: Option<(f64, f64)>) {
+        self.inner.cp1 = value.map(|c| [c.0, c.1]);
+    }
+
     /// Second control point offset, if any.
     #[getter]
     fn cp2_offset(&self) -> Option<(f64, f64)> {
         self.inner.cp2.map(|c| (c[0], c[1]))
+    }
+
+    #[setter]
+    fn set_cp2_offset(&mut self, value: Option<(f64, f64)>) {
+        self.inner.cp2 = value.map(|c| [c.0, c.1]);
     }
 
     /// Whether the curve degenerates to a straight segment.
@@ -87,10 +97,20 @@ impl PyBezier {
         self.inner.base.construction
     }
 
+    #[setter]
+    fn set_construction(&mut self, value: bool) {
+        self.inner.base.construction = value;
+    }
+
     /// Whether the entity is excluded from toolpath output.
     #[getter]
     fn invisible(&self) -> bool {
         self.inner.base.invisible
+    }
+
+    #[setter]
+    fn set_invisible(&mut self, value: bool) {
+        self.inner.base.invisible = value;
     }
 
     /// Whether the entity was created as part of an array copy.
@@ -114,6 +134,12 @@ impl PyBezier {
 
     /// The entity type name.
     fn type_name(&self) -> &'static str {
+        self.inner.type_name()
+    }
+
+    /// The entity type name (attribute alias).
+    #[getter]
+    fn r#type(&self) -> &'static str {
         self.inner.type_name()
     }
 

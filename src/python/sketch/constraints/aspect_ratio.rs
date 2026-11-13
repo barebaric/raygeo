@@ -78,6 +78,11 @@ impl PyAspectRatioConstraint {
         self.clone().into_constraint().referenced_points()
     }
 
+    /// Alias for referenced_points (reference naming).
+    fn get_referenced_point_ids(&self) -> Vec<u64> {
+        self.referenced_points()
+    }
+
     /// Sets the resolved ratio value.
     fn set_ratio(&mut self, ratio: f64) {
         self.ratio = ratio;

@@ -50,11 +50,15 @@ class Polygon:
         r"""
         Whether the entity is construction geometry.
         """
+    @construction.setter
+    def construction(self, value: builtins.bool) -> None: ...
     @property
     def invisible(self) -> builtins.bool:
         r"""
         Whether the entity is excluded from toolpath output.
         """
+    @invisible.setter
+    def invisible(self, value: builtins.bool) -> None: ...
     @property
     def array_copy(self) -> builtins.bool:
         r"""
@@ -70,6 +74,11 @@ class Polygon:
     def fill_color(self) -> typing.Optional[tuple[builtins.float, builtins.float, builtins.float, builtins.float]]:
         r"""
         Fill color as (r, g, b, a), or None.
+        """
+    @property
+    def r#type(self) -> builtins.str:
+        r"""
+        The entity type name (attribute alias).
         """
     def __new__(cls, center: builtins.int, handle: builtins.int, vertices: typing.Sequence[tuple[builtins.float, builtins.float]], closed: builtins.bool = False, construction: builtins.bool = False, rings: typing.Optional[typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]] = None) -> Polygon:
         r"""
@@ -92,10 +101,12 @@ class Polygon:
         r"""
         Returns the geometry signature used for change detection.
         """
-    def to_geometry(self, registry: registry.EntityRegistry) -> geo.Geometry:
+    def get_world_vertices(self, registry: registry.EntityRegistry) -> builtins.list[tuple[builtins.float, builtins.float]]:
         r"""
         Returns the entity's toolpath geometry in model coordinates.
+        Returns the polygon vertices in world coordinates.
         """
+    def to_geometry(self, registry: registry.EntityRegistry) -> geo.Geometry: ...
     def to_polygon_vertices(self, registry: registry.EntityRegistry, forward: builtins.bool = True) -> builtins.list[tuple[builtins.float, builtins.float]]:
         r"""
         Returns the entity's outline as polygon vertices.

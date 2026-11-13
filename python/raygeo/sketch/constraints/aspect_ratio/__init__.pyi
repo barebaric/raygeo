@@ -65,6 +65,10 @@ class AspectRatioConstraint:
         r"""
         Point ids the constraint references.
         """
+    def get_referenced_point_ids(self) -> builtins.list[builtins.int]:
+        r"""
+        Alias for referenced_points (reference naming).
+        """
     def set_ratio(self, ratio: builtins.float) -> None:
         r"""
         Sets the resolved ratio value.

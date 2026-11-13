@@ -38,6 +38,10 @@ class SketchPoint:
         Whether the point is fully constrained, as computed by the
         solver.
         """
+    def __new__(cls, id: builtins.int, x: builtins.float, y: builtins.float, fixed: builtins.bool = False) -> SketchPoint:
+        r"""
+        Creates a point view with the given id and coordinates.
+        """
     def __repr__(self) -> builtins.str:
         r"""
         Returns a readable representation.

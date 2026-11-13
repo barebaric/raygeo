@@ -90,10 +90,20 @@ impl PyPolygon {
         self.inner.base.construction
     }
 
+    #[setter]
+    fn set_construction(&mut self, value: bool) {
+        self.inner.base.construction = value;
+    }
+
     /// Whether the entity is excluded from toolpath output.
     #[getter]
     fn invisible(&self) -> bool {
         self.inner.base.invisible
+    }
+
+    #[setter]
+    fn set_invisible(&mut self, value: bool) {
+        self.inner.base.invisible = value;
     }
 
     /// Whether the entity was created as part of an array copy.
@@ -120,6 +130,12 @@ impl PyPolygon {
         self.inner.type_name()
     }
 
+    /// The entity type name (attribute alias).
+    #[getter]
+    fn r#type(&self) -> &'static str {
+        self.inner.type_name()
+    }
+
     /// The point ids the entity is defined by.
     fn get_point_ids(&self) -> Vec<u64> {
         self.inner.get_point_ids()
@@ -140,6 +156,14 @@ impl PyPolygon {
     }
 
     /// Returns the entity's toolpath geometry in model coordinates.
+    /// Returns the polygon vertices in world coordinates.
+    fn get_world_vertices(
+        &self,
+        registry: &PyEntityRegistry,
+    ) -> Vec<(f64, f64)> {
+        self.inner.get_world_vertices(&registry.inner)
+    }
+
     fn to_geometry(&self, registry: &PyEntityRegistry) -> PyGeometry {
         let geometry = self.inner.to_geometry(&registry.inner);
         PyGeometry { inner: geometry }

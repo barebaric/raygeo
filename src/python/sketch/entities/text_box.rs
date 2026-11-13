@@ -76,6 +76,11 @@ impl PyTextBox {
         self.inner.content.clone()
     }
 
+    #[setter]
+    fn set_content(&mut self, value: String) {
+        self.inner.content = value;
+    }
+
     /// The font family name.
     #[getter]
     fn font_family(&self) -> String {
@@ -106,10 +111,20 @@ impl PyTextBox {
         self.inner.base.construction
     }
 
+    #[setter]
+    fn set_construction(&mut self, value: bool) {
+        self.inner.base.construction = value;
+    }
+
     /// Whether the entity is excluded from toolpath output.
     #[getter]
     fn invisible(&self) -> bool {
         self.inner.base.invisible
+    }
+
+    #[setter]
+    fn set_invisible(&mut self, value: bool) {
+        self.inner.base.invisible = value;
     }
 
     /// Whether the entity was created as part of an array copy.
@@ -133,6 +148,12 @@ impl PyTextBox {
 
     /// The entity type name.
     fn type_name(&self) -> &'static str {
+        self.inner.type_name()
+    }
+
+    /// The entity type name (attribute alias).
+    #[getter]
+    fn r#type(&self) -> &'static str {
         self.inner.type_name()
     }
 

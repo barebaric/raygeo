@@ -53,6 +53,10 @@ class DragConstraint:
         r"""
         Point ids the constraint references.
         """
+    def get_referenced_point_ids(self) -> builtins.list[builtins.int]:
+        r"""
+        Alias for referenced_points (reference naming).
+        """
     def set_target(self, target_x: builtins.float, target_y: builtins.float, weight: builtins.float) -> None:
         r"""
         Sets the target coordinates and pull strength.

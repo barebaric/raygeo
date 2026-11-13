@@ -83,6 +83,10 @@ class AngleConstraint:
         r"""
         Point ids the constraint references.
         """
+    def get_referenced_point_ids(self) -> builtins.list[builtins.int]:
+        r"""
+        Alias for referenced_points (reference naming).
+        """
     def set_value(self, value_deg: builtins.float) -> None:
         r"""
         Sets the angle value in degrees.

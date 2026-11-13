@@ -44,11 +44,15 @@ class Arc:
         r"""
         Whether the entity is construction geometry.
         """
+    @construction.setter
+    def construction(self, value: builtins.bool) -> None: ...
     @property
     def invisible(self) -> builtins.bool:
         r"""
         Whether the entity is excluded from toolpath output.
         """
+    @invisible.setter
+    def invisible(self, value: builtins.bool) -> None: ...
     @property
     def array_copy(self) -> builtins.bool:
         r"""
@@ -64,6 +68,11 @@ class Arc:
     def fill_color(self) -> typing.Optional[tuple[builtins.float, builtins.float, builtins.float, builtins.float]]:
         r"""
         Fill color as (r, g, b, a), or None.
+        """
+    @property
+    def r#type(self) -> builtins.str:
+        r"""
+        The entity type name (attribute alias).
         """
     def __new__(cls, start: builtins.int, end: builtins.int, center: builtins.int, clockwise: builtins.bool = False, construction: builtins.bool = False) -> Arc:
         r"""

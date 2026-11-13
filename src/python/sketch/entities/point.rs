@@ -13,6 +13,23 @@ pub struct PySketchPoint {
 #[gen_stub_pymethods]
 #[pymethods]
 impl PySketchPoint {
+    /// Creates a point view with the given id and coordinates.
+    #[new]
+    #[pyo3(signature = (id, x, y, fixed = false))]
+    fn new(id: u64, x: f64, y: f64, fixed: bool) -> Self {
+        PySketchPoint {
+            inner: crate::sketch::entities::point::SketchPoint {
+                id,
+                x,
+                y,
+                fixed,
+                waypoint_type:
+                    crate::sketch::entities::point::WaypointType::Sharp,
+                constrained: false,
+            },
+        }
+    }
+
     /// Unique point id, stable across solves.
     #[getter]
     fn id(&self) -> u64 {

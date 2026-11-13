@@ -55,6 +55,17 @@ impl PyEllipse {
         self.inner.center
     }
 
+    /// Helper construction line ids.
+    #[getter]
+    fn helper_line_ids(&self) -> Vec<u64> {
+        self.inner.helper_line_ids.clone()
+    }
+
+    #[setter]
+    fn set_helper_line_ids(&mut self, value: Vec<u64>) {
+        self.inner.helper_line_ids = value;
+    }
+
     /// X-radius point id.
     #[getter]
     fn radius_x_point_idx(&self) -> u64 {
@@ -73,10 +84,20 @@ impl PyEllipse {
         self.inner.base.construction
     }
 
+    #[setter]
+    fn set_construction(&mut self, value: bool) {
+        self.inner.base.construction = value;
+    }
+
     /// Whether the entity is excluded from toolpath output.
     #[getter]
     fn invisible(&self) -> bool {
         self.inner.base.invisible
+    }
+
+    #[setter]
+    fn set_invisible(&mut self, value: bool) {
+        self.inner.base.invisible = value;
     }
 
     /// Whether the entity was created as part of an array copy.
@@ -100,6 +121,12 @@ impl PyEllipse {
 
     /// The entity type name.
     fn type_name(&self) -> &'static str {
+        self.inner.type_name()
+    }
+
+    /// The entity type name (attribute alias).
+    #[getter]
+    fn r#type(&self) -> &'static str {
         self.inner.type_name()
     }
 
