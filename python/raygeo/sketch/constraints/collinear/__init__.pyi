@@ -2,6 +2,8 @@
 # ruff: noqa: E501, F401, F403, F405
 
 import builtins
+import collections.abc
+from raygeo.sketch import protocols
 from raygeo.sketch import registry
 import typing
 __all__ = [
@@ -52,7 +54,7 @@ class CollinearConstraint:
         r"""
         Serializes to the reference constraint dictionary shape.
         """
-    def draw(self, ctx: typing.Any, registry: registry.EntityRegistry, to_screen: typing.Any, is_selected: builtins.bool = False, is_hovered: builtins.bool = False, point_radius: builtins.float = 5.0) -> None:
+    def draw(self, ctx: protocols.Canvas, registry: protocols.DrawContext, to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], is_selected: builtins.bool = False, is_hovered: builtins.bool = False, point_radius: builtins.float = 5.0) -> None:
         r"""
         Draws the constraint's symbol onto the cairo context.
         """

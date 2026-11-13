@@ -520,3 +520,30 @@ impl PointContext for EntityRegistry {
         let _ = self.set_point_position(id, x, y);
     }
 }
+
+impl crate::sketch::draw::DrawContext for EntityRegistry {
+    fn get_point(&self, id: u64) -> Option<crate::sketch::draw::DrawPoint> {
+        self.get_point(id)
+            .map(|point| crate::sketch::draw::DrawPoint {
+                x: point.x,
+                y: point.y,
+                fixed: point.fixed,
+            })
+    }
+
+    fn entity_ids(&self) -> Vec<u64> {
+        EntityRegistry::entity_ids(self)
+    }
+
+    fn entity_type(&self, id: u64) -> Option<std::borrow::Cow<'static, str>> {
+        EntityRegistry::entity_type(self, id).map(std::borrow::Cow::Borrowed)
+    }
+
+    fn entity_point_ids(&self, id: u64) -> Option<Vec<u64>> {
+        EntityRegistry::entity_point_ids(self, id)
+    }
+
+    fn point_in_text_box_frame(&self, point_id: u64) -> bool {
+        EntityRegistry::point_is_in_text_box_frame(self, point_id)
+    }
+}

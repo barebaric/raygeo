@@ -6,7 +6,8 @@ use crate::sketch::constraint::{
     JacobianEntry, PointContext, SketchConstraint,
 };
 use crate::sketch::draw::{
-    draw_equal_symbol, screen_scale, CairoLike, DrawStyle, EQUAL_OFFSET_SCREEN,
+    draw_equal_symbol, screen_scale, CairoLike, DrawContext, DrawStyle,
+    EQUAL_OFFSET_SCREEN,
 };
 use crate::sketch::registry::EntityRegistry;
 
@@ -124,16 +125,16 @@ impl SketchConstraint for EqualDistanceConstraint {
 
     fn draw(
         &self,
-        registry: &EntityRegistry,
+        context: &dyn DrawContext,
         to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
         ctx: &dyn CairoLike,
         style: &DrawStyle,
     ) {
         let (Some(pa), Some(pb), Some(pc), Some(pd)) = (
-            registry.get_point(self.p1),
-            registry.get_point(self.p2),
-            registry.get_point(self.p3),
-            registry.get_point(self.p4),
+            context.get_point(self.p1),
+            context.get_point(self.p2),
+            context.get_point(self.p3),
+            context.get_point(self.p4),
         ) else {
             return;
         };

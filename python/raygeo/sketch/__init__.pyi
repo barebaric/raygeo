@@ -114,3 +114,4 @@ class Solver:
         Residual function evaluations of the last solve.
         """
 
+from . import protocols

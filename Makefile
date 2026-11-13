@@ -28,6 +28,7 @@ venv:
 
 stubs:
 	cargo clean -p raygeo && cargo run --bin stub_gen --features python
+	echo "from . import protocols" >> python/raygeo/sketch/__init__.pyi
 
 format: format-rust format-python
 

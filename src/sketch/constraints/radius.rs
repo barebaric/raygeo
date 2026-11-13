@@ -7,7 +7,7 @@ use crate::sketch::constraint::{
 };
 use crate::sketch::draw::{
     draw_conflict_underlay, draw_label, draw_status_color, format_value,
-    screen_scale, CairoLike, DrawStyle, LABEL_DIST_SCREEN,
+    screen_scale, CairoLike, DrawContext, DrawStyle, LABEL_DIST_SCREEN,
 };
 use crate::sketch::registry::EntityRegistry;
 
@@ -122,7 +122,7 @@ impl SketchConstraint for RadiusConstraint {
 
     fn draw(
         &self,
-        registry: &EntityRegistry,
+        context: &dyn DrawContext,
         to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
         ctx: &dyn CairoLike,
         style: &DrawStyle,
@@ -131,8 +131,8 @@ impl SketchConstraint for RadiusConstraint {
         // label sits `radius + label_dist / scale` from the center
         // along the radius point direction.
         let (Some(center), Some(radius_pt)) = (
-            registry.get_point(self.center),
-            registry.get_point(self.radius_point),
+            context.get_point(self.center),
+            context.get_point(self.radius_point),
         ) else {
             return;
         };

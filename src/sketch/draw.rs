@@ -61,6 +61,35 @@ impl Default for DrawStyle {
     }
 }
 
+/// One point as seen by the symbol layout: position and fixed flag.
+#[derive(Clone, Copy, Debug)]
+pub struct DrawPoint {
+    pub x: f64,
+    pub y: f64,
+    pub fixed: bool,
+}
+
+/// Read view over the caller's sketch document, addressed by point
+/// id.  The symbol layout reads live coordinates through this
+/// protocol instead of a snapshot, mirroring how the solver reads
+/// coordinates through [`crate::sketch::constraint::PointContext`].
+pub trait DrawContext {
+    /// Returns the `(x, y)` position of a point id.
+    fn get_point(&self, id: u64) -> Option<DrawPoint>;
+
+    /// Returns the entity ids of the document.
+    fn entity_ids(&self) -> Vec<u64>;
+
+    /// Returns the type name of an entity id.
+    fn entity_type(&self, id: u64) -> Option<std::borrow::Cow<'static, str>>;
+
+    /// Returns the point ids of an entity id.
+    fn entity_point_ids(&self, id: u64) -> Option<Vec<u64>>;
+
+    /// Whether the point is one of a text box frame's corner points.
+    fn point_in_text_box_frame(&self, point_id: u64) -> bool;
+}
+
 /// The subset of the cairo context API the constraint symbols need.
 ///
 /// The Python binding maps this onto the caller's pycairo context

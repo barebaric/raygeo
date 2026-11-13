@@ -472,6 +472,19 @@ impl PyEntityRegistry {
         self.inner.point_position(id)
     }
 
+    /// Whether a point carries the fixed flag.
+    fn point_is_fixed(&self, id: u64) -> bool {
+        self.inner
+            .get_point(id)
+            .map(|point| point.fixed)
+            .unwrap_or(false)
+    }
+
+    /// Whether the point is one of a text box frame's corner points.
+    fn point_is_in_text_box_frame(&self, id: u64) -> bool {
+        self.inner.point_is_in_text_box_frame(id)
+    }
+
     /// Junction point ids of an entity.
     fn junction_point_ids(&self, id: u64) -> Vec<u64> {
         self.inner

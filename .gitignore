@@ -9,3 +9,4 @@ dist/
 
 # WASI SDK toolchain downloaded by scripts/wasm-check.sh
 .tmp/
+.zcode/

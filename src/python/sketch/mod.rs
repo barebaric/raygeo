@@ -2,6 +2,7 @@
 
 pub(crate) mod constraints;
 pub(crate) mod point;
+pub(crate) mod protocols;
 pub(crate) mod registry;
 pub(crate) mod solver;
 pub(crate) mod topology;
@@ -26,6 +27,8 @@ per-point constrained (fully-determined) flags, and per-constraint
 conflict indices.
 ";
 
+use std::ffi::CString;
+
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = m.py();
     let sketch_mod = PyModule::new(py, "sketch")?;
@@ -40,8 +43,20 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     m.add_submodule(&sketch_mod)?;
 
+    let protocols_code = CString::new(include_str!(
+        "../../../python/raygeo/sketch/protocols.py"
+    ))?;
+    let protocols_mod = PyModule::from_code(
+        py,
+        &protocols_code,
+        c"protocols.py",
+        c"protocols",
+    )?;
+    sketch_mod.add_submodule(&protocols_mod)?;
+
     let sys_modules = py.import("sys")?.getattr("modules")?;
     sys_modules.set_item("raygeo.sketch", &sketch_mod)?;
+    sys_modules.set_item("raygeo.sketch.protocols", &protocols_mod)?;
 
     Ok(())
 }
