@@ -3,16 +3,15 @@
 The constraint `draw` and `is_hit` methods accept the caller's own
 objects duck-typed against these protocols: the canvas the symbols
 replay onto, the document the symbol layout reads through, and the
-solver constraint classes.
+solver constraint classes.  The canvas protocol covers the members
+Python consumers interact with; renderer-only calls (line caps and
+joins) stay on the Rust-side canvas contract.
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
-from typing import TYPE_CHECKING, Protocol, runtime_checkable
-
-if TYPE_CHECKING:
-    from cairo import LineCap, LineJoin
+from typing import Protocol, runtime_checkable
 
 ScreenMap = Callable[[tuple[float, float]], tuple[float, float]]
 
@@ -28,10 +27,6 @@ class Canvas(Protocol):
     def set_line_width(self, width: float) -> None: ...
 
     def set_dash(self, dashes: Sequence[float], offset: float = 0) -> None: ...
-
-    def set_line_cap(self, line_cap: LineCap) -> None: ...
-
-    def set_line_join(self, line_join: LineJoin) -> None: ...
 
     def set_source_rgb(
         self, red: float, green: float, blue: float
