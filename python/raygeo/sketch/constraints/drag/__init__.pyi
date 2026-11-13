@@ -2,6 +2,8 @@
 # ruff: noqa: E501, F401, F403, F405
 
 import builtins
+import collections.abc
+from raygeo.sketch import protocols
 import typing
 __all__ = [
     "DragConstraint",
@@ -32,9 +34,23 @@ class DragConstraint:
         r"""
         Pull strength.
         """
+    @property
+    def status(self) -> builtins.int:
+        r"""
+        Reference validation status ordinal.
+        """
+    @status.setter
+    def status(self, value: builtins.int) -> None:
+        r"""
+        Reference validation status ordinal.
+        """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __new__(cls, point: builtins.int, target_x: builtins.float, target_y: builtins.float, weight: builtins.float) -> DragConstraint:
         r"""
         Creates the constraint from its resolved points and values.
+        """
+    def draw(self, ctx: protocols.Canvas, registry: protocols.DrawContext, to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], is_selected: builtins.bool = False, is_hovered: builtins.bool = False, point_radius: builtins.float = 5.0) -> None:
+        r"""
+        Draws the constraint's symbol onto the cairo context.
         """
 
