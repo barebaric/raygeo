@@ -82,6 +82,7 @@ impl PyParallelogramConstraint {
 
     pub(crate) fn from_core(core: CoreConstraint) -> Self {
         PyParallelogramConstraint {
+            status: 0,
             p_origin: core.p_origin,
             p_width: core.p_width,
             p_height: core.p_height,
