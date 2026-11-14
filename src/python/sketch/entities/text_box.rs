@@ -77,6 +77,12 @@ impl PyTextBox {
     }
 
     /// The text content.
+    /// The ids of the frame construction lines.
+    #[getter]
+    fn construction_line_ids(&self) -> Vec<u64> {
+        self.inner.construction_line_ids.clone()
+    }
+
     #[getter]
     fn content(&self) -> String {
         self.inner.content.clone()

@@ -36,10 +36,13 @@ class TextBox:
         Height point id.
         """
     @property
-    def content(self) -> builtins.str:
+    def construction_line_ids(self) -> builtins.list[builtins.int]:
         r"""
         The text content.
+        The ids of the frame construction lines.
         """
+    @property
+    def content(self) -> builtins.str: ...
     @content.setter
     def content(self, value: builtins.str) -> None: ...
     @property
