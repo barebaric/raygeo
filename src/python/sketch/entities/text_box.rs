@@ -23,6 +23,33 @@ pub struct PyTextBox {
     pub registry: Option<Py<PyAny>>,
 }
 
+impl PyTextBox {
+    /// Reads the current entity state from the owning registry so
+    /// views stay live across edits; falls back to the local snapshot
+    /// when unattached.
+    fn live(&self) -> CoreTextBox {
+        if let Some(registry) = &self.registry {
+            return Python::attach(|py| {
+                if let Ok(reg) =
+                    registry.bind(py).extract::<PyRef<'_, PyEntityRegistry>>()
+                {
+                    if let Some(entity) =
+                        reg.inner.get_entity(self.inner.base.id)
+                    {
+                        if let Some(tb) =
+                            entity.as_any().downcast_ref::<CoreTextBox>()
+                        {
+                            return tb.clone();
+                        }
+                    }
+                }
+                self.inner.clone()
+            });
+        }
+        self.inner.clone()
+    }
+}
+
 #[gen_stub_pymethods]
 #[pymethods]
 impl PyTextBox {
@@ -58,6 +85,11 @@ impl PyTextBox {
         self.inner.base.id
     }
 
+    #[setter]
+    fn set_id(&mut self, value: u64) {
+        self.inner.base.id = value;
+    }
+
     /// Origin point id.
     #[getter]
     fn origin_id(&self) -> u64 {
@@ -90,7 +122,7 @@ impl PyTextBox {
 
     #[getter]
     fn content(&self) -> String {
-        self.inner.content.clone()
+        self.live().content.clone()
     }
 
     #[setter]
@@ -102,32 +134,33 @@ impl PyTextBox {
     /// The font family name.
     #[getter]
     fn font_family(&self) -> String {
-        self.inner.font_config.family.clone()
+        self.live().font_config.family.clone()
     }
 
     /// The font size in points.
     #[getter]
     fn font_size(&self) -> f64 {
-        self.inner.font_config.size
+        self.live().font_config.size
     }
 
     /// Whether the text is bold.
     #[getter]
     fn bold(&self) -> bool {
-        self.inner.font_config.bold
+        self.live().font_config.bold
     }
 
     /// Whether the text is italic.
     #[getter]
     fn italic(&self) -> bool {
-        self.inner.font_config.italic
+        self.live().font_config.italic
     }
 
     /// The font configuration as a FontConfig object.
     #[getter]
     fn font_config(&self, py: Python<'_>) -> PyFontConfig {
+        let live = self.live();
         let extra = PyDict::new(py);
-        for (key, value) in &self.inner.font_extra {
+        for (key, value) in &live.font_extra {
             if let Ok(obj) =
                 crate::python::sketch::constraints::value_to_py(py, value)
             {
@@ -135,7 +168,7 @@ impl PyTextBox {
             }
         }
         PyFontConfig {
-            core: self.inner.font_config.clone(),
+            core: live.font_config.clone(),
             extra: extra.into(),
         }
     }

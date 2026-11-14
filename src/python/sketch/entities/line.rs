@@ -40,6 +40,11 @@ impl PyLine {
         self.inner.base.id
     }
 
+    #[setter]
+    fn set_id(&mut self, value: u64) {
+        self.inner.base.id = value;
+    }
+
     /// First endpoint point id.
     #[getter]
     fn p1_idx(&self) -> u64 {

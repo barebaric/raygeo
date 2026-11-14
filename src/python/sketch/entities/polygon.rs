@@ -57,6 +57,11 @@ impl PyPolygon {
         self.inner.base.id
     }
 
+    #[setter]
+    fn set_id(&mut self, value: u64) {
+        self.inner.base.id = value;
+    }
+
     /// Center point id.
     #[getter]
     fn center_idx(&self) -> u64 {

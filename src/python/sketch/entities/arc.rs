@@ -46,6 +46,11 @@ impl PyArc {
         self.inner.base.id
     }
 
+    #[setter]
+    fn set_id(&mut self, value: u64) {
+        self.inner.base.id = value;
+    }
+
     /// Start point id.
     #[getter]
     fn start_idx(&self) -> u64 {

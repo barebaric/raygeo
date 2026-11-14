@@ -20,6 +20,8 @@ class TextBox:
         r"""
         Unique entity id.
         """
+    @id.setter
+    def id(self, value: builtins.int) -> None: ...
     @property
     def origin_id(self) -> builtins.int:
         r"""

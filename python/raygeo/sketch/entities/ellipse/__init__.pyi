@@ -19,6 +19,8 @@ class Ellipse:
         r"""
         Unique entity id.
         """
+    @id.setter
+    def id(self, value: builtins.int) -> None: ...
     @property
     def center_idx(self) -> builtins.int:
         r"""

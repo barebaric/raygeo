@@ -19,6 +19,8 @@ class Arc:
         r"""
         Unique entity id.
         """
+    @id.setter
+    def id(self, value: builtins.int) -> None: ...
     @property
     def start_idx(self) -> builtins.int:
         r"""
