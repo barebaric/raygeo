@@ -63,6 +63,12 @@ class EntityRegistry:
         r"""
         Deserializes the model from a reference registry dictionary.
         """
+    def load_from_dict(self, dict: dict) -> None:
+        r"""
+        Replaces the model in place from a reference registry
+        dictionary, keeping this registry object (and any views bound
+        to it) valid.
+        """
     def to_dict(self) -> dict:
         r"""
         Serializes the model to a reference registry dictionary.

@@ -149,6 +149,16 @@ impl PyEntityRegistry {
             .ok_or_else(|| PyValueError::new_err("invalid registry dict"))
     }
 
+    /// Replaces the model in place from a reference registry
+    /// dictionary, keeping this registry object (and any views bound
+    /// to it) valid.
+    fn load_from_dict(&mut self, dict: &Bound<'_, PyDict>) -> PyResult<()> {
+        let value = value_from_dict(dict)?;
+        self.inner = EntityRegistry::from_json(&value)
+            .ok_or_else(|| PyValueError::new_err("invalid registry dict"))?;
+        Ok(())
+    }
+
     /// Serializes the model to a reference registry dictionary.
     fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let value = self.inner.to_json();
