@@ -55,7 +55,7 @@ def test_radius_constraint(setup_env):
     # Current radius is 10. Target is 10. Error = 10 - 10 = 0
     c = RadiusConstraint(center, start, 10.0)
     assert c.error(reg)[0] == pytest.approx(0.0)
-    assert c.user_visible() is True
+    assert c.user_visible is True
 
     # Target is 5. Error = 10 - 5 = 5
     c2 = RadiusConstraint(center, start, 5.0)
@@ -69,10 +69,10 @@ def test_radius_constraint_user_visible(setup_env):
     reg.add_circle(center, radius_pt)
 
     c = RadiusConstraint(center, radius_pt, 10.0, user_visible=False)
-    assert c.user_visible() is False
+    assert c.user_visible is False
 
     c2 = RadiusConstraint(center, radius_pt, 10.0, user_visible=True)
-    assert c2.user_visible() is True
+    assert c2.user_visible is True
 
 
 def test_radius_constraint_on_circle(setup_env):
@@ -172,7 +172,7 @@ def test_radius_constraint_serialization_round_trip(setup_env):
 
     # Check that the restored constraint has the same error
     assert original.error(reg) == restored.error(reg)
-    assert original.user_visible() == restored.user_visible()
+    assert original.user_visible == restored.user_visible
 
 
 def test_radius_constraint_with_expression(setup_env):
@@ -185,11 +185,11 @@ def test_radius_constraint_with_expression(setup_env):
     # value 10.0 for "r_val" is passed as the resolved value and the
     # expression string is stored alongside (no update_from_context).
     c = RadiusConstraint(center, radius_pt, 10.0)
-    c.set_expression("r_val")
+    c.expression = "r_val"
 
     # Current r=5, target=10. Error = 5 - 10 = -5
     assert c.error(reg)[0] == pytest.approx(-5.0)
-    assert c.expression() == "r_val"
+    assert c.expression == "r_val"
 
 
 def test_radius_is_hit(setup_env):

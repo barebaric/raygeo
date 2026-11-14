@@ -41,7 +41,7 @@ class PerpendicularConstraint:
         r"""
         Creates the constraint from resolved operands.
         """
-    def error(self, registry: registry.EntityRegistry, _ctx: typing.Optional[typing.Any] = None) -> typing.Any:
+    def error(self, registry: registry.EntityRegistry, _ctx: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
         r"""
         Returns the constraint error at the registry's point
         positions.

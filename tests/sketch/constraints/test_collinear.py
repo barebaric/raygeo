@@ -49,16 +49,16 @@ def test_collinear_constraint_serialization():
     assert new_constraint.p1 == 1
     assert new_constraint.p2 == 2
     assert new_constraint.p3 == 3
-    assert new_constraint.user_visible() is True
+    assert new_constraint.user_visible is True
 
 
 def test_collinear_constraint_user_visible():
     """Test that user_visible can be set."""
     c = CollinearConstraint(1, 2, 3, user_visible=False)
-    assert c.user_visible() is False
+    assert c.user_visible is False
 
     c2 = CollinearConstraint(1, 2, 3, user_visible=True)
-    assert c2.user_visible() is True
+    assert c2.user_visible is True
 
 
 # deferred: targets_segment is only bound on dimensional constraints

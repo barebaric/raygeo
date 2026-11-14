@@ -66,7 +66,7 @@ def test_perpendicular_constraint_line_line(setup_env):
     c = PerpendicularConstraint(PerpendicularTarget.LineLine(p1, p2, p3, p4))
     # Dot product: (10, 0) . (0, 10) = 0
     assert c.error(reg)[0] == pytest.approx(0.0)
-    assert c.user_visible() is True
+    assert c.user_visible is True
 
     # Make Line 2 NOT perpendicular (Slope 1)
     # Move p4 to (15, 15). Vector (10, 10)
@@ -90,13 +90,13 @@ def test_perpendicular_constraint_user_visible(setup_env):
         PerpendicularTarget.LineLine(p1, p2, p3, p4),
         user_visible=False,
     )
-    assert c.user_visible() is False
+    assert c.user_visible is False
 
     c2 = PerpendicularConstraint(
         PerpendicularTarget.LineLine(p1, p2, p3, p4),
         user_visible=True,
     )
-    assert c2.user_visible() is True
+    assert c2.user_visible is True
 
 
 def test_perpendicular_constraint_extended(setup_env):
@@ -242,7 +242,7 @@ def test_perpendicular_constraint_serialization_round_trip(setup_env):
 
     # Check that the restored constraint has the same error
     assert original.error(reg) == restored.error(reg)
-    assert original.user_visible() == restored.user_visible()
+    assert original.user_visible == restored.user_visible
 
 
 def test_perpendicular_is_hit(setup_env):

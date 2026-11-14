@@ -62,7 +62,7 @@ class PointOnLineConstraint:
         r"""
         Creates the point-on-line/curve constraint.
         """
-    def error(self, registry: registry.EntityRegistry, _ctx: typing.Optional[typing.Any] = None) -> typing.Any:
+    def error(self, registry: registry.EntityRegistry, _ctx: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
         r"""
         Returns the constraint error at the registry's point
         positions.

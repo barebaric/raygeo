@@ -57,14 +57,10 @@ impl PyCollinearConstraint {
     #[pyo3(signature = (registry, _ctx = None))]
     fn error(
         &self,
-        py: Python<'_>,
         registry: &PyEntityRegistry,
         _ctx: Option<Py<PyAny>>,
-    ) -> Py<PyAny> {
-        super::error_to_py(
-            py,
-            self.clone().into_constraint().error(&registry.inner),
-        )
+    ) -> Vec<f64> {
+        self.clone().into_constraint().error(&registry.inner)
     }
 
     /// Point ids the constraint references.

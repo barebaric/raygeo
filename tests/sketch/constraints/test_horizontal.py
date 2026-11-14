@@ -54,7 +54,7 @@ def test_horizontal_constraint(setup_env):
 
     c = HorizontalConstraint(p1, p2)
     assert c.error(reg)[0] == pytest.approx(-5.0)
-    assert c.user_visible() is True
+    assert c.user_visible is True
 
 
 def test_horizontal_constraint_user_visible(setup_env):
@@ -63,10 +63,10 @@ def test_horizontal_constraint_user_visible(setup_env):
     p2 = reg.add_point(10, 5)
 
     c = HorizontalConstraint(p1, p2, user_visible=False)
-    assert c.user_visible() is False
+    assert c.user_visible is False
 
     c2 = HorizontalConstraint(p1, p2, user_visible=True)
-    assert c2.user_visible() is True
+    assert c2.user_visible is True
 
 
 # deferred: targets_segment is only bound on dimensional constraints
@@ -102,7 +102,7 @@ def test_horizontal_constraint_serialization_round_trip(setup_env):
 
     # Check that the restored constraint has the same error
     assert original.error(reg) == restored.error(reg)
-    assert original.user_visible() == restored.user_visible()
+    assert original.user_visible == restored.user_visible
 
 
 def test_horizontal_is_hit(setup_env):
