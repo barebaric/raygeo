@@ -71,11 +71,11 @@ class EntityRegistry:
         r"""
         Adds a point and returns its id.
         """
-    def add_points(self, points: typing.Sequence[tuple[builtins.int, builtins.float, builtins.float, builtins.bool]]) -> None:
+    def add_points(self, points: typing.Any) -> None:
         r"""
         Appends pre-built points given as ``(id, x, y, fixed)`` tuples.
         """
-    def set_points(self, points: typing.Sequence[tuple[builtins.int, builtins.float, builtins.float, builtins.bool]]) -> None:
+    def set_points(self, points: typing.Any) -> None:
         r"""
         Replaces the point list with ``(id, x, y, fixed)`` tuples.
         """

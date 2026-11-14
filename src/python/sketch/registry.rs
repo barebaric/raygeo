@@ -20,6 +20,21 @@ use crate::sketch::registry::EntityRegistry;
 use crate::sketch::registry::FontConfig;
 
 /// Converts a Python dictionary to a serde_json value.
+fn extract_sketch_point(obj: &Bound<'_, PyAny>) -> PyResult<SketchPoint> {
+    if let Ok(p) = obj.extract::<PyRef<'_, PySketchPoint>>() {
+        return Ok(p.inner.clone());
+    }
+    let (id, x, y, fixed): (u64, f64, f64, bool) = obj.extract()?;
+    Ok(SketchPoint {
+        id,
+        x,
+        y,
+        fixed,
+        waypoint_type: WaypointType::Sharp,
+        constrained: false,
+    })
+}
+
 pub(crate) fn value_from_dict(dict: &Bound<'_, PyDict>) -> PyResult<Value> {
     let mut map = serde_json::Map::new();
     for (key, value) in dict.iter() {
@@ -153,37 +168,23 @@ impl PyEntityRegistry {
     }
 
     /// Appends pre-built points given as ``(id, x, y, fixed)`` tuples.
-    fn add_points(&mut self, points: Vec<(u64, f64, f64, bool)>) {
-        self.inner.add_points(
-            points
-                .into_iter()
-                .map(|(id, x, y, fixed)| SketchPoint {
-                    id,
-                    x,
-                    y,
-                    fixed,
-                    waypoint_type: WaypointType::Sharp,
-                    constrained: false,
-                })
-                .collect(),
-        );
+    fn add_points(&mut self, points: &Bound<'_, PyAny>) -> PyResult<()> {
+        let mut collected = Vec::new();
+        for item in points.try_iter()? {
+            collected.push(extract_sketch_point(&item?)?);
+        }
+        self.inner.add_points(collected);
+        Ok(())
     }
 
     /// Replaces the point list with ``(id, x, y, fixed)`` tuples.
-    fn set_points(&mut self, points: Vec<(u64, f64, f64, bool)>) {
-        self.inner.set_points(
-            points
-                .into_iter()
-                .map(|(id, x, y, fixed)| SketchPoint {
-                    id,
-                    x,
-                    y,
-                    fixed,
-                    waypoint_type: WaypointType::Sharp,
-                    constrained: false,
-                })
-                .collect(),
-        );
+    fn set_points(&mut self, points: &Bound<'_, PyAny>) -> PyResult<()> {
+        let mut collected = Vec::new();
+        for item in points.try_iter()? {
+            collected.push(extract_sketch_point(&item?)?);
+        }
+        self.inner.set_points(collected);
+        Ok(())
     }
 
     /// Removes the given points.
