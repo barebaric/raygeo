@@ -58,6 +58,8 @@ class Arc:
         r"""
         Whether the entity was created as part of an array copy.
         """
+    @array_copy.setter
+    def array_copy(self, value: builtins.bool) -> None: ...
     @property
     def constrained(self) -> builtins.bool:
         r"""

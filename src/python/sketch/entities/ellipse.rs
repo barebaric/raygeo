@@ -112,6 +112,12 @@ impl PyEllipse {
         self.inner.base.array_copy
     }
 
+    #[setter]
+    fn set_array_copy(&mut self, value: bool) {
+        self.inner.base.array_copy = value;
+        self.write_back();
+    }
+
     /// Whether the entity is fully constrained, as computed by the
     /// solver.
     #[getter]
@@ -244,7 +250,9 @@ impl PyEllipse {
     /// Sets the fill color; returns whether the entity supports
     /// fills.
     fn set_fill_color(&mut self, color: Option<[f64; 4]>) -> bool {
-        self.inner.set_fill_color(color)
+        let supported = self.inner.set_fill_color(color);
+        self.write_back();
+        supported
     }
     /// Persists in-place edits back to the owning registry, if any.
     fn write_back(&self) {
