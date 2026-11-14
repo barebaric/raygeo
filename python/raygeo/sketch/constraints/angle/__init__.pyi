@@ -54,6 +54,11 @@ class AngleConstraint:
         Resolved angle value in degrees.
         """
     @property
+    def user_visible(self) -> builtins.bool:
+        r"""
+        Reference user-visibility flag.
+        """
+    @property
     def status(self) -> builtins.int:
         r"""
         Reference validation status ordinal.
@@ -68,13 +73,23 @@ class AngleConstraint:
         r"""
         The angle value in degrees (alias of ``value_deg``).
         """
+    @property
+    def expression(self) -> typing.Optional[builtins.str]:
+        r"""
+        The stored expression string, if any (evaluated caller-side).
+        """
+    @expression.setter
+    def expression(self, value: typing.Optional[builtins.str]) -> None:
+        r"""
+        Sets the expression string (evaluated caller-side).
+        """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __new__(cls, p1: builtins.int, p2: builtins.int, p3: builtins.int, p4: builtins.int, value_deg: builtins.float, e1_far: typing.Optional[builtins.int] = None, e2_far: typing.Optional[builtins.int] = None, user_visible: builtins.bool = True) -> AngleConstraint:
         r"""
         Creates the angle constraint from its resolved points and
         value.
         """
-    def error(self, registry: registry.EntityRegistry) -> builtins.list[builtins.float]:
+    def error(self, registry: registry.EntityRegistry, _ctx: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
         r"""
         Returns the constraint error at the registry's point
         positions.
@@ -82,6 +97,10 @@ class AngleConstraint:
     def referenced_points(self) -> builtins.list[builtins.int]:
         r"""
         Point ids the constraint references.
+        """
+    def get_referenced_point_ids(self) -> builtins.set[builtins.int]:
+        r"""
+        Alias for referenced_points (reference naming).
         """
     def set_value(self, value_deg: builtins.float) -> None:
         r"""
@@ -95,21 +114,9 @@ class AngleConstraint:
         r"""
         Draws the constraint's symbol onto the cairo context.
         """
-    def user_visible(self) -> builtins.bool:
-        r"""
-        Reference user-visibility flag.
-        """
     def set_user_visible(self, value: builtins.bool) -> None:
         r"""
         Sets the reference user-visibility flag.
-        """
-    def expression(self) -> typing.Optional[builtins.str]:
-        r"""
-        The stored expression string, if any (evaluated caller-side).
-        """
-    def set_expression(self, expression: typing.Optional[builtins.str]) -> None:
-        r"""
-        Sets the expression string (evaluated caller-side).
         """
     def is_mirror_compatible(self) -> builtins.bool:
         r"""
@@ -120,5 +127,9 @@ class AngleConstraint:
     def is_hit(self, mx: builtins.float, my: builtins.float, threshold: builtins.float, registry: registry.EntityRegistry, to_screen: typing.Optional[collections.abc.Callable[[tuple[float, float]], tuple[float, float]]] = None) -> builtins.bool:
         r"""
         Whether the constraint's rendered symbol is hit at (mx, my).
+        """
+    def mirror(self) -> None:
+        r"""
+        Mirrors the angle value (negates it).
         """
 

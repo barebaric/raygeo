@@ -11,6 +11,10 @@ __all__ = [
 class SketchPoint:
     r"""
     A sketch point: coordinates and solver flags.
+    
+    When obtained from a registry it is a live view: coordinate writes
+    are written back to the registry. It also behaves like an ``(x, y)``
+    pair for indexing and iteration.
     """
     @property
     def id(self) -> builtins.int:
@@ -22,22 +26,56 @@ class SketchPoint:
         r"""
         X coordinate.
         """
+    @x.setter
+    def x(self, value: builtins.float) -> None: ...
     @property
     def y(self) -> builtins.float:
         r"""
         Y coordinate.
         """
+    @y.setter
+    def y(self, value: builtins.float) -> None: ...
     @property
     def fixed(self) -> builtins.bool:
         r"""
         Whether the point is pinned and never moves.
         """
+    @fixed.setter
+    def fixed(self, value: builtins.bool) -> None: ...
     @property
     def constrained(self) -> builtins.bool:
         r"""
         Whether the point is fully constrained, as computed by the
         solver.
         """
+    @constrained.setter
+    def constrained(self, value: builtins.bool) -> None: ...
+    def __new__(cls, id: builtins.int, x: builtins.float, y: builtins.float, fixed: builtins.bool = False) -> SketchPoint:
+        r"""
+        Creates a point view with the given id and coordinates.
+        """
+    def __getitem__(self, index: builtins.int) -> builtins.float:
+        r"""
+        Index 0 gives x, index 1 gives y (pair-like access).
+        """
+    def __setitem__(self, index: builtins.int, value: builtins.float) -> None:
+        r"""
+        Writes a coordinate and persists it to the owning registry.
+        """
+    def __len__(self) -> builtins.int:
+        r"""
+        The point is a pair of coordinates.
+        """
+    def __iter__(self) -> typing.Any:
+        r"""
+        Iterates ``(x, y)``.
+        """
+    def __eq__(self, other: typing.Any) -> typing.Any:
+        r"""
+        Compares equal to an ``(x, y)`` pair or another point with the
+        same coordinates.
+        """
+    def __hash__(self) -> builtins.int: ...
     def __repr__(self) -> builtins.str:
         r"""
         Returns a readable representation.

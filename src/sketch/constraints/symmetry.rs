@@ -205,6 +205,15 @@ impl SymmetryConstraint {
         });
         data["p1"] = json!(self.p1);
         data["p2"] = json!(self.p2);
+        match &self.target {
+            SymmetryTarget::Point { center } => {
+                data["center"] = json!(center);
+            }
+            SymmetryTarget::Line { l1, l2 } => {
+                data["l1"] = json!(l1);
+                data["l2"] = json!(l2);
+            }
+        }
         data
     }
 }

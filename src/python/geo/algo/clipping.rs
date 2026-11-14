@@ -24,6 +24,7 @@ use crate::geo::algo::clipping::{
     subtract_polygons_from_line_segment_2d,
 };
 use crate::geo::types::{Point, Rect};
+use crate::python::geo::flex_point::PyPoint2D;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
@@ -178,8 +179,8 @@ fn clip_line_segment_to_regions_py(
 )]
 #[pyfunction(name = "clip_line_segment_with_rect_2d")]
 fn clip_line_segment_with_rect_2d_py(
-    p1: (f64, f64),
-    p2: (f64, f64),
+    p1: PyPoint2D,
+    p2: PyPoint2D,
     rect: (f64, f64, f64, f64),
 ) -> Option<Edge2D> {
     let p1 = Point::new(p1.0, p1.1);
@@ -215,8 +216,8 @@ fn clip_line_segment_with_rect_2d_py(
 )]
 #[pyfunction(name = "clip_line_segment_with_polygons_2d")]
 fn clip_line_segment_with_polygons_2d_py(
-    p1: (f64, f64),
-    p2: (f64, f64),
+    p1: PyPoint2D,
+    p2: PyPoint2D,
     regions: &Bound<'_, PyAny>,
 ) -> PyResult<Vec<Edge2D>> {
     let p1 = Point::new(p1.0, p1.1);
@@ -250,8 +251,8 @@ fn clip_line_segment_with_polygons_2d_py(
 )]
 #[pyfunction(name = "subtract_polygons_from_line_segment_2d")]
 fn subtract_polygons_from_line_segment_2d_py(
-    p1: (f64, f64),
-    p2: (f64, f64),
+    p1: PyPoint2D,
+    p2: PyPoint2D,
     regions: &Bound<'_, PyAny>,
 ) -> PyResult<Vec<Edge2D>> {
     let p1 = Point::new(p1.0, p1.1);

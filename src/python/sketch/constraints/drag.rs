@@ -1,9 +1,11 @@
 //! Bindings for the drag constraint.
 
 use pyo3::prelude::*;
+use pyo3::types::PyDict;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::python::sketch::protocols::{Canvas, DrawContext, ScreenMap};
+use crate::python::sketch::registry::PyEntityRegistry;
 use crate::sketch::constraint::SketchConstraint;
 use crate::sketch::constraints::drag::DragConstraint as CoreConstraint;
 
@@ -39,14 +41,14 @@ pub struct PyDragConstraint {
 impl PyDragConstraint {
     /// Creates the constraint from its resolved points and values.
     #[new]
-    #[pyo3(signature = (point, target_x, target_y, weight))]
+    #[pyo3(signature = (point, target_x, target_y, weight = 1.0))]
     fn new(point: u64, target_x: f64, target_y: f64, weight: f64) -> Self {
         PyDragConstraint {
             point,
             target_x,
             target_y,
             weight,
-            status: 0,
+            status: 1,
         }
     }
 
@@ -55,11 +57,31 @@ impl PyDragConstraint {
         self.clone().into_constraint().referenced_points()
     }
 
+    /// Alias for referenced_points (reference naming).
+    fn get_referenced_point_ids(&self) -> std::collections::HashSet<u64> {
+        self.referenced_points().into_iter().collect()
+    }
+
     /// Sets the target coordinates and pull strength.
     fn set_target(&mut self, target_x: f64, target_y: f64, weight: f64) {
         self.target_x = target_x;
         self.target_y = target_y;
         self.weight = weight;
+    }
+
+    /// Returns the constraint error at the registry's point positions.
+    #[pyo3(signature = (registry, _ctx = None))]
+    fn error(
+        &self,
+        registry: &PyEntityRegistry,
+        _ctx: Option<Py<PyAny>>,
+    ) -> Vec<f64> {
+        self.clone().into_constraint().error(&registry.inner)
+    }
+
+    /// Serializes to the reference constraint dictionary shape.
+    fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
+        super::dict_from_value(py, &self.clone().into_constraint().to_json())
     }
 
     /// Draws the constraint's symbol onto the cairo context.
@@ -100,7 +122,7 @@ impl PyDragConstraint {
 
     pub(crate) fn from_core(core: CoreConstraint) -> Self {
         PyDragConstraint {
-            status: 0,
+            status: 1,
             point: core.point,
             target_x: core.target_x,
             target_y: core.target_y,

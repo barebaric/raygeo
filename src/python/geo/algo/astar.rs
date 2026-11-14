@@ -1,3 +1,4 @@
+use crate::python::geo::flex_point::PyPoint2D;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction};
 
@@ -48,8 +49,8 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 #[pyfunction(name = "find_path")]
 #[pyo3(signature = (from_, to, free_space, obstacles = None, obstacle_margin = 0.0, cell_size = 1.0))]
 fn find_path_py(
-    from_: (f64, f64),
-    to: (f64, f64),
+    from_: PyPoint2D,
+    to: PyPoint2D,
     free_space: Vec<Vec<(f64, f64)>>,
     obstacles: Option<Vec<Vec<(f64, f64)>>>,
     obstacle_margin: f64,

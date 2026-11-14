@@ -717,10 +717,10 @@ fn get_perpendicular_dist_sq_py(
 )]
 #[pyfunction(name = "get_bezier_length")]
 fn get_bezier_length_py(
-    p0: (f64, f64),
-    c1: (f64, f64),
-    c2: (f64, f64),
-    p1: (f64, f64),
+    p0: PyPoint2D,
+    c1: PyPoint2D,
+    c2: PyPoint2D,
+    p1: PyPoint2D,
 ) -> f64 {
     get_bezier_length(
         Point::new(p0.0, p0.1),
@@ -783,7 +783,7 @@ fn fit_cubic_bezier_py(points: Vec<(f64, f64)>) -> Option<CubicBezier2D> {
 #[pyfunction(name = "nearest_tangent_circle_on_bezier")]
 #[allow(clippy::type_complexity)]
 fn nearest_tangent_circle_on_bezier_py(
-    point: (f64, f64),
+    point: PyPoint2D,
     bezier: CubicBezier2D,
     radius: f64,
 ) -> Option<((f64, f64), (f64, f64), f64)> {
@@ -878,10 +878,10 @@ fn get_bezier_closest_point_py(
 )]
 #[pyfunction(name = "get_bezier_tangent")]
 fn get_bezier_tangent_py(
-    p0: (f64, f64),
-    c1: (f64, f64),
-    c2: (f64, f64),
-    p3: (f64, f64),
+    p0: PyPoint2D,
+    c1: PyPoint2D,
+    c2: PyPoint2D,
+    p3: PyPoint2D,
     t: f64,
 ) -> (f64, f64) {
     let tangent = get_bezier_tangent(
@@ -923,10 +923,10 @@ fn get_bezier_tangent_py(
 )]
 #[pyfunction(name = "get_bezier_samples")]
 fn get_bezier_samples_py(
-    p0: (f64, f64),
-    c1: (f64, f64),
-    c2: (f64, f64),
-    p3: (f64, f64),
+    p0: PyPoint2D,
+    c1: PyPoint2D,
+    c2: PyPoint2D,
+    p3: PyPoint2D,
     segments: usize,
 ) -> Vec<(f64, f64)> {
     get_bezier_samples(
@@ -971,7 +971,7 @@ fn get_bezier_samples_py(
 )]
 #[pyfunction(name = "compute_constrained_control_offset")]
 fn compute_constrained_control_offset_py(
-    modified: (f64, f64),
+    modified: PyPoint2D,
     other: Option<(f64, f64)>,
     symmetric: bool,
 ) -> (f64, f64) {

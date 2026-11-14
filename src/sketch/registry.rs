@@ -106,6 +106,22 @@ impl EntityRegistry {
         self.entity_index.get(&id).map(|&i| &mut self.entities[i])
     }
 
+    /// Replaces the entity with the given id from its dictionary form,
+    /// preserving the id. Returns false for an unknown id or invalid
+    /// dictionary. Point membership is unchanged by in-place edits.
+    pub fn replace_entity_from_json(&mut self, id: u64, data: &Value) -> bool {
+        let Some(mut entity) = entity_from_json(data) else {
+            return false;
+        };
+        let Some(&i) = self.entity_index.get(&id) else {
+            return false;
+        };
+        entity.base_mut().id = id;
+        self.entities[i] = entity;
+        self.entity_version += 1;
+        true
+    }
+
     /// The reference serialization type string of an entity.
     pub fn entity_type(&self, id: u64) -> Option<&'static str> {
         self.get_entity(id).map(|e| e.type_name())
@@ -308,6 +324,7 @@ impl EntityRegistry {
     /// Appends pre-built points whose ids are final.
     pub fn add_points(&mut self, points: Vec<SketchPoint>) {
         for point in points {
+            self.id_counter = self.id_counter.max(point.id + 1);
             self.point_index.insert(point.id, self.points.len());
             self.points.push(point);
         }

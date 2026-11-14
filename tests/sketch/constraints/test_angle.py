@@ -230,10 +230,10 @@ def test_angle_constraint_user_visible(setup_env):
     reg.add_line(p3, p4)
 
     c = AngleConstraint(p1, p2, p3, p4, 90.0, user_visible=False)
-    assert c.user_visible() is False
+    assert c.user_visible is False
 
     c2 = AngleConstraint(p1, p2, p3, p4, 90.0, user_visible=True)
-    assert c2.user_visible() is True
+    assert c2.user_visible is True
 
 
 def test_angle_constraint_with_expression(setup_env):
@@ -250,10 +250,10 @@ def test_angle_constraint_with_expression(setup_env):
     reg.add_line(p3, p4)
 
     c = AngleConstraint(p3, p4, p1, p2, 45.0)
-    c.set_expression("angle")
+    c.expression = "angle"
 
     assert c.error(reg)[0] == pytest.approx(0.0, abs=1e-6)
-    assert c.expression() == "angle"
+    assert c.expression == "angle"
     assert c.is_mirror_compatible() is False
 
 
@@ -290,7 +290,7 @@ def test_angle_constraint_serialization_round_trip(setup_env):
     )
 
     assert original.error(reg) == pytest.approx(restored.error(reg), abs=1e-6)
-    assert original.user_visible() == restored.user_visible()
+    assert original.user_visible == restored.user_visible
 
 
 def test_angle_constraint_serialization_with_expression(setup_env):
@@ -305,7 +305,7 @@ def test_angle_constraint_serialization_with_expression(setup_env):
 
     # Value is pre-resolved from the context ("angle" -> 90.0).
     original = AngleConstraint(p1, p2, p3, p4, 90.0)
-    original.set_expression("angle")
+    original.expression = "angle"
 
     serialized = original.to_dict()
     restored = AngleConstraint(
@@ -317,7 +317,7 @@ def test_angle_constraint_serialization_with_expression(setup_env):
         serialized["e1_far_idx"],
         serialized["e2_far_idx"],
     )
-    restored.set_expression(serialized.get("expression"))
+    restored.expression = serialized.get("expression")
 
     assert original.error(reg) == pytest.approx(restored.error(reg), abs=1e-6)
 

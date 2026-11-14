@@ -1,3 +1,4 @@
+use crate::python::geo::flex_point::PyPoint2D;
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList, PyType};
 use pyo3_stub_gen::derive::{
@@ -1719,9 +1720,9 @@ impl Geometry {
     #[allow(clippy::too_many_arguments)]
     fn map_to_frame(
         slf: Bound<'_, Self>,
-        origin: (f64, f64),
-        p_width: (f64, f64),
-        p_height: (f64, f64),
+        origin: PyPoint2D,
+        p_width: PyPoint2D,
+        p_height: PyPoint2D,
         anchor_y: Option<f64>,
         stable_src_height: Option<f64>,
         anchor_x: Option<f64>,

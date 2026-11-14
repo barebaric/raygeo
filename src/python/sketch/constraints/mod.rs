@@ -131,7 +131,14 @@ impl<'a> PyDrawContext<'a> {
 impl DrawContextContract for PyDrawContext<'_> {
     fn get_point(&self, id: u64) -> Option<DrawPoint> {
         let value = self.call("get_point", id)?;
-        let xy: (f64, f64) = value.extract().ok()?;
+        let xy: (f64, f64) = match value.extract::<(f64, f64)>() {
+            Ok(pair) => pair,
+            Err(_) => {
+                let x = value.getattr("x").ok()?.extract().ok()?;
+                let y = value.getattr("y").ok()?.extract().ok()?;
+                (x, y)
+            }
+        };
         let fixed = match self.call("point_is_fixed", id) {
             Some(flag) => flag.extract::<bool>().unwrap_or(false),
             None => false,

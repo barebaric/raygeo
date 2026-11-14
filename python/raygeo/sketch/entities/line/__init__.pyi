@@ -19,6 +19,8 @@ class Line:
         r"""
         Unique entity id.
         """
+    @id.setter
+    def id(self, value: builtins.int) -> None: ...
     @property
     def p1_idx(self) -> builtins.int:
         r"""
@@ -34,26 +36,39 @@ class Line:
         r"""
         Whether the entity is construction geometry.
         """
+    @construction.setter
+    def construction(self, value: builtins.bool) -> None: ...
     @property
     def invisible(self) -> builtins.bool:
         r"""
         Whether the entity is excluded from toolpath output.
         """
+    @invisible.setter
+    def invisible(self, value: builtins.bool) -> None: ...
     @property
     def array_copy(self) -> builtins.bool:
         r"""
         Whether the entity was created as part of an array copy.
         """
+    @array_copy.setter
+    def array_copy(self, value: builtins.bool) -> None: ...
     @property
     def constrained(self) -> builtins.bool:
         r"""
         Whether the entity is fully constrained, as computed by the
         solver.
         """
+    @constrained.setter
+    def constrained(self, value: builtins.bool) -> None: ...
     @property
     def fill_color(self) -> typing.Optional[tuple[builtins.float, builtins.float, builtins.float, builtins.float]]:
         r"""
         Fill color as (r, g, b, a), or None.
+        """
+    @property
+    def r#type(self) -> builtins.str:
+        r"""
+        The entity type name (attribute alias).
         """
     def __new__(cls, p1: builtins.int, p2: builtins.int, construction: builtins.bool = False) -> Line:
         r"""
@@ -111,5 +126,18 @@ class Line:
         r"""
         Sets the fill color; returns whether the entity supports
         fills.
+        """
+    def write_back(self) -> None:
+        r"""
+        Persists in-place edits back to the owning registry, if any.
+        """
+    def __eq__(self, other: typing.Any) -> builtins.bool:
+        r"""
+        Entities compare equal by id (raygeo hands out fresh views).
+        """
+    def __hash__(self) -> builtins.int: ...
+    def get_drag_anchor_points(self, point_id: builtins.int) -> builtins.list[builtins.int]:
+        r"""
+        Point ids that act as drag anchors for the given point.
         """
 

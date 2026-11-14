@@ -12,6 +12,7 @@ tests, plus higher-level self-intersection and cross-intersection checks
 on geometry command arrays.
 ";
 
+use crate::python::geo::flex_point::PyPoint2D;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
@@ -42,8 +43,8 @@ use crate::geo::algo::intersect;
 )]
 #[pyfunction(name = "get_ray_polygon_intersection")]
 fn ray_polygon_intersection_py(
-    origin: (f64, f64),
-    direction: (f64, f64),
+    origin: PyPoint2D,
+    direction: PyPoint2D,
     polygon: Vec<(f64, f64)>,
 ) -> Option<(f64, f64)> {
     let pts: Vec<crate::geo::types::Point> = polygon
@@ -85,10 +86,10 @@ fn ray_polygon_intersection_py(
 )]
 #[pyfunction(name = "get_ray_line_intersection")]
 fn ray_line_intersection_py(
-    origin: (f64, f64),
-    direction: (f64, f64),
-    a: (f64, f64),
-    b: (f64, f64),
+    origin: PyPoint2D,
+    direction: PyPoint2D,
+    a: PyPoint2D,
+    b: PyPoint2D,
 ) -> Option<(f64, f64)> {
     intersect::get_ray_line_intersection(
         crate::geo::types::Point::new(origin.0, origin.1),

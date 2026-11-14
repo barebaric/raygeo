@@ -65,7 +65,7 @@ def test_symmetry_constraint_point(setup_env):
     # x: (-5 + 5) - 0 = 0
     # y: (-2 + 2) - 0 = 0
     assert c.error(reg) == pytest.approx([0.0, 0.0])
-    assert c.user_visible() is True
+    assert c.user_visible is True
 
     # Move P2 to (6, 2)
     # x: (-5 + 6) - 0 = 1
@@ -82,12 +82,12 @@ def test_symmetry_constraint_user_visible(setup_env):
     c = SymmetryConstraint(
         p1, p2, SymmetryTarget.Point(pc), user_visible=False
     )
-    assert c.user_visible() is False
+    assert c.user_visible is False
 
     c2 = SymmetryConstraint(
         p1, p2, SymmetryTarget.Point(pc), user_visible=True
     )
-    assert c2.user_visible() is True
+    assert c2.user_visible is True
 
 
 # deferred: targets_segment is only bound on dimensional constraints

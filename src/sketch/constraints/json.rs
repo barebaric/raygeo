@@ -336,6 +336,10 @@ pub fn constraint_from_dict(
             let p2 = u64_field(data, "p2")?;
             let target = if let Some(center) = opt_u64(data, "center") {
                 SymmetryTarget::Point { center }
+            } else if let (Some(l1), Some(l2)) =
+                (opt_u64(data, "l1"), opt_u64(data, "l2"))
+            {
+                SymmetryTarget::Line { l1, l2 }
             } else {
                 let axis = opt_u64(data, "axis")?;
                 let (l1, l2) = line_endpoints(model, axis)?;

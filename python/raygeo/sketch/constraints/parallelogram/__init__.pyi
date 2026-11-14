@@ -4,6 +4,7 @@
 import builtins
 import collections.abc
 from raygeo.sketch import protocols
+from raygeo.sketch import registry
 import typing
 __all__ = [
     "ParallelogramConstraint",
@@ -35,6 +36,11 @@ class ParallelogramConstraint:
         Fourth corner.
         """
     @property
+    def user_visible(self) -> builtins.bool:
+        r"""
+        Reference user-visibility flag.
+        """
+    @property
     def status(self) -> builtins.int:
         r"""
         Reference validation status ordinal.
@@ -45,13 +51,29 @@ class ParallelogramConstraint:
         Reference validation status ordinal.
         """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __new__(cls, p_origin: builtins.int, p_width: builtins.int, p_height: builtins.int, p4: builtins.int) -> ParallelogramConstraint:
+    def __new__(cls, p_origin: builtins.int, p_width: builtins.int, p_height: builtins.int, p4: builtins.int, user_visible: builtins.bool = True) -> ParallelogramConstraint:
         r"""
         Creates the constraint from its resolved points and values.
+        """
+    def set_user_visible(self, value: builtins.bool) -> None:
+        r"""
+        Sets the reference user-visibility flag.
         """
     def referenced_points(self) -> builtins.list[builtins.int]:
         r"""
         Point ids the constraint references.
+        """
+    def get_referenced_point_ids(self) -> builtins.set[builtins.int]:
+        r"""
+        Alias for referenced_points (reference naming).
+        """
+    def error(self, registry: registry.EntityRegistry, _ctx: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
+        r"""
+        Returns the constraint error at the registry's point positions.
+        """
+    def to_dict(self) -> dict:
+        r"""
+        Serializes to the reference constraint dictionary shape.
         """
     def draw(self, ctx: protocols.Canvas, registry: protocols.DrawContext, to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], is_selected: builtins.bool = False, is_hovered: builtins.bool = False, point_radius: builtins.float = 5.0) -> None:
         r"""

@@ -3,6 +3,7 @@
 
 import builtins
 from raygeo import geo
+from raygeo.geo.shape import text
 from raygeo.sketch import registry
 import typing
 __all__ = [
@@ -19,6 +20,8 @@ class TextBox:
         r"""
         Unique entity id.
         """
+    @id.setter
+    def id(self, value: builtins.int) -> None: ...
     @property
     def origin_id(self) -> builtins.int:
         r"""
@@ -35,10 +38,11 @@ class TextBox:
         Height point id.
         """
     @property
-    def content(self) -> builtins.str:
-        r"""
-        The text content.
-        """
+    def construction_line_ids(self) -> builtins.list[builtins.int]: ...
+    @property
+    def content(self) -> builtins.str: ...
+    @content.setter
+    def content(self, value: builtins.str) -> None: ...
     @property
     def font_family(self) -> builtins.str:
         r"""
@@ -60,35 +64,61 @@ class TextBox:
         Whether the text is italic.
         """
     @property
+    def font_config(self) -> text.FontConfig:
+        r"""
+        The font configuration as a FontConfig object.
+        """
+    @font_config.setter
+    def font_config(self, value: text.FontConfig) -> None: ...
+    @property
     def construction(self) -> builtins.bool:
         r"""
         Whether the entity is construction geometry.
         """
+    @construction.setter
+    def construction(self, value: builtins.bool) -> None: ...
     @property
     def invisible(self) -> builtins.bool:
         r"""
         Whether the entity is excluded from toolpath output.
         """
+    @invisible.setter
+    def invisible(self, value: builtins.bool) -> None: ...
     @property
     def array_copy(self) -> builtins.bool:
         r"""
         Whether the entity was created as part of an array copy.
         """
+    @array_copy.setter
+    def array_copy(self, value: builtins.bool) -> None: ...
     @property
     def constrained(self) -> builtins.bool:
         r"""
         Whether the entity is fully constrained, as computed by the
         solver.
         """
+    @constrained.setter
+    def constrained(self, value: builtins.bool) -> None: ...
     @property
     def fill_color(self) -> typing.Optional[tuple[builtins.float, builtins.float, builtins.float, builtins.float]]:
         r"""
         Fill color as (r, g, b, a), or None.
         """
+    @property
+    def r#type(self) -> builtins.str:
+        r"""
+        The entity type name (attribute alias).
+        """
     def __new__(cls, origin: builtins.int, width: builtins.int, height: builtins.int, content: builtins.str = '', font_family: builtins.str = 'sans-serif', font_size: builtins.float = 10.0, bold: builtins.bool = False, italic: builtins.bool = False) -> TextBox:
         r"""
         Creates an unattached text box; an id is assigned on
         insertion.
+        """
+    def get_fourth_corner_id(self, registry: registry.EntityRegistry) -> typing.Optional[builtins.int]:
+        r"""
+        The text content.
+        The ids of the frame construction lines.
+        The fourth frame corner point id, if resolvable.
         """
     def type_name(self) -> builtins.str:
         r"""
@@ -142,5 +172,22 @@ class TextBox:
         r"""
         Sets the fill color; returns whether the entity supports
         fills.
+        """
+    def write_back(self) -> None:
+        r"""
+        Persists in-place edits back to the owning registry, if any.
+        """
+    def __eq__(self, other: typing.Any) -> builtins.bool:
+        r"""
+        Entities compare equal by id (raygeo hands out fresh views).
+        """
+    def __hash__(self) -> builtins.int: ...
+    def get_drag_anchor_points(self, point_id: builtins.int) -> builtins.list[builtins.int]:
+        r"""
+        Point ids that act as drag anchors for the given point.
+        """
+    def get_all_frame_point_ids(self, registry: registry.EntityRegistry) -> builtins.list[builtins.int]:
+        r"""
+        All four frame corner point ids.
         """
 

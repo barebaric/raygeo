@@ -4,6 +4,7 @@
 import builtins
 import collections.abc
 from raygeo.sketch import protocols
+from raygeo.sketch import registry
 import typing
 __all__ = [
     "DragConstraint",
@@ -45,7 +46,7 @@ class DragConstraint:
         Reference validation status ordinal.
         """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __new__(cls, point: builtins.int, target_x: builtins.float, target_y: builtins.float, weight: builtins.float) -> DragConstraint:
+    def __new__(cls, point: builtins.int, target_x: builtins.float, target_y: builtins.float, weight: builtins.float = 1.0) -> DragConstraint:
         r"""
         Creates the constraint from its resolved points and values.
         """
@@ -53,9 +54,21 @@ class DragConstraint:
         r"""
         Point ids the constraint references.
         """
+    def get_referenced_point_ids(self) -> builtins.set[builtins.int]:
+        r"""
+        Alias for referenced_points (reference naming).
+        """
     def set_target(self, target_x: builtins.float, target_y: builtins.float, weight: builtins.float) -> None:
         r"""
         Sets the target coordinates and pull strength.
+        """
+    def error(self, registry: registry.EntityRegistry, _ctx: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
+        r"""
+        Returns the constraint error at the registry's point positions.
+        """
+    def to_dict(self) -> dict:
+        r"""
+        Serializes to the reference constraint dictionary shape.
         """
     def draw(self, ctx: protocols.Canvas, registry: protocols.DrawContext, to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], is_selected: builtins.bool = False, is_hovered: builtins.bool = False, point_radius: builtins.float = 5.0) -> None:
         r"""

@@ -36,6 +36,11 @@ class RotationalConstraint:
         Resolved rotation angle in radians.
         """
     @property
+    def user_visible(self) -> builtins.bool:
+        r"""
+        Reference user-visibility flag.
+        """
+    @property
     def status(self) -> builtins.int:
         r"""
         Reference validation status ordinal.
@@ -45,12 +50,22 @@ class RotationalConstraint:
         r"""
         Reference validation status ordinal.
         """
+    @property
+    def expression(self) -> typing.Optional[builtins.str]:
+        r"""
+        The stored expression string, if any (evaluated caller-side).
+        """
+    @expression.setter
+    def expression(self, value: typing.Optional[builtins.str]) -> None:
+        r"""
+        Sets the expression string (evaluated caller-side).
+        """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __new__(cls, center: builtins.int, p1: builtins.int, p2: builtins.int, angle_rad: builtins.float, user_visible: builtins.bool = True) -> RotationalConstraint:
         r"""
         Creates the constraint from its resolved points and values.
         """
-    def error(self, registry: registry.EntityRegistry) -> builtins.list[builtins.float]:
+    def error(self, registry: registry.EntityRegistry, _ctx: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
         r"""
         Returns the constraint error at the registry's point
         positions.
@@ -58,6 +73,10 @@ class RotationalConstraint:
     def referenced_points(self) -> builtins.list[builtins.int]:
         r"""
         Point ids the constraint references.
+        """
+    def get_referenced_point_ids(self) -> builtins.set[builtins.int]:
+        r"""
+        Alias for referenced_points (reference naming).
         """
     def to_dict(self) -> dict:
         r"""
@@ -67,20 +86,8 @@ class RotationalConstraint:
         r"""
         Draws the constraint's symbol onto the cairo context.
         """
-    def user_visible(self) -> builtins.bool:
-        r"""
-        Reference user-visibility flag.
-        """
     def set_user_visible(self, value: builtins.bool) -> None:
         r"""
         Sets the reference user-visibility flag.
-        """
-    def expression(self) -> typing.Optional[builtins.str]:
-        r"""
-        The stored expression string, if any (evaluated caller-side).
-        """
-    def set_expression(self, expression: typing.Optional[builtins.str]) -> None:
-        r"""
-        Sets the expression string (evaluated caller-side).
         """
 

@@ -55,7 +55,7 @@ def test_diameter_constraint(setup_env):
     # Target diam is 10, actual is 10. Error = 10 - 10 = 0
     c = DiameterConstraint(center, radius_pt, 10.0)
     assert c.error(reg)[0] == pytest.approx(0.0)
-    assert c.user_visible() is True
+    assert c.user_visible is True
 
     # Target diam is 20, actual is 10. Error = 10 - 20 = -10
     c2 = DiameterConstraint(center, radius_pt, 20.0)
@@ -69,10 +69,10 @@ def test_diameter_constraint_user_visible(setup_env):
     reg.add_circle(center, radius_pt)
 
     c = DiameterConstraint(center, radius_pt, 10.0, user_visible=False)
-    assert c.user_visible() is False
+    assert c.user_visible is False
 
     c2 = DiameterConstraint(center, radius_pt, 10.0, user_visible=True)
-    assert c2.user_visible() is True
+    assert c2.user_visible is True
 
 
 def test_diameter_constrains_radius_method(setup_env):
@@ -136,7 +136,7 @@ def test_diameter_constraint_serialization_round_trip(setup_env):
 
     # Check that the restored constraint has the same error
     assert original.error(reg) == restored.error(reg)
-    assert original.user_visible() == restored.user_visible()
+    assert original.user_visible == restored.user_visible
 
 
 def test_diameter_constraint_with_expression(setup_env):
@@ -152,11 +152,11 @@ def test_diameter_constraint_with_expression(setup_env):
     # update_from_context evaluation has no binding counterpart).
     # Actual diam is 10, target is 20. Error = 10 - 20 = -10
     c = DiameterConstraint(center, radius_pt, 20.0)
-    c.set_expression("target_diam")
+    c.expression = "target_diam"
 
     assert c.error(reg)[0] == pytest.approx(-10.0)
     assert c.value == 20.0
-    assert c.expression() == "target_diam"
+    assert c.expression == "target_diam"
 
 
 def test_diameter_constraint_gradient(setup_env):

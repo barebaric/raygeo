@@ -63,7 +63,7 @@ def test_tangent_constraint(setup_env):
 
     c = TangentConstraint(lp1, lp2, center, start)
     assert c.error(reg)[0] == pytest.approx(0.0)
-    assert c.user_visible() is True
+    assert c.user_visible is True
 
     # Move line to y=20. dist=20, radius=10. Error = 10.
     reg.set_point_position(lp1, -5, 20)
@@ -84,10 +84,10 @@ def test_tangent_constraint_user_visible(setup_env):
     reg.add_line(lp1, lp2)
 
     c = TangentConstraint(lp1, lp2, center, start, user_visible=False)
-    assert c.user_visible() is False
+    assert c.user_visible is False
 
     c2 = TangentConstraint(lp1, lp2, center, start, user_visible=True)
-    assert c2.user_visible() is True
+    assert c2.user_visible is True
 
 
 def test_tangent_constraint_on_circle(setup_env):
@@ -192,7 +192,7 @@ def test_tangent_constraint_serialization_round_trip(setup_env):
 
     # Check that the restored constraint has the same error
     assert original.error(reg) == restored.error(reg)
-    assert original.user_visible() == restored.user_visible()
+    assert original.user_visible == restored.user_visible
 
 
 def test_tangent_is_hit(setup_env):

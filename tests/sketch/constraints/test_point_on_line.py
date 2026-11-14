@@ -65,7 +65,7 @@ def test_point_on_line_constraint(setup_env):
 
     c = PointOnLineConstraint(p3, PointOnTarget.Line(p1, p2))
     assert c.error(reg)[0] == pytest.approx(5.0)
-    assert c.user_visible() is True
+    assert c.user_visible is True
 
     # Move point to (5, 0). Error should be 0.
     reg.set_point_position(p3, 5, 0)
@@ -83,12 +83,12 @@ def test_point_on_line_constraint_user_visible(setup_env):
     c = PointOnLineConstraint(
         p3, PointOnTarget.Line(p1, p2), user_visible=False
     )
-    assert c.user_visible() is False
+    assert c.user_visible is False
 
     c2 = PointOnLineConstraint(
         p3, PointOnTarget.Line(p1, p2), user_visible=True
     )
-    assert c2.user_visible() is True
+    assert c2.user_visible is True
 
 
 def test_point_on_arc_circle_constraint(setup_env):

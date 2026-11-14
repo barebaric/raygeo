@@ -36,6 +36,11 @@ class EqualDistanceConstraint:
         Second point of the second pair.
         """
     @property
+    def user_visible(self) -> builtins.bool:
+        r"""
+        Reference user-visibility flag.
+        """
+    @property
     def status(self) -> builtins.int:
         r"""
         Reference validation status ordinal.
@@ -50,7 +55,7 @@ class EqualDistanceConstraint:
         r"""
         Creates the constraint from its resolved points and values.
         """
-    def error(self, registry: registry.EntityRegistry) -> builtins.list[builtins.float]:
+    def error(self, registry: registry.EntityRegistry, _ctx: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
         r"""
         Returns the constraint error at the registry's point
         positions.
@@ -59,6 +64,10 @@ class EqualDistanceConstraint:
         r"""
         Point ids the constraint references.
         """
+    def get_referenced_point_ids(self) -> builtins.set[builtins.int]:
+        r"""
+        Alias for referenced_points (reference naming).
+        """
     def to_dict(self) -> dict:
         r"""
         Serializes to the reference constraint dictionary shape.
@@ -66,10 +75,6 @@ class EqualDistanceConstraint:
     def draw(self, ctx: protocols.Canvas, registry: protocols.DrawContext, to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], is_selected: builtins.bool = False, is_hovered: builtins.bool = False, point_radius: builtins.float = 5.0) -> None:
         r"""
         Draws the constraint's symbol onto the cairo context.
-        """
-    def user_visible(self) -> builtins.bool:
-        r"""
-        Reference user-visibility flag.
         """
     def set_user_visible(self, value: builtins.bool) -> None:
         r"""

@@ -27,6 +27,21 @@ class PointOnLineConstraint:
         Resolved target geometry.
         """
     @property
+    def user_visible(self) -> builtins.bool:
+        r"""
+        Reference user-visibility flag.
+        """
+    @property
+    def shape_id(self) -> typing.Optional[builtins.int]:
+        r"""
+        Reference shape entity id (resolved from the registry).
+        """
+    @shape_id.setter
+    def shape_id(self, value: typing.Optional[builtins.int]) -> None:
+        r"""
+        Reference shape entity id (resolved from the registry).
+        """
+    @property
     def status(self) -> builtins.int:
         r"""
         Reference validation status ordinal.
@@ -36,19 +51,26 @@ class PointOnLineConstraint:
         r"""
         Reference validation status ordinal.
         """
+    @property
+    def point_id(self) -> builtins.int:
+        r"""
+        Point ids the constraint references.
+        Alias for point (reference naming).
+        """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __new__(cls, point: builtins.int, target: PointOnTarget, user_visible: builtins.bool = True) -> PointOnLineConstraint:
         r"""
         Creates the point-on-line/curve constraint.
         """
-    def error(self, registry: registry.EntityRegistry) -> builtins.list[builtins.float]:
+    def error(self, registry: registry.EntityRegistry, _ctx: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
         r"""
         Returns the constraint error at the registry's point
         positions.
         """
-    def referenced_points(self) -> builtins.list[builtins.int]:
+    def referenced_points(self) -> builtins.list[builtins.int]: ...
+    def get_referenced_point_ids(self) -> builtins.set[builtins.int]:
         r"""
-        Point ids the constraint references.
+        Alias for referenced_points (reference naming).
         """
     def to_dict(self) -> dict:
         r"""
@@ -57,10 +79,6 @@ class PointOnLineConstraint:
     def draw(self, ctx: protocols.Canvas, registry: protocols.DrawContext, to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], is_selected: builtins.bool = False, is_hovered: builtins.bool = False, point_radius: builtins.float = 5.0) -> None:
         r"""
         Draws the constraint's symbol onto the cairo context.
-        """
-    def user_visible(self) -> builtins.bool:
-        r"""
-        Reference user-visibility flag.
         """
     def set_user_visible(self, value: builtins.bool) -> None:
         r"""

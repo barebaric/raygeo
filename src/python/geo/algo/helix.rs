@@ -9,6 +9,7 @@ with configurable direction (CW/CCW), pitch, and expansion/reduction.
 
 use crate::geo::algo::helix::{self, HelixDirection as RustHelixDirection};
 use crate::geo::types::Point;
+use crate::python::geo::flex_point::PyPoint2D;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass_enum, gen_stub_pyfunction};
 
@@ -110,7 +111,7 @@ impl PyHelixDirection {
 ))]
 #[allow(clippy::too_many_arguments)]
 fn generate_helix_py(
-    center: (f64, f64),
+    center: PyPoint2D,
     start_radius: f64,
     end_radius: f64,
     z_start: f64,

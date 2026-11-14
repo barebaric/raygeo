@@ -53,7 +53,7 @@ def test_distance_constraint(setup_env):
     # Target is 10, actual is 10. Error should be 10 - 10 = 0.
     c = DistanceConstraint(p1, p2, 10.0)
     assert c.error(reg)[0] == pytest.approx(0.0)
-    assert c.user_visible() is True
+    assert c.user_visible is True
 
     # Target is 5, actual is 10. Error should be 10 - 5 = 5.
     c2 = DistanceConstraint(p1, p2, 5.0)
@@ -66,10 +66,10 @@ def test_distance_constraint_user_visible(setup_env):
     p2 = reg.add_point(10, 0)
 
     c = DistanceConstraint(p1, p2, 10.0, user_visible=False)
-    assert c.user_visible() is False
+    assert c.user_visible is False
 
     c2 = DistanceConstraint(p1, p2, 10.0, user_visible=True)
-    assert c2.user_visible() is True
+    assert c2.user_visible is True
 
 
 def test_distance_constrains_radius_method(setup_env):
@@ -113,11 +113,11 @@ def test_distance_constraint_with_expression(setup_env):
     p2 = reg.add_point(10, 0)
 
     c = DistanceConstraint(p1, p2, 20.0)
-    c.set_expression("width")
+    c.expression = "width"
 
     # Actual dist is 10, target dist is 20. Error is 10 - 20 = -10.
     assert c.error(reg)[0] == pytest.approx(-10.0)
-    assert c.expression() == "width"
+    assert c.expression == "width"
 
 
 def test_distance_constraint_gradient(setup_env):
@@ -150,7 +150,7 @@ def test_distance_constraint_serialization_round_trip(setup_env):
 
     # Check that the restored constraint has the same error
     assert original.error(reg) == restored.error(reg)
-    assert original.user_visible() == restored.user_visible()
+    assert original.user_visible == restored.user_visible
 
 
 def test_distance_constraint_serialization_round_trip_with_expression(
@@ -163,7 +163,7 @@ def test_distance_constraint_serialization_round_trip_with_expression(
     # Create original constraint with expression; the value is
     # pre-resolved from the context ("width" -> 20.0)
     original = DistanceConstraint(p1, p2, 20.0)
-    original.set_expression("width")
+    original.expression = "width"
 
     # Serialize to dict
     serialized = original.to_dict()
@@ -173,7 +173,7 @@ def test_distance_constraint_serialization_round_trip_with_expression(
     handle = reg.add_constraint_json(serialized)
     data = reg.constraint_dict(handle)
     restored = DistanceConstraint(data["p1"], data["p2"], data["value"])
-    restored.set_expression(data.get("expression"))
+    restored.expression = data.get("expression")
 
     # Check that the restored constraint has the same error
     assert original.error(reg) == restored.error(reg)

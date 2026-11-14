@@ -21,6 +21,7 @@ use crate::sketch::entities::Entity;
 pub(crate) fn entity_to_py<'py>(
     py: Python<'py>,
     entity: &dyn Entity,
+    registry: &Bound<'_, PyAny>,
 ) -> PyResult<Bound<'py, PyAny>> {
     use crate::python::sketch::entities::arc::PyArc;
     use crate::python::sketch::entities::bezier::PyBezier;
@@ -43,12 +44,19 @@ pub(crate) fn entity_to_py<'py>(
             py,
             PyLine {
                 inner: line.clone(),
+                registry: Some(registry.clone().unbind()),
             },
         )?;
         return Ok(object.bind(py).clone().into_any());
     }
     if let Some(arc) = any.downcast_ref::<Arc>() {
-        let object = Py::new(py, PyArc { inner: arc.clone() })?;
+        let object = Py::new(
+            py,
+            PyArc {
+                inner: arc.clone(),
+                registry: Some(registry.clone().unbind()),
+            },
+        )?;
         return Ok(object.bind(py).clone().into_any());
     }
     if let Some(circle) = any.downcast_ref::<Circle>() {
@@ -56,6 +64,7 @@ pub(crate) fn entity_to_py<'py>(
             py,
             PyCircle {
                 inner: circle.clone(),
+                registry: Some(registry.clone().unbind()),
             },
         )?;
         return Ok(object.bind(py).clone().into_any());
@@ -65,6 +74,7 @@ pub(crate) fn entity_to_py<'py>(
             py,
             PyEllipse {
                 inner: ellipse.clone(),
+                registry: Some(registry.clone().unbind()),
             },
         )?;
         return Ok(object.bind(py).clone().into_any());
@@ -74,6 +84,7 @@ pub(crate) fn entity_to_py<'py>(
             py,
             PyBezier {
                 inner: bezier.clone(),
+                registry: Some(registry.clone().unbind()),
             },
         )?;
         return Ok(object.bind(py).clone().into_any());
@@ -83,6 +94,7 @@ pub(crate) fn entity_to_py<'py>(
             py,
             PyPolygon {
                 inner: polygon.clone(),
+                registry: Some(registry.clone().unbind()),
             },
         )?;
         return Ok(object.bind(py).clone().into_any());
@@ -92,6 +104,7 @@ pub(crate) fn entity_to_py<'py>(
             py,
             PyTextBox {
                 inner: text_box.clone(),
+                registry: Some(registry.clone().unbind()),
             },
         )?;
         return Ok(object.bind(py).clone().into_any());

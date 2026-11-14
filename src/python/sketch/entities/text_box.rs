@@ -7,6 +7,7 @@ use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::geo::shape::text::FontConfig as CoreFontConfig;
 use crate::python::geo::geometry::Geometry as PyGeometry;
+use crate::python::geo::shape::text::PyFontConfig;
 use crate::python::sketch::constraints::dict_from_value;
 use crate::python::sketch::registry::PyEntityRegistry;
 use crate::sketch::entities::mirror::{MirrorAxis, MirrorDirection};
@@ -18,6 +19,35 @@ use crate::sketch::entities::Entity;
 #[pyclass(module = "raygeo.sketch.entities.text_box", name = "TextBox")]
 pub struct PyTextBox {
     pub inner: CoreTextBox,
+    /// Live back-reference to the owning registry, if any.
+    pub registry: Option<Py<PyAny>>,
+}
+
+impl PyTextBox {
+    /// Reads the current entity state from the owning registry so
+    /// views stay live across edits; falls back to the local snapshot
+    /// when unattached.
+    fn live(&self) -> CoreTextBox {
+        if let Some(registry) = &self.registry {
+            return Python::attach(|py| {
+                if let Ok(reg) =
+                    registry.bind(py).extract::<PyRef<'_, PyEntityRegistry>>()
+                {
+                    if let Some(entity) =
+                        reg.inner.get_entity(self.inner.base.id)
+                    {
+                        if let Some(tb) =
+                            entity.as_any().downcast_ref::<CoreTextBox>()
+                        {
+                            return tb.clone();
+                        }
+                    }
+                }
+                self.inner.clone()
+            });
+        }
+        self.inner.clone()
+    }
 }
 
 #[gen_stub_pymethods]
@@ -43,13 +73,21 @@ impl PyTextBox {
         inner.font_config = CoreFontConfig::new(&font_family, font_size)
             .bold(bold)
             .italic(italic);
-        PyTextBox { inner }
+        PyTextBox {
+            inner,
+            registry: None,
+        }
     }
 
     /// Unique entity id.
     #[getter]
     fn id(&self) -> u64 {
         self.inner.base.id
+    }
+
+    #[setter]
+    fn set_id(&mut self, value: u64) {
+        self.inner.base.id = value;
     }
 
     /// Origin point id.
@@ -71,33 +109,74 @@ impl PyTextBox {
     }
 
     /// The text content.
+    /// The ids of the frame construction lines.
+    /// The fourth frame corner point id, if resolvable.
+    fn get_fourth_corner_id(&self, registry: &PyEntityRegistry) -> Option<u64> {
+        self.inner.get_fourth_corner_id(&registry.inner)
+    }
+
+    #[getter]
+    fn construction_line_ids(&self) -> Vec<u64> {
+        self.inner.construction_line_ids.clone()
+    }
+
     #[getter]
     fn content(&self) -> String {
-        self.inner.content.clone()
+        self.live().content.clone()
+    }
+
+    #[setter]
+    fn set_content(&mut self, value: String) {
+        self.inner.content = value;
+        self.write_back();
     }
 
     /// The font family name.
     #[getter]
     fn font_family(&self) -> String {
-        self.inner.font_config.family.clone()
+        self.live().font_config.family.clone()
     }
 
     /// The font size in points.
     #[getter]
     fn font_size(&self) -> f64 {
-        self.inner.font_config.size
+        self.live().font_config.size
     }
 
     /// Whether the text is bold.
     #[getter]
     fn bold(&self) -> bool {
-        self.inner.font_config.bold
+        self.live().font_config.bold
     }
 
     /// Whether the text is italic.
     #[getter]
     fn italic(&self) -> bool {
-        self.inner.font_config.italic
+        self.live().font_config.italic
+    }
+
+    /// The font configuration as a FontConfig object.
+    #[getter]
+    fn font_config(&self, py: Python<'_>) -> PyFontConfig {
+        let live = self.live();
+        let extra = PyDict::new(py);
+        for (key, value) in &live.font_extra {
+            if let Ok(obj) =
+                crate::python::sketch::constraints::value_to_py(py, value)
+            {
+                let _ = extra.set_item(key.as_str(), obj);
+            }
+        }
+        PyFontConfig {
+            core: live.font_config.clone(),
+            extra: extra.into(),
+        }
+    }
+
+    #[setter]
+    fn set_font_config(&mut self, value: PyRef<'_, PyFontConfig>) {
+        self.inner.font_config = value.core.clone();
+        self.write_back();
     }
 
     /// Whether the entity is construction geometry.
@@ -106,10 +185,22 @@ impl PyTextBox {
         self.inner.base.construction
     }
 
+    #[setter]
+    fn set_construction(&mut self, value: bool) {
+        self.inner.base.construction = value;
+        self.write_back();
+    }
+
     /// Whether the entity is excluded from toolpath output.
     #[getter]
     fn invisible(&self) -> bool {
         self.inner.base.invisible
+    }
+
+    #[setter]
+    fn set_invisible(&mut self, value: bool) {
+        self.inner.base.invisible = value;
+        self.write_back();
     }
 
     /// Whether the entity was created as part of an array copy.
@@ -118,11 +209,30 @@ impl PyTextBox {
         self.inner.base.array_copy
     }
 
+    #[setter]
+    fn set_array_copy(&mut self, value: bool) {
+        self.inner.base.array_copy = value;
+        self.write_back();
+    }
+
     /// Whether the entity is fully constrained, as computed by the
     /// solver.
     #[getter]
     fn constrained(&self) -> bool {
         self.inner.base.constrained
+    }
+
+    #[setter]
+    fn set_constrained(&mut self, value: bool) {
+        self.inner.base.constrained = value;
+        if let Some(registry) = &self.registry {
+            Python::attach(|py| {
+                let _ = registry.bind(py).call_method1(
+                    "set_entity_constrained",
+                    (self.inner.base.id, value),
+                );
+            });
+        }
     }
 
     /// Fill color as (r, g, b, a), or None.
@@ -133,6 +243,12 @@ impl PyTextBox {
 
     /// The entity type name.
     fn type_name(&self) -> &'static str {
+        self.inner.type_name()
+    }
+
+    /// The entity type name (attribute alias).
+    #[getter]
+    fn r#type(&self) -> &'static str {
         self.inner.type_name()
     }
 
@@ -244,7 +360,46 @@ impl PyTextBox {
     /// Sets the fill color; returns whether the entity supports
     /// fills.
     fn set_fill_color(&mut self, color: Option<[f64; 4]>) -> bool {
-        self.inner.set_fill_color(color)
+        let supported = self.inner.set_fill_color(color);
+        self.write_back();
+        supported
+    }
+    /// Persists in-place edits back to the owning registry, if any.
+    fn write_back(&self) {
+        if let Some(registry) = &self.registry {
+            Python::attach(|py| {
+                if let Ok(dict) =
+                    crate::python::sketch::constraints::dict_from_value(
+                        py,
+                        &self.inner.to_json(),
+                    )
+                {
+                    let _ = registry.bind(py).call_method1(
+                        "replace_entity_from_dict",
+                        (self.inner.base.id, dict),
+                    );
+                }
+            });
+        }
+    }
+    /// Entities compare equal by id (raygeo hands out fresh views).
+    fn __eq__(&self, other: &Bound<'_, PyAny>) -> bool {
+        if let Ok(e) = other.extract::<PyRef<'_, PyTextBox>>() {
+            return self.inner.base.id == e.inner.base.id;
+        }
+        false
+    }
+
+    fn __hash__(&self) -> u64 {
+        self.inner.base.id
+    }
+    /// Point ids that act as drag anchors for the given point.
+    fn get_drag_anchor_points(&self, point_id: u64) -> Vec<u64> {
+        self.inner.get_drag_anchor_points(point_id)
+    }
+    /// All four frame corner point ids.
+    fn get_all_frame_point_ids(&self, registry: &PyEntityRegistry) -> Vec<u64> {
+        self.inner.get_all_frame_point_ids(&registry.inner)
     }
 }
 

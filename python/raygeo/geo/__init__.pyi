@@ -692,7 +692,7 @@ class Geometry:
         :returns: Tuple of ``(inner_contours, outer_contours)``, each a list of Geometry.
         :complexity: O(n log n) average time, O(n) space
         """
-    def map_to_frame(self, origin: tuple[builtins.float, builtins.float], p_width: tuple[builtins.float, builtins.float], p_height: tuple[builtins.float, builtins.float], anchor_y: typing.Optional[builtins.float] = None, stable_src_height: typing.Optional[builtins.float] = None, anchor_x: typing.Optional[builtins.float] = None, stable_src_width: typing.Optional[builtins.float] = None) -> Geometry:
+    def map_to_frame(self, origin: builtins.tuple[float, float], p_width: builtins.tuple[float, float], p_height: builtins.tuple[float, float], anchor_y: typing.Optional[builtins.float] = None, stable_src_height: typing.Optional[builtins.float] = None, anchor_x: typing.Optional[builtins.float] = None, stable_src_width: typing.Optional[builtins.float] = None) -> Geometry:
         r"""
         Map the geometry into a rectangular frame.
         

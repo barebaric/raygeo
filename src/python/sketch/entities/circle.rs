@@ -17,6 +17,8 @@ use crate::sketch::entities::Entity;
 #[pyclass(module = "raygeo.sketch.entities.circle", name = "Circle")]
 pub struct PyCircle {
     pub inner: CoreCircle,
+    /// Live back-reference to the owning registry, if any.
+    pub registry: Option<Py<PyAny>>,
 }
 
 #[gen_stub_pymethods]
@@ -28,6 +30,7 @@ impl PyCircle {
     fn new(center: u64, radius_point: u64, construction: bool) -> Self {
         PyCircle {
             inner: CoreCircle::new(0, center, radius_point, construction),
+            registry: None,
         }
     }
 
@@ -35,6 +38,11 @@ impl PyCircle {
     #[getter]
     fn id(&self) -> u64 {
         self.inner.base.id
+    }
+
+    #[setter]
+    fn set_id(&mut self, value: u64) {
+        self.inner.base.id = value;
     }
 
     /// Center point id.
@@ -55,10 +63,22 @@ impl PyCircle {
         self.inner.base.construction
     }
 
+    #[setter]
+    fn set_construction(&mut self, value: bool) {
+        self.inner.base.construction = value;
+        self.write_back();
+    }
+
     /// Whether the entity is excluded from toolpath output.
     #[getter]
     fn invisible(&self) -> bool {
         self.inner.base.invisible
+    }
+
+    #[setter]
+    fn set_invisible(&mut self, value: bool) {
+        self.inner.base.invisible = value;
+        self.write_back();
     }
 
     /// Whether the entity was created as part of an array copy.
@@ -67,11 +87,30 @@ impl PyCircle {
         self.inner.base.array_copy
     }
 
+    #[setter]
+    fn set_array_copy(&mut self, value: bool) {
+        self.inner.base.array_copy = value;
+        self.write_back();
+    }
+
     /// Whether the entity is fully constrained, as computed by the
     /// solver.
     #[getter]
     fn constrained(&self) -> bool {
         self.inner.base.constrained
+    }
+
+    #[setter]
+    fn set_constrained(&mut self, value: bool) {
+        self.inner.base.constrained = value;
+        if let Some(registry) = &self.registry {
+            Python::attach(|py| {
+                let _ = registry.bind(py).call_method1(
+                    "set_entity_constrained",
+                    (self.inner.base.id, value),
+                );
+            });
+        }
     }
 
     /// Fill color as (r, g, b, a), or None.
@@ -82,6 +121,12 @@ impl PyCircle {
 
     /// The entity type name.
     fn type_name(&self) -> &'static str {
+        self.inner.type_name()
+    }
+
+    /// The entity type name (attribute alias).
+    #[getter]
+    fn r#type(&self) -> &'static str {
         self.inner.type_name()
     }
 
@@ -193,7 +238,42 @@ impl PyCircle {
     /// Sets the fill color; returns whether the entity supports
     /// fills.
     fn set_fill_color(&mut self, color: Option<[f64; 4]>) -> bool {
-        self.inner.set_fill_color(color)
+        let supported = self.inner.set_fill_color(color);
+        self.write_back();
+        supported
+    }
+    /// Persists in-place edits back to the owning registry, if any.
+    fn write_back(&self) {
+        if let Some(registry) = &self.registry {
+            Python::attach(|py| {
+                if let Ok(dict) =
+                    crate::python::sketch::constraints::dict_from_value(
+                        py,
+                        &self.inner.to_json(),
+                    )
+                {
+                    let _ = registry.bind(py).call_method1(
+                        "replace_entity_from_dict",
+                        (self.inner.base.id, dict),
+                    );
+                }
+            });
+        }
+    }
+    /// Entities compare equal by id (raygeo hands out fresh views).
+    fn __eq__(&self, other: &Bound<'_, PyAny>) -> bool {
+        if let Ok(e) = other.extract::<PyRef<'_, PyCircle>>() {
+            return self.inner.base.id == e.inner.base.id;
+        }
+        false
+    }
+
+    fn __hash__(&self) -> u64 {
+        self.inner.base.id
+    }
+    /// Point ids that act as drag anchors for the given point.
+    fn get_drag_anchor_points(&self, point_id: u64) -> Vec<u64> {
+        self.inner.get_drag_anchor_points(point_id)
     }
 }
 

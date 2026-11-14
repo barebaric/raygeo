@@ -18,6 +18,7 @@ use crate::geo::shape::circle::{
     project_point_onto_circle,
 };
 use crate::geo::types::{Point, Polygon, Rect};
+use crate::python::geo::flex_point::PyPoint2D;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
@@ -69,9 +70,9 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 )]
 #[pyfunction(name = "get_circle_circle_intersections")]
 fn get_circle_circle_intersections_py(
-    c1: (f64, f64),
+    c1: PyPoint2D,
     r1: f64,
-    c2: (f64, f64),
+    c2: PyPoint2D,
     r2: f64,
 ) -> Vec<(f64, f64)> {
     points_to_tuples(get_circle_circle_intersections(
@@ -106,9 +107,9 @@ fn get_circle_circle_intersections_py(
 )]
 #[pyfunction(name = "get_line_circle_intersections")]
 fn get_line_circle_intersections_py(
-    p1: (f64, f64),
-    p2: (f64, f64),
-    center: (f64, f64),
+    p1: PyPoint2D,
+    p2: PyPoint2D,
+    center: PyPoint2D,
     radius: f64,
 ) -> Vec<(f64, f64)> {
     points_to_tuples(get_line_circle_intersections(
@@ -141,7 +142,7 @@ fn get_line_circle_intersections_py(
 )]
 #[pyfunction(name = "is_circle_inside_rect")]
 fn is_circle_inside_rect_py(
-    center: (f64, f64),
+    center: PyPoint2D,
     radius: f64,
     rect: (f64, f64, f64, f64),
 ) -> bool {
@@ -174,7 +175,7 @@ fn is_circle_inside_rect_py(
 )]
 #[pyfunction(name = "does_circle_intersect_rect")]
 fn does_circle_intersect_rect_py(
-    center: (f64, f64),
+    center: PyPoint2D,
     radius: f64,
     rect: (f64, f64, f64, f64),
 ) -> bool {
@@ -209,9 +210,9 @@ fn does_circle_intersect_rect_py(
 )]
 #[pyfunction(name = "line_segment_intersects_circle")]
 fn line_segment_intersects_circle_py(
-    p1: (f64, f64),
-    p2: (f64, f64),
-    circle_center: (f64, f64),
+    p1: PyPoint2D,
+    p2: PyPoint2D,
+    circle_center: PyPoint2D,
     circle_radius: f64,
 ) -> bool {
     line_segment_intersects_circle(
@@ -245,8 +246,8 @@ fn line_segment_intersects_circle_py(
 )]
 #[pyfunction(name = "project_point_onto_circle")]
 fn project_point_onto_circle_py(
-    point: (f64, f64),
-    center: (f64, f64),
+    point: PyPoint2D,
+    center: PyPoint2D,
     radius: f64,
 ) -> Option<(f64, f64)> {
     option_point_to_tuple(project_point_onto_circle(
@@ -280,9 +281,9 @@ fn project_point_onto_circle_py(
 )]
 #[pyfunction(name = "find_tangent_circle_centers")]
 fn find_tangent_circle_centers_py(
-    pass_through: (f64, f64),
-    seg_a: (f64, f64),
-    seg_b: (f64, f64),
+    pass_through: PyPoint2D,
+    seg_a: PyPoint2D,
+    seg_b: PyPoint2D,
     radius: f64,
 ) -> Vec<((f64, f64), (f64, f64))> {
     find_tangent_circle_centers(
@@ -328,7 +329,7 @@ fn find_tangent_circle_centers_py(
 #[pyfunction(name = "nearest_tangent_circle_on_polyline")]
 #[allow(clippy::type_complexity)]
 fn nearest_tangent_circle_on_polyline_py(
-    point: (f64, f64),
+    point: PyPoint2D,
     polyline: Vec<(f64, f64)>,
     radius: f64,
     from_end: bool,
@@ -374,8 +375,8 @@ fn nearest_tangent_circle_on_polyline_py(
 )]
 #[pyfunction(name = "get_circle_signed_distance")]
 fn get_circle_signed_distance_py(
-    point: (f64, f64),
-    center: (f64, f64),
+    point: PyPoint2D,
+    center: PyPoint2D,
     radius: f64,
 ) -> f64 {
     get_circle_signed_distance(

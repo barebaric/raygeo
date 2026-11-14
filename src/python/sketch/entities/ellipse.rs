@@ -17,6 +17,8 @@ use crate::sketch::entities::Entity;
 #[pyclass(module = "raygeo.sketch.entities.ellipse", name = "Ellipse")]
 pub struct PyEllipse {
     pub inner: CoreEllipse,
+    /// Live back-reference to the owning registry, if any.
+    pub registry: Option<Py<PyAny>>,
 }
 
 #[gen_stub_pymethods]
@@ -40,6 +42,7 @@ impl PyEllipse {
                 radius_y_point,
                 construction,
             ),
+            registry: None,
         }
     }
 
@@ -49,13 +52,42 @@ impl PyEllipse {
         self.inner.base.id
     }
 
+    #[setter]
+    fn set_id(&mut self, value: u64) {
+        self.inner.base.id = value;
+    }
+
     /// Center point id.
     #[getter]
     fn center_idx(&self) -> u64 {
         self.inner.center
     }
 
+    /// Helper construction line ids.
+    #[getter]
+    fn helper_line_ids(&self) -> Vec<u64> {
+        self.inner.helper_line_ids.clone()
+    }
+
+    #[setter]
+    fn set_helper_line_ids(&mut self, value: Vec<u64>) {
+        self.inner.helper_line_ids = value;
+        self.write_back();
+    }
+
     /// X-radius point id.
+    /// Alias for radius_x_point_idx.
+    #[getter]
+    fn radius_x_pt_idx(&self) -> u64 {
+        self.inner.radius_x_point
+    }
+
+    /// Alias for radius_y_point_idx.
+    #[getter]
+    fn radius_y_pt_idx(&self) -> u64 {
+        self.inner.radius_y_point
+    }
+
     #[getter]
     fn radius_x_point_idx(&self) -> u64 {
         self.inner.radius_x_point
@@ -73,10 +105,22 @@ impl PyEllipse {
         self.inner.base.construction
     }
 
+    #[setter]
+    fn set_construction(&mut self, value: bool) {
+        self.inner.base.construction = value;
+        self.write_back();
+    }
+
     /// Whether the entity is excluded from toolpath output.
     #[getter]
     fn invisible(&self) -> bool {
         self.inner.base.invisible
+    }
+
+    #[setter]
+    fn set_invisible(&mut self, value: bool) {
+        self.inner.base.invisible = value;
+        self.write_back();
     }
 
     /// Whether the entity was created as part of an array copy.
@@ -85,11 +129,30 @@ impl PyEllipse {
         self.inner.base.array_copy
     }
 
+    #[setter]
+    fn set_array_copy(&mut self, value: bool) {
+        self.inner.base.array_copy = value;
+        self.write_back();
+    }
+
     /// Whether the entity is fully constrained, as computed by the
     /// solver.
     #[getter]
     fn constrained(&self) -> bool {
         self.inner.base.constrained
+    }
+
+    #[setter]
+    fn set_constrained(&mut self, value: bool) {
+        self.inner.base.constrained = value;
+        if let Some(registry) = &self.registry {
+            Python::attach(|py| {
+                let _ = registry.bind(py).call_method1(
+                    "set_entity_constrained",
+                    (self.inner.base.id, value),
+                );
+            });
+        }
     }
 
     /// Fill color as (r, g, b, a), or None.
@@ -100,6 +163,12 @@ impl PyEllipse {
 
     /// The entity type name.
     fn type_name(&self) -> &'static str {
+        self.inner.type_name()
+    }
+
+    /// The entity type name (attribute alias).
+    #[getter]
+    fn r#type(&self) -> &'static str {
         self.inner.type_name()
     }
 
@@ -211,7 +280,46 @@ impl PyEllipse {
     /// Sets the fill color; returns whether the entity supports
     /// fills.
     fn set_fill_color(&mut self, color: Option<[f64; 4]>) -> bool {
-        self.inner.set_fill_color(color)
+        let supported = self.inner.set_fill_color(color);
+        self.write_back();
+        supported
+    }
+    /// Persists in-place edits back to the owning registry, if any.
+    fn write_back(&self) {
+        if let Some(registry) = &self.registry {
+            Python::attach(|py| {
+                if let Ok(dict) =
+                    crate::python::sketch::constraints::dict_from_value(
+                        py,
+                        &self.inner.to_json(),
+                    )
+                {
+                    let _ = registry.bind(py).call_method1(
+                        "replace_entity_from_dict",
+                        (self.inner.base.id, dict),
+                    );
+                }
+            });
+        }
+    }
+    /// Entities compare equal by id (raygeo hands out fresh views).
+    fn __eq__(&self, other: &Bound<'_, PyAny>) -> bool {
+        if let Ok(e) = other.extract::<PyRef<'_, PyEllipse>>() {
+            return self.inner.base.id == e.inner.base.id;
+        }
+        false
+    }
+
+    fn __hash__(&self) -> u64 {
+        self.inner.base.id
+    }
+    /// The ellipse's two radii in model units.
+    fn _get_radii(&self, registry: &PyEntityRegistry) -> (f64, f64) {
+        self.inner.radii(&registry.inner)
+    }
+    /// Point ids that act as drag anchors for the given point.
+    fn get_drag_anchor_points(&self, point_id: u64) -> Vec<u64> {
+        self.inner.get_drag_anchor_points(point_id)
     }
 }
 

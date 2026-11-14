@@ -60,7 +60,7 @@ class MedialAxis:
         :param sampling_spacing: Spacing between sampling points in mm.
         :returns: ``MedialAxis`` object.
         """
-    def path_between(self, from_pt: tuple[builtins.float, builtins.float], to_pt: tuple[builtins.float, builtins.float]) -> typing.Optional[builtins.list[tuple[builtins.float, builtins.float]]]:
+    def path_between(self, from_pt: builtins.tuple[float, float], to_pt: builtins.tuple[float, float]) -> typing.Optional[builtins.list[tuple[builtins.float, builtins.float]]]:
         r"""
         Find a path between two points along the medial axis skeleton.
         

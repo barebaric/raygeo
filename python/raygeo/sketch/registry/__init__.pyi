@@ -63,6 +63,12 @@ class EntityRegistry:
         r"""
         Deserializes the model from a reference registry dictionary.
         """
+    def load_from_dict(self, dict: dict) -> None:
+        r"""
+        Replaces the model in place from a reference registry
+        dictionary, keeping this registry object (and any views bound
+        to it) valid.
+        """
     def to_dict(self) -> dict:
         r"""
         Serializes the model to a reference registry dictionary.
@@ -71,9 +77,13 @@ class EntityRegistry:
         r"""
         Adds a point and returns its id.
         """
-    def add_points(self, points: typing.Sequence[tuple[builtins.int, builtins.float, builtins.float, builtins.bool]]) -> None:
+    def add_points(self, points: typing.Any) -> None:
         r"""
         Appends pre-built points given as ``(id, x, y, fixed)`` tuples.
+        """
+    def set_points(self, points: typing.Any) -> None:
+        r"""
+        Replaces the point list with ``(id, x, y, fixed)`` tuples.
         """
     def remove_points(self, point_ids: typing.Sequence[builtins.int]) -> None:
         r"""
@@ -130,6 +140,10 @@ class EntityRegistry:
     def set_point_constrained(self, id: builtins.int, constrained: builtins.bool) -> builtins.bool:
         r"""
         Sets a point's solver-constrained flag.
+        """
+    def set_entity_constrained(self, id: builtins.int, constrained: builtins.bool) -> builtins.bool:
+        r"""
+        Sets an entity's solver-constrained flag.
         """
     def set_point_position(self, id: builtins.int, x: builtins.float, y: builtins.float) -> builtins.bool:
         r"""
@@ -231,9 +245,13 @@ class EntityRegistry:
         r"""
         Waypoint type string of a point ("sharp"/"smooth"/"symmetric").
         """
-    def get_point(self, id: builtins.int) -> typing.Optional[tuple[builtins.float, builtins.float]]:
+    def get_point(self, id: builtins.int) -> typing.Optional[point.SketchPoint]:
         r"""
         Coordinates of a point as ``(x, y)``, or ``None``.
+        """
+    def get_point_object(self, id: builtins.int) -> typing.Optional[point.SketchPoint]:
+        r"""
+        The point object for an id (with id/coords/flags), or None.
         """
     def point_is_fixed(self, id: builtins.int) -> builtins.bool:
         r"""
@@ -259,10 +277,12 @@ class EntityRegistry:
         r"""
         Points that move rigidly with `point_id`.
         """
-    def drag_anchor_points(self, point_id: builtins.int) -> builtins.list[builtins.int]:
+    def get_drag_anchor_points(self, point_id: builtins.int) -> builtins.list[builtins.int]:
         r"""
         Points pinned while `point_id` is dragged.
+        Alias for drag_anchor_points (reference naming).
         """
+    def drag_anchor_points(self, point_id: builtins.int) -> builtins.list[builtins.int]: ...
     def ignorable_unconstrained_points(self, id: builtins.int) -> builtins.list[builtins.int]:
         r"""
         Points that can stay unconstrained when the entity is
@@ -312,10 +332,12 @@ class EntityRegistry:
         r"""
         Solver-relevant state snapshot of an entity, or ``None``.
         """
-    def set_state(self, id: builtins.int, state: dict) -> None:
+    def replace_entity_from_dict(self, id: builtins.int, data: dict) -> builtins.bool:
         r"""
         Restores an entity's state snapshot.
+        Replaces an entity in place from its dictionary form.
         """
+    def set_state(self, id: builtins.int, state: dict) -> None: ...
     def to_geometry(self, id: builtins.int) -> geo.Geometry:
         r"""
         The entity as a raygeo Geometry object.
@@ -356,10 +378,12 @@ class EntityRegistry:
         r"""
         All entities as their concrete classes.
         """
-    def get_entity_object(self, id: builtins.int) -> typing.Optional[typing.Union[line.Line, arc.Arc, circle.Circle, ellipse.Ellipse, bezier.Bezier, polygon.Polygon, text_box.TextBox]]:
+    def get_entity(self, id: builtins.int) -> typing.Optional[typing.Union[line.Line, arc.Arc, circle.Circle, ellipse.Ellipse, bezier.Bezier, polygon.Polygon, text_box.TextBox]]:
         r"""
         The entity object for an id, or None.
+        Alias for get_entity_object (reference naming).
         """
+    def get_entity_object(self, id: builtins.int) -> typing.Optional[typing.Union[line.Line, arc.Arc, circle.Circle, ellipse.Ellipse, bezier.Bezier, polygon.Polygon, text_box.TextBox]]: ...
     def add_entity(self, obj: typing.Any) -> builtins.int:
         r"""
         Adds an entity object to the registry and returns its id.

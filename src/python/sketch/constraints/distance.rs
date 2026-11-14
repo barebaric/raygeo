@@ -29,6 +29,7 @@ pub struct PyDistanceConstraint {
     #[pyo3(get)]
     pub value: f64,
     /// Reference user-visibility flag.
+    #[pyo3(get)]
     pub user_visible: bool,
     /// Reference validation status ordinal.
     #[pyo3(get, set)]
@@ -49,14 +50,19 @@ impl PyDistanceConstraint {
             p2,
             value,
             user_visible,
-            status: 0,
+            status: 1,
             expression: None,
         }
     }
 
     /// Returns the constraint error at the registry's point
     /// positions.
-    fn error(&self, registry: &PyEntityRegistry) -> Vec<f64> {
+    #[pyo3(signature = (registry, _ctx = None))]
+    fn error(
+        &self,
+        registry: &PyEntityRegistry,
+        _ctx: Option<Py<PyAny>>,
+    ) -> Vec<f64> {
         self.clone().into_constraint().error(&registry.inner)
     }
 
@@ -65,7 +71,12 @@ impl PyDistanceConstraint {
         self.clone().into_constraint().referenced_points()
     }
 
-    /// Sets the resolved distance value.
+    /// Alias for referenced_points (reference naming).
+    fn get_referenced_point_ids(&self) -> std::collections::HashSet<u64> {
+        self.referenced_points().into_iter().collect()
+    }
+
+    /// Sets the resolved dimensional value.
     fn set_value(&mut self, value: f64) {
         self.value = value;
     }
@@ -100,22 +111,19 @@ impl PyDistanceConstraint {
         )
     }
 
-    /// Reference user-visibility flag.
-    fn user_visible(&self) -> bool {
-        self.user_visible
-    }
-
     /// Sets the reference user-visibility flag.
     fn set_user_visible(&mut self, value: bool) {
         self.user_visible = value;
     }
 
     /// The stored expression string, if any (evaluated caller-side).
+    #[getter]
     fn expression(&self) -> Option<String> {
         self.expression.clone()
     }
 
     /// Sets the expression string (evaluated caller-side).
+    #[setter]
     fn set_expression(&mut self, expression: Option<String>) {
         self.expression = expression;
     }
@@ -182,7 +190,7 @@ impl PyDistanceConstraint {
             p2: core.p2,
             value: core.value,
             user_visible: core.user_visible,
-            status: 0,
+            status: 1,
             expression: core.expression,
         }
     }

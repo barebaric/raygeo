@@ -1,5 +1,8 @@
 //! Python bindings for the sketch data model.
 
+use std::collections::HashMap;
+use std::sync::Mutex;
+
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
@@ -20,7 +23,22 @@ use crate::sketch::registry::EntityRegistry;
 use crate::sketch::registry::FontConfig;
 
 /// Converts a Python dictionary to a serde_json value.
-fn value_from_dict(dict: &Bound<'_, PyDict>) -> PyResult<Value> {
+fn extract_sketch_point(obj: &Bound<'_, PyAny>) -> PyResult<SketchPoint> {
+    if let Ok(p) = obj.extract::<PyRef<'_, PySketchPoint>>() {
+        return Ok(p.inner.clone());
+    }
+    let (id, x, y, fixed): (u64, f64, f64, bool) = obj.extract()?;
+    Ok(SketchPoint {
+        id,
+        x,
+        y,
+        fixed,
+        waypoint_type: WaypointType::Sharp,
+        constrained: false,
+    })
+}
+
+pub(crate) fn value_from_dict(dict: &Bound<'_, PyDict>) -> PyResult<Value> {
     let mut map = serde_json::Map::new();
     for (key, value) in dict.iter() {
         let key: String = key.extract()?;
@@ -131,6 +149,16 @@ impl PyEntityRegistry {
             .ok_or_else(|| PyValueError::new_err("invalid registry dict"))
     }
 
+    /// Replaces the model in place from a reference registry
+    /// dictionary, keeping this registry object (and any views bound
+    /// to it) valid.
+    fn load_from_dict(&mut self, dict: &Bound<'_, PyDict>) -> PyResult<()> {
+        let value = value_from_dict(dict)?;
+        self.inner = EntityRegistry::from_json(&value)
+            .ok_or_else(|| PyValueError::new_err("invalid registry dict"))?;
+        Ok(())
+    }
+
     /// Serializes the model to a reference registry dictionary.
     fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let value = self.inner.to_json();
@@ -153,20 +181,23 @@ impl PyEntityRegistry {
     }
 
     /// Appends pre-built points given as ``(id, x, y, fixed)`` tuples.
-    fn add_points(&mut self, points: Vec<(u64, f64, f64, bool)>) {
-        self.inner.add_points(
-            points
-                .into_iter()
-                .map(|(id, x, y, fixed)| SketchPoint {
-                    id,
-                    x,
-                    y,
-                    fixed,
-                    waypoint_type: WaypointType::Sharp,
-                    constrained: false,
-                })
-                .collect(),
-        );
+    fn add_points(&mut self, points: &Bound<'_, PyAny>) -> PyResult<()> {
+        let mut collected = Vec::new();
+        for item in points.try_iter()? {
+            collected.push(extract_sketch_point(&item?)?);
+        }
+        self.inner.add_points(collected);
+        Ok(())
+    }
+
+    /// Replaces the point list with ``(id, x, y, fixed)`` tuples.
+    fn set_points(&mut self, points: &Bound<'_, PyAny>) -> PyResult<()> {
+        let mut collected = Vec::new();
+        for item in points.try_iter()? {
+            collected.push(extract_sketch_point(&item?)?);
+        }
+        self.inner.set_points(collected);
+        Ok(())
     }
 
     /// Removes the given points.
@@ -325,6 +356,17 @@ impl PyEntityRegistry {
         self.inner.set_point_constrained(id, constrained)
     }
 
+    /// Sets an entity's solver-constrained flag.
+    fn set_entity_constrained(&mut self, id: u64, constrained: bool) -> bool {
+        match self.inner.get_entity_mut(id) {
+            Some(entity) => {
+                entity.base_mut().constrained = constrained;
+                true
+            }
+            None => false,
+        }
+    }
+
     /// Sets a point's coordinates.
     fn set_point_position(&mut self, id: u64, x: f64, y: f64) -> bool {
         self.inner.set_point_position(id, x, y)
@@ -463,14 +505,14 @@ impl PyEntityRegistry {
         &self,
         py: Python<'py>,
     ) -> PyResult<Vec<AnyConstraint<'py>>> {
-        self.inner
-            .all_constraints()
-            .iter()
-            .map(|entry| {
-                constraint_to_py(py, entry.constraint.as_ref())
-                    .map(AnyConstraint)
-            })
-            .collect()
+        let count = self.inner.constraint_count() as u64;
+        let mut result = Vec::with_capacity(count as usize);
+        for index in 0..count {
+            if let Some(object) = self.get_constraint_object(py, index)? {
+                result.push(object);
+            }
+        }
+        Ok(result)
     }
 
     /// The constraint object for a handle, or None.
@@ -480,8 +522,34 @@ impl PyEntityRegistry {
         index: u64,
     ) -> PyResult<Option<AnyConstraint<'py>>> {
         match self.inner.get_constraint(index) {
-            Some(constraint) => constraint_to_py(py, constraint)
-                .map(|object| Some(AnyConstraint(object))),
+            Some(constraint) => {
+                let object = constraint_to_py(py, constraint)?;
+                if let Some(dict) = self.inner.constraint_dict(index) {
+                    if let Some(ids) =
+                        dict.get("entity_ids").and_then(|v| v.as_array())
+                    {
+                        let ids: Vec<u64> =
+                            ids.iter().filter_map(|v| v.as_u64()).collect();
+                        let _ = object.setattr("entity_ids", ids);
+                    }
+                    if let Some(sid) =
+                        dict.get("shape_id").and_then(|v| v.as_u64())
+                    {
+                        let _ = object.setattr("shape_id", sid);
+                    }
+                    if let Some(expr) =
+                        dict.get("expression").and_then(|v| v.as_str())
+                    {
+                        let _ = object.setattr("expression", expr);
+                    }
+                    if let Some(uv) =
+                        dict.get("user_visible").and_then(|v| v.as_bool())
+                    {
+                        let _ = object.call_method1("set_user_visible", (uv,));
+                    }
+                }
+                Ok(Some(AnyConstraint(object)))
+            }
             None => Ok(None),
         }
     }
@@ -521,8 +589,22 @@ impl PyEntityRegistry {
     }
 
     /// Coordinates of a point as ``(x, y)``, or ``None``.
-    fn get_point(&self, id: u64) -> Option<(f64, f64)> {
-        self.inner.point_position(id)
+    fn get_point(slf: &Bound<'_, Self>, id: u64) -> Option<PySketchPoint> {
+        let reg = slf.borrow();
+        reg.inner
+            .get_point(id)
+            .map(|point| PySketchPoint::live(point, slf.as_any()))
+    }
+
+    /// The point object for an id (with id/coords/flags), or None.
+    fn get_point_object(
+        slf: &Bound<'_, Self>,
+        id: u64,
+    ) -> Option<PySketchPoint> {
+        let reg = slf.borrow();
+        reg.inner
+            .get_point(id)
+            .map(|point| PySketchPoint::live(point, slf.as_any()))
     }
 
     /// Whether a point carries the fixed flag.
@@ -568,6 +650,11 @@ impl PyEntityRegistry {
     }
 
     /// Points pinned while `point_id` is dragged.
+    /// Alias for drag_anchor_points (reference naming).
+    fn get_drag_anchor_points(&self, point_id: u64) -> Vec<u64> {
+        self.drag_anchor_points(point_id)
+    }
+
     fn drag_anchor_points(&self, point_id: u64) -> Vec<u64> {
         self.inner.get_drag_anchor_points(point_id)
     }
@@ -687,6 +774,16 @@ impl PyEntityRegistry {
     }
 
     /// Restores an entity's state snapshot.
+    /// Replaces an entity in place from its dictionary form.
+    fn replace_entity_from_dict(
+        &mut self,
+        id: u64,
+        data: &Bound<'_, PyDict>,
+    ) -> PyResult<bool> {
+        let value = value_from_dict(data)?;
+        Ok(self.inner.replace_entity_from_json(id, &value))
+    }
+
     fn set_state(
         &mut self,
         id: u64,
@@ -791,35 +888,49 @@ impl PyEntityRegistry {
     }
 
     /// All sketch points, in id order.
-    fn points(&self) -> Vec<PySketchPoint> {
-        self.inner
+    fn points(slf: &Bound<'_, Self>) -> Vec<PySketchPoint> {
+        let reg = slf.borrow();
+        reg.inner
             .all_points()
             .iter()
-            .map(|point| PySketchPoint {
-                inner: point.clone(),
-            })
+            .map(|point| PySketchPoint::live(point.clone(), slf.as_any()))
             .collect()
     }
 
     /// All entities as their concrete classes.
-    fn entities<'py>(&self, py: Python<'py>) -> PyResult<Vec<AnyEntity<'py>>> {
-        self.inner
+    fn entities<'py>(
+        slf: &Bound<'_, Self>,
+        py: Python<'py>,
+    ) -> PyResult<Vec<AnyEntity<'py>>> {
+        let reg = slf.borrow();
+        reg.inner
             .all_entities()
             .iter()
-            .map(|entity| entity_to_py(py, entity.as_ref()).map(AnyEntity))
+            .map(|entity| {
+                entity_to_py(py, entity.as_ref(), slf.as_any()).map(AnyEntity)
+            })
             .collect()
     }
 
     /// The entity object for an id, or None.
-    fn get_entity_object<'py>(
-        &self,
+    /// Alias for get_entity_object (reference naming).
+    fn get_entity<'py>(
+        slf: &Bound<'_, Self>,
         py: Python<'py>,
         id: u64,
     ) -> PyResult<Option<AnyEntity<'py>>> {
-        match self.inner.get_entity(id) {
-            Some(entity) => {
-                entity_to_py(py, entity).map(|object| Some(AnyEntity(object)))
-            }
+        Self::get_entity_object(slf, py, id)
+    }
+
+    fn get_entity_object<'py>(
+        slf: &Bound<'_, Self>,
+        py: Python<'py>,
+        id: u64,
+    ) -> PyResult<Option<AnyEntity<'py>>> {
+        let reg = slf.borrow();
+        match reg.inner.get_entity(id) {
+            Some(entity) => entity_to_py(py, entity, slf.as_any())
+                .map(|object| Some(AnyEntity(object))),
             None => Ok(None),
         }
     }
@@ -827,7 +938,9 @@ impl PyEntityRegistry {
     /// Adds an entity object to the registry and returns its id.
     fn add_entity(&mut self, obj: &Bound<'_, PyAny>) -> PyResult<u64> {
         let entity = extract_entity(obj)?;
-        Ok(self.inner.add_entity_object(entity))
+        let id = self.inner.add_entity_object(entity);
+        let _ = obj.setattr("id", id);
+        Ok(id)
     }
 
     /// Serializes the entity to a reference entity dictionary.

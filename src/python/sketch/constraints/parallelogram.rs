@@ -1,9 +1,11 @@
 //! Bindings for the parallelogram constraint.
 
 use pyo3::prelude::*;
+use pyo3::types::PyDict;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::python::sketch::protocols::{Canvas, DrawContext, ScreenMap};
+use crate::python::sketch::registry::PyEntityRegistry;
 use crate::sketch::constraint::SketchConstraint;
 use crate::sketch::constraints::parallelogram::ParallelogramConstraint as CoreConstraint;
 
@@ -29,6 +31,9 @@ pub struct PyParallelogramConstraint {
     /// Fourth corner.
     #[pyo3(get)]
     pub p4: u64,
+    /// Reference user-visibility flag.
+    #[pyo3(get)]
+    pub user_visible: bool,
     /// Reference validation status ordinal.
     #[pyo3(get, set)]
     pub status: u8,
@@ -39,20 +44,52 @@ pub struct PyParallelogramConstraint {
 impl PyParallelogramConstraint {
     /// Creates the constraint from its resolved points and values.
     #[new]
-    #[pyo3(signature = (p_origin, p_width, p_height, p4))]
-    fn new(p_origin: u64, p_width: u64, p_height: u64, p4: u64) -> Self {
+    #[pyo3(signature = (p_origin, p_width, p_height, p4, user_visible = true))]
+    fn new(
+        p_origin: u64,
+        p_width: u64,
+        p_height: u64,
+        p4: u64,
+        user_visible: bool,
+    ) -> Self {
         PyParallelogramConstraint {
             p_origin,
             p_width,
             p_height,
             p4,
-            status: 0,
+            user_visible,
+            status: 1,
         }
+    }
+
+    /// Sets the reference user-visibility flag.
+    fn set_user_visible(&mut self, value: bool) {
+        self.user_visible = value;
     }
 
     /// Point ids the constraint references.
     fn referenced_points(&self) -> Vec<u64> {
         self.clone().into_constraint().referenced_points()
+    }
+
+    /// Alias for referenced_points (reference naming).
+    fn get_referenced_point_ids(&self) -> std::collections::HashSet<u64> {
+        self.referenced_points().into_iter().collect()
+    }
+
+    /// Returns the constraint error at the registry's point positions.
+    #[pyo3(signature = (registry, _ctx = None))]
+    fn error(
+        &self,
+        registry: &PyEntityRegistry,
+        _ctx: Option<Py<PyAny>>,
+    ) -> Vec<f64> {
+        self.clone().into_constraint().error(&registry.inner)
+    }
+
+    /// Serializes to the reference constraint dictionary shape.
+    fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
+        super::dict_from_value(py, &self.clone().into_constraint().to_json())
     }
 
     /// Draws the constraint's symbol onto the cairo context.
@@ -83,16 +120,24 @@ impl PyParallelogramConstraint {
 
 impl PyParallelogramConstraint {
     pub(crate) fn into_constraint(self) -> CoreConstraint {
-        CoreConstraint::new(self.p_origin, self.p_width, self.p_height, self.p4)
+        let mut core = CoreConstraint::new(
+            self.p_origin,
+            self.p_width,
+            self.p_height,
+            self.p4,
+        );
+        core.user_visible = self.user_visible;
+        core
     }
 
     pub(crate) fn from_core(core: CoreConstraint) -> Self {
         PyParallelogramConstraint {
-            status: 0,
+            status: 1,
             p_origin: core.p_origin,
             p_width: core.p_width,
             p_height: core.p_height,
             p4: core.p4,
+            user_visible: core.user_visible,
         }
     }
 }

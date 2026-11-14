@@ -19,16 +19,33 @@ class Ellipse:
         r"""
         Unique entity id.
         """
+    @id.setter
+    def id(self, value: builtins.int) -> None: ...
     @property
     def center_idx(self) -> builtins.int:
         r"""
         Center point id.
         """
     @property
-    def radius_x_point_idx(self) -> builtins.int:
+    def helper_line_ids(self) -> builtins.list[builtins.int]:
+        r"""
+        Helper construction line ids.
+        """
+    @helper_line_ids.setter
+    def helper_line_ids(self, value: typing.Sequence[builtins.int]) -> None: ...
+    @property
+    def radius_x_pt_idx(self) -> builtins.int:
         r"""
         X-radius point id.
+        Alias for radius_x_point_idx.
         """
+    @property
+    def radius_y_pt_idx(self) -> builtins.int:
+        r"""
+        Alias for radius_y_point_idx.
+        """
+    @property
+    def radius_x_point_idx(self) -> builtins.int: ...
     @property
     def radius_y_point_idx(self) -> builtins.int:
         r"""
@@ -39,26 +56,39 @@ class Ellipse:
         r"""
         Whether the entity is construction geometry.
         """
+    @construction.setter
+    def construction(self, value: builtins.bool) -> None: ...
     @property
     def invisible(self) -> builtins.bool:
         r"""
         Whether the entity is excluded from toolpath output.
         """
+    @invisible.setter
+    def invisible(self, value: builtins.bool) -> None: ...
     @property
     def array_copy(self) -> builtins.bool:
         r"""
         Whether the entity was created as part of an array copy.
         """
+    @array_copy.setter
+    def array_copy(self, value: builtins.bool) -> None: ...
     @property
     def constrained(self) -> builtins.bool:
         r"""
         Whether the entity is fully constrained, as computed by the
         solver.
         """
+    @constrained.setter
+    def constrained(self, value: builtins.bool) -> None: ...
     @property
     def fill_color(self) -> typing.Optional[tuple[builtins.float, builtins.float, builtins.float, builtins.float]]:
         r"""
         Fill color as (r, g, b, a), or None.
+        """
+    @property
+    def r#type(self) -> builtins.str:
+        r"""
+        The entity type name (attribute alias).
         """
     def __new__(cls, center: builtins.int, radius_x_point: builtins.int, radius_y_point: builtins.int, construction: builtins.bool = False) -> Ellipse:
         r"""
@@ -117,5 +147,22 @@ class Ellipse:
         r"""
         Sets the fill color; returns whether the entity supports
         fills.
+        """
+    def write_back(self) -> None:
+        r"""
+        Persists in-place edits back to the owning registry, if any.
+        """
+    def __eq__(self, other: typing.Any) -> builtins.bool:
+        r"""
+        Entities compare equal by id (raygeo hands out fresh views).
+        """
+    def __hash__(self) -> builtins.int: ...
+    def _get_radii(self, registry: registry.EntityRegistry) -> tuple[builtins.float, builtins.float]:
+        r"""
+        The ellipse's two radii in model units.
+        """
+    def get_drag_anchor_points(self, point_id: builtins.int) -> builtins.list[builtins.int]:
+        r"""
+        Point ids that act as drag anchors for the given point.
         """
 

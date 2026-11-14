@@ -80,7 +80,7 @@ fn get_polyline_bounds_py(polyline: Vec<PyPoint2D>) -> (f64, f64, f64, f64) {
 #[pyfunction(name = "get_polyline_closest_point")]
 fn get_polyline_closest_point_py(
     polyline: Vec<(f64, f64)>,
-    point: (f64, f64),
+    point: PyPoint2D,
 ) -> Option<(usize, f64)> {
     let pts: Vec<Point> =
         polyline.iter().map(|&(x, y)| Point::new(x, y)).collect();
@@ -113,8 +113,8 @@ fn get_polyline_closest_point_py(
 #[pyfunction(name = "trim_polyline_at")]
 fn trim_polyline_at_py(
     polyline: Vec<(f64, f64)>,
-    a: (f64, f64),
-    b: (f64, f64),
+    a: PyPoint2D,
+    b: PyPoint2D,
 ) -> Vec<(f64, f64)> {
     let pts: Vec<Point> =
         polyline.iter().map(|&(x, y)| Point::new(x, y)).collect();

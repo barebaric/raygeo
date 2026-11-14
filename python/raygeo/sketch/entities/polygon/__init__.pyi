@@ -20,6 +20,8 @@ class Polygon:
         r"""
         Unique entity id.
         """
+    @id.setter
+    def id(self, value: builtins.int) -> None: ...
     @property
     def center_idx(self) -> builtins.int:
         r"""
@@ -43,33 +45,46 @@ class Polygon:
     @property
     def rings(self) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
         r"""
-        The hole rings in the local frame.
+        All rings in the local frame (outer contour first, then holes).
         """
     @property
     def construction(self) -> builtins.bool:
         r"""
         Whether the entity is construction geometry.
         """
+    @construction.setter
+    def construction(self, value: builtins.bool) -> None: ...
     @property
     def invisible(self) -> builtins.bool:
         r"""
         Whether the entity is excluded from toolpath output.
         """
+    @invisible.setter
+    def invisible(self, value: builtins.bool) -> None: ...
     @property
     def array_copy(self) -> builtins.bool:
         r"""
         Whether the entity was created as part of an array copy.
         """
+    @array_copy.setter
+    def array_copy(self, value: builtins.bool) -> None: ...
     @property
     def constrained(self) -> builtins.bool:
         r"""
         Whether the entity is fully constrained, as computed by the
         solver.
         """
+    @constrained.setter
+    def constrained(self, value: builtins.bool) -> None: ...
     @property
     def fill_color(self) -> typing.Optional[tuple[builtins.float, builtins.float, builtins.float, builtins.float]]:
         r"""
         Fill color as (r, g, b, a), or None.
+        """
+    @property
+    def r#type(self) -> builtins.str:
+        r"""
+        The entity type name (attribute alias).
         """
     def __new__(cls, center: builtins.int, handle: builtins.int, vertices: typing.Sequence[tuple[builtins.float, builtins.float]], closed: builtins.bool = False, construction: builtins.bool = False, rings: typing.Optional[typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]] = None) -> Polygon:
         r"""
@@ -92,10 +107,12 @@ class Polygon:
         r"""
         Returns the geometry signature used for change detection.
         """
-    def to_geometry(self, registry: registry.EntityRegistry) -> geo.Geometry:
+    def get_world_vertices(self, registry: registry.EntityRegistry) -> builtins.list[tuple[builtins.float, builtins.float]]:
         r"""
         Returns the entity's toolpath geometry in model coordinates.
+        Returns the polygon vertices in world coordinates.
         """
+    def to_geometry(self, registry: registry.EntityRegistry) -> geo.Geometry: ...
     def to_polygon_vertices(self, registry: registry.EntityRegistry, forward: builtins.bool = True) -> builtins.list[tuple[builtins.float, builtins.float]]:
         r"""
         Returns the entity's outline as polygon vertices.
@@ -128,5 +145,46 @@ class Polygon:
         r"""
         Sets the fill color; returns whether the entity supports
         fills.
+        """
+    def write_back(self) -> None:
+        r"""
+        Persists in-place edits back to the owning registry, if any.
+        """
+    def __eq__(self, other: typing.Any) -> builtins.bool:
+        r"""
+        Entities compare equal by id (raygeo hands out fresh views).
+        """
+    def __hash__(self) -> builtins.int: ...
+    def get_drag_anchor_points(self, point_id: builtins.int) -> builtins.list[builtins.int]:
+        r"""
+        Point ids that act as drag anchors for the given point.
+        """
+    @staticmethod
+    def from_dict(data: dict) -> Polygon:
+        r"""
+        Builds a polygon from its reference dictionary form.
+        """
+    @staticmethod
+    def build(id: builtins.int, center: builtins.int, handle: builtins.int, center_pos: tuple[builtins.float, builtins.float], handle_pos: tuple[builtins.float, builtins.float], vertices: typing.Sequence[tuple[builtins.float, builtins.float]], closed: builtins.bool = False, world_holes: typing.Optional[typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]] = None) -> tuple[typing.Any, typing.Any, Polygon]:
+        r"""
+        Reference factory: builds a polygon from center/handle point
+        ids, outer vertices and optional world-space hole rings.
+        """
+    def get_world_rings(self, registry: registry.EntityRegistry) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
+        r"""
+        The polygon's rings in world coordinates.
+        """
+    def is_closed_loop(self) -> builtins.bool:
+        r"""
+        Whether the polygon is a closed loop.
+        """
+    def is_contained_by(self, rect: tuple[builtins.float, builtins.float, builtins.float, builtins.float], registry: registry.EntityRegistry) -> builtins.bool:
+        r"""
+        Whether the polygon is contained by the given (x1, y1, x2, y2) rect.
+        """
+    def enclosed_signed_area(self, registry: registry.EntityRegistry) -> typing.Optional[builtins.float]:
+        r"""
+        The signed area enclosed by the polygon (outer ring minus
+        holes), or None when the frame points are missing.
         """
 

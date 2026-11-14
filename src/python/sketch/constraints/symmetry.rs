@@ -77,6 +77,7 @@ pub struct PySymmetryConstraint {
     #[pyo3(get)]
     pub target: PySymmetryTarget,
     /// Reference user-visibility flag.
+    #[pyo3(get)]
     pub user_visible: bool,
     /// Reference validation status ordinal.
     #[pyo3(get, set)]
@@ -100,19 +101,29 @@ impl PySymmetryConstraint {
             p2,
             target,
             user_visible,
-            status: 0,
+            status: 1,
         }
     }
 
     /// Returns the constraint error at the registry's point
     /// positions.
-    fn error(&self, registry: &PyEntityRegistry) -> Vec<f64> {
+    #[pyo3(signature = (registry, _ctx = None))]
+    fn error(
+        &self,
+        registry: &PyEntityRegistry,
+        _ctx: Option<Py<PyAny>>,
+    ) -> Vec<f64> {
         self.clone().into_constraint().error(&registry.inner)
     }
 
     /// Point ids the constraint references.
     fn referenced_points(&self) -> Vec<u64> {
         self.clone().into_constraint().referenced_points()
+    }
+
+    /// Alias for referenced_points (reference naming).
+    fn get_referenced_point_ids(&self) -> std::collections::HashSet<u64> {
+        self.referenced_points().into_iter().collect()
     }
 
     /// Serializes to the reference constraint dictionary shape.
@@ -143,11 +154,6 @@ impl PySymmetryConstraint {
             point_radius,
             self.status,
         )
-    }
-
-    /// Reference user-visibility flag.
-    fn user_visible(&self) -> bool {
-        self.user_visible
     }
 
     /// Sets the reference user-visibility flag.
@@ -195,7 +201,7 @@ impl PySymmetryConstraint {
             p2: core.p2,
             target: PySymmetryTarget::from(&core.target),
             user_visible: core.user_visible,
-            status: 0,
+            status: 1,
         }
     }
 }

@@ -31,6 +31,11 @@ class DiameterConstraint:
         Resolved diameter value.
         """
     @property
+    def user_visible(self) -> builtins.bool:
+        r"""
+        Reference user-visibility flag.
+        """
+    @property
     def status(self) -> builtins.int:
         r"""
         Reference validation status ordinal.
@@ -40,12 +45,22 @@ class DiameterConstraint:
         r"""
         Reference validation status ordinal.
         """
+    @property
+    def expression(self) -> typing.Optional[builtins.str]:
+        r"""
+        The stored expression string, if any (evaluated caller-side).
+        """
+    @expression.setter
+    def expression(self, value: typing.Optional[builtins.str]) -> None:
+        r"""
+        Sets the expression string (evaluated caller-side).
+        """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __new__(cls, center: builtins.int, radius_point: builtins.int, value: builtins.float, user_visible: builtins.bool = True) -> DiameterConstraint:
         r"""
         Creates the constraint from its resolved points and values.
         """
-    def error(self, registry: registry.EntityRegistry) -> builtins.list[builtins.float]:
+    def error(self, registry: registry.EntityRegistry, _ctx: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
         r"""
         Returns the constraint error at the registry's point
         positions.
@@ -54,9 +69,13 @@ class DiameterConstraint:
         r"""
         Point ids the constraint references.
         """
+    def get_referenced_point_ids(self) -> builtins.set[builtins.int]:
+        r"""
+        Alias for referenced_points (reference naming).
+        """
     def set_value(self, value: builtins.float) -> None:
         r"""
-        Sets the resolved diameter value.
+        Sets the resolved dimensional value.
         """
     def to_dict(self) -> dict:
         r"""
@@ -66,21 +85,9 @@ class DiameterConstraint:
         r"""
         Draws the constraint's symbol onto the cairo context.
         """
-    def user_visible(self) -> builtins.bool:
-        r"""
-        Reference user-visibility flag.
-        """
     def set_user_visible(self, value: builtins.bool) -> None:
         r"""
         Sets the reference user-visibility flag.
-        """
-    def expression(self) -> typing.Optional[builtins.str]:
-        r"""
-        The stored expression string, if any (evaluated caller-side).
-        """
-    def set_expression(self, expression: typing.Optional[builtins.str]) -> None:
-        r"""
-        Sets the expression string (evaluated caller-side).
         """
     def targets_segment(self, p1: builtins.int, p2: builtins.int, entity_id: typing.Optional[builtins.int], registry: registry.EntityRegistry) -> builtins.bool:
         r"""

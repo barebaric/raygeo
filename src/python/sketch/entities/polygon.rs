@@ -18,6 +18,8 @@ use crate::sketch::entities::Entity;
 #[pyclass(module = "raygeo.sketch.entities.polygon", name = "Polygon")]
 pub struct PyPolygon {
     pub inner: CorePolygon,
+    /// Live back-reference to the owning registry, if any.
+    pub registry: Option<Py<PyAny>>,
 }
 
 #[gen_stub_pymethods]
@@ -45,6 +47,7 @@ impl PyPolygon {
                 construction,
                 rings.unwrap_or_default(),
             ),
+            registry: None,
         }
     }
 
@@ -52,6 +55,11 @@ impl PyPolygon {
     #[getter]
     fn id(&self) -> u64 {
         self.inner.base.id
+    }
+
+    #[setter]
+    fn set_id(&mut self, value: u64) {
+        self.inner.base.id = value;
     }
 
     /// Center point id.
@@ -78,10 +86,10 @@ impl PyPolygon {
         self.inner.rings.first().cloned().unwrap_or_default()
     }
 
-    /// The hole rings in the local frame.
+    /// All rings in the local frame (outer contour first, then holes).
     #[getter]
     fn rings(&self) -> Vec<Vec<(f64, f64)>> {
-        self.inner.rings[1..].to_vec()
+        self.inner.rings.clone()
     }
 
     /// Whether the entity is construction geometry.
@@ -90,10 +98,22 @@ impl PyPolygon {
         self.inner.base.construction
     }
 
+    #[setter]
+    fn set_construction(&mut self, value: bool) {
+        self.inner.base.construction = value;
+        self.write_back();
+    }
+
     /// Whether the entity is excluded from toolpath output.
     #[getter]
     fn invisible(&self) -> bool {
         self.inner.base.invisible
+    }
+
+    #[setter]
+    fn set_invisible(&mut self, value: bool) {
+        self.inner.base.invisible = value;
+        self.write_back();
     }
 
     /// Whether the entity was created as part of an array copy.
@@ -102,11 +122,30 @@ impl PyPolygon {
         self.inner.base.array_copy
     }
 
+    #[setter]
+    fn set_array_copy(&mut self, value: bool) {
+        self.inner.base.array_copy = value;
+        self.write_back();
+    }
+
     /// Whether the entity is fully constrained, as computed by the
     /// solver.
     #[getter]
     fn constrained(&self) -> bool {
         self.inner.base.constrained
+    }
+
+    #[setter]
+    fn set_constrained(&mut self, value: bool) {
+        self.inner.base.constrained = value;
+        if let Some(registry) = &self.registry {
+            Python::attach(|py| {
+                let _ = registry.bind(py).call_method1(
+                    "set_entity_constrained",
+                    (self.inner.base.id, value),
+                );
+            });
+        }
     }
 
     /// Fill color as (r, g, b, a), or None.
@@ -117,6 +156,12 @@ impl PyPolygon {
 
     /// The entity type name.
     fn type_name(&self) -> &'static str {
+        self.inner.type_name()
+    }
+
+    /// The entity type name (attribute alias).
+    #[getter]
+    fn r#type(&self) -> &'static str {
         self.inner.type_name()
     }
 
@@ -140,6 +185,14 @@ impl PyPolygon {
     }
 
     /// Returns the entity's toolpath geometry in model coordinates.
+    /// Returns the polygon vertices in world coordinates.
+    fn get_world_vertices(
+        &self,
+        registry: &PyEntityRegistry,
+    ) -> Vec<(f64, f64)> {
+        self.inner.get_world_vertices(&registry.inner)
+    }
+
     fn to_geometry(&self, registry: &PyEntityRegistry) -> PyGeometry {
         let geometry = self.inner.to_geometry(&registry.inner);
         PyGeometry { inner: geometry }
@@ -228,7 +281,140 @@ impl PyPolygon {
     /// Sets the fill color; returns whether the entity supports
     /// fills.
     fn set_fill_color(&mut self, color: Option<[f64; 4]>) -> bool {
-        self.inner.set_fill_color(color)
+        let supported = self.inner.set_fill_color(color);
+        self.write_back();
+        supported
+    }
+    /// Persists in-place edits back to the owning registry, if any.
+    fn write_back(&self) {
+        if let Some(registry) = &self.registry {
+            Python::attach(|py| {
+                if let Ok(dict) =
+                    crate::python::sketch::constraints::dict_from_value(
+                        py,
+                        &self.inner.to_json(),
+                    )
+                {
+                    let _ = registry.bind(py).call_method1(
+                        "replace_entity_from_dict",
+                        (self.inner.base.id, dict),
+                    );
+                }
+            });
+        }
+    }
+    /// Entities compare equal by id (raygeo hands out fresh views).
+    fn __eq__(&self, other: &Bound<'_, PyAny>) -> bool {
+        if let Ok(e) = other.extract::<PyRef<'_, PyPolygon>>() {
+            return self.inner.base.id == e.inner.base.id;
+        }
+        false
+    }
+
+    fn __hash__(&self) -> u64 {
+        self.inner.base.id
+    }
+    /// Point ids that act as drag anchors for the given point.
+    fn get_drag_anchor_points(&self, point_id: u64) -> Vec<u64> {
+        self.inner.get_drag_anchor_points(point_id)
+    }
+    /// Builds a polygon from its reference dictionary form.
+    #[staticmethod]
+    fn from_dict(data: &Bound<'_, PyDict>) -> PyResult<PyPolygon> {
+        let value = crate::python::sketch::registry::value_from_dict(data)?;
+        let inner = CorePolygon::from_json(&value).ok_or_else(|| {
+            pyo3::exceptions::PyValueError::new_err("invalid polygon dict")
+        })?;
+        Ok(PyPolygon {
+            inner,
+            registry: None,
+        })
+    }
+
+    /// Reference factory: builds a polygon from center/handle point
+    /// ids, outer vertices and optional world-space hole rings.
+    #[staticmethod]
+    #[pyo3(signature = (id, center, handle, center_pos, handle_pos, vertices, closed = false, world_holes = None))]
+    #[allow(clippy::too_many_arguments)]
+    fn build(
+        py: Python<'_>,
+        id: u64,
+        center: u64,
+        handle: u64,
+        center_pos: (f64, f64),
+        handle_pos: (f64, f64),
+        vertices: Vec<(f64, f64)>,
+        closed: bool,
+        world_holes: Option<Vec<Vec<(f64, f64)>>>,
+    ) -> (Py<PyAny>, Py<PyAny>, PyPolygon) {
+        let _ = id;
+        let (cx, cy) = center_pos;
+        let (dx, dy) = (handle_pos.0 - cx, handle_pos.1 - cy);
+        let scale = dx.hypot(dy);
+        let (ux, uy, scale) = if scale < 1e-9 {
+            (1.0, 0.0, 1.0)
+        } else {
+            (dx / scale, dy / scale, scale)
+        };
+        let to_local = |(wx, wy): (f64, f64)| -> (f64, f64) {
+            let a = (wx - cx) / scale;
+            let b = (wy - cy) / scale;
+            (a * ux + b * uy, -a * uy + b * ux)
+        };
+        let local_vertices: Vec<(f64, f64)> =
+            vertices.iter().map(|&v| to_local(v)).collect();
+        let local_holes: Vec<Vec<(f64, f64)>> = world_holes
+            .unwrap_or_default()
+            .iter()
+            .map(|ring| ring.iter().map(|&v| to_local(v)).collect())
+            .collect();
+        let inner = CorePolygon::new(
+            0,
+            center,
+            handle,
+            local_vertices,
+            closed,
+            false,
+            local_holes,
+        );
+        (
+            py.None(),
+            py.None(),
+            PyPolygon {
+                inner,
+                registry: None,
+            },
+        )
+    }
+    /// The polygon's rings in world coordinates.
+    fn get_world_rings(
+        &self,
+        registry: &PyEntityRegistry,
+    ) -> Vec<Vec<(f64, f64)>> {
+        self.inner.get_world_rings(&registry.inner)
+    }
+
+    /// Whether the polygon is a closed loop.
+    fn is_closed_loop(&self) -> bool {
+        self.inner.is_closed_loop()
+    }
+    /// Whether the polygon is contained by the given (x1, y1, x2, y2) rect.
+    fn is_contained_by(
+        &self,
+        rect: (f64, f64, f64, f64),
+        registry: &PyEntityRegistry,
+    ) -> bool {
+        let r = crate::geo::types::Rect {
+            min: crate::geo::types::Point::new(rect.0, rect.1),
+            max: crate::geo::types::Point::new(rect.2, rect.3),
+        };
+        self.inner.is_contained_by(r, &registry.inner)
+    }
+
+    /// The signed area enclosed by the polygon (outer ring minus
+    /// holes), or None when the frame points are missing.
+    fn enclosed_signed_area(&self, registry: &PyEntityRegistry) -> Option<f64> {
+        self.inner.enclosed_signed_area(&registry.inner)
     }
 }
 

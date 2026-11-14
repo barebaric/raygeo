@@ -12,6 +12,7 @@ use crate::geo::shape::line::is_point_inside_rect;
 use crate::geo::shape::rect::do_rects_intersect;
 use crate::geo::shape::rect::does_rect_contain_rect;
 use crate::geo::types::{Point, Rect};
+use crate::python::geo::flex_point::PyPoint2D;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
@@ -54,7 +55,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 )]
 #[pyfunction(name = "is_point_inside_rect")]
 fn is_point_inside_rect_py(
-    point: (f64, f64),
+    point: PyPoint2D,
     rect: (f64, f64, f64, f64),
 ) -> bool {
     is_point_inside_rect(

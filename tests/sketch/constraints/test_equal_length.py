@@ -74,7 +74,7 @@ def test_equal_length_constraint(setup_env):
     # Test Line-Line (error is [len2 - len1])
     c = EqualLengthConstraint([[p1, p2, p3, p4]])
     assert c.error(reg) == pytest.approx([5.0 - 10.0])
-    assert c.user_visible() is True
+    assert c.user_visible is True
 
     # Test Line-Arc (error is [rad1 - len1])
     c2 = EqualLengthConstraint([[p1, p2, c1_p, s1]])
@@ -108,10 +108,10 @@ def test_equal_length_constraint_user_visible(setup_env):
     reg.add_line(p3, p4)
 
     c = EqualLengthConstraint([[p1, p2, p3, p4]], user_visible=False)
-    assert c.user_visible() is False
+    assert c.user_visible is False
 
     c2 = EqualLengthConstraint([[p1, p2, p3, p4]], user_visible=True)
-    assert c2.user_visible() is True
+    assert c2.user_visible is True
 
 
 def test_equal_length_constrains_radius_method(setup_env):
