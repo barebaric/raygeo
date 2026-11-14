@@ -289,6 +289,10 @@ impl PyArc {
     ) -> bool {
         self.inner.is_angle_within_sweep(angle, &registry.inner)
     }
+    /// Point ids that act as drag anchors for the given point.
+    fn get_drag_anchor_points(&self, point_id: u64) -> Vec<u64> {
+        self.inner.get_drag_anchor_points(point_id)
+    }
 }
 
 /// Registers the arc class with the given module.

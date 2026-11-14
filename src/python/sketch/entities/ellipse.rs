@@ -304,6 +304,10 @@ impl PyEllipse {
     fn _get_radii(&self, registry: &PyEntityRegistry) -> (f64, f64) {
         self.inner.radii(&registry.inner)
     }
+    /// Point ids that act as drag anchors for the given point.
+    fn get_drag_anchor_points(&self, point_id: u64) -> Vec<u64> {
+        self.inner.get_drag_anchor_points(point_id)
+    }
 }
 
 /// Registers the ellipse class with the given module.

@@ -152,4 +152,8 @@ class Arc:
         r"""
         Whether an angle lies within the arc's sweep.
         """
+    def get_drag_anchor_points(self, point_id: builtins.int) -> builtins.list[builtins.int]:
+        r"""
+        Point ids that act as drag anchors for the given point.
+        """
 

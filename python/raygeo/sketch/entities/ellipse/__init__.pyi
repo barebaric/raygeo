@@ -159,4 +159,8 @@ class Ellipse:
         r"""
         The ellipse's two radii in model units.
         """
+    def get_drag_anchor_points(self, point_id: builtins.int) -> builtins.list[builtins.int]:
+        r"""
+        Point ids that act as drag anchors for the given point.
+        """
 

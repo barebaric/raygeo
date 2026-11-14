@@ -134,4 +134,8 @@ class Line:
         Entities compare equal by id (raygeo hands out fresh views).
         """
     def __hash__(self) -> builtins.int: ...
+    def get_drag_anchor_points(self, point_id: builtins.int) -> builtins.list[builtins.int]:
+        r"""
+        Point ids that act as drag anchors for the given point.
+        """
 
