@@ -204,6 +204,10 @@ impl PyAngleConstraint {
             to_screen.as_ref(),
         )
     }
+    /// Mirrors the angle value (negates it).
+    fn mirror(&mut self) {
+        self.value_deg = -self.value_deg;
+    }
 }
 
 impl PyAngleConstraint {

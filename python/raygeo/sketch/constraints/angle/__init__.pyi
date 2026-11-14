@@ -127,4 +127,8 @@ class AngleConstraint:
         r"""
         Whether the constraint's rendered symbol is hit at (mx, my).
         """
+    def mirror(self) -> None:
+        r"""
+        Mirrors the angle value (negates it).
+        """
 
