@@ -43,6 +43,9 @@ pub struct PyPointOnCurveConstraint {
     /// Reference user-visibility flag.
     #[pyo3(get)]
     pub user_visible: bool,
+    /// Reference shape entity id (resolved from the registry).
+    #[pyo3(get, set)]
+    pub shape_id: Option<u64>,
     /// Reference validation status ordinal.
     #[pyo3(get, set)]
     pub status: u8,
@@ -79,6 +82,7 @@ impl PyPointOnCurveConstraint {
             cp2_offset,
             is_line,
             user_visible,
+            shape_id: None,
             status: 1,
         }
     }
@@ -88,10 +92,14 @@ impl PyPointOnCurveConstraint {
     #[pyo3(signature = (registry, _ctx = None))]
     fn error(
         &self,
+        py: Python<'_>,
         registry: &PyEntityRegistry,
         _ctx: Option<Py<PyAny>>,
-    ) -> Vec<f64> {
-        self.clone().into_constraint().error(&registry.inner)
+    ) -> Py<PyAny> {
+        super::error_to_py(
+            py,
+            self.clone().into_constraint().error(&registry.inner),
+        )
     }
 
     /// Point ids the constraint references.
@@ -190,6 +198,7 @@ impl PyPointOnCurveConstraint {
             cp2_offset: (core.cp2_offset[0], core.cp2_offset[1]),
             is_line: core.is_line,
             user_visible: core.user_visible,
+            shape_id: None,
             status: 1,
         }
     }

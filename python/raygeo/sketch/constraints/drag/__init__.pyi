@@ -62,7 +62,7 @@ class DragConstraint:
         r"""
         Sets the target coordinates and pull strength.
         """
-    def error(self, registry: registry.EntityRegistry, _ctx: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
+    def error(self, registry: registry.EntityRegistry, _ctx: typing.Optional[typing.Any] = None) -> typing.Any:
         r"""
         Returns the constraint error at the registry's point positions.
         """

@@ -509,8 +509,24 @@ impl PyEntityRegistry {
         index: u64,
     ) -> PyResult<Option<AnyConstraint<'py>>> {
         match self.inner.get_constraint(index) {
-            Some(constraint) => constraint_to_py(py, constraint)
-                .map(|object| Some(AnyConstraint(object))),
+            Some(constraint) => {
+                let object = constraint_to_py(py, constraint)?;
+                if let Some(dict) = self.inner.constraint_dict(index) {
+                    if let Some(ids) =
+                        dict.get("entity_ids").and_then(|v| v.as_array())
+                    {
+                        let ids: Vec<u64> =
+                            ids.iter().filter_map(|v| v.as_u64()).collect();
+                        let _ = object.setattr("entity_ids", ids);
+                    }
+                    if let Some(sid) =
+                        dict.get("shape_id").and_then(|v| v.as_u64())
+                    {
+                        let _ = object.setattr("shape_id", sid);
+                    }
+                }
+                Ok(Some(AnyConstraint(object)))
+            }
             None => Ok(None),
         }
     }

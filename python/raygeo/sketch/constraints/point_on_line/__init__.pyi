@@ -32,6 +32,16 @@ class PointOnLineConstraint:
         Reference user-visibility flag.
         """
     @property
+    def shape_id(self) -> typing.Optional[builtins.int]:
+        r"""
+        Reference shape entity id (resolved from the registry).
+        """
+    @shape_id.setter
+    def shape_id(self, value: typing.Optional[builtins.int]) -> None:
+        r"""
+        Reference shape entity id (resolved from the registry).
+        """
+    @property
     def status(self) -> builtins.int:
         r"""
         Reference validation status ordinal.
@@ -52,7 +62,7 @@ class PointOnLineConstraint:
         r"""
         Creates the point-on-line/curve constraint.
         """
-    def error(self, registry: registry.EntityRegistry, _ctx: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
+    def error(self, registry: registry.EntityRegistry, _ctx: typing.Optional[typing.Any] = None) -> typing.Any:
         r"""
         Returns the constraint error at the registry's point
         positions.

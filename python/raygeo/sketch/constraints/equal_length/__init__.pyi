@@ -29,6 +29,16 @@ class EqualLengthConstraint:
         Reference user-visibility flag.
         """
     @property
+    def entity_ids(self) -> builtins.list[builtins.int]:
+        r"""
+        Reference entity ids (resolved from the registry).
+        """
+    @entity_ids.setter
+    def entity_ids(self, value: typing.Sequence[builtins.int]) -> None:
+        r"""
+        Reference entity ids (resolved from the registry).
+        """
+    @property
     def status(self) -> builtins.int:
         r"""
         Reference validation status ordinal.
@@ -43,7 +53,7 @@ class EqualLengthConstraint:
         r"""
         Creates the constraint from resolved pairs.
         """
-    def error(self, registry: registry.EntityRegistry, _ctx: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
+    def error(self, registry: registry.EntityRegistry, _ctx: typing.Optional[typing.Any] = None) -> typing.Any:
         r"""
         Returns the constraint error at the registry's point
         positions.

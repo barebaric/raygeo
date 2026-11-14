@@ -67,6 +67,23 @@ pub(crate) fn dict_from_value<'py>(
     Ok(dict)
 }
 
+/// Converts a residual vector to the reference error shape: a scalar
+/// for a single residual, a list otherwise.
+pub(crate) fn error_to_py(py: Python<'_>, residuals: Vec<f64>) -> Py<PyAny> {
+    use pyo3::types::PyList;
+    if residuals.len() == 1 {
+        return residuals[0]
+            .into_pyobject(py)
+            .expect("float conversion")
+            .into_any()
+            .unbind();
+    }
+    PyList::new(py, residuals)
+        .expect("list conversion")
+        .into_any()
+        .unbind()
+}
+
 pub(crate) fn value_to_py<'py>(
     py: Python<'py>,
     value: &Value,

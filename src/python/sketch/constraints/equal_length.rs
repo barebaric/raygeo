@@ -28,6 +28,9 @@ pub struct PyEqualLengthConstraint {
     /// Reference user-visibility flag.
     #[pyo3(get)]
     pub user_visible: bool,
+    /// Reference entity ids (resolved from the registry).
+    #[pyo3(get, set)]
+    pub entity_ids: Vec<u64>,
     /// Reference validation status ordinal.
     #[pyo3(get, set)]
     pub status: u8,
@@ -43,6 +46,7 @@ impl PyEqualLengthConstraint {
         PyEqualLengthConstraint {
             pairs,
             user_visible,
+            entity_ids: Vec::new(),
             status: 1,
         }
     }
@@ -52,10 +56,14 @@ impl PyEqualLengthConstraint {
     #[pyo3(signature = (registry, _ctx = None))]
     fn error(
         &self,
+        py: Python<'_>,
         registry: &PyEntityRegistry,
         _ctx: Option<Py<PyAny>>,
-    ) -> Vec<f64> {
-        self.clone().into_constraint().error(&registry.inner)
+    ) -> Py<PyAny> {
+        super::error_to_py(
+            py,
+            self.clone().into_constraint().error(&registry.inner),
+        )
     }
 
     /// Point ids the constraint references.
@@ -184,6 +192,7 @@ impl PyEqualLengthConstraint {
         PyEqualLengthConstraint {
             pairs: core.pairs,
             user_visible: core.user_visible,
+            entity_ids: Vec::new(),
             status: 1,
         }
     }
