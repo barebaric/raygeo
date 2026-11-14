@@ -313,6 +313,23 @@ impl Entity for TextBoxEntity {
         } else {
             self.base.fill_color = None;
         }
+        if let Some(v) = state.get("content").and_then(Value::as_str) {
+            self.content = v.to_string();
+        }
+        if let Some(font) = state.get("font_config") {
+            if let Some(v) = font.get("font_family").and_then(Value::as_str) {
+                self.font_config.family = v.to_string();
+            }
+            if let Some(v) = font.get("font_size").and_then(Value::as_f64) {
+                self.font_config.size = v;
+            }
+            if let Some(v) = font.get("bold").and_then(Value::as_bool) {
+                self.font_config.bold = v;
+            }
+            if let Some(v) = font.get("italic").and_then(Value::as_bool) {
+                self.font_config.italic = v;
+            }
+        }
     }
 
     fn compute_constrained(
