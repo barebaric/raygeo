@@ -16,6 +16,7 @@ extraction from a constrained triangulation of the domain boundary.
 * ``MedialAxis.trim_to_polygons`` — filter nodes to those inside given polygons.
 ";
 
+use crate::python::geo::flex_point::PyPoint2D;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
@@ -96,8 +97,8 @@ impl PyMedialAxis {
     #[pyo3(signature = (from_pt, to_pt))]
     fn path_between(
         &self,
-        from_pt: (f64, f64),
-        to_pt: (f64, f64),
+        from_pt: PyPoint2D,
+        to_pt: PyPoint2D,
     ) -> Option<Vec<(f64, f64)>> {
         let path = self.inner.path_between(
             Point::new(from_pt.0, from_pt.1),

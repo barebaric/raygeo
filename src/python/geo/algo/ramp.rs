@@ -9,6 +9,7 @@ with automatic extension when the ramp angle exceeds the maximum.
 
 use crate::geo::algo::ramp::{self, RampStyle as RustRampStyle};
 use crate::geo::types::Point;
+use crate::python::geo::flex_point::PyPoint2D;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass_enum, gen_stub_pyfunction};
 
@@ -102,8 +103,8 @@ impl PyRampStyle {
     lateral_amplitude = 1.0,
 ))]
 fn generate_ramp_py(
-    start: (f64, f64),
-    end: (f64, f64),
+    start: PyPoint2D,
+    end: PyPoint2D,
     z_start: f64,
     z_end: f64,
     max_ramp_angle_deg: f64,

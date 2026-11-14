@@ -17,6 +17,7 @@ use crate::geo::shape::arc::get_polyline_turn_sign;
 use crate::geo::shape::polygon::compute_polygon_bounds;
 use crate::geo::shape::polyline::trim_polyline_at;
 use crate::geo::types::Point;
+use crate::python::geo::flex_point::PyPoint2D;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
@@ -70,8 +71,8 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 )]
 #[pyfunction(name = "create_fillet_polyline")]
 fn create_fillet_polyline_py(
-    p: (f64, f64),
-    dir: (f64, f64),
+    p: PyPoint2D,
+    dir: PyPoint2D,
     radius: f64,
     sweep_angle: f64,
     side: f64,

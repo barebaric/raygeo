@@ -168,7 +168,7 @@ fn fit_circle_to_points_py(
 fn project_circle_center_to_bisector_py(
     p1: PyPoint3D,
     p2: PyPoint3D,
-    center: (f64, f64),
+    center: PyPoint2D,
 ) -> (f64, f64) {
     point_to_tuple(project_circle_center_to_bisector(
         Point3D::new(p1.0, p1.1, p1.2),
@@ -366,7 +366,7 @@ fn get_polyline_line_deviation_py(
 #[pyfunction(name = "get_polyline_arc_deviation")]
 fn get_polyline_arc_deviation_py(
     points: Vec<PyPoint3D>,
-    center: (f64, f64),
+    center: PyPoint2D,
     radius: f64,
 ) -> f64 {
     let pts: Vec<Point3D> =

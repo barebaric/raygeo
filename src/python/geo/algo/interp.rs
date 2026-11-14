@@ -11,6 +11,7 @@ use crate::geo::algo::interp::{
     solve_quadratic,
 };
 use crate::python::geo::flex_point::tuple_to_point3d;
+use crate::python::geo::flex_point::PyPoint2D;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
@@ -224,10 +225,10 @@ fn solve_quadratic_py(a: f64, b: f64, c: f64) -> (Option<f64>, Option<f64>) {
 #[pyfunction(name = "barycentric_interpolate")]
 #[pyo3(signature = (p, va, vb, vc, ua, ub, uc))]
 fn barycentric_interpolate_py(
-    p: (f64, f64),
-    va: (f64, f64),
-    vb: (f64, f64),
-    vc: (f64, f64),
+    p: PyPoint2D,
+    va: PyPoint2D,
+    vb: PyPoint2D,
+    vc: PyPoint2D,
     ua: f64,
     ub: f64,
     uc: f64,
@@ -270,10 +271,10 @@ fn barycentric_interpolate_py(
 #[pyfunction(name = "get_barycentric_weights")]
 #[pyo3(signature = (p, va, vb, vc))]
 fn barycentric_weights_py(
-    p: (f64, f64),
-    va: (f64, f64),
-    vb: (f64, f64),
-    vc: (f64, f64),
+    p: PyPoint2D,
+    va: PyPoint2D,
+    vb: PyPoint2D,
+    vc: PyPoint2D,
 ) -> (f64, f64, f64) {
     get_barycentric_weights(
         crate::geo::types::Point::new(p.0, p.1),

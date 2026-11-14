@@ -189,10 +189,10 @@ fn calculate_input_scale_py(
 )]
 #[pyfunction(name = "convolve_two_segments")]
 fn convolve_two_segments_py(
-    a1: (f64, f64),
-    a2: (f64, f64),
-    b1: (f64, f64),
-    b2: (f64, f64),
+    a1: PyPoint2D,
+    a2: PyPoint2D,
+    b1: PyPoint2D,
+    b2: PyPoint2D,
 ) -> Vec<(f64, f64)> {
     let result = convolve_two_segments(
         Point::new(a1.0, a1.1),

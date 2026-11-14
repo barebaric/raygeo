@@ -538,15 +538,22 @@ impl PyEntityRegistry {
     }
 
     /// Coordinates of a point as ``(x, y)``, or ``None``.
-    fn get_point(&self, id: u64) -> Option<(f64, f64)> {
-        self.inner.point_position(id)
+    fn get_point(slf: &Bound<'_, Self>, id: u64) -> Option<PySketchPoint> {
+        let reg = slf.borrow();
+        reg.inner
+            .get_point(id)
+            .map(|point| PySketchPoint::live(point, slf.as_any()))
     }
 
     /// The point object for an id (with id/coords/flags), or None.
-    fn get_point_object(&self, id: u64) -> Option<PySketchPoint> {
-        self.inner
+    fn get_point_object(
+        slf: &Bound<'_, Self>,
+        id: u64,
+    ) -> Option<PySketchPoint> {
+        let reg = slf.borrow();
+        reg.inner
             .get_point(id)
-            .map(|point| PySketchPoint { inner: point })
+            .map(|point| PySketchPoint::live(point, slf.as_any()))
     }
 
     /// Whether a point carries the fixed flag.
@@ -815,13 +822,12 @@ impl PyEntityRegistry {
     }
 
     /// All sketch points, in id order.
-    fn points(&self) -> Vec<PySketchPoint> {
-        self.inner
+    fn points(slf: &Bound<'_, Self>) -> Vec<PySketchPoint> {
+        let reg = slf.borrow();
+        reg.inner
             .all_points()
             .iter()
-            .map(|point| PySketchPoint {
-                inner: point.clone(),
-            })
+            .map(|point| PySketchPoint::live(point.clone(), slf.as_any()))
             .collect()
     }
 

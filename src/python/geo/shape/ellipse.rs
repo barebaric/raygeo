@@ -18,6 +18,7 @@ use crate::geo::shape::ellipse::{
     is_point_inside_ellipse, is_point_on_ellipse,
 };
 use crate::geo::types::Point;
+use crate::python::geo::flex_point::PyPoint2D;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
@@ -69,7 +70,7 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 )]
 #[pyfunction(name = "get_ellipse_point_at")]
 fn get_ellipse_point_at_py(
-    center: (f64, f64),
+    center: PyPoint2D,
     rx: f64,
     ry: f64,
     rotation: f64,
@@ -114,7 +115,7 @@ fn get_ellipse_point_at_py(
 )]
 #[pyfunction(name = "get_ellipse_samples")]
 fn get_ellipse_samples_py(
-    center: (f64, f64),
+    center: PyPoint2D,
     rx: f64,
     ry: f64,
     rotation: f64,
@@ -163,8 +164,8 @@ fn get_ellipse_samples_py(
 )]
 #[pyfunction(name = "is_point_on_ellipse")]
 fn is_point_on_ellipse_py(
-    point: (f64, f64),
-    center: (f64, f64),
+    point: PyPoint2D,
+    center: PyPoint2D,
     rx: f64,
     ry: f64,
     rotation: f64,
@@ -206,8 +207,8 @@ fn is_point_on_ellipse_py(
 )]
 #[pyfunction(name = "is_point_inside_ellipse")]
 fn is_point_inside_ellipse_py(
-    point: (f64, f64),
-    center: (f64, f64),
+    point: PyPoint2D,
+    center: PyPoint2D,
     rx: f64,
     ry: f64,
     rotation: f64,

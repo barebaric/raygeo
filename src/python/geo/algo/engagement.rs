@@ -4,6 +4,7 @@ pub(crate) const MODULE_DOC: &str = "\
 Circle-boundary overlap (engagement) metrics.
 ";
 
+use crate::python::geo::flex_point::PyPoint2D;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
@@ -93,7 +94,7 @@ fn disk_segment_area_py(x: f64, r: f64) -> f64 {
 )]
 #[pyfunction(name = "get_point_engagement")]
 fn point_engagement_py(
-    center: (f64, f64),
+    center: PyPoint2D,
     radius: f64,
     fragments: Vec<Vec<(f64, f64)>>,
 ) -> (f64, f64, f64) {
@@ -127,7 +128,7 @@ fn point_engagement_py(
 )]
 #[pyfunction(name = "get_angular_engagement")]
 fn angular_engagement_py(
-    center: (f64, f64),
+    center: PyPoint2D,
     radius: f64,
     fragments: Vec<Vec<(f64, f64)>>,
 ) -> f64 {

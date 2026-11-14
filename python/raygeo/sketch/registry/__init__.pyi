@@ -235,7 +235,7 @@ class EntityRegistry:
         r"""
         Waypoint type string of a point ("sharp"/"smooth"/"symmetric").
         """
-    def get_point(self, id: builtins.int) -> typing.Optional[tuple[builtins.float, builtins.float]]:
+    def get_point(self, id: builtins.int) -> typing.Optional[point.SketchPoint]:
         r"""
         Coordinates of a point as ``(x, y)``, or ``None``.
         """

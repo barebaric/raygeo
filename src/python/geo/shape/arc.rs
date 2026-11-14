@@ -56,10 +56,10 @@ use pyo3_stub_gen::derive::gen_stub_pyfunction;
 )]
 #[pyfunction(name = "get_arc_through_point")]
 fn arc_through_point_py(
-    t_start: (f64, f64),
-    t_end: (f64, f64),
-    t_mid: (f64, f64),
-    center: (f64, f64),
+    t_start: PyPoint2D,
+    t_end: PyPoint2D,
+    t_mid: PyPoint2D,
+    center: PyPoint2D,
     radius: f64,
 ) -> Vec<(f64, f64)> {
     get_arc_through_point(
@@ -162,9 +162,9 @@ fn _arc_params_from_any(
 #[pyfunction(name = "get_arc_bounds")]
 #[pyo3(signature = (start, end, center, clockwise))]
 fn get_arc_bounds_py(
-    start: (f64, f64),
-    end: (f64, f64),
-    center: (f64, f64),
+    start: PyPoint2D,
+    end: PyPoint2D,
+    center: PyPoint2D,
     clockwise: bool,
 ) -> (f64, f64, f64, f64) {
     let r = get_arc_bounds(
@@ -198,9 +198,9 @@ fn get_arc_bounds_py(
 )]
 #[pyfunction(name = "get_arc_direction")]
 fn get_arc_direction_py(
-    center: (f64, f64),
-    start: (f64, f64),
-    mouse: (f64, f64),
+    center: PyPoint2D,
+    start: PyPoint2D,
+    mouse: PyPoint2D,
 ) -> bool {
     get_arc_direction(
         Point::new(center.0, center.1),
@@ -233,9 +233,9 @@ fn get_arc_direction_py(
 )]
 #[pyfunction(name = "get_arc_length")]
 fn get_arc_length_py(
-    start_pos: (f64, f64),
-    end_pos: (f64, f64),
-    center_offset: (f64, f64),
+    start_pos: PyPoint2D,
+    end_pos: PyPoint2D,
+    center_offset: PyPoint2D,
     clockwise: bool,
 ) -> f64 {
     get_arc_length(
@@ -356,9 +356,9 @@ fn get_arc_closest_point_py(
 #[pyfunction(name = "get_arc_midpoint")]
 #[pyo3(signature = (start, end, center, clockwise))]
 fn get_arc_midpoint_py(
-    start: (f64, f64),
-    end: (f64, f64),
-    center: (f64, f64),
+    start: PyPoint2D,
+    end: PyPoint2D,
+    center: PyPoint2D,
     clockwise: bool,
 ) -> (f64, f64) {
     point_to_tuple(get_arc_midpoint(
@@ -394,9 +394,9 @@ fn get_arc_midpoint_py(
 #[pyfunction(name = "get_arc_angles")]
 #[pyo3(signature = (start, end, center, clockwise))]
 fn get_arc_angles_py(
-    start: (f64, f64),
-    end: (f64, f64),
-    center: (f64, f64),
+    start: PyPoint2D,
+    end: PyPoint2D,
+    center: PyPoint2D,
     clockwise: bool,
 ) -> (f64, f64, f64) {
     get_arc_angles(
@@ -434,9 +434,9 @@ fn get_arc_angles_py(
 #[pyfunction(name = "does_arc_intersect_rect")]
 #[pyo3(signature = (arc_start, arc_end, arc_center, clockwise, rect))]
 fn does_arc_intersect_rect_py(
-    arc_start: (f64, f64),
-    arc_end: (f64, f64),
-    arc_center: (f64, f64),
+    arc_start: PyPoint2D,
+    arc_end: PyPoint2D,
+    arc_center: PyPoint2D,
     clockwise: bool,
     rect: (f64, f64, f64, f64),
 ) -> bool {
@@ -478,11 +478,11 @@ fn does_arc_intersect_rect_py(
 #[pyfunction(name = "does_arc_intersect_circle")]
 #[pyo3(signature = (arc_start, arc_end, arc_center, clockwise, circle_center, circle_radius))]
 fn does_arc_intersect_circle_py(
-    arc_start: (f64, f64),
-    arc_end: (f64, f64),
-    arc_center: (f64, f64),
+    arc_start: PyPoint2D,
+    arc_end: PyPoint2D,
+    arc_center: PyPoint2D,
     clockwise: bool,
-    circle_center: (f64, f64),
+    circle_center: PyPoint2D,
     circle_radius: f64,
 ) -> bool {
     does_arc_intersect_circle(
@@ -549,9 +549,9 @@ fn is_arc_clockwise_py(points: Vec<PyPoint2D>, center: PyPoint2D) -> bool {
 #[pyfunction(name = "is_arc_inside_polygons")]
 #[pyo3(signature = (arc_start, arc_end, arc_center, clockwise, polygons))]
 fn is_arc_inside_polygons_py(
-    arc_start: (f64, f64),
-    arc_end: (f64, f64),
-    arc_center: (f64, f64),
+    arc_start: PyPoint2D,
+    arc_end: PyPoint2D,
+    arc_center: PyPoint2D,
     clockwise: bool,
     polygons: &Bound<'_, PyAny>,
 ) -> PyResult<bool> {
@@ -726,7 +726,7 @@ fn get_polyline_turn_sign_py(polyline: Vec<(f64, f64)>) -> f64 {
 )]
 #[pyfunction(name = "get_arc_samples")]
 fn get_arc_samples_py(
-    center: (f64, f64),
+    center: PyPoint2D,
     radius: f64,
     start_angle: f64,
     sweep: f64,
@@ -771,8 +771,8 @@ fn get_arc_samples_py(
 )]
 #[pyfunction(name = "get_arc_tangent_at_point")]
 fn get_arc_tangent_at_point_py(
-    center: (f64, f64),
-    point: (f64, f64),
+    center: PyPoint2D,
+    point: PyPoint2D,
     clockwise: bool,
 ) -> (f64, f64) {
     let tangent = get_arc_tangent_at_point(

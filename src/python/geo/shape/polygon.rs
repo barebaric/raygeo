@@ -548,9 +548,9 @@ fn transform_polygons_py(
 )]
 #[pyfunction(name = "get_point_line_distance")]
 fn point_line_distance_py(
-    point: (f64, f64),
-    line_start: (f64, f64),
-    line_end: (f64, f64),
+    point: PyPoint2D,
+    line_start: PyPoint2D,
+    line_end: PyPoint2D,
 ) -> f64 {
     get_point_line_distance(
         Point::new(point.0, point.1),
@@ -779,7 +779,7 @@ fn get_polygons_closest_point_py(
 )]
 #[pyfunction(name = "get_signed_boundary_distance")]
 fn get_signed_boundary_distance_py(
-    point: (f64, f64),
+    point: PyPoint2D,
     polygons: Vec<Vec<(f64, f64)>>,
 ) -> f64 {
     let polys: Vec<Vec<Point>> = polygons
@@ -813,7 +813,7 @@ fn get_signed_boundary_distance_py(
 #[pyfunction(name = "get_circle_polygon")]
 #[pyo3(signature = (center, radius, n = 64))]
 fn get_circle_polygon_py(
-    center: (f64, f64),
+    center: PyPoint2D,
     radius: f64,
     n: usize,
 ) -> Vec<(f64, f64)> {
@@ -851,8 +851,8 @@ fn get_circle_polygon_py(
 )]
 #[pyfunction(name = "get_segment_swept_polygon")]
 fn get_segment_swept_polygon_py(
-    a: (f64, f64),
-    b: (f64, f64),
+    a: PyPoint2D,
+    b: PyPoint2D,
     radius: f64,
 ) -> Vec<Vec<(f64, f64)>> {
     polygons_to_tuples(get_segment_swept_polygon(
@@ -926,11 +926,11 @@ fn get_polyline_swept_polygon_py(
 )]
 #[pyfunction(name = "get_miter_offset_intersection")]
 fn miter_offset_intersection_py(
-    v: (f64, f64),
-    off_a: (f64, f64),
-    dir_a: (f64, f64),
-    off_b: (f64, f64),
-    dir_b: (f64, f64),
+    v: PyPoint2D,
+    off_a: PyPoint2D,
+    dir_a: PyPoint2D,
+    off_b: PyPoint2D,
+    dir_b: PyPoint2D,
 ) -> (f64, f64) {
     point_to_tuple(get_miter_offset_intersection(
         Point::new(v.0, v.1),
@@ -1109,7 +1109,7 @@ fn get_polygon_edges_py(
 )]
 #[pyfunction(name = "is_point_inside_polygon")]
 fn is_point_inside_polygon_py(
-    point: (f64, f64),
+    point: PyPoint2D,
     polygon: Vec<PyPoint2D>,
 ) -> bool {
     is_point_inside_polygon(
@@ -1144,7 +1144,7 @@ fn is_point_inside_polygon_py(
 )]
 #[pyfunction(name = "is_point_strictly_inside_polygon")]
 fn is_point_strictly_inside_polygon_py(
-    point: (f64, f64),
+    point: PyPoint2D,
     polygon: Vec<PyPoint2D>,
 ) -> bool {
     is_point_strictly_inside_polygon(
@@ -1215,7 +1215,7 @@ fn is_path_confined_to_boundary_py(
 )]
 #[pyfunction(name = "does_polygon_enclose_circle")]
 fn does_polygon_enclose_circle_py(
-    center: (f64, f64),
+    center: PyPoint2D,
     radius: f64,
     polygon: Vec<PyPoint2D>,
 ) -> bool {
@@ -1907,7 +1907,7 @@ fn normalize_polygons_numpy_py(
 )]
 #[pyfunction(name = "point_in_polygon_numpy")]
 fn point_in_polygon_numpy_py(
-    point: (f64, f64),
+    point: PyPoint2D,
     polygon: Bound<'_, PyArray2<f64>>,
 ) -> bool {
     let p = _polygon_from_numpy(&polygon);
@@ -2242,7 +2242,7 @@ fn resample_polygon_py(
 #[pyfunction(name = "get_polygon_heading_at")]
 fn get_polygon_heading_at_py(
     polygon: Vec<PyPoint2D>,
-    vertex: (f64, f64),
+    vertex: PyPoint2D,
 ) -> f64 {
     let poly = poly_to_points(polygon);
     get_polygon_heading_at(&poly, Point::new(vertex.0, vertex.1))
@@ -2273,7 +2273,7 @@ fn get_polygon_heading_at_py(
 #[pyfunction(name = "walk_polygon_from_point")]
 fn walk_polygon_from_point_py(
     polygon: Vec<PyPoint2D>,
-    start: (f64, f64),
+    start: PyPoint2D,
 ) -> Vec<(usize, f64, f64)> {
     let poly = poly_to_points(polygon);
     let start_pt = Point::new(start.0, start.1);

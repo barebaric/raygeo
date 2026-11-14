@@ -24,6 +24,7 @@ use crate::geo::shape::line::{
     longest_line_through_point,
 };
 use crate::geo::types::{Point, Rect};
+use crate::python::geo::flex_point::PyPoint2D;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
@@ -129,10 +130,10 @@ pub fn register(shape_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 )]
 #[pyfunction(name = "get_line_line_intersection")]
 fn get_line_line_intersection_py(
-    p1: (f64, f64),
-    p2: (f64, f64),
-    p3: (f64, f64),
-    p4: (f64, f64),
+    p1: PyPoint2D,
+    p2: PyPoint2D,
+    p3: PyPoint2D,
+    p4: PyPoint2D,
 ) -> Option<(f64, f64)> {
     option_point_to_tuple(get_line_line_intersection(
         Point::new(p1.0, p1.1),
@@ -167,10 +168,10 @@ fn get_line_line_intersection_py(
 )]
 #[pyfunction(name = "get_line_segment_intersection")]
 fn get_line_segment_intersection_py(
-    p1: (f64, f64),
-    p2: (f64, f64),
-    p3: (f64, f64),
-    p4: (f64, f64),
+    p1: PyPoint2D,
+    p2: PyPoint2D,
+    p3: PyPoint2D,
+    p4: PyPoint2D,
 ) -> Option<(f64, f64)> {
     option_point_to_tuple(get_line_segment_intersection(
         Point::new(p1.0, p1.1),
@@ -205,8 +206,8 @@ fn get_line_segment_intersection_py(
 )]
 #[pyfunction(name = "get_line_closest_point")]
 fn get_line_closest_point_py(
-    line_p1: (f64, f64),
-    line_p2: (f64, f64),
+    line_p1: PyPoint2D,
+    line_p2: PyPoint2D,
     x: f64,
     y: f64,
 ) -> (f64, f64) {
@@ -242,8 +243,8 @@ fn get_line_closest_point_py(
 )]
 #[pyfunction(name = "get_line_segment_closest_point")]
 fn get_line_segment_closest_point_py(
-    seg_p1: (f64, f64),
-    seg_p2: (f64, f64),
+    seg_p1: PyPoint2D,
+    seg_p2: PyPoint2D,
     x: f64,
     y: f64,
 ) -> (f64, (f64, f64), f64) {
@@ -280,9 +281,9 @@ fn get_line_segment_closest_point_py(
 )]
 #[pyfunction(name = "get_point_line_distance")]
 fn get_point_line_distance_py(
-    point: (f64, f64),
-    line_p1: (f64, f64),
-    line_p2: (f64, f64),
+    point: PyPoint2D,
+    line_p1: PyPoint2D,
+    line_p2: PyPoint2D,
 ) -> f64 {
     get_point_line_distance(
         Point::new(point.0, point.1),
@@ -317,9 +318,9 @@ fn get_point_line_distance_py(
 )]
 #[pyfunction(name = "get_point_line_signed_distance")]
 fn get_point_line_signed_distance_py(
-    point: (f64, f64),
-    line_p1: (f64, f64),
-    line_p2: (f64, f64),
+    point: PyPoint2D,
+    line_p1: PyPoint2D,
+    line_p2: PyPoint2D,
 ) -> f64 {
     get_point_line_signed_distance(
         Point::new(point.0, point.1),
@@ -350,9 +351,9 @@ fn get_point_line_signed_distance_py(
 )]
 #[pyfunction(name = "is_point_on_line_segment")]
 fn is_point_on_line_segment_py(
-    point: (f64, f64),
-    seg_p1: (f64, f64),
-    seg_p2: (f64, f64),
+    point: PyPoint2D,
+    seg_p1: PyPoint2D,
+    seg_p2: PyPoint2D,
 ) -> bool {
     is_point_on_segment(
         Point::new(point.0, point.1),
@@ -383,8 +384,8 @@ fn is_point_on_line_segment_py(
 )]
 #[pyfunction(name = "does_line_segment_intersect_rect")]
 fn does_line_segment_intersect_rect_py(
-    p1: (f64, f64),
-    p2: (f64, f64),
+    p1: PyPoint2D,
+    p2: PyPoint2D,
     rect: (f64, f64, f64, f64),
 ) -> bool {
     does_line_segment_intersect_rect(
@@ -418,9 +419,9 @@ fn does_line_segment_intersect_rect_py(
 )]
 #[pyfunction(name = "does_line_segment_intersect_circle")]
 fn does_line_segment_intersect_circle_py(
-    p1: (f64, f64),
-    p2: (f64, f64),
-    circle_center: (f64, f64),
+    p1: PyPoint2D,
+    p2: PyPoint2D,
+    circle_center: PyPoint2D,
     circle_radius: f64,
 ) -> bool {
     does_line_segment_intersect_circle(
@@ -454,8 +455,8 @@ fn does_line_segment_intersect_circle_py(
 )]
 #[pyfunction(name = "get_line_segment_polygon_intersections")]
 fn get_line_segment_polygon_intersections_py(
-    p1: (f64, f64),
-    p2: (f64, f64),
+    p1: PyPoint2D,
+    p2: PyPoint2D,
     polygon: Vec<Vec<(f64, f64)>>,
 ) -> Vec<f64> {
     let poly = polygons_from_tuples(polygon);
@@ -492,8 +493,8 @@ fn get_line_segment_polygon_intersections_py(
 )]
 #[pyfunction(name = "does_line_cross_polygon")]
 fn does_line_cross_polygon_py(
-    a: (f64, f64),
-    b: (f64, f64),
+    a: PyPoint2D,
+    b: PyPoint2D,
     polygon: Vec<(f64, f64)>,
 ) -> bool {
     let pts: Vec<Point> =
@@ -522,11 +523,7 @@ fn does_line_cross_polygon_py(
     module = "raygeo.geo.shape.line"
 )]
 #[pyfunction(name = "get_angle_at_vertex")]
-fn get_angle_at_vertex_py(
-    p0: (f64, f64),
-    p1: (f64, f64),
-    p2: (f64, f64),
-) -> f64 {
+fn get_angle_at_vertex_py(p0: PyPoint2D, p1: PyPoint2D, p2: PyPoint2D) -> f64 {
     get_angle_at_vertex(
         Point::new(p0.0, p0.1),
         Point::new(p1.0, p1.1),
@@ -557,11 +554,7 @@ fn get_angle_at_vertex_py(
     module = "raygeo.geo.shape.line"
 )]
 #[pyfunction(name = "get_interior_angle")]
-fn get_interior_angle_py(
-    p0: (f64, f64),
-    p1: (f64, f64),
-    p2: (f64, f64),
-) -> f64 {
+fn get_interior_angle_py(p0: PyPoint2D, p1: PyPoint2D, p2: PyPoint2D) -> f64 {
     get_interior_angle(
         Point::new(p0.0, p0.1),
         Point::new(p1.0, p1.1),
@@ -611,10 +604,10 @@ fn get_interior_angle_py(
 )]
 #[pyfunction(name = "get_segment_segment_distance")]
 fn get_segment_segment_distance_py(
-    a: (f64, f64),
-    b: (f64, f64),
-    c: (f64, f64),
-    d: (f64, f64),
+    a: PyPoint2D,
+    b: PyPoint2D,
+    c: PyPoint2D,
+    d: PyPoint2D,
 ) -> f64 {
     get_segment_segment_distance(
         Point::new(a.0, a.1),
@@ -625,7 +618,7 @@ fn get_segment_segment_distance_py(
 }
 
 #[pyfunction(name = "get_line_segment_length")]
-fn get_line_segment_length_py(p1: (f64, f64), p2: (f64, f64)) -> f64 {
+fn get_line_segment_length_py(p1: PyPoint2D, p2: PyPoint2D) -> f64 {
     get_line_segment_length(Point::new(p1.0, p1.1), Point::new(p2.0, p2.1))
 }
 
@@ -652,7 +645,7 @@ fn get_line_segment_length_py(p1: (f64, f64), p2: (f64, f64)) -> f64 {
 )]
 #[pyfunction(name = "longest_line_through_point")]
 fn longest_line_through_point_py(
-    pt: (f64, f64),
+    pt: PyPoint2D,
     bbox: (f64, f64, f64, f64),
 ) -> ((f64, f64), (f64, f64)) {
     let (start, end) = longest_line_through_point(

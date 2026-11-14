@@ -16,6 +16,7 @@ use crate::geo::algo::smooth::{
 };
 use crate::geo::shape::polygon::compute_polygon_bounds;
 use crate::geo::types::{Point, Point3D};
+use crate::python::geo::flex_point::PyPoint2D;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
@@ -344,8 +345,8 @@ fn chaikin_corner_cut_py(
 #[pyfunction(name = "build_smoothed_path")]
 #[pyo3(signature = (last, first, waypoints = None, uncleared = None, clearance = 1.0, smoothing_amount = 120))]
 fn build_smoothed_path_py(
-    last: (f64, f64),
-    first: (f64, f64),
+    last: PyPoint2D,
+    first: PyPoint2D,
     waypoints: Option<Vec<(f64, f64)>>,
     uncleared: Option<Vec<Vec<(f64, f64)>>>,
     clearance: f64,

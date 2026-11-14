@@ -10,6 +10,7 @@ widening after a helical entry (EntryStrategy.Helix expand_to_diameter).
 
 use crate::geo::algo::spiral;
 use crate::geo::types::Point;
+use crate::python::geo::flex_point::PyPoint2D;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
@@ -74,7 +75,7 @@ pub fn register(algo_mod: &Bound<'_, PyModule>) -> PyResult<()> {
 ))]
 #[allow(clippy::too_many_arguments)]
 fn generate_spiral_py(
-    center: (f64, f64),
+    center: PyPoint2D,
     z: f64,
     start_radius: f64,
     end_radius: f64,
