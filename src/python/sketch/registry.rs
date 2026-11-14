@@ -20,7 +20,7 @@ use crate::sketch::registry::EntityRegistry;
 use crate::sketch::registry::FontConfig;
 
 /// Converts a Python dictionary to a serde_json value.
-fn value_from_dict(dict: &Bound<'_, PyDict>) -> PyResult<Value> {
+pub(crate) fn value_from_dict(dict: &Bound<'_, PyDict>) -> PyResult<Value> {
     let mut map = serde_json::Map::new();
     for (key, value) in dict.iter() {
         let key: String = key.extract()?;
@@ -599,6 +599,11 @@ impl PyEntityRegistry {
     }
 
     /// Points pinned while `point_id` is dragged.
+    /// Alias for drag_anchor_points (reference naming).
+    fn get_drag_anchor_points(&self, point_id: u64) -> Vec<u64> {
+        self.drag_anchor_points(point_id)
+    }
+
     fn drag_anchor_points(&self, point_id: u64) -> Vec<u64> {
         self.inner.get_drag_anchor_points(point_id)
     }
@@ -857,6 +862,15 @@ impl PyEntityRegistry {
     }
 
     /// The entity object for an id, or None.
+    /// Alias for get_entity_object (reference naming).
+    fn get_entity<'py>(
+        slf: &Bound<'_, Self>,
+        py: Python<'py>,
+        id: u64,
+    ) -> PyResult<Option<AnyEntity<'py>>> {
+        Self::get_entity_object(slf, py, id)
+    }
+
     fn get_entity_object<'py>(
         slf: &Bound<'_, Self>,
         py: Python<'py>,

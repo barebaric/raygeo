@@ -267,10 +267,12 @@ class EntityRegistry:
         r"""
         Points that move rigidly with `point_id`.
         """
-    def drag_anchor_points(self, point_id: builtins.int) -> builtins.list[builtins.int]:
+    def get_drag_anchor_points(self, point_id: builtins.int) -> builtins.list[builtins.int]:
         r"""
         Points pinned while `point_id` is dragged.
+        Alias for drag_anchor_points (reference naming).
         """
+    def drag_anchor_points(self, point_id: builtins.int) -> builtins.list[builtins.int]: ...
     def ignorable_unconstrained_points(self, id: builtins.int) -> builtins.list[builtins.int]:
         r"""
         Points that can stay unconstrained when the entity is
@@ -366,10 +368,12 @@ class EntityRegistry:
         r"""
         All entities as their concrete classes.
         """
-    def get_entity_object(self, id: builtins.int) -> typing.Optional[typing.Union[line.Line, arc.Arc, circle.Circle, ellipse.Ellipse, bezier.Bezier, polygon.Polygon, text_box.TextBox]]:
+    def get_entity(self, id: builtins.int) -> typing.Optional[typing.Union[line.Line, arc.Arc, circle.Circle, ellipse.Ellipse, bezier.Bezier, polygon.Polygon, text_box.TextBox]]:
         r"""
         The entity object for an id, or None.
+        Alias for get_entity_object (reference naming).
         """
+    def get_entity_object(self, id: builtins.int) -> typing.Optional[typing.Union[line.Line, arc.Arc, circle.Circle, ellipse.Ellipse, bezier.Bezier, polygon.Polygon, text_box.TextBox]]: ...
     def add_entity(self, obj: typing.Any) -> builtins.int:
         r"""
         Adds an entity object to the registry and returns its id.

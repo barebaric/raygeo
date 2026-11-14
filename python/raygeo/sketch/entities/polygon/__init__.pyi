@@ -157,4 +157,15 @@ class Polygon:
         r"""
         Point ids that act as drag anchors for the given point.
         """
+    @staticmethod
+    def from_dict(data: dict) -> Polygon:
+        r"""
+        Builds a polygon from its reference dictionary form.
+        """
+    @staticmethod
+    def build(id: builtins.int, center: builtins.int, handle: builtins.int, center_pos: tuple[builtins.float, builtins.float], handle_pos: tuple[builtins.float, builtins.float], vertices: typing.Sequence[tuple[builtins.float, builtins.float]], closed: builtins.bool = False, world_holes: typing.Optional[typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]] = None) -> tuple[typing.Any, typing.Any, Polygon]:
+        r"""
+        Reference factory: builds a polygon from center/handle point
+        ids, outer vertices and optional world-space hole rings.
+        """
 

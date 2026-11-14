@@ -184,4 +184,8 @@ class TextBox:
         r"""
         Point ids that act as drag anchors for the given point.
         """
+    def get_all_frame_point_ids(self, registry: registry.EntityRegistry) -> builtins.list[builtins.int]:
+        r"""
+        All four frame corner point ids.
+        """
 

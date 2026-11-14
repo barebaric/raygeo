@@ -305,6 +305,54 @@ impl PyPolygon {
     fn get_drag_anchor_points(&self, point_id: u64) -> Vec<u64> {
         self.inner.get_drag_anchor_points(point_id)
     }
+    /// Builds a polygon from its reference dictionary form.
+    #[staticmethod]
+    fn from_dict(data: &Bound<'_, PyDict>) -> PyResult<PyPolygon> {
+        let value = crate::python::sketch::registry::value_from_dict(data)?;
+        let inner = CorePolygon::from_json(&value).ok_or_else(|| {
+            pyo3::exceptions::PyValueError::new_err("invalid polygon dict")
+        })?;
+        Ok(PyPolygon {
+            inner,
+            registry: None,
+        })
+    }
+
+    /// Reference factory: builds a polygon from center/handle point
+    /// ids, outer vertices and optional world-space hole rings.
+    #[staticmethod]
+    #[pyo3(signature = (id, center, handle, center_pos, handle_pos, vertices, closed = false, world_holes = None))]
+    #[allow(clippy::too_many_arguments)]
+    fn build(
+        py: Python<'_>,
+        id: u64,
+        center: u64,
+        handle: u64,
+        center_pos: (f64, f64),
+        handle_pos: (f64, f64),
+        vertices: Vec<(f64, f64)>,
+        closed: bool,
+        world_holes: Option<Vec<Vec<(f64, f64)>>>,
+    ) -> (Py<PyAny>, Py<PyAny>, PyPolygon) {
+        let _ = (id, center_pos, handle_pos);
+        let inner = CorePolygon::new(
+            0,
+            center,
+            handle,
+            vertices,
+            closed,
+            false,
+            world_holes.unwrap_or_default(),
+        );
+        (
+            py.None(),
+            py.None(),
+            PyPolygon {
+                inner,
+                registry: None,
+            },
+        )
+    }
 }
 
 /// Registers the polygon class with the given module.

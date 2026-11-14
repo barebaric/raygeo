@@ -356,6 +356,10 @@ impl PyTextBox {
     fn get_drag_anchor_points(&self, point_id: u64) -> Vec<u64> {
         self.inner.get_drag_anchor_points(point_id)
     }
+    /// All four frame corner point ids.
+    fn get_all_frame_point_ids(&self, registry: &PyEntityRegistry) -> Vec<u64> {
+        self.inner.get_all_frame_point_ids(&registry.inner)
+    }
 }
 
 /// Registers the text_box class with the given module.
