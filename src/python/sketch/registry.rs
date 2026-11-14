@@ -1,5 +1,8 @@
 //! Python bindings for the sketch data model.
 
+use std::collections::HashMap;
+use std::sync::Mutex;
+
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;

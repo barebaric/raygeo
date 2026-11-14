@@ -182,4 +182,9 @@ class Polygon:
         r"""
         Whether the polygon is contained by the given (x1, y1, x2, y2) rect.
         """
+    def enclosed_signed_area(self, registry: registry.EntityRegistry) -> typing.Optional[builtins.float]:
+        r"""
+        The signed area enclosed by the polygon (outer ring minus
+        holes), or None when the frame points are missing.
+        """
 

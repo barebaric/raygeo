@@ -410,6 +410,12 @@ impl PyPolygon {
         };
         self.inner.is_contained_by(r, &registry.inner)
     }
+
+    /// The signed area enclosed by the polygon (outer ring minus
+    /// holes), or None when the frame points are missing.
+    fn enclosed_signed_area(&self, registry: &PyEntityRegistry) -> Option<f64> {
+        self.inner.enclosed_signed_area(&registry.inner)
+    }
 }
 
 /// Registers the polygon class with the given module.
