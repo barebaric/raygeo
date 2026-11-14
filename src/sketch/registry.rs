@@ -324,6 +324,7 @@ impl EntityRegistry {
     /// Appends pre-built points whose ids are final.
     pub fn add_points(&mut self, points: Vec<SketchPoint>) {
         for point in points {
+            self.id_counter = self.id_counter.max(point.id + 1);
             self.point_index.insert(point.id, self.points.len());
             self.points.push(point);
         }
