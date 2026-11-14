@@ -88,7 +88,7 @@ impl PyAngleConstraint {
             e2_far,
             value_deg,
             user_visible,
-            status: 0,
+            status: 1,
             expression: None,
         }
     }
@@ -232,7 +232,7 @@ impl PyAngleConstraint {
             e2_far: core.e2_far,
             value_deg: core.value_deg,
             user_visible: core.user_visible,
-            status: 0,
+            status: 1,
             expression: core.expression,
         }
     }

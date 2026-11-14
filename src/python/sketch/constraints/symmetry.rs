@@ -100,7 +100,7 @@ impl PySymmetryConstraint {
             p2,
             target,
             user_visible,
-            status: 0,
+            status: 1,
         }
     }
 
@@ -205,7 +205,7 @@ impl PySymmetryConstraint {
             p2: core.p2,
             target: PySymmetryTarget::from(&core.target),
             user_visible: core.user_visible,
-            status: 0,
+            status: 1,
         }
     }
 }

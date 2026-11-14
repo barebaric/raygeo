@@ -113,6 +113,11 @@ impl PyArc {
         self.inner.base.constrained
     }
 
+    #[setter]
+    fn set_constrained(&mut self, value: bool) {
+        self.inner.base.constrained = value;
+    }
+
     /// Fill color as (r, g, b, a), or None.
     #[getter]
     fn fill_color(&self) -> Option<(f64, f64, f64, f64)> {
@@ -275,6 +280,14 @@ impl PyArc {
 
     fn __hash__(&self) -> u64 {
         self.inner.base.id
+    }
+    /// Whether an angle lies within the arc's sweep.
+    fn is_angle_within_sweep(
+        &self,
+        angle: f64,
+        registry: &PyEntityRegistry,
+    ) -> bool {
+        self.inner.is_angle_within_sweep(angle, &registry.inner)
     }
 }
 

@@ -59,7 +59,7 @@ impl PyRotationalConstraint {
             p2,
             angle_rad,
             user_visible,
-            status: 0,
+            status: 1,
             expression: None,
         }
     }
@@ -154,7 +154,7 @@ impl PyRotationalConstraint {
             p2: core.p2,
             angle_rad: core.angle_rad,
             user_visible: core.user_visible,
-            status: 0,
+            status: 1,
             expression: core.expression,
         }
     }

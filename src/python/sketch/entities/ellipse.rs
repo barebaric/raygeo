@@ -137,6 +137,11 @@ impl PyEllipse {
         self.inner.base.constrained
     }
 
+    #[setter]
+    fn set_constrained(&mut self, value: bool) {
+        self.inner.base.constrained = value;
+    }
+
     /// Fill color as (r, g, b, a), or None.
     #[getter]
     fn fill_color(&self) -> Option<(f64, f64, f64, f64)> {
@@ -294,6 +299,10 @@ impl PyEllipse {
 
     fn __hash__(&self) -> u64 {
         self.inner.base.id
+    }
+    /// The ellipse's two radii in model units.
+    fn _get_radii(&self, registry: &PyEntityRegistry) -> (f64, f64) {
+        self.inner.radii(&registry.inner)
     }
 }
 

@@ -63,7 +63,7 @@ impl PyAspectRatioConstraint {
             p4,
             ratio,
             user_visible,
-            status: 0,
+            status: 1,
         }
     }
 
@@ -152,7 +152,7 @@ impl PyAspectRatioConstraint {
             p4: core.p4,
             ratio: core.ratio,
             user_visible: core.user_visible,
-            status: 0,
+            status: 1,
         }
     }
 }

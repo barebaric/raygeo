@@ -54,7 +54,7 @@ impl PyDiameterConstraint {
             radius_point,
             value,
             user_visible,
-            status: 0,
+            status: 1,
             expression: None,
         }
     }
@@ -212,7 +212,7 @@ impl PyDiameterConstraint {
             radius_point: core.radius_point,
             value: core.value,
             user_visible: core.user_visible,
-            status: 0,
+            status: 1,
             expression: core.expression,
         }
     }

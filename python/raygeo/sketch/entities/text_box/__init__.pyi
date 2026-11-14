@@ -95,6 +95,8 @@ class TextBox:
         Whether the entity is fully constrained, as computed by the
         solver.
         """
+    @constrained.setter
+    def constrained(self, value: builtins.bool) -> None: ...
     @property
     def fill_color(self) -> typing.Optional[tuple[builtins.float, builtins.float, builtins.float, builtins.float]]:
         r"""

@@ -42,7 +42,7 @@ impl PyEqualLengthConstraint {
         PyEqualLengthConstraint {
             pairs,
             user_visible,
-            status: 0,
+            status: 1,
         }
     }
 
@@ -188,7 +188,7 @@ impl PyEqualLengthConstraint {
         PyEqualLengthConstraint {
             pairs: core.pairs,
             user_visible: core.user_visible,
-            status: 0,
+            status: 1,
         }
     }
 }

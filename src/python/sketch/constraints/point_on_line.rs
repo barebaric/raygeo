@@ -99,7 +99,7 @@ impl PyPointOnLineConstraint {
             point,
             target,
             user_visible,
-            status: 0,
+            status: 1,
         }
     }
 
@@ -227,7 +227,7 @@ impl PyPointOnLineConstraint {
             point: core.point,
             target: PyPointOnTarget::from(&core.target),
             user_visible: core.user_visible,
-            status: 0,
+            status: 1,
         }
     }
 }

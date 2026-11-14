@@ -47,7 +47,7 @@ impl PyCollinearConstraint {
             p2,
             p3,
             user_visible,
-            status: 0,
+            status: 1,
         }
     }
 
@@ -127,7 +127,7 @@ impl PyCollinearConstraint {
             p2: core.p2,
             p3: core.p3,
             user_visible: core.user_visible,
-            status: 0,
+            status: 1,
         }
     }
 }

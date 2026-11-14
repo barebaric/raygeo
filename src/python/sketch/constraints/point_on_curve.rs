@@ -78,7 +78,7 @@ impl PyPointOnCurveConstraint {
             cp2_offset,
             is_line,
             user_visible,
-            status: 0,
+            status: 1,
         }
     }
 
@@ -188,7 +188,7 @@ impl PyPointOnCurveConstraint {
             cp2_offset: (core.cp2_offset[0], core.cp2_offset[1]),
             is_line: core.is_line,
             user_visible: core.user_visible,
-            status: 0,
+            status: 1,
         }
     }
 }

@@ -43,7 +43,7 @@ impl PyVerticalConstraint {
             p1,
             p2,
             user_visible,
-            status: 0,
+            status: 1,
         }
     }
 
@@ -148,7 +148,7 @@ impl PyVerticalConstraint {
             p1: core.p1,
             p2: core.p2,
             user_visible: core.user_visible,
-            status: 0,
+            status: 1,
         }
     }
 }

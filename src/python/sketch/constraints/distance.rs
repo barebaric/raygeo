@@ -49,7 +49,7 @@ impl PyDistanceConstraint {
             p2,
             value,
             user_visible,
-            status: 0,
+            status: 1,
             expression: None,
         }
     }
@@ -194,7 +194,7 @@ impl PyDistanceConstraint {
             p2: core.p2,
             value: core.value,
             user_visible: core.user_visible,
-            status: 0,
+            status: 1,
             expression: core.expression,
         }
     }

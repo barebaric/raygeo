@@ -130,6 +130,11 @@ impl PyPolygon {
         self.inner.base.constrained
     }
 
+    #[setter]
+    fn set_constrained(&mut self, value: bool) {
+        self.inner.base.constrained = value;
+    }
+
     /// Fill color as (r, g, b, a), or None.
     #[getter]
     fn fill_color(&self) -> Option<(f64, f64, f64, f64)> {

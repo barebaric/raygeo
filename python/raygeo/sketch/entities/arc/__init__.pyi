@@ -66,6 +66,8 @@ class Arc:
         Whether the entity is fully constrained, as computed by the
         solver.
         """
+    @constrained.setter
+    def constrained(self, value: builtins.bool) -> None: ...
     @property
     def fill_color(self) -> typing.Optional[tuple[builtins.float, builtins.float, builtins.float, builtins.float]]:
         r"""
@@ -146,4 +148,8 @@ class Arc:
         Entities compare equal by id (raygeo hands out fresh views).
         """
     def __hash__(self) -> builtins.int: ...
+    def is_angle_within_sweep(self, angle: builtins.float, registry: registry.EntityRegistry) -> builtins.bool:
+        r"""
+        Whether an angle lies within the arc's sweep.
+        """
 

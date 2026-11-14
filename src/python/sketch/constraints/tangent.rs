@@ -57,7 +57,7 @@ impl PyTangentConstraint {
             center,
             radius_point,
             user_visible,
-            status: 0,
+            status: 1,
         }
     }
 
@@ -164,7 +164,7 @@ impl PyTangentConstraint {
             center: core.center,
             radius_point: core.radius_point,
             user_visible: core.user_visible,
-            status: 0,
+            status: 1,
         }
     }
 }

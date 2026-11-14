@@ -51,7 +51,7 @@ impl PyEqualDistanceConstraint {
             p3,
             p4,
             user_visible,
-            status: 0,
+            status: 1,
         }
     }
 
@@ -148,7 +148,7 @@ impl PyEqualDistanceConstraint {
             p3: core.p3,
             p4: core.p4,
             user_visible: core.user_visible,
-            status: 0,
+            status: 1,
         }
     }
 }

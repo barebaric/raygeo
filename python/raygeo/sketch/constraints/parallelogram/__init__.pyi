@@ -4,6 +4,7 @@
 import builtins
 import collections.abc
 from raygeo.sketch import protocols
+from raygeo.sketch import registry
 import typing
 __all__ = [
     "ParallelogramConstraint",
@@ -56,6 +57,14 @@ class ParallelogramConstraint:
     def get_referenced_point_ids(self) -> builtins.set[builtins.int]:
         r"""
         Alias for referenced_points (reference naming).
+        """
+    def error(self, registry: registry.EntityRegistry, _ctx: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
+        r"""
+        Returns the constraint error at the registry's point positions.
+        """
+    def to_dict(self) -> dict:
+        r"""
+        Serializes to the reference constraint dictionary shape.
         """
     def draw(self, ctx: protocols.Canvas, registry: protocols.DrawContext, to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], is_selected: builtins.bool = False, is_hovered: builtins.bool = False, point_radius: builtins.float = 5.0) -> None:
         r"""

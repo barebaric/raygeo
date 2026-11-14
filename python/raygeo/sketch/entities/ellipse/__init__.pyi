@@ -76,6 +76,8 @@ class Ellipse:
         Whether the entity is fully constrained, as computed by the
         solver.
         """
+    @constrained.setter
+    def constrained(self, value: builtins.bool) -> None: ...
     @property
     def fill_color(self) -> typing.Optional[tuple[builtins.float, builtins.float, builtins.float, builtins.float]]:
         r"""
@@ -153,4 +155,8 @@ class Ellipse:
         Entities compare equal by id (raygeo hands out fresh views).
         """
     def __hash__(self) -> builtins.int: ...
+    def _get_radii(self, registry: registry.EntityRegistry) -> tuple[builtins.float, builtins.float]:
+        r"""
+        The ellipse's two radii in model units.
+        """
 
