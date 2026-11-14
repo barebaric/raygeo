@@ -365,6 +365,18 @@ impl PyPolygon {
     fn is_closed_loop(&self) -> bool {
         self.inner.is_closed_loop()
     }
+    /// Whether the polygon is contained by the given (x1, y1, x2, y2) rect.
+    fn is_contained_by(
+        &self,
+        rect: (f64, f64, f64, f64),
+        registry: &PyEntityRegistry,
+    ) -> bool {
+        let r = crate::geo::types::Rect {
+            min: crate::geo::types::Point::new(rect.0, rect.1),
+            max: crate::geo::types::Point::new(rect.2, rect.3),
+        };
+        self.inner.is_contained_by(r, &registry.inner)
+    }
 }
 
 /// Registers the polygon class with the given module.

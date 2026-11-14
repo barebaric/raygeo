@@ -41,7 +41,7 @@ pub struct PyDragConstraint {
 impl PyDragConstraint {
     /// Creates the constraint from its resolved points and values.
     #[new]
-    #[pyo3(signature = (point, target_x, target_y, weight))]
+    #[pyo3(signature = (point, target_x, target_y, weight = 1.0))]
     fn new(point: u64, target_x: f64, target_y: f64, weight: f64) -> Self {
         PyDragConstraint {
             point,

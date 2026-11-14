@@ -46,7 +46,7 @@ class DragConstraint:
         Reference validation status ordinal.
         """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __new__(cls, point: builtins.int, target_x: builtins.float, target_y: builtins.float, weight: builtins.float) -> DragConstraint:
+    def __new__(cls, point: builtins.int, target_x: builtins.float, target_y: builtins.float, weight: builtins.float = 1.0) -> DragConstraint:
         r"""
         Creates the constraint from its resolved points and values.
         """

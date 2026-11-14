@@ -176,4 +176,8 @@ class Polygon:
         r"""
         Whether the polygon is a closed loop.
         """
+    def is_contained_by(self, rect: tuple[builtins.float, builtins.float, builtins.float, builtins.float], registry: registry.EntityRegistry) -> builtins.bool:
+        r"""
+        Whether the polygon is contained by the given (x1, y1, x2, y2) rect.
+        """
 
