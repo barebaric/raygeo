@@ -7,6 +7,7 @@ use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::geo::shape::text::FontConfig as CoreFontConfig;
 use crate::python::geo::geometry::Geometry as PyGeometry;
+use crate::python::geo::shape::text::PyFontConfig;
 use crate::python::sketch::constraints::dict_from_value;
 use crate::python::sketch::registry::PyEntityRegistry;
 use crate::sketch::entities::mirror::{MirrorAxis, MirrorDirection};
@@ -103,6 +104,28 @@ impl PyTextBox {
     #[getter]
     fn italic(&self) -> bool {
         self.inner.font_config.italic
+    }
+
+    /// The font configuration as a FontConfig object.
+    #[getter]
+    fn font_config(&self, py: Python<'_>) -> PyFontConfig {
+        let extra = PyDict::new(py);
+        for (key, value) in &self.inner.font_extra {
+            if let Ok(obj) =
+                crate::python::sketch::constraints::value_to_py(py, value)
+            {
+                let _ = extra.set_item(key.as_str(), obj);
+            }
+        }
+        PyFontConfig {
+            core: self.inner.font_config.clone(),
+            extra: extra.into(),
+        }
+    }
+
+    #[setter]
+    fn set_font_config(&mut self, value: PyRef<'_, PyFontConfig>) {
+        self.inner.font_config = value.core.clone();
     }
 
     /// Whether the entity is construction geometry.

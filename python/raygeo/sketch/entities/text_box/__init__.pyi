@@ -3,6 +3,7 @@
 
 import builtins
 from raygeo import geo
+from raygeo.geo.shape import text
 from raygeo.sketch import registry
 import typing
 __all__ = [
@@ -61,6 +62,13 @@ class TextBox:
         r"""
         Whether the text is italic.
         """
+    @property
+    def font_config(self) -> text.FontConfig:
+        r"""
+        The font configuration as a FontConfig object.
+        """
+    @font_config.setter
+    def font_config(self, value: text.FontConfig) -> None: ...
     @property
     def construction(self) -> builtins.bool:
         r"""
