@@ -45,7 +45,7 @@ class Polygon:
     @property
     def rings(self) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
         r"""
-        The hole rings in the local frame.
+        All rings in the local frame (outer contour first, then holes).
         """
     @property
     def construction(self) -> builtins.bool:

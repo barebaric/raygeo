@@ -86,10 +86,10 @@ impl PyPolygon {
         self.inner.rings.first().cloned().unwrap_or_default()
     }
 
-    /// The hole rings in the local frame.
+    /// All rings in the local frame (outer contour first, then holes).
     #[getter]
     fn rings(&self) -> Vec<Vec<(f64, f64)>> {
-        self.inner.rings[1..].to_vec()
+        self.inner.rings.clone()
     }
 
     /// Whether the entity is construction geometry.
@@ -347,15 +347,35 @@ impl PyPolygon {
         closed: bool,
         world_holes: Option<Vec<Vec<(f64, f64)>>>,
     ) -> (Py<PyAny>, Py<PyAny>, PyPolygon) {
-        let _ = (id, center_pos, handle_pos);
+        let _ = id;
+        let (cx, cy) = center_pos;
+        let (dx, dy) = (handle_pos.0 - cx, handle_pos.1 - cy);
+        let scale = dx.hypot(dy);
+        let (ux, uy, scale) = if scale < 1e-9 {
+            (1.0, 0.0, 1.0)
+        } else {
+            (dx / scale, dy / scale, scale)
+        };
+        let to_local = |(wx, wy): (f64, f64)| -> (f64, f64) {
+            let a = (wx - cx) / scale;
+            let b = (wy - cy) / scale;
+            (a * ux + b * uy, -a * uy + b * ux)
+        };
+        let local_vertices: Vec<(f64, f64)> =
+            vertices.iter().map(|&v| to_local(v)).collect();
+        let local_holes: Vec<Vec<(f64, f64)>> = world_holes
+            .unwrap_or_default()
+            .iter()
+            .map(|ring| ring.iter().map(|&v| to_local(v)).collect())
+            .collect();
         let inner = CorePolygon::new(
             0,
             center,
             handle,
-            vertices,
+            local_vertices,
             closed,
             false,
-            world_holes.unwrap_or_default(),
+            local_holes,
         );
         (
             py.None(),

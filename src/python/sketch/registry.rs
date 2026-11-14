@@ -920,7 +920,9 @@ impl PyEntityRegistry {
     /// Adds an entity object to the registry and returns its id.
     fn add_entity(&mut self, obj: &Bound<'_, PyAny>) -> PyResult<u64> {
         let entity = extract_entity(obj)?;
-        Ok(self.inner.add_entity_object(entity))
+        let id = self.inner.add_entity_object(entity);
+        let _ = obj.setattr("id", id);
+        Ok(id)
     }
 
     /// Serializes the entity to a reference entity dictionary.
