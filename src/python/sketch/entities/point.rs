@@ -113,6 +113,14 @@ impl PySketchPoint {
     #[setter]
     fn set_constrained(&mut self, value: bool) {
         self.inner.constrained = value;
+        if let Some(registry) = &self.registry {
+            Python::attach(|py| {
+                let _ = registry.bind(py).call_method1(
+                    "set_point_constrained",
+                    (self.inner.id, value),
+                );
+            });
+        }
     }
 
     /// Index 0 gives x, index 1 gives y (pair-like access).

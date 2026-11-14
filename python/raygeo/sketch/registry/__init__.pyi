@@ -135,6 +135,10 @@ class EntityRegistry:
         r"""
         Sets a point's solver-constrained flag.
         """
+    def set_entity_constrained(self, id: builtins.int, constrained: builtins.bool) -> builtins.bool:
+        r"""
+        Sets an entity's solver-constrained flag.
+        """
     def set_point_position(self, id: builtins.int, x: builtins.float, y: builtins.float) -> builtins.bool:
         r"""
         Sets a point's coordinates.

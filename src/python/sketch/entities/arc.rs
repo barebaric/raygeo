@@ -116,6 +116,14 @@ impl PyArc {
     #[setter]
     fn set_constrained(&mut self, value: bool) {
         self.inner.base.constrained = value;
+        if let Some(registry) = &self.registry {
+            Python::attach(|py| {
+                let _ = registry.bind(py).call_method1(
+                    "set_entity_constrained",
+                    (self.inner.base.id, value),
+                );
+            });
+        }
     }
 
     /// Fill color as (r, g, b, a), or None.

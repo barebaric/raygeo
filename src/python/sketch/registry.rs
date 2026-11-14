@@ -343,6 +343,17 @@ impl PyEntityRegistry {
         self.inner.set_point_constrained(id, constrained)
     }
 
+    /// Sets an entity's solver-constrained flag.
+    fn set_entity_constrained(&mut self, id: u64, constrained: bool) -> bool {
+        match self.inner.get_entity_mut(id) {
+            Some(entity) => {
+                entity.base_mut().constrained = constrained;
+                true
+            }
+            None => false,
+        }
+    }
+
     /// Sets a point's coordinates.
     fn set_point_position(&mut self, id: u64, x: f64, y: f64) -> bool {
         self.inner.set_point_position(id, x, y)
