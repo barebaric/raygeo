@@ -532,6 +532,11 @@ impl PyEntityRegistry {
                     {
                         let _ = object.setattr("expression", expr);
                     }
+                    if let Some(uv) =
+                        dict.get("user_visible").and_then(|v| v.as_bool())
+                    {
+                        let _ = object.call_method1("set_user_visible", (uv,));
+                    }
                 }
                 Ok(Some(AnyConstraint(object)))
             }

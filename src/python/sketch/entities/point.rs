@@ -39,6 +39,28 @@ impl PySketchPoint {
             });
         }
     }
+
+    /// Reads the current point state from the owning registry so
+    /// views stay live across edits; falls back to the local snapshot
+    /// when unattached.
+    fn current(&self) -> crate::sketch::entities::point::SketchPoint {
+        if let Some(registry) = &self.registry {
+            return Python::attach(|py| {
+                if let Ok(reg) =
+                    registry.bind(py).extract::<PyRef<
+                        '_,
+                        crate::python::sketch::registry::PyEntityRegistry,
+                    >>()
+                {
+                    if let Some(point) = reg.inner.get_point(self.inner.id) {
+                        return point;
+                    }
+                }
+                self.inner.clone()
+            });
+        }
+        self.inner.clone()
+    }
 }
 
 #[gen_stub_pymethods]
@@ -71,7 +93,7 @@ impl PySketchPoint {
     /// X coordinate.
     #[getter]
     fn x(&self) -> f64 {
-        self.inner.x
+        self.current().x
     }
 
     #[setter]
@@ -83,7 +105,7 @@ impl PySketchPoint {
     /// Y coordinate.
     #[getter]
     fn y(&self) -> f64 {
-        self.inner.y
+        self.current().y
     }
 
     #[setter]
@@ -95,7 +117,7 @@ impl PySketchPoint {
     /// Whether the point is pinned and never moves.
     #[getter]
     fn fixed(&self) -> bool {
-        self.inner.fixed
+        self.current().fixed
     }
 
     #[setter]
@@ -107,7 +129,7 @@ impl PySketchPoint {
     /// solver.
     #[getter]
     fn constrained(&self) -> bool {
-        self.inner.constrained
+        self.current().constrained
     }
 
     #[setter]
@@ -126,8 +148,8 @@ impl PySketchPoint {
     /// Index 0 gives x, index 1 gives y (pair-like access).
     fn __getitem__(&self, index: i64) -> PyResult<f64> {
         match index {
-            0 | -2 => Ok(self.inner.x),
-            1 | -1 => Ok(self.inner.y),
+            0 | -2 => Ok(self.current().x),
+            1 | -1 => Ok(self.current().y),
             _ => Err(pyo3::exceptions::PyIndexError::new_err(
                 "point index out of range",
             )),
@@ -151,7 +173,8 @@ impl PySketchPoint {
 
     /// Iterates ``(x, y)``.
     fn __iter__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
-        let pair = PyTuple::new(py, [self.inner.x, self.inner.y])?;
+        let cur = self.current();
+        let pair = PyTuple::new(py, [cur.x, cur.y])?;
         pair.call_method0("__iter__")
     }
 

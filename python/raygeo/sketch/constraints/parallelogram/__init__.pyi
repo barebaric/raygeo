@@ -51,7 +51,7 @@ class ParallelogramConstraint:
         Reference validation status ordinal.
         """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __new__(cls, p_origin: builtins.int, p_width: builtins.int, p_height: builtins.int, p4: builtins.int) -> ParallelogramConstraint:
+    def __new__(cls, p_origin: builtins.int, p_width: builtins.int, p_height: builtins.int, p4: builtins.int, user_visible: builtins.bool = True) -> ParallelogramConstraint:
         r"""
         Creates the constraint from its resolved points and values.
         """

@@ -44,14 +44,20 @@ pub struct PyParallelogramConstraint {
 impl PyParallelogramConstraint {
     /// Creates the constraint from its resolved points and values.
     #[new]
-    #[pyo3(signature = (p_origin, p_width, p_height, p4))]
-    fn new(p_origin: u64, p_width: u64, p_height: u64, p4: u64) -> Self {
+    #[pyo3(signature = (p_origin, p_width, p_height, p4, user_visible = true))]
+    fn new(
+        p_origin: u64,
+        p_width: u64,
+        p_height: u64,
+        p4: u64,
+        user_visible: bool,
+    ) -> Self {
         PyParallelogramConstraint {
             p_origin,
             p_width,
             p_height,
             p4,
-            user_visible: true,
+            user_visible,
             status: 1,
         }
     }
