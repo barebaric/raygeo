@@ -36,6 +36,12 @@ class PointOnLineConstraint:
         r"""
         Reference validation status ordinal.
         """
+    @property
+    def point_id(self) -> builtins.int:
+        r"""
+        Point ids the constraint references.
+        Alias for point (reference naming).
+        """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __new__(cls, point: builtins.int, target: PointOnTarget, user_visible: builtins.bool = True) -> PointOnLineConstraint:
         r"""
@@ -46,10 +52,7 @@ class PointOnLineConstraint:
         Returns the constraint error at the registry's point
         positions.
         """
-    def referenced_points(self) -> builtins.list[builtins.int]:
-        r"""
-        Point ids the constraint references.
-        """
+    def referenced_points(self) -> builtins.list[builtins.int]: ...
     def get_referenced_point_ids(self) -> builtins.set[builtins.int]:
         r"""
         Alias for referenced_points (reference naming).
