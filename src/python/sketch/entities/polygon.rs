@@ -285,6 +285,17 @@ impl PyPolygon {
             });
         }
     }
+    /// Entities compare equal by id (raygeo hands out fresh views).
+    fn __eq__(&self, other: &Bound<'_, PyAny>) -> bool {
+        if let Ok(e) = other.extract::<PyRef<'_, PyPolygon>>() {
+            return self.inner.base.id == e.inner.base.id;
+        }
+        false
+    }
+
+    fn __hash__(&self) -> u64 {
+        self.inner.base.id
+    }
 }
 
 /// Registers the polygon class with the given module.

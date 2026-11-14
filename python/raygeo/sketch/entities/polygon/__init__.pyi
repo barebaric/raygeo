@@ -146,4 +146,9 @@ class Polygon:
         r"""
         Persists in-place edits back to the owning registry, if any.
         """
+    def __eq__(self, other: typing.Any) -> builtins.bool:
+        r"""
+        Entities compare equal by id (raygeo hands out fresh views).
+        """
+    def __hash__(self) -> builtins.int: ...
 

@@ -80,6 +80,10 @@ class Arc:
         r"""
         Creates an unattached arc; an id is assigned on insertion.
         """
+    def get_midpoint(self, registry: registry.EntityRegistry) -> typing.Optional[tuple[builtins.float, builtins.float]]:
+        r"""
+        The arc's midpoint in model coordinates, if defined.
+        """
     def type_name(self) -> builtins.str:
         r"""
         The entity type name.
@@ -137,4 +141,9 @@ class Arc:
         r"""
         Persists in-place edits back to the owning registry, if any.
         """
+    def __eq__(self, other: typing.Any) -> builtins.bool:
+        r"""
+        Entities compare equal by id (raygeo hands out fresh views).
+        """
+    def __hash__(self) -> builtins.int: ...
 

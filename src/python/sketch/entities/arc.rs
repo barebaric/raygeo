@@ -119,6 +119,11 @@ impl PyArc {
         self.inner.base.fill_color.map(|c| (c[0], c[1], c[2], c[3]))
     }
 
+    /// The arc's midpoint in model coordinates, if defined.
+    fn get_midpoint(&self, registry: &PyEntityRegistry) -> Option<(f64, f64)> {
+        self.inner.get_midpoint(&registry.inner)
+    }
+
     /// The entity type name.
     fn type_name(&self) -> &'static str {
         self.inner.type_name()
@@ -259,6 +264,17 @@ impl PyArc {
                 }
             });
         }
+    }
+    /// Entities compare equal by id (raygeo hands out fresh views).
+    fn __eq__(&self, other: &Bound<'_, PyAny>) -> bool {
+        if let Ok(e) = other.extract::<PyRef<'_, PyArc>>() {
+            return self.inner.base.id == e.inner.base.id;
+        }
+        false
+    }
+
+    fn __hash__(&self) -> u64 {
+        self.inner.base.id
     }
 }
 
