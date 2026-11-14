@@ -31,6 +31,9 @@ pub struct PyParallelogramConstraint {
     /// Fourth corner.
     #[pyo3(get)]
     pub p4: u64,
+    /// Reference user-visibility flag.
+    #[pyo3(get)]
+    pub user_visible: bool,
     /// Reference validation status ordinal.
     #[pyo3(get, set)]
     pub status: u8,
@@ -48,8 +51,14 @@ impl PyParallelogramConstraint {
             p_width,
             p_height,
             p4,
+            user_visible: true,
             status: 1,
         }
+    }
+
+    /// Sets the reference user-visibility flag.
+    fn set_user_visible(&mut self, value: bool) {
+        self.user_visible = value;
     }
 
     /// Point ids the constraint references.
@@ -105,7 +114,14 @@ impl PyParallelogramConstraint {
 
 impl PyParallelogramConstraint {
     pub(crate) fn into_constraint(self) -> CoreConstraint {
-        CoreConstraint::new(self.p_origin, self.p_width, self.p_height, self.p4)
+        let mut core = CoreConstraint::new(
+            self.p_origin,
+            self.p_width,
+            self.p_height,
+            self.p4,
+        );
+        core.user_visible = self.user_visible;
+        core
     }
 
     pub(crate) fn from_core(core: CoreConstraint) -> Self {
@@ -115,6 +131,7 @@ impl PyParallelogramConstraint {
             p_width: core.p_width,
             p_height: core.p_height,
             p4: core.p4,
+            user_visible: core.user_visible,
         }
     }
 }

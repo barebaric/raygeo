@@ -36,6 +36,11 @@ class ParallelogramConstraint:
         Fourth corner.
         """
     @property
+    def user_visible(self) -> builtins.bool:
+        r"""
+        Reference user-visibility flag.
+        """
+    @property
     def status(self) -> builtins.int:
         r"""
         Reference validation status ordinal.
@@ -49,6 +54,10 @@ class ParallelogramConstraint:
     def __new__(cls, p_origin: builtins.int, p_width: builtins.int, p_height: builtins.int, p4: builtins.int) -> ParallelogramConstraint:
         r"""
         Creates the constraint from its resolved points and values.
+        """
+    def set_user_visible(self, value: builtins.bool) -> None:
+        r"""
+        Sets the reference user-visibility flag.
         """
     def referenced_points(self) -> builtins.list[builtins.int]:
         r"""

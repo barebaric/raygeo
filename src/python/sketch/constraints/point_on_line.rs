@@ -82,6 +82,7 @@ pub struct PyPointOnLineConstraint {
     #[pyo3(get)]
     pub target: PyPointOnTarget,
     /// Reference user-visibility flag.
+    #[pyo3(get)]
     pub user_visible: bool,
     /// Reference validation status ordinal.
     #[pyo3(get, set)]
@@ -158,11 +159,6 @@ impl PyPointOnLineConstraint {
             point_radius,
             self.status,
         )
-    }
-
-    /// Reference user-visibility flag.
-    fn user_visible(&self) -> bool {
-        self.user_visible
     }
 
     /// Sets the reference user-visibility flag.

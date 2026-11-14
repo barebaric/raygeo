@@ -29,6 +29,7 @@ pub struct PyCollinearConstraint {
     #[pyo3(get)]
     pub p3: u64,
     /// Reference user-visibility flag.
+    #[pyo3(get)]
     pub user_visible: bool,
     /// Reference validation status ordinal.
     #[pyo3(get, set)]
@@ -100,11 +101,6 @@ impl PyCollinearConstraint {
             point_radius,
             self.status,
         )
-    }
-
-    /// Reference user-visibility flag.
-    fn user_visible(&self) -> bool {
-        self.user_visible
     }
 
     /// Sets the reference user-visibility flag.

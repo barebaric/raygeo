@@ -41,6 +41,7 @@ pub struct PyPointOnCurveConstraint {
     #[pyo3(get)]
     pub is_line: bool,
     /// Reference user-visibility flag.
+    #[pyo3(get)]
     pub user_visible: bool,
     /// Reference validation status ordinal.
     #[pyo3(get, set)]
@@ -137,11 +138,6 @@ impl PyPointOnCurveConstraint {
             point_radius,
             self.status,
         )
-    }
-
-    /// Reference user-visibility flag.
-    fn user_visible(&self) -> bool {
-        self.user_visible
     }
 
     /// Sets the reference user-visibility flag.

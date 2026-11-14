@@ -29,6 +29,7 @@ pub struct PyDistanceConstraint {
     #[pyo3(get)]
     pub value: f64,
     /// Reference user-visibility flag.
+    #[pyo3(get)]
     pub user_visible: bool,
     /// Reference validation status ordinal.
     #[pyo3(get, set)]
@@ -75,7 +76,7 @@ impl PyDistanceConstraint {
         self.referenced_points().into_iter().collect()
     }
 
-    /// Sets the resolved distance value.
+    /// Sets the resolved dimensional value.
     fn set_value(&mut self, value: f64) {
         self.value = value;
     }
@@ -108,11 +109,6 @@ impl PyDistanceConstraint {
             point_radius,
             self.status,
         )
-    }
-
-    /// Reference user-visibility flag.
-    fn user_visible(&self) -> bool {
-        self.user_visible
     }
 
     /// Sets the reference user-visibility flag.

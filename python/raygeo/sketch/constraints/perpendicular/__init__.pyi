@@ -22,6 +22,11 @@ class PerpendicularConstraint:
         Resolved operand geometry.
         """
     @property
+    def user_visible(self) -> builtins.bool:
+        r"""
+        Reference user-visibility flag.
+        """
+    @property
     def status(self) -> builtins.int:
         r"""
         Reference validation status ordinal.
@@ -56,10 +61,6 @@ class PerpendicularConstraint:
     def draw(self, ctx: protocols.Canvas, registry: protocols.DrawContext, to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], is_selected: builtins.bool = False, is_hovered: builtins.bool = False, point_radius: builtins.float = 5.0) -> None:
         r"""
         Draws the constraint's symbol onto the cairo context.
-        """
-    def user_visible(self) -> builtins.bool:
-        r"""
-        Reference user-visibility flag.
         """
     def set_user_visible(self, value: builtins.bool) -> None:
         r"""

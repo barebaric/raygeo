@@ -44,6 +44,7 @@ pub struct PyAngleConstraint {
     #[pyo3(get)]
     pub value_deg: f64,
     /// Reference user-visibility flag.
+    #[pyo3(get)]
     pub user_visible: bool,
     /// Reference validation status ordinal.
     #[pyo3(get, set)]
@@ -153,11 +154,6 @@ impl PyAngleConstraint {
             point_radius,
             self.status,
         )
-    }
-
-    /// Reference user-visibility flag.
-    fn user_visible(&self) -> bool {
-        self.user_visible
     }
 
     /// Sets the reference user-visibility flag.
