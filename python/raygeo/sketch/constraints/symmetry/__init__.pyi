@@ -46,7 +46,7 @@ class SymmetryConstraint:
         r"""
         Creates the symmetry constraint.
         """
-    def error(self, registry: registry.EntityRegistry, ctx: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
+    def error(self, registry: registry.EntityRegistry, _ctx: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
         r"""
         Returns the constraint error at the registry's point
         positions.

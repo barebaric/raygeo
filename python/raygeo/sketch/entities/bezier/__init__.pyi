@@ -141,4 +141,8 @@ class Bezier:
         Sets the fill color; returns whether the entity supports
         fills.
         """
+    def write_back(self) -> None:
+        r"""
+        Persists in-place edits back to the owning registry, if any.
+        """
 

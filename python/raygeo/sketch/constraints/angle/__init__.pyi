@@ -84,7 +84,7 @@ class AngleConstraint:
         Creates the angle constraint from its resolved points and
         value.
         """
-    def error(self, registry: registry.EntityRegistry, ctx: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
+    def error(self, registry: registry.EntityRegistry, _ctx: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
         r"""
         Returns the constraint error at the registry's point
         positions.

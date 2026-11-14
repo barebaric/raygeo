@@ -320,10 +320,12 @@ class EntityRegistry:
         r"""
         Solver-relevant state snapshot of an entity, or ``None``.
         """
-    def set_state(self, id: builtins.int, state: dict) -> None:
+    def replace_entity_from_dict(self, id: builtins.int, data: dict) -> builtins.bool:
         r"""
         Restores an entity's state snapshot.
+        Replaces an entity in place from its dictionary form.
         """
+    def set_state(self, id: builtins.int, state: dict) -> None: ...
     def to_geometry(self, id: builtins.int) -> geo.Geometry:
         r"""
         The entity as a raygeo Geometry object.

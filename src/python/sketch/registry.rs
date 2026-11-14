@@ -718,6 +718,16 @@ impl PyEntityRegistry {
     }
 
     /// Restores an entity's state snapshot.
+    /// Replaces an entity in place from its dictionary form.
+    fn replace_entity_from_dict(
+        &mut self,
+        id: u64,
+        data: &Bound<'_, PyDict>,
+    ) -> PyResult<bool> {
+        let value = value_from_dict(data)?;
+        Ok(self.inner.replace_entity_from_json(id, &value))
+    }
+
     fn set_state(
         &mut self,
         id: u64,
@@ -832,24 +842,30 @@ impl PyEntityRegistry {
     }
 
     /// All entities as their concrete classes.
-    fn entities<'py>(&self, py: Python<'py>) -> PyResult<Vec<AnyEntity<'py>>> {
-        self.inner
+    fn entities<'py>(
+        slf: &Bound<'_, Self>,
+        py: Python<'py>,
+    ) -> PyResult<Vec<AnyEntity<'py>>> {
+        let reg = slf.borrow();
+        reg.inner
             .all_entities()
             .iter()
-            .map(|entity| entity_to_py(py, entity.as_ref()).map(AnyEntity))
+            .map(|entity| {
+                entity_to_py(py, entity.as_ref(), slf.as_any()).map(AnyEntity)
+            })
             .collect()
     }
 
     /// The entity object for an id, or None.
     fn get_entity_object<'py>(
-        &self,
+        slf: &Bound<'_, Self>,
         py: Python<'py>,
         id: u64,
     ) -> PyResult<Option<AnyEntity<'py>>> {
-        match self.inner.get_entity(id) {
-            Some(entity) => {
-                entity_to_py(py, entity).map(|object| Some(AnyEntity(object)))
-            }
+        let reg = slf.borrow();
+        match reg.inner.get_entity(id) {
+            Some(entity) => entity_to_py(py, entity, slf.as_any())
+                .map(|object| Some(AnyEntity(object))),
             None => Ok(None),
         }
     }

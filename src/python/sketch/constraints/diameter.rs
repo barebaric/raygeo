@@ -61,11 +61,11 @@ impl PyDiameterConstraint {
 
     /// Returns the constraint error at the registry's point
     /// positions.
-    #[pyo3(signature = (registry, ctx = None))]
+    #[pyo3(signature = (registry, _ctx = None))]
     fn error(
         &self,
         registry: &PyEntityRegistry,
-        ctx: Option<Py<PyAny>>,
+        _ctx: Option<Py<PyAny>>,
     ) -> Vec<f64> {
         self.clone().into_constraint().error(&registry.inner)
     }

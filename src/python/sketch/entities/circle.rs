@@ -17,6 +17,8 @@ use crate::sketch::entities::Entity;
 #[pyclass(module = "raygeo.sketch.entities.circle", name = "Circle")]
 pub struct PyCircle {
     pub inner: CoreCircle,
+    /// Live back-reference to the owning registry, if any.
+    pub registry: Option<Py<PyAny>>,
 }
 
 #[gen_stub_pymethods]
@@ -28,6 +30,7 @@ impl PyCircle {
     fn new(center: u64, radius_point: u64, construction: bool) -> Self {
         PyCircle {
             inner: CoreCircle::new(0, center, radius_point, construction),
+            registry: None,
         }
     }
 
@@ -58,6 +61,7 @@ impl PyCircle {
     #[setter]
     fn set_construction(&mut self, value: bool) {
         self.inner.base.construction = value;
+        self.write_back();
     }
 
     /// Whether the entity is excluded from toolpath output.
@@ -69,6 +73,7 @@ impl PyCircle {
     #[setter]
     fn set_invisible(&mut self, value: bool) {
         self.inner.base.invisible = value;
+        self.write_back();
     }
 
     /// Whether the entity was created as part of an array copy.
@@ -210,6 +215,24 @@ impl PyCircle {
     /// fills.
     fn set_fill_color(&mut self, color: Option<[f64; 4]>) -> bool {
         self.inner.set_fill_color(color)
+    }
+    /// Persists in-place edits back to the owning registry, if any.
+    fn write_back(&self) {
+        if let Some(registry) = &self.registry {
+            Python::attach(|py| {
+                if let Ok(dict) =
+                    crate::python::sketch::constraints::dict_from_value(
+                        py,
+                        &self.inner.to_json(),
+                    )
+                {
+                    let _ = registry.bind(py).call_method1(
+                        "replace_entity_from_dict",
+                        (self.inner.base.id, dict),
+                    );
+                }
+            });
+        }
     }
 }
 

@@ -18,6 +18,8 @@ use crate::sketch::entities::Entity;
 #[pyclass(module = "raygeo.sketch.entities.polygon", name = "Polygon")]
 pub struct PyPolygon {
     pub inner: CorePolygon,
+    /// Live back-reference to the owning registry, if any.
+    pub registry: Option<Py<PyAny>>,
 }
 
 #[gen_stub_pymethods]
@@ -45,6 +47,7 @@ impl PyPolygon {
                 construction,
                 rings.unwrap_or_default(),
             ),
+            registry: None,
         }
     }
 
@@ -93,6 +96,7 @@ impl PyPolygon {
     #[setter]
     fn set_construction(&mut self, value: bool) {
         self.inner.base.construction = value;
+        self.write_back();
     }
 
     /// Whether the entity is excluded from toolpath output.
@@ -104,6 +108,7 @@ impl PyPolygon {
     #[setter]
     fn set_invisible(&mut self, value: bool) {
         self.inner.base.invisible = value;
+        self.write_back();
     }
 
     /// Whether the entity was created as part of an array copy.
@@ -253,6 +258,24 @@ impl PyPolygon {
     /// fills.
     fn set_fill_color(&mut self, color: Option<[f64; 4]>) -> bool {
         self.inner.set_fill_color(color)
+    }
+    /// Persists in-place edits back to the owning registry, if any.
+    fn write_back(&self) {
+        if let Some(registry) = &self.registry {
+            Python::attach(|py| {
+                if let Ok(dict) =
+                    crate::python::sketch::constraints::dict_from_value(
+                        py,
+                        &self.inner.to_json(),
+                    )
+                {
+                    let _ = registry.bind(py).call_method1(
+                        "replace_entity_from_dict",
+                        (self.inner.base.id, dict),
+                    );
+                }
+            });
+        }
     }
 }
 
