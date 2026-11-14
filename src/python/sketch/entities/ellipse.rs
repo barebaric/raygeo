@@ -71,6 +71,18 @@ impl PyEllipse {
     }
 
     /// X-radius point id.
+    /// Alias for radius_x_point_idx.
+    #[getter]
+    fn radius_x_pt_idx(&self) -> u64 {
+        self.inner.radius_x_point
+    }
+
+    /// Alias for radius_y_point_idx.
+    #[getter]
+    fn radius_y_pt_idx(&self) -> u64 {
+        self.inner.radius_y_point
+    }
+
     #[getter]
     fn radius_x_point_idx(&self) -> u64 {
         self.inner.radius_x_point

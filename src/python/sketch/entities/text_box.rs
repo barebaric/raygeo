@@ -78,6 +78,11 @@ impl PyTextBox {
 
     /// The text content.
     /// The ids of the frame construction lines.
+    /// The fourth frame corner point id, if resolvable.
+    fn get_fourth_corner_id(&self, registry: &PyEntityRegistry) -> Option<u64> {
+        self.inner.get_fourth_corner_id(&registry.inner)
+    }
+
     #[getter]
     fn construction_line_ids(&self) -> Vec<u64> {
         self.inner.construction_line_ids.clone()

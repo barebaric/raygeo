@@ -36,11 +36,7 @@ class TextBox:
         Height point id.
         """
     @property
-    def construction_line_ids(self) -> builtins.list[builtins.int]:
-        r"""
-        The text content.
-        The ids of the frame construction lines.
-        """
+    def construction_line_ids(self) -> builtins.list[builtins.int]: ...
     @property
     def content(self) -> builtins.str: ...
     @content.setter
@@ -113,6 +109,12 @@ class TextBox:
         r"""
         Creates an unattached text box; an id is assigned on
         insertion.
+        """
+    def get_fourth_corner_id(self, registry: registry.EntityRegistry) -> typing.Optional[builtins.int]:
+        r"""
+        The text content.
+        The ids of the frame construction lines.
+        The fourth frame corner point id, if resolvable.
         """
     def type_name(self) -> builtins.str:
         r"""

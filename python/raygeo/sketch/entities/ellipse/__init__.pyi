@@ -32,10 +32,18 @@ class Ellipse:
     @helper_line_ids.setter
     def helper_line_ids(self, value: typing.Sequence[builtins.int]) -> None: ...
     @property
-    def radius_x_point_idx(self) -> builtins.int:
+    def radius_x_pt_idx(self) -> builtins.int:
         r"""
         X-radius point id.
+        Alias for radius_x_point_idx.
         """
+    @property
+    def radius_y_pt_idx(self) -> builtins.int:
+        r"""
+        Alias for radius_y_point_idx.
+        """
+    @property
+    def radius_x_point_idx(self) -> builtins.int: ...
     @property
     def radius_y_point_idx(self) -> builtins.int:
         r"""
