@@ -58,6 +58,12 @@ class PointOnCurveConstraint:
         r"""
         Reference validation status ordinal.
         """
+    @property
+    def point_id(self) -> builtins.int:
+        r"""
+        Point ids the constraint references.
+        Alias for point (reference naming).
+        """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __new__(cls, point: builtins.int, start: builtins.int, end: builtins.int, cp1_offset: tuple[builtins.float, builtins.float], cp2_offset: tuple[builtins.float, builtins.float], is_line: builtins.bool, user_visible: builtins.bool = True) -> PointOnCurveConstraint:
         r"""
@@ -68,10 +74,7 @@ class PointOnCurveConstraint:
         Returns the constraint error at the registry's point
         positions.
         """
-    def referenced_points(self) -> builtins.list[builtins.int]:
-        r"""
-        Point ids the constraint references.
-        """
+    def referenced_points(self) -> builtins.list[builtins.int]: ...
     def get_referenced_point_ids(self) -> builtins.set[builtins.int]:
         r"""
         Alias for referenced_points (reference naming).

@@ -94,6 +94,12 @@ impl PyPointOnCurveConstraint {
     }
 
     /// Point ids the constraint references.
+    /// Alias for point (reference naming).
+    #[getter]
+    fn point_id(&self) -> u64 {
+        self.point
+    }
+
     fn referenced_points(&self) -> Vec<u64> {
         self.clone().into_constraint().referenced_points()
     }
