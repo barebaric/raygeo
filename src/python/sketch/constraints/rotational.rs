@@ -66,7 +66,12 @@ impl PyRotationalConstraint {
 
     /// Returns the constraint error at the registry's point
     /// positions.
-    fn error(&self, registry: &PyEntityRegistry) -> Vec<f64> {
+    #[pyo3(signature = (registry, ctx = None))]
+    fn error(
+        &self,
+        registry: &PyEntityRegistry,
+        ctx: Option<Py<PyAny>>,
+    ) -> Vec<f64> {
         self.clone().into_constraint().error(&registry.inner)
     }
 
@@ -76,8 +81,8 @@ impl PyRotationalConstraint {
     }
 
     /// Alias for referenced_points (reference naming).
-    fn get_referenced_point_ids(&self) -> Vec<u64> {
-        self.referenced_points()
+    fn get_referenced_point_ids(&self) -> std::collections::HashSet<u64> {
+        self.referenced_points().into_iter().collect()
     }
 
     /// Serializes to the reference constraint dictionary shape.
@@ -121,11 +126,13 @@ impl PyRotationalConstraint {
     }
 
     /// The stored expression string, if any (evaluated caller-side).
+    #[getter]
     fn expression(&self) -> Option<String> {
         self.expression.clone()
     }
 
     /// Sets the expression string (evaluated caller-side).
+    #[setter]
     fn set_expression(&mut self, expression: Option<String>) {
         self.expression = expression;
     }

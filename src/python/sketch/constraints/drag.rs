@@ -56,8 +56,8 @@ impl PyDragConstraint {
     }
 
     /// Alias for referenced_points (reference naming).
-    fn get_referenced_point_ids(&self) -> Vec<u64> {
-        self.referenced_points()
+    fn get_referenced_point_ids(&self) -> std::collections::HashSet<u64> {
+        self.referenced_points().into_iter().collect()
     }
 
     /// Sets the target coordinates and pull strength.

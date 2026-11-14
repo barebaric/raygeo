@@ -36,7 +36,7 @@ class PerpendicularConstraint:
         r"""
         Creates the constraint from resolved operands.
         """
-    def error(self, registry: registry.EntityRegistry) -> builtins.list[builtins.float]:
+    def error(self, registry: registry.EntityRegistry, ctx: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
         r"""
         Returns the constraint error at the registry's point
         positions.
@@ -45,7 +45,7 @@ class PerpendicularConstraint:
         r"""
         Point ids the constraint references.
         """
-    def get_referenced_point_ids(self) -> builtins.list[builtins.int]:
+    def get_referenced_point_ids(self) -> builtins.set[builtins.int]:
         r"""
         Alias for referenced_points (reference naming).
         """
