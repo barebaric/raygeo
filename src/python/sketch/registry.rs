@@ -492,14 +492,14 @@ impl PyEntityRegistry {
         &self,
         py: Python<'py>,
     ) -> PyResult<Vec<AnyConstraint<'py>>> {
-        self.inner
-            .all_constraints()
-            .iter()
-            .map(|entry| {
-                constraint_to_py(py, entry.constraint.as_ref())
-                    .map(AnyConstraint)
-            })
-            .collect()
+        let count = self.inner.constraint_count() as u64;
+        let mut result = Vec::with_capacity(count as usize);
+        for index in 0..count {
+            if let Some(object) = self.get_constraint_object(py, index)? {
+                result.push(object);
+            }
+        }
+        Ok(result)
     }
 
     /// The constraint object for a handle, or None.
@@ -523,6 +523,11 @@ impl PyEntityRegistry {
                         dict.get("shape_id").and_then(|v| v.as_u64())
                     {
                         let _ = object.setattr("shape_id", sid);
+                    }
+                    if let Some(expr) =
+                        dict.get("expression").and_then(|v| v.as_str())
+                    {
+                        let _ = object.setattr("expression", expr);
                     }
                 }
                 Ok(Some(AnyConstraint(object)))
