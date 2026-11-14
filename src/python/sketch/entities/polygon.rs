@@ -353,6 +353,18 @@ impl PyPolygon {
             },
         )
     }
+    /// The polygon's rings in world coordinates.
+    fn get_world_rings(
+        &self,
+        registry: &PyEntityRegistry,
+    ) -> Vec<Vec<(f64, f64)>> {
+        self.inner.get_world_rings(&registry.inner)
+    }
+
+    /// Whether the polygon is a closed loop.
+    fn is_closed_loop(&self) -> bool {
+        self.inner.is_closed_loop()
+    }
 }
 
 /// Registers the polygon class with the given module.

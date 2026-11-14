@@ -149,19 +149,22 @@ impl PySketchPoint {
 
     /// Compares equal to an ``(x, y)`` pair or another point with the
     /// same coordinates.
-    fn __eq__(&self, other: &Bound<'_, PyAny>) -> bool {
+    fn __eq__(&self, py: Python<'_>, other: &Bound<'_, PyAny>) -> Py<PyAny> {
         if let Ok(p) = other.extract::<PyRef<'_, PySketchPoint>>() {
-            return self.inner.x == p.inner.x && self.inner.y == p.inner.y;
+            let eq = self.inner.x == p.inner.x && self.inner.y == p.inner.y;
+            return pyo3::types::PyBool::new(py, eq)
+                .to_owned()
+                .into_any()
+                .unbind();
         }
         if let Ok((x, y)) = other.extract::<(f64, f64)>() {
-            return self.inner.x == x && self.inner.y == y;
+            let eq = self.inner.x == x && self.inner.y == y;
+            return pyo3::types::PyBool::new(py, eq)
+                .to_owned()
+                .into_any()
+                .unbind();
         }
-        if let (Ok(x), Ok(y)) = (other.get_item(0), other.get_item(1)) {
-            if let (Ok(x), Ok(y)) = (x.extract::<f64>(), y.extract::<f64>()) {
-                return self.inner.x == x && self.inner.y == y;
-            }
-        }
-        false
+        py.NotImplemented()
     }
 
     fn __hash__(&self) -> u64 {

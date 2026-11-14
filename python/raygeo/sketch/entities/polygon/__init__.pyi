@@ -168,4 +168,12 @@ class Polygon:
         Reference factory: builds a polygon from center/handle point
         ids, outer vertices and optional world-space hole rings.
         """
+    def get_world_rings(self, registry: registry.EntityRegistry) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
+        r"""
+        The polygon's rings in world coordinates.
+        """
+    def is_closed_loop(self) -> builtins.bool:
+        r"""
+        Whether the polygon is a closed loop.
+        """
 

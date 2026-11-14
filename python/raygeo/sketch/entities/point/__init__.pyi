@@ -70,7 +70,7 @@ class SketchPoint:
         r"""
         Iterates ``(x, y)``.
         """
-    def __eq__(self, other: typing.Any) -> builtins.bool:
+    def __eq__(self, other: typing.Any) -> typing.Any:
         r"""
         Compares equal to an ``(x, y)`` pair or another point with the
         same coordinates.
