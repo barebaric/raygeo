@@ -2,10 +2,12 @@
 //!
 //! Every constraint mirrors one class of the reference sketch model
 //! and owns its own residual and gradient math (see the [`constraints`
-//! submodule]).  The caller resolves entity references to concrete
-//! point ids and parameter expressions to plain floats, so a
-//! constraint sees only a point context and never entity or parameter
-//! knowledge.
+//! submodule]).  Constraints reference points directly, or reference
+//! entities and resolve them through the point context at residual
+//! time — mirroring the reference model, where entity-referencing
+//! constraints looked their geometry up through the registry on every
+//! evaluation.  The caller resolves parameter expressions to plain
+//! floats before solving.
 
 use serde_json::Value;
 
@@ -24,7 +26,15 @@ pub trait PointContext {
 
     /// Overwrites the coordinates of a point id.
     fn set_xy(&mut self, id: u64, x: f64, y: f64);
+
+    /// Returns the entity with the given id, for constraints that
+    /// reference entities and resolve them at residual time.
+    fn get_entity(&self, id: u64) -> Option<&dyn Entity>;
 }
+
+/// One Jacobian entry: derivative of residual `row` w.r.t. the two
+/// coordinates of `point_id`.
+use crate::sketch::entities::Entity;
 
 /// One Jacobian entry: derivative of residual `row` w.r.t. the two
 /// coordinates of `point_id`.
@@ -39,11 +49,13 @@ pub trait SketchConstraint: Send + Sync {
     /// Serialization to the reference constraint dictionary shape.
     fn to_json(&self) -> Value;
 
-    /// Returns all point ids this constraint couples.
-    fn referenced_points(&self) -> Vec<u64>;
+    /// Returns all point ids this constraint couples.  Entity
+    /// references resolve through the context.
+    fn referenced_points(&self, ctx: &dyn PointContext) -> Vec<u64>;
 
-    /// Returns the number of scalar residuals.
-    fn residual_count(&self) -> usize;
+    /// Returns the number of scalar residuals.  Entity references
+    /// resolve through the context.
+    fn residual_count(&self, ctx: &dyn PointContext) -> usize;
 
     /// Calculates the error of the constraint.
     fn error(&self, reg: &dyn PointContext) -> Vec<f64>;

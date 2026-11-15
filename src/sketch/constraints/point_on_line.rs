@@ -53,7 +53,7 @@ impl SketchConstraint for PointOnLineConstraint {
         PointOnLineConstraint::to_json(self)
     }
 
-    fn referenced_points(&self) -> Vec<u64> {
+    fn referenced_points(&self, _ctx: &dyn PointContext) -> Vec<u64> {
         let mut ids = vec![self.point];
         match &self.target {
             PointOnTarget::Line { l1, l2 } => {
@@ -71,7 +71,7 @@ impl SketchConstraint for PointOnLineConstraint {
         ids
     }
 
-    fn residual_count(&self) -> usize {
+    fn residual_count(&self, _ctx: &dyn PointContext) -> usize {
         1
     }
 

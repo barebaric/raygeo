@@ -56,7 +56,7 @@ impl SketchConstraint for SymmetryConstraint {
         SymmetryConstraint::to_json(self)
     }
 
-    fn referenced_points(&self) -> Vec<u64> {
+    fn referenced_points(&self, _ctx: &dyn PointContext) -> Vec<u64> {
         let mut ids = vec![self.p1, self.p2];
         match &self.target {
             SymmetryTarget::Point { center } => ids.push(*center),
@@ -68,7 +68,7 @@ impl SketchConstraint for SymmetryConstraint {
         ids
     }
 
-    fn residual_count(&self) -> usize {
+    fn residual_count(&self, _ctx: &dyn PointContext) -> usize {
         2
     }
 

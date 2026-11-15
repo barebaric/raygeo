@@ -66,6 +66,9 @@ impl Entity for Line {
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
+    fn clone_box(&self) -> Box<dyn Entity> {
+        Box::new(self.clone())
+    }
 
     fn type_name(&self) -> &'static str {
         "line"

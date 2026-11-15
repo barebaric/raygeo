@@ -119,6 +119,9 @@ pub trait Entity: Send + Sync {
     /// Downcast hook for the binding layer.
     fn as_any(&self) -> &dyn std::any::Any;
 
+    /// Clones the entity as a boxed trait object.
+    fn clone_box(&self) -> Box<dyn Entity>;
+
     /// The reference serialization type string.
     fn type_name(&self) -> &'static str;
 

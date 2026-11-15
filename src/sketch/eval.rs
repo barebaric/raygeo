@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 
 use crate::sketch::constraint::{PointContext, SketchConstraint};
+use crate::sketch::entities::Entity;
 
 /// Read/write coordinate table over the sketch's points, addressed by
 /// point id.  Implements [`PointContext`] for the constraints and
@@ -10,13 +11,25 @@ use crate::sketch::constraint::{PointContext, SketchConstraint};
 pub struct Evaluator {
     slot_of: HashMap<u64, usize>,
     pub(crate) coords: Vec<f64>,
+    /// Structure snapshot (entity kinds and their point ids) used by
+    /// entity-referencing constraints; positions always come from
+    /// `coords`.
+    registry: crate::sketch::registry::EntityRegistry,
 }
 
 impl Evaluator {
     /// Builds an evaluator over `coords` (two floats per point,
     /// indexed through `slot_of`).
-    pub fn new(slot_of: HashMap<u64, usize>, coords: Vec<f64>) -> Self {
-        Evaluator { slot_of, coords }
+    pub fn new(
+        slot_of: HashMap<u64, usize>,
+        coords: Vec<f64>,
+        registry: crate::sketch::registry::EntityRegistry,
+    ) -> Self {
+        Evaluator {
+            slot_of,
+            coords,
+            registry,
+        }
     }
 
     /// Overwrites the coordinates of the given slots from the flat
@@ -34,7 +47,7 @@ impl Evaluator {
     pub fn residuals(&self, constraints: &[&dyn SketchConstraint]) -> Vec<f64> {
         let mut residuals = Vec::new();
         for constraint in constraints {
-            if constraint.residual_count() == 0 {
+            if constraint.residual_count(self) == 0 {
                 continue;
             }
             residuals.extend(constraint.error(self));
@@ -57,7 +70,7 @@ impl Evaluator {
     ) -> Vec<f64> {
         let mut rows = 0;
         for constraint in constraints {
-            rows += constraint.residual_count();
+            rows += constraint.residual_count(self);
         }
         if rows == 0 {
             rows = 1;
@@ -65,7 +78,7 @@ impl Evaluator {
         let mut jac = vec![0.0; rows * n_vars];
         let mut row_offset = 0;
         for constraint in constraints {
-            let count = constraint.residual_count();
+            let count = constraint.residual_count(self);
             if count == 0 {
                 continue;
             }
@@ -90,7 +103,7 @@ impl Evaluator {
         constraints
             .iter()
             .map(|constraint| {
-                if constraint.residual_count() == 0 {
+                if constraint.residual_count(self) == 0 {
                     return 0.0;
                 }
                 constraint
@@ -103,6 +116,10 @@ impl Evaluator {
 }
 
 impl PointContext for Evaluator {
+    fn get_entity(&self, id: u64) -> Option<&dyn Entity> {
+        self.registry.get_entity(id)
+    }
+
     fn xy(&self, id: u64) -> (f64, f64) {
         let slot = self.slot_of[&id];
         (self.coords[2 * slot], self.coords[2 * slot + 1])

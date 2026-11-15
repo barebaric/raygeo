@@ -119,7 +119,7 @@ impl SketchConstraint for AngleConstraint {
         AngleConstraint::to_json(self)
     }
 
-    fn referenced_points(&self) -> Vec<u64> {
+    fn referenced_points(&self, _ctx: &dyn PointContext) -> Vec<u64> {
         let mut ids = vec![self.p1, self.p2, self.p3, self.p4];
         for far in [self.e1_far, self.e2_far].into_iter().flatten() {
             if !ids.contains(&far) {
@@ -129,7 +129,7 @@ impl SketchConstraint for AngleConstraint {
         ids
     }
 
-    fn residual_count(&self) -> usize {
+    fn residual_count(&self, _ctx: &dyn PointContext) -> usize {
         1
     }
 

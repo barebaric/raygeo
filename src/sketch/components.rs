@@ -14,6 +14,7 @@ use super::constraint::SketchConstraint;
 /// when some chain of constraints couples them.  Points not referenced
 /// by any constraint belong to no component.
 pub fn compute_constraint_components(
+    registry: &crate::sketch::registry::EntityRegistry,
     constraints: &[&dyn SketchConstraint],
 ) -> Vec<BTreeSet<u64>> {
     let mut parent: HashMap<u64, u64> = HashMap::new();
@@ -38,7 +39,7 @@ pub fn compute_constraint_components(
     }
 
     for constraint in constraints {
-        let pids = constraint.referenced_points();
+        let pids = constraint.referenced_points(registry);
         let first = match pids.first() {
             Some(&id) => id,
             None => continue,

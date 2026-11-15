@@ -51,11 +51,11 @@ impl SketchConstraint for AspectRatioConstraint {
         AspectRatioConstraint::to_json(self)
     }
 
-    fn referenced_points(&self) -> Vec<u64> {
+    fn referenced_points(&self, _ctx: &dyn PointContext) -> Vec<u64> {
         vec![self.p1, self.p2, self.p3, self.p4]
     }
 
-    fn residual_count(&self) -> usize {
+    fn residual_count(&self, _ctx: &dyn PointContext) -> usize {
         1
     }
 
