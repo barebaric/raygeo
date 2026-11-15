@@ -6,6 +6,7 @@ use pyo3::types::PyDict;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 use serde_json::Value;
 
+use super::types::EntityId;
 use crate::geo::types::Rect;
 use crate::python::geo::geometry::Geometry as PyGeometry;
 use crate::python::sketch::constraints::{
@@ -173,8 +174,8 @@ impl PyEntityRegistry {
 
     /// Adds a point and returns its id.
     #[pyo3(signature = (x, y, fixed = false))]
-    fn add_point(&mut self, x: f64, y: f64, fixed: bool) -> u64 {
-        self.inner.add_point(x, y, fixed)
+    fn add_point(&mut self, x: f64, y: f64, fixed: bool) -> EntityId {
+        EntityId(self.inner.add_point(x, y, fixed))
     }
 
     /// Appends pre-built points given as ``(id, x, y, fixed)`` tuples.
@@ -198,98 +199,125 @@ impl PyEntityRegistry {
     }
 
     /// Removes the given points.
-    fn remove_points(&mut self, point_ids: Vec<u64>) {
+    fn remove_points(&mut self, point_ids: Vec<EntityId>) {
+        let point_ids: Vec<u64> = point_ids.iter().map(|v| v.0).collect();
         self.inner.remove_points(&point_ids);
     }
 
     /// Adds a line and returns its id.
     #[pyo3(signature = (p1, p2, construction = false))]
-    fn add_line(&mut self, p1: u64, p2: u64, construction: bool) -> u64 {
-        self.inner.add_line(p1, p2, construction)
+    fn add_line(
+        &mut self,
+        p1: EntityId,
+        p2: EntityId,
+        construction: bool,
+    ) -> EntityId {
+        let p1 = p1.0;
+        let p2 = p2.0;
+        EntityId(self.inner.add_line(p1, p2, construction))
     }
 
     /// Adds an arc and returns its id.
     #[pyo3(signature = (start, end, center, clockwise = false, construction = false))]
     fn add_arc(
         &mut self,
-        start: u64,
-        end: u64,
-        center: u64,
+        start: EntityId,
+        end: EntityId,
+        center: EntityId,
         clockwise: bool,
         construction: bool,
-    ) -> u64 {
-        self.inner
-            .add_arc(start, end, center, clockwise, construction)
+    ) -> EntityId {
+        let start = start.0;
+        let end = end.0;
+        let center = center.0;
+        EntityId(self.inner.add_arc(
+            start,
+            end,
+            center,
+            clockwise,
+            construction,
+        ))
     }
 
     /// Adds a circle and returns its id.
     #[pyo3(signature = (center, radius_point, construction = false))]
     fn add_circle(
         &mut self,
-        center: u64,
-        radius_point: u64,
+        center: EntityId,
+        radius_point: EntityId,
         construction: bool,
-    ) -> u64 {
-        self.inner.add_circle(center, radius_point, construction)
+    ) -> EntityId {
+        let center = center.0;
+        let radius_point = radius_point.0;
+        EntityId(self.inner.add_circle(center, radius_point, construction))
     }
 
     /// Adds an ellipse and returns its id.
     #[pyo3(signature = (center, radius_x_point, radius_y_point, construction = false))]
     fn add_ellipse(
         &mut self,
-        center: u64,
-        radius_x_point: u64,
-        radius_y_point: u64,
+        center: EntityId,
+        radius_x_point: EntityId,
+        radius_y_point: EntityId,
         construction: bool,
-    ) -> u64 {
-        self.inner.add_ellipse(
+    ) -> EntityId {
+        let center = center.0;
+        let radius_x_point = radius_x_point.0;
+        let radius_y_point = radius_y_point.0;
+        EntityId(self.inner.add_ellipse(
             center,
             radius_x_point,
             radius_y_point,
             construction,
-        )
+        ))
     }
 
     /// Adds a bezier and returns its id.
     #[pyo3(signature = (start, end, construction = false, cp1 = None, cp2 = None))]
     fn add_bezier(
         &mut self,
-        start: u64,
-        end: u64,
+        start: EntityId,
+        end: EntityId,
         construction: bool,
         cp1: Option<(f64, f64)>,
         cp2: Option<(f64, f64)>,
-    ) -> u64 {
-        self.inner.add_bezier(
+    ) -> EntityId {
+        let start = start.0;
+        let end = end.0;
+        EntityId(self.inner.add_bezier(
             start,
             end,
             construction,
             cp1.map(|p| [p.0, p.1]),
             cp2.map(|p| [p.0, p.1]),
-        )
+        ))
     }
 
     /// Adds a polygon and returns its id.
     #[pyo3(signature = (center, handle, vertices, closed = false, construction = false, rings = None))]
     fn add_polygon(
         &mut self,
-        center: u64,
-        handle: u64,
+        center: EntityId,
+        handle: EntityId,
         vertices: Vec<(f64, f64)>,
         closed: bool,
         construction: bool,
         rings: Option<Vec<Vec<(f64, f64)>>>,
-    ) -> u64 {
+    ) -> EntityId {
+        let center = center.0;
+        let handle = handle.0;
         let to_pairs = |list: Vec<(f64, f64)>| -> Vec<(f64, f64)> { list };
-        self.inner.add_polygon(
-            center,
-            handle,
-            to_pairs(vertices),
-            closed,
-            construction,
-            rings
-                .map(|r| r.into_iter().map(to_pairs).collect())
-                .unwrap_or_default(),
+        EntityId(
+            self.inner.add_polygon(
+                center,
+                handle,
+                to_pairs(vertices),
+                closed,
+                construction,
+                rings
+                    .map(|r| r.into_iter().map(to_pairs).collect())
+                    .unwrap_or_default(),
+            ),
         )
     }
 
@@ -298,16 +326,19 @@ impl PyEntityRegistry {
     #[allow(clippy::too_many_arguments)]
     fn add_text_box(
         &mut self,
-        origin: u64,
-        width: u64,
-        height: u64,
+        origin: EntityId,
+        width: EntityId,
+        height: EntityId,
         content: String,
         font_family: String,
         font_size: f64,
         bold: bool,
         italic: bool,
-    ) -> u64 {
-        self.inner.add_text_box(
+    ) -> EntityId {
+        let origin = origin.0;
+        let width = width.0;
+        let height = height.0;
+        EntityId(self.inner.add_text_box(
             origin,
             width,
             height,
@@ -320,11 +351,12 @@ impl PyEntityRegistry {
                 extra: serde_json::Map::new(),
             },
             Vec::new(),
-        )
+        ))
     }
 
     /// Removes entities by id.
-    fn remove_entities(&mut self, entity_ids: Vec<u64>) {
+    fn remove_entities(&mut self, entity_ids: Vec<EntityId>) {
+        let entity_ids: Vec<u64> = entity_ids.iter().map(|v| v.0).collect();
         self.inner.remove_entities_by_id(&entity_ids);
     }
 
@@ -339,22 +371,32 @@ impl PyEntityRegistry {
     }
 
     /// All point ids in insertion order.
-    fn point_ids(&self) -> Vec<u64> {
-        self.inner.point_ids()
+    fn point_ids(&self) -> Vec<EntityId> {
+        self.inner.point_ids().into_iter().map(EntityId).collect()
     }
 
     /// All entity ids in insertion order.
-    fn entity_ids(&self) -> Vec<u64> {
-        self.inner.entity_ids()
+    fn entity_ids(&self) -> Vec<EntityId> {
+        self.inner.entity_ids().into_iter().map(EntityId).collect()
     }
 
     /// Sets a point's solver-constrained flag.
-    fn set_point_constrained(&mut self, id: u64, constrained: bool) -> bool {
+    fn set_point_constrained(
+        &mut self,
+        id: EntityId,
+        constrained: bool,
+    ) -> bool {
+        let id = id.0;
         self.inner.set_point_constrained(id, constrained)
     }
 
     /// Sets an entity's solver-constrained flag.
-    fn set_entity_constrained(&mut self, id: u64, constrained: bool) -> bool {
+    fn set_entity_constrained(
+        &mut self,
+        id: EntityId,
+        constrained: bool,
+    ) -> bool {
+        let id = id.0;
         match self.inner.get_entity_mut(id) {
             Some(entity) => {
                 entity.base_mut().constrained = constrained;
@@ -365,28 +407,37 @@ impl PyEntityRegistry {
     }
 
     /// Sets a point's coordinates.
-    fn set_point_position(&mut self, id: u64, x: f64, y: f64) -> bool {
+    fn set_point_position(&mut self, id: EntityId, x: f64, y: f64) -> bool {
+        let id = id.0;
         self.inner.set_point_position(id, x, y)
     }
 
     /// Whether the point is referenced by any entity.
-    fn is_point_used(&self, id: u64) -> bool {
+    fn is_point_used(&self, id: EntityId) -> bool {
+        let id = id.0;
         self.inner.is_point_used(id)
     }
 
     /// The serialization type string of an entity, or ``None``.
-    fn entity_type(&self, id: u64) -> Option<&'static str> {
+    fn entity_type(&self, id: EntityId) -> Option<&'static str> {
+        let id = id.0;
         self.inner.entity_type(id)
     }
 
     /// Control point ids of an entity, or ``None``.
-    fn entity_point_ids(&self, id: u64) -> Option<Vec<u64>> {
-        self.inner.entity_point_ids(id)
+    fn entity_point_ids(&self, id: EntityId) -> Option<Vec<EntityId>> {
+        let id = id.0;
+        self.inner
+            .entity_point_ids(id)
+            .map(|ids| ids.into_iter().map(EntityId).collect())
     }
 
     /// Endpoint ids of an edge entity, or ``None``.
-    fn entity_endpoint_ids(&self, id: u64) -> Option<Vec<u64>> {
-        self.inner.entity_endpoint_ids(id)
+    fn entity_endpoint_ids(&self, id: EntityId) -> Option<Vec<EntityId>> {
+        let id = id.0;
+        self.inner
+            .entity_endpoint_ids(id)
+            .map(|ids| ids.into_iter().map(EntityId).collect())
     }
 
     /// Monotonic entity-list version.
@@ -395,7 +446,8 @@ impl PyEntityRegistry {
     }
 
     /// Whether the entity participates in edge/chaining adjacency.
-    fn is_edge_entity(&self, id: u64) -> bool {
+    fn is_edge_entity(&self, id: EntityId) -> bool {
+        let id = id.0;
         self.inner
             .get_entity(id)
             .map(|e| e.is_edge_entity())
@@ -403,7 +455,8 @@ impl PyEntityRegistry {
     }
 
     /// Whether the entity has a radius.
-    fn is_radius_entity(&self, id: u64) -> bool {
+    fn is_radius_entity(&self, id: EntityId) -> bool {
+        let id = id.0;
         self.inner
             .get_entity(id)
             .map(|e| e.is_radius_entity())
@@ -411,7 +464,8 @@ impl PyEntityRegistry {
     }
 
     /// Whether the entity alone forms a closed loop.
-    fn is_closed_loop(&self, id: u64) -> bool {
+    fn is_closed_loop(&self, id: EntityId) -> bool {
+        let id = id.0;
         self.inner
             .get_entity(id)
             .map(|e| e.is_closed_loop())
@@ -419,7 +473,8 @@ impl PyEntityRegistry {
     }
 
     /// Whether a point can be constrained onto this entity's curve.
-    fn supports_point_on_curve(&self, id: u64) -> bool {
+    fn supports_point_on_curve(&self, id: EntityId) -> bool {
+        let id = id.0;
         self.inner
             .get_entity(id)
             .map(|e| e.supports_point_on_curve())
@@ -427,7 +482,8 @@ impl PyEntityRegistry {
     }
 
     /// Whether the entity is fully constrained.
-    fn is_constrained(&self, id: u64) -> bool {
+    fn is_constrained(&self, id: EntityId) -> bool {
+        let id = id.0;
         self.inner
             .get_entity(id)
             .map(|e| e.base().constrained)
@@ -435,7 +491,8 @@ impl PyEntityRegistry {
     }
 
     /// Whether the entity is a construction entity.
-    fn is_construction(&self, id: u64) -> bool {
+    fn is_construction(&self, id: EntityId) -> bool {
+        let id = id.0;
         self.inner
             .get_entity(id)
             .map(|e| e.base().construction)
@@ -443,7 +500,8 @@ impl PyEntityRegistry {
     }
 
     /// Sets the construction flag.
-    fn set_construction(&mut self, id: u64, construction: bool) {
+    fn set_construction(&mut self, id: EntityId, construction: bool) {
+        let id = id.0;
         let Some(entity) = self.inner.get_entity_mut(id) else {
             return;
         };
@@ -571,7 +629,8 @@ impl PyEntityRegistry {
     }
 
     /// Whether the point is solver-constrained.
-    fn point_constrained(&self, id: u64) -> bool {
+    fn point_constrained(&self, id: EntityId) -> bool {
+        let id = id.0;
         self.inner
             .get_point(id)
             .map(|p| p.constrained)
@@ -579,14 +638,16 @@ impl PyEntityRegistry {
     }
 
     /// Waypoint type string of a point ("sharp"/"smooth"/"symmetric").
-    fn waypoint_type(&self, id: u64) -> Option<String> {
+    fn waypoint_type(&self, id: EntityId) -> Option<String> {
+        let id = id.0;
         self.inner
             .get_point(id)
             .map(|p| p.waypoint_type.as_str().to_string())
     }
 
     /// Coordinates of a point as ``(x, y)``, or ``None``.
-    fn get_point(slf: &Bound<'_, Self>, id: u64) -> Option<PySketchPoint> {
+    fn get_point(slf: &Bound<'_, Self>, id: EntityId) -> Option<PySketchPoint> {
+        let id = id.0;
         let reg = slf.borrow();
         reg.inner
             .get_point(id)
@@ -596,8 +657,9 @@ impl PyEntityRegistry {
     /// The point object for an id (with id/coords/flags), or None.
     fn get_point_object(
         slf: &Bound<'_, Self>,
-        id: u64,
+        id: EntityId,
     ) -> Option<PySketchPoint> {
+        let id = id.0;
         let reg = slf.borrow();
         reg.inner
             .get_point(id)
@@ -605,7 +667,8 @@ impl PyEntityRegistry {
     }
 
     /// Whether a point carries the fixed flag.
-    fn point_is_fixed(&self, id: u64) -> bool {
+    fn point_is_fixed(&self, id: EntityId) -> bool {
+        let id = id.0;
         self.inner
             .get_point(id)
             .map(|point| point.fixed)
@@ -613,28 +676,37 @@ impl PyEntityRegistry {
     }
 
     /// Whether the point is one of a text box frame's corner points.
-    fn point_is_in_text_box_frame(&self, id: u64) -> bool {
+    fn point_is_in_text_box_frame(&self, id: EntityId) -> bool {
+        let id = id.0;
         self.inner.point_is_in_text_box_frame(id)
     }
 
     /// Junction point ids of an entity.
-    fn junction_point_ids(&self, id: u64) -> Vec<u64> {
+    fn junction_point_ids(&self, id: EntityId) -> Vec<EntityId> {
+        let id = id.0;
         self.inner
             .get_entity(id)
-            .map(|e| e.get_junction_point_ids())
+            .map(|e| {
+                e.get_junction_point_ids()
+                    .into_iter()
+                    .map(EntityId)
+                    .collect()
+            })
             .unwrap_or_default()
     }
 
     /// Helper/child ids of a compound entity.
-    fn helper_ids(&self, id: u64) -> Vec<u64> {
+    fn helper_ids(&self, id: EntityId) -> Vec<EntityId> {
+        let id = id.0;
         self.inner
             .get_entity(id)
-            .map(|e| e.get_helper_ids())
+            .map(|e| e.get_helper_ids().into_iter().map(EntityId).collect())
             .unwrap_or_default()
     }
 
     /// Drops the entity's references to its helper entities.
-    fn clear_helper_references(&mut self, id: u64) {
+    fn clear_helper_references(&mut self, id: EntityId) {
+        let id = id.0;
         let Some(entity) = self.inner.get_entity_mut(id) else {
             return;
         };
@@ -642,31 +714,48 @@ impl PyEntityRegistry {
     }
 
     /// Points that move rigidly with `point_id`.
-    fn rigidly_connected_points(&self, point_id: u64) -> Vec<u64> {
-        self.inner.get_rigidly_connected_points(point_id)
+    fn rigidly_connected_points(&self, point_id: EntityId) -> Vec<EntityId> {
+        let point_id = point_id.0;
+        self.inner
+            .get_rigidly_connected_points(point_id)
+            .into_iter()
+            .map(EntityId)
+            .collect()
     }
 
     /// Points pinned while `point_id` is dragged.
     /// Alias for drag_anchor_points (reference naming).
-    fn get_drag_anchor_points(&self, point_id: u64) -> Vec<u64> {
+    fn get_drag_anchor_points(&self, point_id: EntityId) -> Vec<EntityId> {
         self.drag_anchor_points(point_id)
     }
 
-    fn drag_anchor_points(&self, point_id: u64) -> Vec<u64> {
-        self.inner.get_drag_anchor_points(point_id)
+    fn drag_anchor_points(&self, point_id: EntityId) -> Vec<EntityId> {
+        let point_id = point_id.0;
+        self.inner
+            .get_drag_anchor_points(point_id)
+            .into_iter()
+            .map(EntityId)
+            .collect()
     }
 
     /// Points that can stay unconstrained when the entity is
     /// constrained.
-    fn ignorable_unconstrained_points(&self, id: u64) -> Vec<u64> {
+    fn ignorable_unconstrained_points(&self, id: EntityId) -> Vec<EntityId> {
+        let id = id.0;
         self.inner
             .get_entity(id)
-            .map(|e| e.get_ignorable_unconstrained_points())
+            .map(|e| {
+                e.get_ignorable_unconstrained_points()
+                    .into_iter()
+                    .map(EntityId)
+                    .collect()
+            })
             .unwrap_or_default()
     }
 
     /// Characteristic length used by equal-length constraints.
-    fn characteristic_length(&self, id: u64) -> f64 {
+    fn characteristic_length(&self, id: EntityId) -> f64 {
+        let id = id.0;
         self.inner
             .get_entity(id)
             .map(|e| e.characteristic_length(&self.inner))
@@ -674,7 +763,8 @@ impl PyEntityRegistry {
     }
 
     /// Signed area enclosed by a closed single-entity loop.
-    fn enclosed_signed_area(&self, id: u64) -> Option<f64> {
+    fn enclosed_signed_area(&self, id: EntityId) -> Option<f64> {
+        let id = id.0;
         self.inner
             .get_entity(id)
             .and_then(|e| e.enclosed_signed_area(&self.inner))
@@ -683,7 +773,8 @@ impl PyEntityRegistry {
     /// Whether the point lies within threshold distance of the
     /// entity.
     #[pyo3(signature = (id, mx, my, threshold))]
-    fn hit_test(&self, id: u64, mx: f64, my: f64, threshold: f64) -> bool {
+    fn hit_test(&self, id: EntityId, mx: f64, my: f64, threshold: f64) -> bool {
+        let id = id.0;
         self.inner
             .get_entity(id)
             .map(|e| e.hit_test(mx, my, threshold, &self.inner))
@@ -691,7 +782,8 @@ impl PyEntityRegistry {
     }
 
     /// Whether the entity is fully strictly contained in the rect.
-    fn is_contained_by(&self, id: u64, rect: [f64; 4]) -> bool {
+    fn is_contained_by(&self, id: EntityId, rect: [f64; 4]) -> bool {
+        let id = id.0;
         self.inner
             .get_entity(id)
             .map(|e| {
@@ -704,7 +796,8 @@ impl PyEntityRegistry {
     }
 
     /// Whether the entity intersects the rect or is contained by it.
-    fn intersects_rect(&self, id: u64, rect: [f64; 4]) -> bool {
+    fn intersects_rect(&self, id: EntityId, rect: [f64; 4]) -> bool {
+        let id = id.0;
         self.inner
             .get_entity(id)
             .map(|e| {
@@ -717,7 +810,8 @@ impl PyEntityRegistry {
     }
 
     /// Whether a point is inside the entity (closed shapes).
-    fn contains_point(&self, id: u64, x: f64, y: f64) -> bool {
+    fn contains_point(&self, id: EntityId, x: f64, y: f64) -> bool {
+        let id = id.0;
         self.inner
             .get_entity(id)
             .map(|e| e.contains_point(&self.inner, x, y))
@@ -727,7 +821,13 @@ impl PyEntityRegistry {
     /// Signed distance from a point to the entity's locus, or
     /// ``None`` when unsupported.
     #[pyo3(signature = (id, px, py))]
-    fn signed_distance_to(&self, id: u64, px: f64, py: f64) -> Option<f64> {
+    fn signed_distance_to(
+        &self,
+        id: EntityId,
+        px: f64,
+        py: f64,
+    ) -> Option<f64> {
+        let id = id.0;
         self.inner
             .get_entity(id)
             .and_then(|e| e.signed_distance_to(px, py, &self.inner))
@@ -735,7 +835,13 @@ impl PyEntityRegistry {
 
     /// Tangent vector at a defining point, or ``None`` when the
     /// entity has no directional tangent.
-    fn tangent_at(&self, id: u64, point_id: u64) -> Option<(f64, f64)> {
+    fn tangent_at(
+        &self,
+        id: EntityId,
+        point_id: EntityId,
+    ) -> Option<(f64, f64)> {
+        let id = id.0;
+        let point_id = point_id.0;
         self.inner
             .get_entity(id)
             .and_then(|e| e.tangent_at(&self.inner, point_id))
@@ -746,8 +852,9 @@ impl PyEntityRegistry {
     fn geometry_signature<'py>(
         &self,
         py: Python<'py>,
-        id: u64,
+        id: EntityId,
     ) -> PyResult<Bound<'py, PyAny>> {
+        let id = id.0;
         match self
             .inner
             .get_entity(id)
@@ -762,8 +869,9 @@ impl PyEntityRegistry {
     fn get_state<'py>(
         &self,
         py: Python<'py>,
-        id: u64,
+        id: EntityId,
     ) -> PyResult<Bound<'py, PyAny>> {
+        let id = id.0;
         match self.inner.get_entity(id).and_then(|e| e.get_state()) {
             Some(state) => value_to_py(py, &state),
             None => Ok(py.None().into_bound(py)),
@@ -774,18 +882,20 @@ impl PyEntityRegistry {
     /// Replaces an entity in place from its dictionary form.
     fn replace_entity_from_dict(
         &mut self,
-        id: u64,
+        id: EntityId,
         data: &Bound<'_, PyDict>,
     ) -> PyResult<bool> {
+        let id = id.0;
         let value = value_from_dict(data)?;
         Ok(self.inner.replace_entity_from_json(id, &value))
     }
 
     fn set_state(
         &mut self,
-        id: u64,
+        id: EntityId,
         state: &Bound<'_, PyDict>,
     ) -> PyResult<()> {
+        let id = id.0;
         let value = value_from_dict(state)?;
         let Some(entity) = self.inner.get_entity_mut(id) else {
             return Ok(());
@@ -796,7 +906,8 @@ impl PyEntityRegistry {
 
     /// The entity as a raygeo Geometry object.
     #[allow(clippy::borrowed_box)]
-    fn to_geometry(&self, id: u64) -> PyGeometry {
+    fn to_geometry(&self, id: EntityId) -> PyGeometry {
+        let id = id.0;
         let Some(entity) = self.inner.get_entity(id) else {
             return PyGeometry {
                 inner: crate::geo::geometry::Geometry::new(),
@@ -808,7 +919,12 @@ impl PyEntityRegistry {
 
     /// Polygon vertices of the entity (sampled for curves).
     #[pyo3(signature = (id, forward))]
-    fn to_polygon_vertices(&self, id: u64, forward: bool) -> Vec<(f64, f64)> {
+    fn to_polygon_vertices(
+        &self,
+        id: EntityId,
+        forward: bool,
+    ) -> Vec<(f64, f64)> {
+        let id = id.0;
         self.inner
             .get_entity(id)
             .map(|e| e.to_polygon_vertices(&self.inner, forward))
@@ -817,7 +933,8 @@ impl PyEntityRegistry {
 
     /// Sampled polyline of the entity.
     #[pyo3(signature = (id, tolerance = 0.1))]
-    fn to_polyline(&self, id: u64, tolerance: f64) -> Vec<(f64, f64)> {
+    fn to_polyline(&self, id: EntityId, tolerance: f64) -> Vec<(f64, f64)> {
+        let id = id.0;
         self.inner
             .get_entity(id)
             .map(|e| e.to_polyline(&self.inner, tolerance))
@@ -826,7 +943,12 @@ impl PyEntityRegistry {
 
     /// Sampled polylines of the entity (multi-contour for text).
     #[pyo3(signature = (id, tolerance = 0.1))]
-    fn to_polylines(&self, id: u64, tolerance: f64) -> Vec<Vec<(f64, f64)>> {
+    fn to_polylines(
+        &self,
+        id: EntityId,
+        tolerance: f64,
+    ) -> Vec<Vec<(f64, f64)>> {
+        let id = id.0;
         self.inner
             .get_entity(id)
             .map(|e| e.to_polylines(&self.inner, tolerance))
@@ -835,7 +957,13 @@ impl PyEntityRegistry {
 
     /// Appends the entity's geometry (traversal direction aware) to
     /// an existing Geometry object.
-    fn append_to_geometry(&self, geo: &mut PyGeometry, id: u64, forward: bool) {
+    fn append_to_geometry(
+        &self,
+        geo: &mut PyGeometry,
+        id: EntityId,
+        forward: bool,
+    ) {
+        let id = id.0;
         let Some(entity) = self.inner.get_entity(id) else {
             return;
         };
@@ -848,8 +976,10 @@ impl PyEntityRegistry {
     #[pyo3(signature = (radius_constrained_entity_ids = Vec::new()))]
     fn update_constrained_status(
         &mut self,
-        radius_constrained_entity_ids: Vec<u64>,
+        radius_constrained_entity_ids: Vec<EntityId>,
     ) {
+        let radius_constrained_entity_ids: Vec<u64> =
+            radius_constrained_entity_ids.iter().map(|v| v.0).collect();
         let radius_ids: std::collections::HashSet<u64> =
             radius_constrained_entity_ids.into_iter().collect();
         let constrains_radius =
@@ -861,10 +991,11 @@ impl PyEntityRegistry {
     /// bezier offsets, polygon winding).
     fn mirror(
         &mut self,
-        id: u64,
+        id: EntityId,
         direction: &str,
         position: f64,
     ) -> PyResult<()> {
+        let id = id.0;
         let direction = match direction {
             "vertical" => MirrorDirection::Vertical,
             "horizontal" => MirrorDirection::Horizontal,
@@ -914,7 +1045,7 @@ impl PyEntityRegistry {
     fn get_entity<'py>(
         slf: &Bound<'_, Self>,
         py: Python<'py>,
-        id: u64,
+        id: EntityId,
     ) -> PyResult<Option<AnyEntity<'py>>> {
         Self::get_entity_object(slf, py, id)
     }
@@ -922,8 +1053,9 @@ impl PyEntityRegistry {
     fn get_entity_object<'py>(
         slf: &Bound<'_, Self>,
         py: Python<'py>,
-        id: u64,
+        id: EntityId,
     ) -> PyResult<Option<AnyEntity<'py>>> {
+        let id = id.0;
         let reg = slf.borrow();
         match reg.inner.get_entity(id) {
             Some(entity) => entity_to_py(py, entity, slf.as_any())
@@ -944,8 +1076,9 @@ impl PyEntityRegistry {
     fn entity_to_dict<'py>(
         &self,
         py: Python<'py>,
-        id: u64,
+        id: EntityId,
     ) -> PyResult<Bound<'py, PyDict>> {
+        let id = id.0;
         let dict = PyDict::new(py);
         if let Some(entity) = self.inner.get_entity(id) {
             let value = entity.to_json();

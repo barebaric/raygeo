@@ -5,6 +5,7 @@ import builtins
 from raygeo import geo
 from raygeo.sketch import entities
 from raygeo.sketch import registry
+from raygeo.sketch import types
 import typing
 __all__ = [
     "Line",
@@ -16,12 +17,12 @@ class Line(entities.Entity):
     A straight segment between two points.
     """
     @property
-    def id(self) -> builtins.int:
+    def id(self) -> types.EntityID:
         r"""
         Unique entity id.
         """
     @id.setter
-    def id(self, value: builtins.int) -> None: ...
+    def id(self, value: types.EntityID) -> None: ...
     @property
     def p1_idx(self) -> builtins.int:
         r"""

@@ -84,3 +84,9 @@ def test_every_entity_class_is_an_entity():
         assert issubclass(cls, Entity), f"{qualified} is not an Entity"
         missing = [m for m in ENTITY_MEMBERS if not hasattr(cls, m)]
         assert not missing, f"{qualified} misses {missing}"
+
+
+def test_entity_id_alias_is_wired():
+    from raygeo.sketch.types import EntityID
+
+    assert EntityID is int

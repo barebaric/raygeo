@@ -4,6 +4,8 @@ use pyo3::prelude::*;
 use pyo3::types::PyTuple;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
+use crate::python::sketch::types::EntityId;
+
 /// A sketch point: coordinates and solver flags.
 ///
 /// When obtained from a registry it is a live view: coordinate writes
@@ -86,8 +88,8 @@ impl PySketchPoint {
 
     /// Unique point id, stable across solves.
     #[getter]
-    fn id(&self) -> u64 {
-        self.inner.id
+    fn id(&self) -> EntityId {
+        EntityId(self.inner.id)
     }
 
     /// X coordinate.
