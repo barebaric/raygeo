@@ -5,6 +5,8 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
+use crate::python::sketch::types::EntityId;
+
 use super::PyEntityBase;
 use crate::python::geo::geometry::Geometry as PyGeometry;
 use crate::python::sketch::constraints::dict_from_value;
@@ -38,13 +40,13 @@ impl PyLine {
 
     /// Unique entity id.
     #[getter]
-    fn id(&self) -> u64 {
-        self.inner.base.id
+    fn id(&self) -> EntityId {
+        EntityId(self.inner.base.id)
     }
 
     #[setter]
-    fn set_id(&mut self, value: u64) {
-        self.inner.base.id = value;
+    fn set_id(&mut self, value: EntityId) {
+        self.inner.base.id = value.0;
     }
 
     /// First endpoint point id.

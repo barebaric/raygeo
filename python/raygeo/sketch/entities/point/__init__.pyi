@@ -2,6 +2,7 @@
 # ruff: noqa: E501, F401, F403, F405
 
 import builtins
+from raygeo.sketch import types
 import typing
 __all__ = [
     "SketchPoint",
@@ -17,7 +18,7 @@ class SketchPoint:
     pair for indexing and iteration.
     """
     @property
-    def id(self) -> builtins.int:
+    def id(self) -> types.EntityID:
         r"""
         Unique point id, stable across solves.
         """

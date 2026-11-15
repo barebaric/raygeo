@@ -5,6 +5,7 @@ import builtins
 from raygeo import geo
 from raygeo.sketch import entities
 from raygeo.sketch import registry
+from raygeo.sketch import types
 import typing
 __all__ = [
     "Bezier",
@@ -16,12 +17,12 @@ class Bezier(entities.Entity):
     A cubic bezier segment with optional control point offsets.
     """
     @property
-    def id(self) -> builtins.int:
+    def id(self) -> types.EntityID:
         r"""
         Unique entity id.
         """
     @id.setter
-    def id(self, value: builtins.int) -> None: ...
+    def id(self, value: types.EntityID) -> None: ...
     @property
     def start_idx(self) -> builtins.int:
         r"""

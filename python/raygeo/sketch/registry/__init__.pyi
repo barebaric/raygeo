@@ -17,6 +17,7 @@ from raygeo import geo
 from raygeo.sketch import constraints
 from raygeo.sketch import entities
 from raygeo.sketch.entities import point
+from raygeo.sketch import types
 import typing
 __all__ = [
     "EntityRegistry",
@@ -49,7 +50,7 @@ class EntityRegistry:
         r"""
         Serializes the model to a reference registry dictionary.
         """
-    def add_point(self, x: builtins.float, y: builtins.float, fixed: builtins.bool = False) -> builtins.int:
+    def add_point(self, x: builtins.float, y: builtins.float, fixed: builtins.bool = False) -> types.EntityID:
         r"""
         Adds a point and returns its id.
         """
@@ -61,39 +62,39 @@ class EntityRegistry:
         r"""
         Replaces the point list with ``(id, x, y, fixed)`` tuples.
         """
-    def remove_points(self, point_ids: typing.Sequence[builtins.int]) -> None:
+    def remove_points(self, point_ids: typing.Sequence[types.EntityID]) -> None:
         r"""
         Removes the given points.
         """
-    def add_line(self, p1: builtins.int, p2: builtins.int, construction: builtins.bool = False) -> builtins.int:
+    def add_line(self, p1: types.EntityID, p2: types.EntityID, construction: builtins.bool = False) -> types.EntityID:
         r"""
         Adds a line and returns its id.
         """
-    def add_arc(self, start: builtins.int, end: builtins.int, center: builtins.int, clockwise: builtins.bool = False, construction: builtins.bool = False) -> builtins.int:
+    def add_arc(self, start: types.EntityID, end: types.EntityID, center: types.EntityID, clockwise: builtins.bool = False, construction: builtins.bool = False) -> types.EntityID:
         r"""
         Adds an arc and returns its id.
         """
-    def add_circle(self, center: builtins.int, radius_point: builtins.int, construction: builtins.bool = False) -> builtins.int:
+    def add_circle(self, center: types.EntityID, radius_point: types.EntityID, construction: builtins.bool = False) -> types.EntityID:
         r"""
         Adds a circle and returns its id.
         """
-    def add_ellipse(self, center: builtins.int, radius_x_point: builtins.int, radius_y_point: builtins.int, construction: builtins.bool = False) -> builtins.int:
+    def add_ellipse(self, center: types.EntityID, radius_x_point: types.EntityID, radius_y_point: types.EntityID, construction: builtins.bool = False) -> types.EntityID:
         r"""
         Adds an ellipse and returns its id.
         """
-    def add_bezier(self, start: builtins.int, end: builtins.int, construction: builtins.bool = False, cp1: typing.Optional[tuple[builtins.float, builtins.float]] = None, cp2: typing.Optional[tuple[builtins.float, builtins.float]] = None) -> builtins.int:
+    def add_bezier(self, start: types.EntityID, end: types.EntityID, construction: builtins.bool = False, cp1: typing.Optional[tuple[builtins.float, builtins.float]] = None, cp2: typing.Optional[tuple[builtins.float, builtins.float]] = None) -> types.EntityID:
         r"""
         Adds a bezier and returns its id.
         """
-    def add_polygon(self, center: builtins.int, handle: builtins.int, vertices: typing.Sequence[tuple[builtins.float, builtins.float]], closed: builtins.bool = False, construction: builtins.bool = False, rings: typing.Optional[typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]] = None) -> builtins.int:
+    def add_polygon(self, center: types.EntityID, handle: types.EntityID, vertices: typing.Sequence[tuple[builtins.float, builtins.float]], closed: builtins.bool = False, construction: builtins.bool = False, rings: typing.Optional[typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]] = None) -> types.EntityID:
         r"""
         Adds a polygon and returns its id.
         """
-    def add_text_box(self, origin: builtins.int, width: builtins.int, height: builtins.int, content: builtins.str = '', font_family: builtins.str = 'sans-serif', font_size: builtins.float = 10.0, bold: builtins.bool = False, italic: builtins.bool = False) -> builtins.int:
+    def add_text_box(self, origin: types.EntityID, width: types.EntityID, height: types.EntityID, content: builtins.str = '', font_family: builtins.str = 'sans-serif', font_size: builtins.float = 10.0, bold: builtins.bool = False, italic: builtins.bool = False) -> types.EntityID:
         r"""
         Adds a text box and returns its id.
         """
-    def remove_entities(self, entity_ids: typing.Sequence[builtins.int]) -> None:
+    def remove_entities(self, entity_ids: typing.Sequence[types.EntityID]) -> None:
         r"""
         Removes entities by id.
         """
@@ -105,39 +106,39 @@ class EntityRegistry:
         r"""
         Entity count.
         """
-    def point_ids(self) -> builtins.list[builtins.int]:
+    def point_ids(self) -> builtins.list[types.EntityID]:
         r"""
         All point ids in insertion order.
         """
-    def entity_ids(self) -> builtins.list[builtins.int]:
+    def entity_ids(self) -> builtins.list[types.EntityID]:
         r"""
         All entity ids in insertion order.
         """
-    def set_point_constrained(self, id: builtins.int, constrained: builtins.bool) -> builtins.bool:
+    def set_point_constrained(self, id: types.EntityID, constrained: builtins.bool) -> builtins.bool:
         r"""
         Sets a point's solver-constrained flag.
         """
-    def set_entity_constrained(self, id: builtins.int, constrained: builtins.bool) -> builtins.bool:
+    def set_entity_constrained(self, id: types.EntityID, constrained: builtins.bool) -> builtins.bool:
         r"""
         Sets an entity's solver-constrained flag.
         """
-    def set_point_position(self, id: builtins.int, x: builtins.float, y: builtins.float) -> builtins.bool:
+    def set_point_position(self, id: types.EntityID, x: builtins.float, y: builtins.float) -> builtins.bool:
         r"""
         Sets a point's coordinates.
         """
-    def is_point_used(self, id: builtins.int) -> builtins.bool:
+    def is_point_used(self, id: types.EntityID) -> builtins.bool:
         r"""
         Whether the point is referenced by any entity.
         """
-    def entity_type(self, id: builtins.int) -> typing.Optional[builtins.str]:
+    def entity_type(self, id: types.EntityID) -> typing.Optional[builtins.str]:
         r"""
         The serialization type string of an entity, or ``None``.
         """
-    def entity_point_ids(self, id: builtins.int) -> typing.Optional[builtins.list[builtins.int]]:
+    def entity_point_ids(self, id: types.EntityID) -> typing.Optional[builtins.list[types.EntityID]]:
         r"""
         Control point ids of an entity, or ``None``.
         """
-    def entity_endpoint_ids(self, id: builtins.int) -> typing.Optional[builtins.list[builtins.int]]:
+    def entity_endpoint_ids(self, id: types.EntityID) -> typing.Optional[builtins.list[types.EntityID]]:
         r"""
         Endpoint ids of an edge entity, or ``None``.
         """
@@ -145,31 +146,31 @@ class EntityRegistry:
         r"""
         Monotonic entity-list version.
         """
-    def is_edge_entity(self, id: builtins.int) -> builtins.bool:
+    def is_edge_entity(self, id: types.EntityID) -> builtins.bool:
         r"""
         Whether the entity participates in edge/chaining adjacency.
         """
-    def is_radius_entity(self, id: builtins.int) -> builtins.bool:
+    def is_radius_entity(self, id: types.EntityID) -> builtins.bool:
         r"""
         Whether the entity has a radius.
         """
-    def is_closed_loop(self, id: builtins.int) -> builtins.bool:
+    def is_closed_loop(self, id: types.EntityID) -> builtins.bool:
         r"""
         Whether the entity alone forms a closed loop.
         """
-    def supports_point_on_curve(self, id: builtins.int) -> builtins.bool:
+    def supports_point_on_curve(self, id: types.EntityID) -> builtins.bool:
         r"""
         Whether a point can be constrained onto this entity's curve.
         """
-    def is_constrained(self, id: builtins.int) -> builtins.bool:
+    def is_constrained(self, id: types.EntityID) -> builtins.bool:
         r"""
         Whether the entity is fully constrained.
         """
-    def is_construction(self, id: builtins.int) -> builtins.bool:
+    def is_construction(self, id: types.EntityID) -> builtins.bool:
         r"""
         Whether the entity is a construction entity.
         """
-    def set_construction(self, id: builtins.int, construction: builtins.bool) -> None:
+    def set_construction(self, id: types.EntityID, construction: builtins.bool) -> None:
         r"""
         Sets the construction flag.
         """
@@ -213,135 +214,135 @@ class EntityRegistry:
         r"""
         Replaces the stored constraint at the given handle.
         """
-    def point_constrained(self, id: builtins.int) -> builtins.bool:
+    def point_constrained(self, id: types.EntityID) -> builtins.bool:
         r"""
         Whether the point is solver-constrained.
         """
-    def waypoint_type(self, id: builtins.int) -> typing.Optional[builtins.str]:
+    def waypoint_type(self, id: types.EntityID) -> typing.Optional[builtins.str]:
         r"""
         Waypoint type string of a point ("sharp"/"smooth"/"symmetric").
         """
-    def get_point(self, id: builtins.int) -> typing.Optional[point.SketchPoint]:
+    def get_point(self, id: types.EntityID) -> typing.Optional[point.SketchPoint]:
         r"""
         Coordinates of a point as ``(x, y)``, or ``None``.
         """
-    def get_point_object(self, id: builtins.int) -> typing.Optional[point.SketchPoint]:
+    def get_point_object(self, id: types.EntityID) -> typing.Optional[point.SketchPoint]:
         r"""
         The point object for an id (with id/coords/flags), or None.
         """
-    def point_is_fixed(self, id: builtins.int) -> builtins.bool:
+    def point_is_fixed(self, id: types.EntityID) -> builtins.bool:
         r"""
         Whether a point carries the fixed flag.
         """
-    def point_is_in_text_box_frame(self, id: builtins.int) -> builtins.bool:
+    def point_is_in_text_box_frame(self, id: types.EntityID) -> builtins.bool:
         r"""
         Whether the point is one of a text box frame's corner points.
         """
-    def junction_point_ids(self, id: builtins.int) -> builtins.list[builtins.int]:
+    def junction_point_ids(self, id: types.EntityID) -> builtins.list[types.EntityID]:
         r"""
         Junction point ids of an entity.
         """
-    def helper_ids(self, id: builtins.int) -> builtins.list[builtins.int]:
+    def helper_ids(self, id: types.EntityID) -> builtins.list[types.EntityID]:
         r"""
         Helper/child ids of a compound entity.
         """
-    def clear_helper_references(self, id: builtins.int) -> None:
+    def clear_helper_references(self, id: types.EntityID) -> None:
         r"""
         Drops the entity's references to its helper entities.
         """
-    def rigidly_connected_points(self, point_id: builtins.int) -> builtins.list[builtins.int]:
+    def rigidly_connected_points(self, point_id: types.EntityID) -> builtins.list[types.EntityID]:
         r"""
         Points that move rigidly with `point_id`.
         """
-    def get_drag_anchor_points(self, point_id: builtins.int) -> builtins.list[builtins.int]:
+    def get_drag_anchor_points(self, point_id: types.EntityID) -> builtins.list[types.EntityID]:
         r"""
         Points pinned while `point_id` is dragged.
         Alias for drag_anchor_points (reference naming).
         """
-    def drag_anchor_points(self, point_id: builtins.int) -> builtins.list[builtins.int]: ...
-    def ignorable_unconstrained_points(self, id: builtins.int) -> builtins.list[builtins.int]:
+    def drag_anchor_points(self, point_id: types.EntityID) -> builtins.list[types.EntityID]: ...
+    def ignorable_unconstrained_points(self, id: types.EntityID) -> builtins.list[types.EntityID]:
         r"""
         Points that can stay unconstrained when the entity is
         constrained.
         """
-    def characteristic_length(self, id: builtins.int) -> builtins.float:
+    def characteristic_length(self, id: types.EntityID) -> builtins.float:
         r"""
         Characteristic length used by equal-length constraints.
         """
-    def enclosed_signed_area(self, id: builtins.int) -> typing.Optional[builtins.float]:
+    def enclosed_signed_area(self, id: types.EntityID) -> typing.Optional[builtins.float]:
         r"""
         Signed area enclosed by a closed single-entity loop.
         """
-    def hit_test(self, id: builtins.int, mx: builtins.float, my: builtins.float, threshold: builtins.float) -> builtins.bool:
+    def hit_test(self, id: types.EntityID, mx: builtins.float, my: builtins.float, threshold: builtins.float) -> builtins.bool:
         r"""
         Whether the point lies within threshold distance of the
         entity.
         """
-    def is_contained_by(self, id: builtins.int, rect: typing.Sequence[builtins.float]) -> builtins.bool:
+    def is_contained_by(self, id: types.EntityID, rect: typing.Sequence[builtins.float]) -> builtins.bool:
         r"""
         Whether the entity is fully strictly contained in the rect.
         """
-    def intersects_rect(self, id: builtins.int, rect: typing.Sequence[builtins.float]) -> builtins.bool:
+    def intersects_rect(self, id: types.EntityID, rect: typing.Sequence[builtins.float]) -> builtins.bool:
         r"""
         Whether the entity intersects the rect or is contained by it.
         """
-    def contains_point(self, id: builtins.int, x: builtins.float, y: builtins.float) -> builtins.bool:
+    def contains_point(self, id: types.EntityID, x: builtins.float, y: builtins.float) -> builtins.bool:
         r"""
         Whether a point is inside the entity (closed shapes).
         """
-    def signed_distance_to(self, id: builtins.int, px: builtins.float, py: builtins.float) -> typing.Optional[builtins.float]:
+    def signed_distance_to(self, id: types.EntityID, px: builtins.float, py: builtins.float) -> typing.Optional[builtins.float]:
         r"""
         Signed distance from a point to the entity's locus, or
         ``None`` when unsupported.
         """
-    def tangent_at(self, id: builtins.int, point_id: builtins.int) -> typing.Optional[tuple[builtins.float, builtins.float]]:
+    def tangent_at(self, id: types.EntityID, point_id: types.EntityID) -> typing.Optional[tuple[builtins.float, builtins.float]]:
         r"""
         Tangent vector at a defining point, or ``None`` when the
         entity has no directional tangent.
         """
-    def geometry_signature(self, id: builtins.int) -> typing.Any:
+    def geometry_signature(self, id: types.EntityID) -> typing.Any:
         r"""
         The entity's geometry signature (quantized defining points
         plus kind-specific state), or ``None`` for unknown ids.
         """
-    def get_state(self, id: builtins.int) -> typing.Any:
+    def get_state(self, id: types.EntityID) -> typing.Any:
         r"""
         Solver-relevant state snapshot of an entity, or ``None``.
         """
-    def replace_entity_from_dict(self, id: builtins.int, data: dict) -> builtins.bool:
+    def replace_entity_from_dict(self, id: types.EntityID, data: dict) -> builtins.bool:
         r"""
         Restores an entity's state snapshot.
         Replaces an entity in place from its dictionary form.
         """
-    def set_state(self, id: builtins.int, state: dict) -> None: ...
-    def to_geometry(self, id: builtins.int) -> geo.Geometry:
+    def set_state(self, id: types.EntityID, state: dict) -> None: ...
+    def to_geometry(self, id: types.EntityID) -> geo.Geometry:
         r"""
         The entity as a raygeo Geometry object.
         """
-    def to_polygon_vertices(self, id: builtins.int, forward: builtins.bool) -> builtins.list[tuple[builtins.float, builtins.float]]:
+    def to_polygon_vertices(self, id: types.EntityID, forward: builtins.bool) -> builtins.list[tuple[builtins.float, builtins.float]]:
         r"""
         Polygon vertices of the entity (sampled for curves).
         """
-    def to_polyline(self, id: builtins.int, tolerance: builtins.float = 0.1) -> builtins.list[tuple[builtins.float, builtins.float]]:
+    def to_polyline(self, id: types.EntityID, tolerance: builtins.float = 0.1) -> builtins.list[tuple[builtins.float, builtins.float]]:
         r"""
         Sampled polyline of the entity.
         """
-    def to_polylines(self, id: builtins.int, tolerance: builtins.float = 0.1) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
+    def to_polylines(self, id: types.EntityID, tolerance: builtins.float = 0.1) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
         r"""
         Sampled polylines of the entity (multi-contour for text).
         """
-    def append_to_geometry(self, geo: geo.Geometry, id: builtins.int, forward: builtins.bool) -> None:
+    def append_to_geometry(self, geo: geo.Geometry, id: types.EntityID, forward: builtins.bool) -> None:
         r"""
         Appends the entity's geometry (traversal direction aware) to
         an existing Geometry object.
         """
-    def update_constrained_status(self, radius_constrained_entity_ids: typing.Sequence[builtins.int] = []) -> None:
+    def update_constrained_status(self, radius_constrained_entity_ids: typing.Sequence[types.EntityID] = []) -> None:
         r"""
         Re-computes constrained flags.  Entities whose radius is
         explicitly dimensioned are listed in
         ``radius_constrained_entity_ids``.
         """
-    def mirror(self, id: builtins.int, direction: builtins.str, position: builtins.float) -> None:
+    def mirror(self, id: types.EntityID, direction: builtins.str, position: builtins.float) -> None:
         r"""
         Mirrors entity-internal state across the axis (arc chirality,
         bezier offsets, polygon winding).
@@ -354,17 +355,17 @@ class EntityRegistry:
         r"""
         All entities as their concrete classes.
         """
-    def get_entity(self, id: builtins.int) -> typing.Optional[entities.Entity]:
+    def get_entity(self, id: types.EntityID) -> typing.Optional[entities.Entity]:
         r"""
         The entity object for an id, or None.
         Alias for get_entity_object (reference naming).
         """
-    def get_entity_object(self, id: builtins.int) -> typing.Optional[entities.Entity]: ...
+    def get_entity_object(self, id: types.EntityID) -> typing.Optional[entities.Entity]: ...
     def add_entity(self, obj: typing.Any) -> builtins.int:
         r"""
         Adds an entity object to the registry and returns its id.
         """
-    def entity_to_dict(self, id: builtins.int) -> dict:
+    def entity_to_dict(self, id: types.EntityID) -> dict:
         r"""
         Serializes the entity to a reference entity dictionary.
         """

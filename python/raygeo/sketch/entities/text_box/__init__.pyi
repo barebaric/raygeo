@@ -6,6 +6,7 @@ from raygeo import geo
 from raygeo.geo.shape import text
 from raygeo.sketch import entities
 from raygeo.sketch import registry
+from raygeo.sketch import types
 import typing
 __all__ = [
     "TextBox",
@@ -17,12 +18,12 @@ class TextBox(entities.Entity):
     A text box framed by origin, width and height points.
     """
     @property
-    def id(self) -> builtins.int:
+    def id(self) -> types.EntityID:
         r"""
         Unique entity id.
         """
     @id.setter
-    def id(self, value: builtins.int) -> None: ...
+    def id(self, value: types.EntityID) -> None: ...
     @property
     def origin_id(self) -> builtins.int:
         r"""

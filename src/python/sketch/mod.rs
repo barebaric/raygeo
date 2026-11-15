@@ -7,6 +7,7 @@ pub(crate) mod protocols;
 pub(crate) mod registry;
 pub(crate) mod solver;
 pub(crate) mod topology;
+pub(crate) mod types;
 
 use pyo3::prelude::*;
 
@@ -45,6 +46,12 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     m.add_submodule(&sketch_mod)?;
 
+    let types_code =
+        CString::new(include_str!("../../../python/raygeo/sketch/types.py"))?;
+    let types_mod =
+        PyModule::from_code(py, &types_code, c"types.py", c"types")?;
+    sketch_mod.add_submodule(&types_mod)?;
+
     let protocols_code = CString::new(include_str!(
         "../../../python/raygeo/sketch/protocols.py"
     ))?;
@@ -58,6 +65,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     let sys_modules = py.import("sys")?.getattr("modules")?;
     sys_modules.set_item("raygeo.sketch", &sketch_mod)?;
+    sys_modules.set_item("raygeo.sketch.types", &types_mod)?;
     sys_modules.set_item("raygeo.sketch.protocols", &protocols_mod)?;
 
     Ok(())
