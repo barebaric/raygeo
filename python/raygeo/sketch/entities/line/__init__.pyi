@@ -66,7 +66,7 @@ class Line:
         Fill color as (r, g, b, a), or None.
         """
     @property
-    def r#type(self) -> builtins.str:
+    def type(self) -> builtins.str:
         r"""
         The entity type name (attribute alias).
         """

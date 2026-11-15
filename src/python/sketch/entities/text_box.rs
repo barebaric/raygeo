@@ -248,7 +248,8 @@ impl PyTextBox {
 
     /// The entity type name (attribute alias).
     #[getter]
-    fn r#type(&self) -> &'static str {
+    #[pyo3(name = "type")]
+    fn type_(&self) -> &'static str {
         self.inner.type_name()
     }
 
