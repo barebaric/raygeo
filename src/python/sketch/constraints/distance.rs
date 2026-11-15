@@ -4,6 +4,8 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
+use super::PyConstraintBase;
+
 use crate::python::sketch::protocols::{Canvas, DrawContext, ScreenMap};
 use crate::python::sketch::registry::PyEntityRegistry;
 use crate::sketch::constraint::SketchConstraint;
@@ -12,6 +14,7 @@ use crate::sketch::constraints::distance::DistanceConstraint as CoreConstraint;
 /// Enforces a fixed distance between two points.
 #[gen_stub_pyclass]
 #[pyclass(
+    extends = PyConstraintBase,
     eq,
     from_py_object,
     module = "raygeo.sketch.constraints.distance",
@@ -44,15 +47,22 @@ impl PyDistanceConstraint {
     /// Creates the constraint from its resolved points and values.
     #[new]
     #[pyo3(signature = (p1, p2, value, user_visible = true))]
-    fn new(p1: u64, p2: u64, value: f64, user_visible: bool) -> Self {
-        PyDistanceConstraint {
-            p1,
-            p2,
-            value,
-            user_visible,
-            status: 1,
-            expression: None,
-        }
+    fn new(
+        p1: u64,
+        p2: u64,
+        value: f64,
+        user_visible: bool,
+    ) -> PyClassInitializer<Self> {
+        PyClassInitializer::from(PyConstraintBase).add_subclass(
+            PyDistanceConstraint {
+                p1,
+                p2,
+                value,
+                user_visible,
+                status: 1,
+                expression: None,
+            },
+        )
     }
 
     /// Returns the constraint error at the registry's point

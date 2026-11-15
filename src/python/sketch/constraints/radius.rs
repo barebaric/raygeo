@@ -4,6 +4,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
+use super::PyConstraintBase;
 use crate::python::sketch::protocols::{Canvas, DrawContext, ScreenMap};
 use crate::python::sketch::registry::PyEntityRegistry;
 use crate::sketch::constraint::SketchConstraint;
@@ -14,6 +15,7 @@ use crate::sketch::constraints::radius::RadiusConstraint as CoreConstraint;
 #[pyclass(
     eq,
     from_py_object,
+    extends = PyConstraintBase,
     module = "raygeo.sketch.constraints.radius",
     name = "RadiusConstraint"
 )]
@@ -49,15 +51,17 @@ impl PyRadiusConstraint {
         radius_point: u64,
         value: f64,
         user_visible: bool,
-    ) -> Self {
-        PyRadiusConstraint {
-            center,
-            radius_point,
-            value,
-            user_visible,
-            status: 1,
-            expression: None,
-        }
+    ) -> PyClassInitializer<Self> {
+        PyClassInitializer::from(PyConstraintBase).add_subclass(
+            PyRadiusConstraint {
+                center,
+                radius_point,
+                value,
+                user_visible,
+                status: 1,
+                expression: None,
+            },
+        )
     }
 
     /// Returns the constraint error at the registry's point

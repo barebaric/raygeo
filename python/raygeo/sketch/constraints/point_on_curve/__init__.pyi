@@ -3,6 +3,7 @@
 
 import builtins
 import collections.abc
+from raygeo.sketch import constraints
 from raygeo.sketch import protocols
 from raygeo.sketch import registry
 import typing
@@ -11,7 +12,7 @@ __all__ = [
 ]
 
 @typing.final
-class PointOnCurveConstraint:
+class PointOnCurveConstraint(constraints.Constraint):
     r"""
     Enforces a point lies on a cubic Bezier curve.  The control
     points are stored as offsets from their owning endpoints; curves

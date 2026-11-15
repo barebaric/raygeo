@@ -6,6 +6,7 @@ use pyo3_stub_gen::derive::{
     gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pymethods,
 };
 
+use super::PyConstraintBase;
 use crate::python::sketch::protocols::{Canvas, DrawContext, ScreenMap};
 use crate::python::sketch::registry::PyEntityRegistry;
 use crate::sketch::constraint::SketchConstraint;
@@ -108,6 +109,7 @@ impl From<&PerpendicularTarget> for PyPerpendicularTarget {
 /// Enforces perpendicularity between two entities.
 #[gen_stub_pyclass]
 #[pyclass(
+    extends = PyConstraintBase,
     eq,
     from_py_object,
     module = "raygeo.sketch.constraints.perpendicular",
@@ -132,12 +134,17 @@ impl PyPerpendicularConstraint {
     /// Creates the constraint from resolved operands.
     #[new]
     #[pyo3(signature = (target, user_visible = true))]
-    fn new(target: PyPerpendicularTarget, user_visible: bool) -> Self {
-        PyPerpendicularConstraint {
-            target,
-            user_visible,
-            status: 1,
-        }
+    fn new(
+        target: PyPerpendicularTarget,
+        user_visible: bool,
+    ) -> PyClassInitializer<Self> {
+        PyClassInitializer::from(PyConstraintBase).add_subclass(
+            PyPerpendicularConstraint {
+                target,
+                user_visible,
+                status: 1,
+            },
+        )
     }
 
     /// Returns the constraint error at the registry's point

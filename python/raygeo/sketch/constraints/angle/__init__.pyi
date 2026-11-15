@@ -3,6 +3,7 @@
 
 import builtins
 import collections.abc
+from raygeo.sketch import constraints
 from raygeo.sketch import protocols
 from raygeo.sketch import registry
 import typing
@@ -11,7 +12,7 @@ __all__ = [
 ]
 
 @typing.final
-class AngleConstraint:
+class AngleConstraint(constraints.Constraint):
     r"""
     Enforces a clockwise angle in degrees between two lines.  The
     angle is measured at the lines' intersection between the rays

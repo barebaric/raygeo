@@ -5,6 +5,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
+use super::PyEntityBase;
 use crate::python::geo::geometry::Geometry as PyGeometry;
 use crate::python::sketch::constraints::dict_from_value;
 use crate::python::sketch::registry::PyEntityRegistry;
@@ -14,7 +15,8 @@ use crate::sketch::entities::Entity;
 
 /// A cubic bezier segment with optional control point offsets.
 #[gen_stub_pyclass]
-#[pyclass(module = "raygeo.sketch.entities.bezier", name = "Bezier")]
+#[pyclass(
+    extends = PyEntityBase,module = "raygeo.sketch.entities.bezier", name = "Bezier")]
 pub struct PyBezier {
     pub inner: CoreBezier,
     /// Live back-reference to the owning registry, if any.
@@ -34,8 +36,8 @@ impl PyBezier {
         construction: bool,
         cp1: Option<(f64, f64)>,
         cp2: Option<(f64, f64)>,
-    ) -> Self {
-        PyBezier {
+    ) -> PyClassInitializer<Self> {
+        PyClassInitializer::from(PyEntityBase).add_subclass(PyBezier {
             inner: CoreBezier::new(
                 0,
                 start,
@@ -45,7 +47,7 @@ impl PyBezier {
                 cp2.map(|p| [p.0, p.1]),
             ),
             registry: None,
-        }
+        })
     }
 
     /// Unique entity id.

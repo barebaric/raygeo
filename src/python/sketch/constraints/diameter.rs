@@ -4,6 +4,8 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
+use super::PyConstraintBase;
+
 use crate::python::sketch::protocols::{Canvas, DrawContext, ScreenMap};
 use crate::python::sketch::registry::PyEntityRegistry;
 use crate::sketch::constraint::SketchConstraint;
@@ -12,6 +14,7 @@ use crate::sketch::constraints::diameter::DiameterConstraint as CoreConstraint;
 /// Enforces the diameter of a circle.
 #[gen_stub_pyclass]
 #[pyclass(
+    extends = PyConstraintBase,
     eq,
     from_py_object,
     module = "raygeo.sketch.constraints.diameter",
@@ -49,15 +52,17 @@ impl PyDiameterConstraint {
         radius_point: u64,
         value: f64,
         user_visible: bool,
-    ) -> Self {
-        PyDiameterConstraint {
-            center,
-            radius_point,
-            value,
-            user_visible,
-            status: 1,
-            expression: None,
-        }
+    ) -> PyClassInitializer<Self> {
+        PyClassInitializer::from(PyConstraintBase).add_subclass(
+            PyDiameterConstraint {
+                center,
+                radius_point,
+                value,
+                user_visible,
+                status: 1,
+                expression: None,
+            },
+        )
     }
 
     /// Returns the constraint error at the registry's point

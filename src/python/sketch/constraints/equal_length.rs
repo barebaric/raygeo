@@ -4,6 +4,8 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
+use super::PyConstraintBase;
+
 use crate::python::sketch::protocols::{Canvas, DrawContext, ScreenMap};
 use crate::python::sketch::registry::PyEntityRegistry;
 use crate::sketch::constraint::SketchConstraint;
@@ -15,6 +17,7 @@ use crate::sketch::constraints::equal_length::EqualLengthConstraint as CoreConst
 /// shorter-side fallback) into flat tuples.
 #[gen_stub_pyclass]
 #[pyclass(
+    extends = PyConstraintBase,
     eq,
     from_py_object,
     module = "raygeo.sketch.constraints.equal_length",
@@ -42,13 +45,18 @@ impl PyEqualLengthConstraint {
     /// Creates the constraint from resolved pairs.
     #[new]
     #[pyo3(signature = (pairs, user_visible = true))]
-    fn new(pairs: Vec<[u64; 4]>, user_visible: bool) -> Self {
-        PyEqualLengthConstraint {
-            pairs,
-            user_visible,
-            entity_ids: Vec::new(),
-            status: 1,
-        }
+    fn new(
+        pairs: Vec<[u64; 4]>,
+        user_visible: bool,
+    ) -> PyClassInitializer<Self> {
+        PyClassInitializer::from(PyConstraintBase).add_subclass(
+            PyEqualLengthConstraint {
+                pairs,
+                user_visible,
+                entity_ids: Vec::new(),
+                status: 1,
+            },
+        )
     }
 
     /// Returns the constraint error at the registry's point

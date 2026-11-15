@@ -4,6 +4,8 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
+use super::PyConstraintBase;
+
 use crate::python::sketch::protocols::{Canvas, DrawContext, ScreenMap};
 use crate::python::sketch::registry::PyEntityRegistry;
 use crate::sketch::constraint::SketchConstraint;
@@ -12,6 +14,7 @@ use crate::sketch::constraints::coincident::CoincidentConstraint as CoreConstrai
 /// Enforces two points are at the same location.
 #[gen_stub_pyclass]
 #[pyclass(
+    extends = PyConstraintBase,
     eq,
     from_py_object,
     module = "raygeo.sketch.constraints.coincident",
@@ -39,13 +42,15 @@ impl PyCoincidentConstraint {
     /// Creates the constraint from its resolved points and values.
     #[new]
     #[pyo3(signature = (p1, p2, user_visible = true))]
-    fn new(p1: u64, p2: u64, user_visible: bool) -> Self {
-        PyCoincidentConstraint {
-            p1,
-            p2,
-            user_visible,
-            status: 1,
-        }
+    fn new(p1: u64, p2: u64, user_visible: bool) -> PyClassInitializer<Self> {
+        PyClassInitializer::from(PyConstraintBase).add_subclass(
+            PyCoincidentConstraint {
+                p1,
+                p2,
+                user_visible,
+                status: 1,
+            },
+        )
     }
 
     /// Returns the constraint error at the registry's point

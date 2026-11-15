@@ -4,6 +4,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
+use super::PyConstraintBase;
 use crate::python::sketch::protocols::{Canvas, DrawContext, ScreenMap};
 use crate::python::sketch::registry::PyEntityRegistry;
 use crate::sketch::constraint::SketchConstraint;
@@ -12,6 +13,7 @@ use crate::sketch::constraints::tangent::TangentConstraint as CoreConstraint;
 /// Enforces a line is tangent to a circle/arc.
 #[gen_stub_pyclass]
 #[pyclass(
+    extends = PyConstraintBase,
     eq,
     from_py_object,
     module = "raygeo.sketch.constraints.tangent",
@@ -51,15 +53,17 @@ impl PyTangentConstraint {
         center: u64,
         radius_point: u64,
         user_visible: bool,
-    ) -> Self {
-        PyTangentConstraint {
-            l1,
-            l2,
-            center,
-            radius_point,
-            user_visible,
-            status: 1,
-        }
+    ) -> PyClassInitializer<Self> {
+        PyClassInitializer::from(PyConstraintBase).add_subclass(
+            PyTangentConstraint {
+                l1,
+                l2,
+                center,
+                radius_point,
+                user_visible,
+                status: 1,
+            },
+        )
     }
 
     /// Returns the constraint error at the registry's point

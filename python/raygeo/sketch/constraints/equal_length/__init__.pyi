@@ -3,6 +3,7 @@
 
 import builtins
 import collections.abc
+from raygeo.sketch import constraints
 from raygeo.sketch import protocols
 from raygeo.sketch import registry
 import typing
@@ -11,7 +12,7 @@ __all__ = [
 ]
 
 @typing.final
-class EqualLengthConstraint:
+class EqualLengthConstraint(constraints.Constraint):
     r"""
     Enforces equal characteristic lengths, one residual per
     `(base_a, base_b, other_a, other_b)` tuple.  The caller expands

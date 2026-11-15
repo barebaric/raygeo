@@ -5,6 +5,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
+use super::PyEntityBase;
 use crate::python::geo::geometry::Geometry as PyGeometry;
 use crate::python::sketch::constraints::dict_from_value;
 use crate::python::sketch::registry::PyEntityRegistry;
@@ -14,7 +15,8 @@ use crate::sketch::entities::Entity;
 
 /// A circle defined by a center and a radius point.
 #[gen_stub_pyclass]
-#[pyclass(module = "raygeo.sketch.entities.circle", name = "Circle")]
+#[pyclass(
+    extends = PyEntityBase,module = "raygeo.sketch.entities.circle", name = "Circle")]
 pub struct PyCircle {
     pub inner: CoreCircle,
     /// Live back-reference to the owning registry, if any.
@@ -27,11 +29,15 @@ impl PyCircle {
     /// Creates an unattached circle; an id is assigned on insertion.
     #[new]
     #[pyo3(signature = (center, radius_point, construction = false))]
-    fn new(center: u64, radius_point: u64, construction: bool) -> Self {
-        PyCircle {
+    fn new(
+        center: u64,
+        radius_point: u64,
+        construction: bool,
+    ) -> PyClassInitializer<Self> {
+        PyClassInitializer::from(PyEntityBase).add_subclass(PyCircle {
             inner: CoreCircle::new(0, center, radius_point, construction),
             registry: None,
-        }
+        })
     }
 
     /// Unique entity id.

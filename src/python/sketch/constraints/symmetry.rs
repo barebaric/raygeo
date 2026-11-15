@@ -6,6 +6,7 @@ use pyo3_stub_gen::derive::{
     gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pymethods,
 };
 
+use super::PyConstraintBase;
 use crate::python::sketch::protocols::{Canvas, DrawContext, ScreenMap};
 use crate::python::sketch::registry::PyEntityRegistry;
 use crate::sketch::constraint::SketchConstraint;
@@ -60,6 +61,7 @@ impl From<&SymmetryTarget> for PySymmetryTarget {
 /// Enforces two points are symmetric about a point or a line.
 #[gen_stub_pyclass]
 #[pyclass(
+    extends = PyConstraintBase,
     eq,
     from_py_object,
     module = "raygeo.sketch.constraints.symmetry",
@@ -95,14 +97,16 @@ impl PySymmetryConstraint {
         p2: u64,
         target: PySymmetryTarget,
         user_visible: bool,
-    ) -> Self {
-        PySymmetryConstraint {
-            p1,
-            p2,
-            target,
-            user_visible,
-            status: 1,
-        }
+    ) -> PyClassInitializer<Self> {
+        PyClassInitializer::from(PyConstraintBase).add_subclass(
+            PySymmetryConstraint {
+                p1,
+                p2,
+                target,
+                user_visible,
+                status: 1,
+            },
+        )
     }
 
     /// Returns the constraint error at the registry's point

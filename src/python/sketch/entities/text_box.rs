@@ -5,6 +5,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
+use super::PyEntityBase;
 use crate::geo::shape::text::FontConfig as CoreFontConfig;
 use crate::python::geo::geometry::Geometry as PyGeometry;
 use crate::python::geo::shape::text::PyFontConfig;
@@ -16,7 +17,8 @@ use crate::sketch::entities::Entity;
 
 /// A text box framed by origin, width and height points.
 #[gen_stub_pyclass]
-#[pyclass(module = "raygeo.sketch.entities.text_box", name = "TextBox")]
+#[pyclass(
+    extends = PyEntityBase,module = "raygeo.sketch.entities.text_box", name = "TextBox")]
 pub struct PyTextBox {
     pub inner: CoreTextBox,
     /// Live back-reference to the owning registry, if any.
@@ -67,16 +69,16 @@ impl PyTextBox {
         font_size: f64,
         bold: bool,
         italic: bool,
-    ) -> Self {
+    ) -> PyClassInitializer<Self> {
         let mut inner =
             CoreTextBox::new(0, origin, width, height, content, false);
         inner.font_config = CoreFontConfig::new(&font_family, font_size)
             .bold(bold)
             .italic(italic);
-        PyTextBox {
+        PyClassInitializer::from(PyEntityBase).add_subclass(PyTextBox {
             inner,
             registry: None,
-        }
+        })
     }
 
     /// Unique entity id.

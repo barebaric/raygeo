@@ -3,6 +3,7 @@
 
 import builtins
 from raygeo import geo
+from raygeo.sketch import entities
 from raygeo.sketch import registry
 import typing
 __all__ = [
@@ -10,7 +11,7 @@ __all__ = [
 ]
 
 @typing.final
-class Bezier:
+class Bezier(entities.Entity):
     r"""
     A cubic bezier segment with optional control point offsets.
     """

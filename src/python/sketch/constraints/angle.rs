@@ -4,6 +4,8 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
+use super::PyConstraintBase;
+
 use crate::python::sketch::protocols::{Canvas, DrawContext, ScreenMap};
 use crate::python::sketch::registry::PyEntityRegistry;
 use crate::sketch::constraint::SketchConstraint;
@@ -15,6 +17,7 @@ use crate::sketch::constraints::angle::AngleConstraint as CoreConstraint;
 /// endpoint farther from the intersection).
 #[gen_stub_pyclass]
 #[pyclass(
+    extends = PyConstraintBase,
     eq,
     from_py_object,
     module = "raygeo.sketch.constraints.angle",
@@ -79,19 +82,21 @@ impl PyAngleConstraint {
         e1_far: Option<u64>,
         e2_far: Option<u64>,
         user_visible: bool,
-    ) -> Self {
-        PyAngleConstraint {
-            p1,
-            p2,
-            p3,
-            p4,
-            e1_far,
-            e2_far,
-            value_deg,
-            user_visible,
-            status: 1,
-            expression: None,
-        }
+    ) -> PyClassInitializer<Self> {
+        PyClassInitializer::from(PyConstraintBase).add_subclass(
+            PyAngleConstraint {
+                p1,
+                p2,
+                p3,
+                p4,
+                e1_far,
+                e2_far,
+                value_deg,
+                user_visible,
+                status: 1,
+                expression: None,
+            },
+        )
     }
 
     /// Returns the constraint error at the registry's point

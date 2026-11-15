@@ -5,6 +5,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
+use super::PyEntityBase;
 use crate::python::geo::geometry::Geometry as PyGeometry;
 use crate::python::sketch::constraints::dict_from_value;
 use crate::python::sketch::registry::PyEntityRegistry;
@@ -14,7 +15,8 @@ use crate::sketch::entities::Entity;
 
 /// A straight segment between two points.
 #[gen_stub_pyclass]
-#[pyclass(module = "raygeo.sketch.entities.line", name = "Line")]
+#[pyclass(
+    extends = PyEntityBase,module = "raygeo.sketch.entities.line", name = "Line")]
 pub struct PyLine {
     pub inner: CoreLine,
     /// Live back-reference to the owning registry, if any.
@@ -27,11 +29,11 @@ impl PyLine {
     /// Creates an unattached line; an id is assigned on insertion.
     #[new]
     #[pyo3(signature = (p1, p2, construction = false))]
-    fn new(p1: u64, p2: u64, construction: bool) -> Self {
-        PyLine {
+    fn new(p1: u64, p2: u64, construction: bool) -> PyClassInitializer<Self> {
+        PyClassInitializer::from(PyEntityBase).add_subclass(PyLine {
             inner: CoreLine::new(0, p1, p2, construction),
             registry: None,
-        }
+        })
     }
 
     /// Unique entity id.

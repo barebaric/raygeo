@@ -5,6 +5,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
+use super::PyEntityBase;
 use crate::python::geo::geometry::Geometry as PyGeometry;
 use crate::python::sketch::constraints::dict_from_value;
 use crate::python::sketch::registry::PyEntityRegistry;
@@ -15,7 +16,8 @@ use crate::sketch::entities::Entity;
 /// A polygon defined in the local frame of center and handle
 /// points.
 #[gen_stub_pyclass]
-#[pyclass(module = "raygeo.sketch.entities.polygon", name = "Polygon")]
+#[pyclass(
+    extends = PyEntityBase,module = "raygeo.sketch.entities.polygon", name = "Polygon")]
 pub struct PyPolygon {
     pub inner: CorePolygon,
     /// Live back-reference to the owning registry, if any.
@@ -36,8 +38,8 @@ impl PyPolygon {
         closed: bool,
         construction: bool,
         rings: Option<Vec<Vec<(f64, f64)>>>,
-    ) -> Self {
-        PyPolygon {
+    ) -> PyClassInitializer<Self> {
+        PyClassInitializer::from(PyEntityBase).add_subclass(PyPolygon {
             inner: CorePolygon::new(
                 0,
                 center,
@@ -48,7 +50,7 @@ impl PyPolygon {
                 rings.unwrap_or_default(),
             ),
             registry: None,
-        }
+        })
     }
 
     /// Unique entity id.
@@ -321,15 +323,21 @@ impl PyPolygon {
     }
     /// Builds a polygon from its reference dictionary form.
     #[staticmethod]
-    fn from_dict(data: &Bound<'_, PyDict>) -> PyResult<PyPolygon> {
+    fn from_dict(
+        py: Python<'_>,
+        data: &Bound<'_, PyDict>,
+    ) -> PyResult<Py<PyPolygon>> {
         let value = crate::python::sketch::registry::value_from_dict(data)?;
         let inner = CorePolygon::from_json(&value).ok_or_else(|| {
             pyo3::exceptions::PyValueError::new_err("invalid polygon dict")
         })?;
-        Ok(PyPolygon {
-            inner,
-            registry: None,
-        })
+        Py::new(
+            py,
+            PyClassInitializer::from(PyEntityBase).add_subclass(PyPolygon {
+                inner,
+                registry: None,
+            }),
+        )
     }
 
     /// Reference factory: builds a polygon from center/handle point
@@ -347,7 +355,7 @@ impl PyPolygon {
         vertices: Vec<(f64, f64)>,
         closed: bool,
         world_holes: Option<Vec<Vec<(f64, f64)>>>,
-    ) -> (Py<PyAny>, Py<PyAny>, PyPolygon) {
+    ) -> PyResult<(Py<PyAny>, Py<PyAny>, Py<PyPolygon>)> {
         let _ = id;
         let (cx, cy) = center_pos;
         let (dx, dy) = (handle_pos.0 - cx, handle_pos.1 - cy);
@@ -378,14 +386,14 @@ impl PyPolygon {
             false,
             local_holes,
         );
-        (
-            py.None(),
-            py.None(),
-            PyPolygon {
+        let polygon = Py::new(
+            py,
+            PyClassInitializer::from(PyEntityBase).add_subclass(PyPolygon {
                 inner,
                 registry: None,
-            },
-        )
+            }),
+        )?;
+        Ok((py.None(), py.None(), polygon))
     }
     /// The polygon's rings in world coordinates.
     fn get_world_rings(

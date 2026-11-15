@@ -5,6 +5,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
+use super::PyEntityBase;
 use crate::python::geo::geometry::Geometry as PyGeometry;
 use crate::python::sketch::constraints::dict_from_value;
 use crate::python::sketch::registry::PyEntityRegistry;
@@ -14,7 +15,8 @@ use crate::sketch::entities::Entity;
 
 /// An ellipse defined by a center and two radius points.
 #[gen_stub_pyclass]
-#[pyclass(module = "raygeo.sketch.entities.ellipse", name = "Ellipse")]
+#[pyclass(
+    extends = PyEntityBase,module = "raygeo.sketch.entities.ellipse", name = "Ellipse")]
 pub struct PyEllipse {
     pub inner: CoreEllipse,
     /// Live back-reference to the owning registry, if any.
@@ -33,8 +35,8 @@ impl PyEllipse {
         radius_x_point: u64,
         radius_y_point: u64,
         construction: bool,
-    ) -> Self {
-        PyEllipse {
+    ) -> PyClassInitializer<Self> {
+        PyClassInitializer::from(PyEntityBase).add_subclass(PyEllipse {
             inner: CoreEllipse::new(
                 0,
                 center,
@@ -43,7 +45,7 @@ impl PyEllipse {
                 construction,
             ),
             registry: None,
-        }
+        })
     }
 
     /// Unique entity id.

@@ -4,6 +4,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
+use super::PyConstraintBase;
 use crate::python::sketch::protocols::{Canvas, DrawContext, ScreenMap};
 use crate::python::sketch::registry::PyEntityRegistry;
 use crate::sketch::constraint::SketchConstraint;
@@ -15,6 +16,7 @@ use crate::sketch::constraints::point_on_curve::PointOnCurveConstraint as CoreCo
 /// (`is_line`).
 #[gen_stub_pyclass]
 #[pyclass(
+    extends = PyConstraintBase,
     eq,
     from_py_object,
     module = "raygeo.sketch.constraints.point_on_curve",
@@ -73,18 +75,20 @@ impl PyPointOnCurveConstraint {
         cp2_offset: (f64, f64),
         is_line: bool,
         user_visible: bool,
-    ) -> Self {
-        PyPointOnCurveConstraint {
-            point,
-            start,
-            end,
-            cp1_offset,
-            cp2_offset,
-            is_line,
-            user_visible,
-            shape_id: None,
-            status: 1,
-        }
+    ) -> PyClassInitializer<Self> {
+        PyClassInitializer::from(PyConstraintBase).add_subclass(
+            PyPointOnCurveConstraint {
+                point,
+                start,
+                end,
+                cp1_offset,
+                cp2_offset,
+                is_line,
+                user_visible,
+                shape_id: None,
+                status: 1,
+            },
+        )
     }
 
     /// Returns the constraint error at the registry's point

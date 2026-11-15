@@ -3,6 +3,7 @@
 
 import builtins
 import collections.abc
+from raygeo.sketch import constraints
 from raygeo.sketch import protocols
 from raygeo.sketch import registry
 import typing
@@ -12,7 +13,7 @@ __all__ = [
 ]
 
 @typing.final
-class SymmetryConstraint:
+class SymmetryConstraint(constraints.Constraint):
     r"""
     Enforces two points are symmetric about a point or a line.
     """
