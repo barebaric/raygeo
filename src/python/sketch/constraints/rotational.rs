@@ -4,6 +4,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
+use super::PyConstraintBase;
 use crate::python::sketch::protocols::{Canvas, DrawContext, ScreenMap};
 use crate::python::sketch::registry::PyEntityRegistry;
 use crate::sketch::constraint::SketchConstraint;
@@ -12,6 +13,7 @@ use crate::sketch::constraints::rotational::RotationalConstraint as CoreConstrai
 /// Enforces p2 is p1 rotated by angle_rad about center.
 #[gen_stub_pyclass]
 #[pyclass(
+    extends = PyConstraintBase,
     eq,
     from_py_object,
     module = "raygeo.sketch.constraints.rotational",
@@ -53,16 +55,18 @@ impl PyRotationalConstraint {
         p2: u64,
         angle_rad: f64,
         user_visible: bool,
-    ) -> Self {
-        PyRotationalConstraint {
-            center,
-            p1,
-            p2,
-            angle_rad,
-            user_visible,
-            status: 1,
-            expression: None,
-        }
+    ) -> PyClassInitializer<Self> {
+        PyClassInitializer::from(PyConstraintBase).add_subclass(
+            PyRotationalConstraint {
+                center,
+                p1,
+                p2,
+                angle_rad,
+                user_visible,
+                status: 1,
+                expression: None,
+            },
+        )
     }
 
     /// Returns the constraint error at the registry's point
@@ -113,6 +117,27 @@ impl PyRotationalConstraint {
             is_hovered,
             point_radius,
             self.status,
+        )
+    }
+
+    /// Whether the constraint's rendered symbol is hit at (mx, my).
+    #[pyo3(signature = (mx, my, threshold, registry, to_screen = None))]
+    fn is_hit(
+        &self,
+        mx: f64,
+        my: f64,
+        threshold: f64,
+        registry: &PyEntityRegistry,
+        to_screen: Option<ScreenMap<'_>>,
+    ) -> bool {
+        let constraint = self.clone().into_constraint();
+        super::constraint_is_hit(
+            &constraint,
+            mx,
+            my,
+            threshold,
+            registry,
+            to_screen.as_ref(),
         )
     }
 

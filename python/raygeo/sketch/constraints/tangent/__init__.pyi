@@ -3,6 +3,7 @@
 
 import builtins
 import collections.abc
+from raygeo.sketch import constraints
 from raygeo.sketch import protocols
 from raygeo.sketch import registry
 import typing
@@ -11,7 +12,7 @@ __all__ = [
 ]
 
 @typing.final
-class TangentConstraint:
+class TangentConstraint(constraints.Constraint):
     r"""
     Enforces a line is tangent to a circle/arc.
     """

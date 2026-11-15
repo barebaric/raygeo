@@ -3,6 +3,7 @@
 
 import builtins
 from raygeo import geo
+from raygeo.sketch import entities
 from raygeo.sketch import registry
 import typing
 __all__ = [
@@ -10,7 +11,7 @@ __all__ = [
 ]
 
 @typing.final
-class Polygon:
+class Polygon(entities.Entity):
     r"""
     A polygon defined in the local frame of center and handle
     points.

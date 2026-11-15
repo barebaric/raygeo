@@ -10,6 +10,7 @@ from . import point
 from . import polygon
 from . import text_box
 __all__ = [
+    "Entity",
     "arc",
     "bezier",
     "circle",
@@ -19,4 +20,13 @@ __all__ = [
     "polygon",
     "text_box",
 ]
+
+class Entity:
+    r"""
+    The common base class of every entity binding: a nominal `Entity`
+    type for `isinstance` checks and annotations.  The per-class
+    members live on the subclasses; polymorphism is carried by the
+    Rust-side `Entity` trait.
+    """
+    ...
 

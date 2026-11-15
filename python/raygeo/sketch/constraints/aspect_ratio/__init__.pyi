@@ -3,6 +3,7 @@
 
 import builtins
 import collections.abc
+from raygeo.sketch import constraints
 from raygeo.sketch import protocols
 from raygeo.sketch import registry
 import typing
@@ -11,7 +12,7 @@ __all__ = [
 ]
 
 @typing.final
-class AspectRatioConstraint:
+class AspectRatioConstraint(constraints.Constraint):
     r"""
     Enforces dist(p1, p2) == ratio * dist(p3, p4).
     """
@@ -85,6 +86,10 @@ class AspectRatioConstraint:
     def draw(self, ctx: protocols.Canvas, registry: protocols.DrawContext, to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], is_selected: builtins.bool = False, is_hovered: builtins.bool = False, point_radius: builtins.float = 5.0) -> None:
         r"""
         Draws the constraint's symbol onto the cairo context.
+        """
+    def is_hit(self, mx: builtins.float, my: builtins.float, threshold: builtins.float, registry: registry.EntityRegistry, to_screen: typing.Optional[collections.abc.Callable[[tuple[float, float]], tuple[float, float]]] = None) -> builtins.bool:
+        r"""
+        Whether the constraint's rendered symbol is hit at (mx, my).
         """
     def set_user_visible(self, value: builtins.bool) -> None:
         r"""

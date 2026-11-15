@@ -14,33 +14,9 @@ polymorphic queries.
 
 import builtins
 from raygeo import geo
-from raygeo.sketch.constraints import angle
-from raygeo.sketch.constraints import aspect_ratio
-from raygeo.sketch.constraints import coincident
-from raygeo.sketch.constraints import collinear
-from raygeo.sketch.constraints import diameter
-from raygeo.sketch.constraints import distance
-from raygeo.sketch.constraints import drag
-from raygeo.sketch.constraints import equal_distance
-from raygeo.sketch.constraints import equal_length
-from raygeo.sketch.constraints import horizontal
-from raygeo.sketch.constraints import parallelogram
-from raygeo.sketch.constraints import perpendicular
-from raygeo.sketch.constraints import point_on_curve
-from raygeo.sketch.constraints import point_on_line
-from raygeo.sketch.constraints import radius
-from raygeo.sketch.constraints import rotational
-from raygeo.sketch.constraints import symmetry
-from raygeo.sketch.constraints import tangent
-from raygeo.sketch.constraints import vertical
-from raygeo.sketch.entities import arc
-from raygeo.sketch.entities import bezier
-from raygeo.sketch.entities import circle
-from raygeo.sketch.entities import ellipse
-from raygeo.sketch.entities import line
+from raygeo.sketch import constraints
+from raygeo.sketch import entities
 from raygeo.sketch.entities import point
-from raygeo.sketch.entities import polygon
-from raygeo.sketch.entities import text_box
 import typing
 __all__ = [
     "EntityRegistry",
@@ -220,11 +196,11 @@ class EntityRegistry:
         Residual values of all stored constraints at the current
         point positions.
         """
-    def constraints(self) -> builtins.list[typing.Union[angle.AngleConstraint, aspect_ratio.AspectRatioConstraint, coincident.CoincidentConstraint, collinear.CollinearConstraint, diameter.DiameterConstraint, distance.DistanceConstraint, drag.DragConstraint, equal_distance.EqualDistanceConstraint, equal_length.EqualLengthConstraint, horizontal.HorizontalConstraint, parallelogram.ParallelogramConstraint, perpendicular.PerpendicularConstraint, point_on_curve.PointOnCurveConstraint, point_on_line.PointOnLineConstraint, radius.RadiusConstraint, rotational.RotationalConstraint, symmetry.SymmetryConstraint, tangent.TangentConstraint, vertical.VerticalConstraint]]:
+    def constraints(self) -> builtins.list[constraints.Constraint]:
         r"""
         All stored constraints as their concrete classes.
         """
-    def get_constraint_object(self, index: builtins.int) -> typing.Optional[typing.Union[angle.AngleConstraint, aspect_ratio.AspectRatioConstraint, coincident.CoincidentConstraint, collinear.CollinearConstraint, diameter.DiameterConstraint, distance.DistanceConstraint, drag.DragConstraint, equal_distance.EqualDistanceConstraint, equal_length.EqualLengthConstraint, horizontal.HorizontalConstraint, parallelogram.ParallelogramConstraint, perpendicular.PerpendicularConstraint, point_on_curve.PointOnCurveConstraint, point_on_line.PointOnLineConstraint, radius.RadiusConstraint, rotational.RotationalConstraint, symmetry.SymmetryConstraint, tangent.TangentConstraint, vertical.VerticalConstraint]]:
+    def get_constraint_object(self, index: builtins.int) -> typing.Optional[constraints.Constraint]:
         r"""
         The constraint object for a handle, or None.
         """
@@ -374,16 +350,16 @@ class EntityRegistry:
         r"""
         All sketch points, in id order.
         """
-    def entities(self) -> builtins.list[typing.Union[line.Line, arc.Arc, circle.Circle, ellipse.Ellipse, bezier.Bezier, polygon.Polygon, text_box.TextBox]]:
+    def entities(self) -> builtins.list[entities.Entity]:
         r"""
         All entities as their concrete classes.
         """
-    def get_entity(self, id: builtins.int) -> typing.Optional[typing.Union[line.Line, arc.Arc, circle.Circle, ellipse.Ellipse, bezier.Bezier, polygon.Polygon, text_box.TextBox]]:
+    def get_entity(self, id: builtins.int) -> typing.Optional[entities.Entity]:
         r"""
         The entity object for an id, or None.
         Alias for get_entity_object (reference naming).
         """
-    def get_entity_object(self, id: builtins.int) -> typing.Optional[typing.Union[line.Line, arc.Arc, circle.Circle, ellipse.Ellipse, bezier.Bezier, polygon.Polygon, text_box.TextBox]]: ...
+    def get_entity_object(self, id: builtins.int) -> typing.Optional[entities.Entity]: ...
     def add_entity(self, obj: typing.Any) -> builtins.int:
         r"""
         Adds an entity object to the registry and returns its id.

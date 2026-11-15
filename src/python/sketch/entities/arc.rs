@@ -5,6 +5,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
+use super::PyEntityBase;
 use crate::python::geo::geometry::Geometry as PyGeometry;
 use crate::python::sketch::constraints::dict_from_value;
 use crate::python::sketch::registry::PyEntityRegistry;
@@ -14,7 +15,8 @@ use crate::sketch::entities::Entity;
 
 /// A circular arc from start to end around a center.
 #[gen_stub_pyclass]
-#[pyclass(module = "raygeo.sketch.entities.arc", name = "Arc")]
+#[pyclass(
+    extends = PyEntityBase,module = "raygeo.sketch.entities.arc", name = "Arc")]
 pub struct PyArc {
     pub inner: CoreArc,
     /// Live back-reference to the owning registry, if any.
@@ -33,11 +35,11 @@ impl PyArc {
         center: u64,
         clockwise: bool,
         construction: bool,
-    ) -> Self {
-        PyArc {
+    ) -> PyClassInitializer<Self> {
+        PyClassInitializer::from(PyEntityBase).add_subclass(PyArc {
             inner: CoreArc::new(0, start, end, center, clockwise, construction),
             registry: None,
-        }
+        })
     }
 
     /// Unique entity id.

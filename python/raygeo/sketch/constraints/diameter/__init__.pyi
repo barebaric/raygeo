@@ -3,6 +3,7 @@
 
 import builtins
 import collections.abc
+from raygeo.sketch import constraints
 from raygeo.sketch import protocols
 from raygeo.sketch import registry
 import typing
@@ -11,7 +12,7 @@ __all__ = [
 ]
 
 @typing.final
-class DiameterConstraint:
+class DiameterConstraint(constraints.Constraint):
     r"""
     Enforces the diameter of a circle.
     """

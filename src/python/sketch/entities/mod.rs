@@ -12,8 +12,9 @@ pub(crate) mod text_box;
 
 use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;
+use pyo3_stub_gen::derive::gen_stub_pyclass;
 use pyo3_stub_gen::{ImportKind, ImportRef, ModuleRef, PyStubType, TypeInfo};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::sketch::entities::Entity;
 
@@ -42,70 +43,70 @@ pub(crate) fn entity_to_py<'py>(
     if let Some(line) = any.downcast_ref::<Line>() {
         let object = Py::new(
             py,
-            PyLine {
+            PyClassInitializer::from(PyEntityBase).add_subclass(PyLine {
                 inner: line.clone(),
                 registry: Some(registry.clone().unbind()),
-            },
+            }),
         )?;
         return Ok(object.bind(py).clone().into_any());
     }
     if let Some(arc) = any.downcast_ref::<Arc>() {
         let object = Py::new(
             py,
-            PyArc {
+            PyClassInitializer::from(PyEntityBase).add_subclass(PyArc {
                 inner: arc.clone(),
                 registry: Some(registry.clone().unbind()),
-            },
+            }),
         )?;
         return Ok(object.bind(py).clone().into_any());
     }
     if let Some(circle) = any.downcast_ref::<Circle>() {
         let object = Py::new(
             py,
-            PyCircle {
+            PyClassInitializer::from(PyEntityBase).add_subclass(PyCircle {
                 inner: circle.clone(),
                 registry: Some(registry.clone().unbind()),
-            },
+            }),
         )?;
         return Ok(object.bind(py).clone().into_any());
     }
     if let Some(ellipse) = any.downcast_ref::<Ellipse>() {
         let object = Py::new(
             py,
-            PyEllipse {
+            PyClassInitializer::from(PyEntityBase).add_subclass(PyEllipse {
                 inner: ellipse.clone(),
                 registry: Some(registry.clone().unbind()),
-            },
+            }),
         )?;
         return Ok(object.bind(py).clone().into_any());
     }
     if let Some(bezier) = any.downcast_ref::<Bezier>() {
         let object = Py::new(
             py,
-            PyBezier {
+            PyClassInitializer::from(PyEntityBase).add_subclass(PyBezier {
                 inner: bezier.clone(),
                 registry: Some(registry.clone().unbind()),
-            },
+            }),
         )?;
         return Ok(object.bind(py).clone().into_any());
     }
     if let Some(polygon) = any.downcast_ref::<PolygonEntity>() {
         let object = Py::new(
             py,
-            PyPolygon {
+            PyClassInitializer::from(PyEntityBase).add_subclass(PyPolygon {
                 inner: polygon.clone(),
                 registry: Some(registry.clone().unbind()),
-            },
+            }),
         )?;
         return Ok(object.bind(py).clone().into_any());
     }
     if let Some(text_box) = any.downcast_ref::<TextBoxEntity>() {
         let object = Py::new(
             py,
-            PyTextBox {
+            PyClassInitializer::from(PyEntityBase).add_subclass(PyTextBox {
                 inner: text_box.clone(),
                 registry: Some(registry.clone().unbind()),
-            },
+            }),
         )?;
         return Ok(object.bind(py).clone().into_any());
     }
@@ -151,7 +152,16 @@ pub(crate) fn extract_entity(
     Err(PyTypeError::new_err("expected a sketch entity object"))
 }
 
-/// The union of all entity classes, for typed registry returns.
+/// The common base class of every entity binding: a nominal `Entity`
+/// type for `isinstance` checks and annotations.  The per-class
+/// members live on the subclasses; polymorphism is carried by the
+/// Rust-side `Entity` trait.
+#[gen_stub_pyclass]
+#[pyclass(subclass, module = "raygeo.sketch.entities", name = "Entity")]
+#[derive(Default)]
+pub struct PyEntityBase;
+
+/// The base of all entity classes, for typed registry returns.
 pub struct AnyEntity<'py>(pub Bound<'py, PyAny>);
 
 impl<'a, 'py> FromPyObject<'a, 'py> for AnyEntity<'py> {
@@ -177,40 +187,18 @@ impl<'py> IntoPyObject<'py> for AnyEntity<'py> {
 
 impl PyStubType for AnyEntity<'_> {
     fn type_output() -> TypeInfo {
-        const KINDS: [(&str, &str); 7] = [
-            ("line", "Line"),
-            ("arc", "Arc"),
-            ("circle", "Circle"),
-            ("ellipse", "Ellipse"),
-            ("bezier", "Bezier"),
-            ("polygon", "Polygon"),
-            ("text_box", "TextBox"),
-        ];
-
-        let mut import = std::collections::HashSet::new();
-        let mut type_refs = HashMap::new();
-        let qualified: Vec<String> = KINDS
-            .iter()
-            .map(|(module_name, class_name)| {
-                let module = ModuleRef::Named(format!(
-                    "raygeo.sketch.entities.{module_name}"
-                ));
-                import.insert(ImportRef::Module(module.clone()));
-                type_refs.insert(
-                    class_name.to_string(),
-                    pyo3_stub_gen::TypeIdentifierRef {
-                        module: module.clone(),
-                        import_kind: ImportKind::Module,
-                    },
-                );
-                format!("{module_name}.{class_name}")
-            })
-            .collect();
+        let module = ModuleRef::Named("raygeo.sketch.entities".to_string());
         TypeInfo {
-            name: format!("typing.Union[{}]", qualified.join(", ")),
+            name: "Entity".to_string(),
             source_module: None,
-            import,
-            type_refs,
+            import: HashSet::from([ImportRef::Module(module.clone())]),
+            type_refs: HashMap::from([(
+                "Entity".to_string(),
+                pyo3_stub_gen::TypeIdentifierRef {
+                    module,
+                    import_kind: ImportKind::Module,
+                },
+            )]),
         }
     }
 }
@@ -222,6 +210,8 @@ pub struct AnyPoint<'py>(pub Bound<'py, PyAny>);
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = m.py();
     let entities_mod = PyModule::new(py, "entities")?;
+
+    entities_mod.add_class::<PyEntityBase>()?;
 
     point::register(&entities_mod)?;
     line::register(&entities_mod)?;

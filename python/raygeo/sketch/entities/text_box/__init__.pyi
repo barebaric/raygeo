@@ -4,6 +4,7 @@
 import builtins
 from raygeo import geo
 from raygeo.geo.shape import text
+from raygeo.sketch import entities
 from raygeo.sketch import registry
 import typing
 __all__ = [
@@ -11,7 +12,7 @@ __all__ = [
 ]
 
 @typing.final
-class TextBox:
+class TextBox(entities.Entity):
     r"""
     A text box framed by origin, width and height points.
     """

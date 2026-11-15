@@ -21,6 +21,7 @@ from . import symmetry
 from . import tangent
 from . import vertical
 __all__ = [
+    "Constraint",
     "angle",
     "aspect_ratio",
     "coincident",
@@ -41,4 +42,13 @@ __all__ = [
     "tangent",
     "vertical",
 ]
+
+class Constraint:
+    r"""
+    The common base class of every constraint binding: a nominal
+    `Constraint` type for `isinstance` checks and annotations.  The
+    per-class members live on the subclasses; polymorphism is carried
+    by the Rust-side `SketchConstraint` trait.
+    """
+    ...
 
