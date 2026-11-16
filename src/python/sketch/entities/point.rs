@@ -13,7 +13,11 @@ use crate::python::sketch::types::EntityId;
 /// are written back to the registry. It also behaves like an ``(x, y)``
 /// pair for indexing and iteration.
 #[gen_stub_pyclass]
-#[pyclass(module = "raygeo.sketch.entities.point", name = "SketchPoint")]
+#[pyclass(
+    subclass,
+    module = "raygeo.sketch.entities.point",
+    name = "SketchPoint"
+)]
 pub struct PySketchPoint {
     pub inner: crate::sketch::entities::point::SketchPoint,
     /// Live back-reference to the owning registry, if any.

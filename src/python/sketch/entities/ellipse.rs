@@ -1,5 +1,6 @@
 //! Bindings for the ellipse entity.
 
+use crate::python::sketch::registry::value_from_dict;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
@@ -11,6 +12,7 @@ use super::PyEntityBase;
 use crate::python::geo::geometry::Geometry as PyGeometry;
 use crate::python::sketch::constraints::dict_from_value;
 use crate::python::sketch::context::PointCtx;
+use crate::sketch::constraint::PointContext;
 use crate::sketch::entities::ellipse::Ellipse as CoreEllipse;
 use crate::sketch::entities::mirror::{MirrorAxis, MirrorDirection};
 use crate::sketch::entities::Entity;
@@ -18,7 +20,8 @@ use crate::sketch::entities::Entity;
 /// An ellipse defined by a center and two radius points.
 #[gen_stub_pyclass]
 #[pyclass(
-    extends = PyEntityBase,module = "raygeo.sketch.entities.ellipse", name = "Ellipse")]
+    extends = PyEntityBase,
+    subclass,module = "raygeo.sketch.entities.ellipse", name = "Ellipse")]
 pub struct PyEllipse {
     pub inner: CoreEllipse,
     /// Construction helper line entity ids.
@@ -340,6 +343,120 @@ impl PyEllipse {
     /// Point ids that act as drag anchors for the given point.
     fn get_drag_anchor_points(&self, point_id: u64) -> Vec<u64> {
         self.inner.get_drag_anchor_points(point_id)
+    }
+
+    /// Restores base flags serialized by to_dict() but not accepted
+    /// as constructor arguments.
+    fn restore_base_flags(&mut self, data: &Bound<'_, PyDict>) {
+        let get = |key: &str| -> bool {
+            data.get_item(key)
+                .ok()
+                .flatten()
+                .and_then(|v| v.extract().ok())
+                .unwrap_or(false)
+        };
+        self.inner.base_mut().invisible = get("invisible");
+        self.inner.base_mut().array_copy = get("array_copy");
+    }
+
+    /// Whether the entity has a radius (arc, circle).
+    fn is_radius_entity(&self) -> bool {
+        self.inner.is_radius_entity()
+    }
+
+    /// Whether the entity forms a closed loop.
+    fn is_closed_loop(&self) -> bool {
+        self.inner.is_closed_loop()
+    }
+
+    /// Whether the entity participates in edge/chaining adjacency
+    /// for loop detection (line, arc, bezier).
+    fn is_edge_entity(&self) -> bool {
+        self.inner.is_edge_entity()
+    }
+
+    /// The entity ids of the curve endpoints.
+    fn get_endpoint_ids(&self) -> Vec<u64> {
+        self.inner.get_endpoint_ids()
+    }
+
+    /// Point ids acting as junction candidates for chaining.
+    fn get_junction_point_ids(&self) -> Vec<u64> {
+        self.inner.get_junction_point_ids()
+    }
+
+    /// Auxiliary/child entity ids belonging to this compound entity.
+    fn get_helper_ids(&self) -> Vec<u64> {
+        self.inner.get_helper_ids()
+    }
+
+    /// Drops this entity's references to its helper entities.
+    fn clear_helper_references(&mut self) {
+        self.inner.clear_helper_references()
+    }
+
+    /// Point ids that can remain unconstrained when this entity is
+    /// constrained.
+    fn get_ignorable_unconstrained_points(&self) -> Vec<u64> {
+        self.inner.get_ignorable_unconstrained_points()
+    }
+
+    /// Whether a point can be constrained onto this entity's curve.
+    fn supports_point_on_curve(&self) -> bool {
+        self.inner.supports_point_on_curve()
+    }
+
+    /// Whether this entity can receive a fill color.
+    fn supports_fill(&self) -> bool {
+        self.inner.supports_fill()
+    }
+
+    /// The characteristic length used by equal-length constraints.
+    fn characteristic_length(&self, registry: PointCtx<'_>) -> f64 {
+        self.inner.characteristic_length(&registry)
+    }
+
+    /// The defining-point pairs of the characteristic length.
+    fn characteristic_length_pairs(&self) -> Vec<[u64; 2]> {
+        self.inner.characteristic_length_pairs()
+    }
+
+    /// The signed area enclosed by the entity, if defined.
+    fn enclosed_signed_area(&self, registry: PointCtx<'_>) -> Option<f64> {
+        self.inner.enclosed_signed_area(&registry)
+    }
+
+    /// Point ids that move rigidly with the given point.
+    fn get_rigidly_connected_points(&self, point_id: u64) -> Vec<u64> {
+        self.inner.get_rigidly_connected_points(point_id)
+    }
+
+    /// Frame point ids of a text box, for containment checks.
+    fn get_all_frame_point_ids(&self, registry: PointCtx<'_>) -> Vec<u64> {
+        self.inner.get_all_frame_point_ids(&registry)
+    }
+
+    /// Solver-relevant discrete state for undo/redo snapshots.
+    fn get_state<'py>(
+        &self,
+        py: Python<'py>,
+    ) -> PyResult<Option<Bound<'py, PyDict>>> {
+        match self.inner.get_state() {
+            Some(value) => dict_from_value(py, &value).map(Some),
+            None => Ok(None),
+        }
+    }
+
+    /// Restores solver-relevant discrete state from a snapshot.
+    fn set_state(&mut self, state: &Bound<'_, PyDict>) -> PyResult<()> {
+        let value = value_from_dict(state)?;
+        self.inner.set_state(&value);
+        Ok(())
+    }
+
+    /// A point on the curve (the radius-x point).
+    fn get_midpoint(&self, registry: PointCtx<'_>) -> Option<(f64, f64)> {
+        registry.point_position(self.inner.radius_x_point)
     }
 }
 
