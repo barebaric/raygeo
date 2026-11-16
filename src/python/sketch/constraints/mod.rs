@@ -157,25 +157,54 @@ impl DrawContextContract for PyDrawContext<'_> {
     }
 
     fn entity_ids(&self) -> Vec<u64> {
-        self.registry
+        if let Ok(ids) = self
+            .registry
             .call_method0("entity_ids")
             .and_then(|ids| ids.extract::<Vec<u64>>())
-            .unwrap_or_default()
+        {
+            return ids;
+        }
+        // The reference registry exposes its entities as a list
+        // attribute instead of a method.
+        let entities = match self.registry.getattr("entities") {
+            Ok(entities) => entities,
+            Err(_) => return vec![],
+        };
+        let iter = match entities.try_iter() {
+            Ok(iter) => iter,
+            Err(_) => return vec![],
+        };
+        let mut ids = Vec::new();
+        for entity in iter.flatten() {
+            if let Ok(id) = entity.getattr("id").and_then(|v| v.extract()) {
+                ids.push(id);
+            }
+        }
+        ids
     }
 
     fn entity_type(&self, id: u64) -> Option<std::borrow::Cow<'static, str>> {
-        let value = self.call("entity_type", id)?;
-        let name: String = value.extract().ok()?;
-        match name.as_str() {
-            "line" => Some(std::borrow::Cow::Borrowed("line")),
-            "text_box" => Some(std::borrow::Cow::Borrowed("text_box")),
-            _ => Some(std::borrow::Cow::Owned(name)),
+        if let Some(value) = self.call("entity_type", id) {
+            if let Ok(name) = value.extract::<String>() {
+                return Some(std::borrow::Cow::Owned(name));
+            }
         }
+        let entity = self.call("get_entity", id)?;
+        let name: String = entity
+            .getattr("type")
+            .ok()
+            .and_then(|v| v.extract().ok())?;
+        Some(std::borrow::Cow::Owned(name))
     }
 
     fn entity_point_ids(&self, id: u64) -> Option<Vec<u64>> {
-        let value = self.call("entity_point_ids", id)?;
-        value.extract().ok()
+        if let Some(value) = self.call("entity_point_ids", id) {
+            if let Ok(ids) = value.extract::<Vec<u64>>() {
+                return Some(ids);
+            }
+        }
+        let entity = self.call("get_entity", id)?;
+        entity.call_method0("get_point_ids").ok()?.extract().ok()
     }
 
     fn point_in_text_box_frame(&self, point_id: u64) -> bool {
