@@ -9,7 +9,6 @@ use crate::sketch::draw::{
     draw_conflict_underlay, draw_selection_underlay, draw_status_color,
     draw_symmetry_arrows, CairoLike, DrawContext, DrawStyle,
 };
-use crate::sketch::registry::EntityRegistry;
 
 /// Enforces two points are symmetric about a center point or about
 /// an axis line (referenced by entity id, resolved to its defining
@@ -152,7 +151,7 @@ impl SketchConstraint for SymmetryConstraint {
         mx: f64,
         my: f64,
         threshold: f64,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
         to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
     ) -> bool {
         let (Some(p1), Some(p2)) =

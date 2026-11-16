@@ -11,25 +11,55 @@
 
 use serde_json::Value;
 
-use crate::sketch::draw::{CairoLike, DrawContext, DrawStyle};
-use crate::sketch::registry::EntityRegistry;
+use crate::sketch::draw::{CairoLike, DrawContext, DrawPoint, DrawStyle};
 
-/// Read/write view of the sketch's point coordinates, addressed by
+/// Read/write view of the sketch's points and entities, addressed by
 /// point id.  Constraints read coordinates through [`PointContext::xy`];
 /// constraints whose Jacobian is computed by finite differences
 /// (e.g. the angle constraint) additionally write perturbed
 /// coordinates through [`PointContext::set_xy`], mirroring how the
-/// reference implementation mutates registry points.
+/// reference implementation mutates registry points.  Entities
+/// resolve their defining-point geometry and their entity
+/// dependencies through the same surface, so both layers work
+/// against snapshots and against the application's live document.
 pub trait PointContext {
+    /// Returns the `(x, y)` coordinates of a point id, or `None`
+    /// when the id is unknown.
+    fn point_position(&self, id: u64) -> Option<(f64, f64)>;
+
+    /// Returns the point state for a point id, or `None` when the
+    /// id is unknown.
+    fn get_point(&self, id: u64) -> Option<DrawPoint> {
+        self.point_position(id).map(|(x, y)| DrawPoint {
+            x,
+            y,
+            fixed: false,
+            constrained: false,
+        })
+    }
+
     /// Returns the `(x, y)` coordinates of a point id.
-    fn xy(&self, id: u64) -> (f64, f64);
+    fn xy(&self, id: u64) -> (f64, f64) {
+        self.point_position(id).unwrap_or((0.0, 0.0))
+    }
 
     /// Overwrites the coordinates of a point id.
     fn set_xy(&mut self, id: u64, x: f64, y: f64);
 
-    /// Returns the entity with the given id, for constraints that
-    /// reference entities and resolve them at residual time.
-    fn get_entity(&self, id: u64) -> Option<&dyn Entity>;
+    /// Returns the entity with the given id, cloned out of the
+    /// context, for constraints that reference entities and resolve
+    /// them at residual time.  Ownership keeps snapshot and live
+    /// contexts symmetric.
+    fn get_entity(&self, id: u64) -> Option<Box<dyn Entity>>;
+
+    /// Returns all entity ids of the document.
+    fn entity_ids(&self) -> Vec<u64>;
+
+    /// Returns the type name of an entity id.
+    fn entity_type(&self, id: u64) -> Option<std::borrow::Cow<'static, str>>;
+
+    /// Returns the point ids of an entity id.
+    fn entity_point_ids(&self, id: u64) -> Option<Vec<u64>>;
 }
 
 /// One Jacobian entry: derivative of residual `row` w.r.t. the two
@@ -74,7 +104,7 @@ pub trait SketchConstraint: Send + Sync {
         _mx: f64,
         _my: f64,
         _threshold: f64,
-        _model: &EntityRegistry,
+        _model: &dyn PointContext,
         _to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
     ) -> bool {
         false

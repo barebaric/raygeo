@@ -13,7 +13,6 @@ use crate::sketch::draw::{
     draw_status_color, format_value, screen_scale, CairoLike, DrawContext,
     DrawStyle,
 };
-use crate::sketch::registry::EntityRegistry;
 
 /// Weight of the angular residual.
 pub const ANGLE_WEIGHT: f64 = 10.0;
@@ -201,7 +200,7 @@ impl SketchConstraint for AngleConstraint {
         mx: f64,
         my: f64,
         threshold: f64,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
         to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
     ) -> bool {
         let Some((p1, p2, p3, p4)) =

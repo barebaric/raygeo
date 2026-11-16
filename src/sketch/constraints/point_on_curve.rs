@@ -12,7 +12,6 @@ use crate::sketch::draw::{
     draw_point_marker, CairoLike, DrawContext, DrawStyle,
 };
 use crate::sketch::entities::bezier::Bezier;
-use crate::sketch::registry::EntityRegistry;
 
 /// Minimum distance below which the closest-point direction is
 /// considered degenerate and the gradient empty.
@@ -199,7 +198,7 @@ impl SketchConstraint for PointOnCurveConstraint {
         mx: f64,
         my: f64,
         threshold: f64,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
         to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
     ) -> bool {
         let Some(pt) = model.get_point(self.point_id) else {

@@ -8,9 +8,9 @@ use crate::geo::shape::circle::{
     is_circle_inside_rect,
 };
 use crate::geo::types::{Point, Rect};
+use crate::sketch::constraint::PointContext;
 
 use super::entity::{Entity, EntityBase};
-use crate::sketch::registry::EntityRegistry;
 
 /// A full circle defined by center and radius point.
 #[derive(Clone, Debug)]
@@ -59,7 +59,7 @@ impl Circle {
         EntityBase::combined_json(&base, extra)
     }
 
-    pub fn radius(&self, model: &EntityRegistry) -> f64 {
+    pub fn radius(&self, model: &dyn PointContext) -> f64 {
         let (Some((cx, cy)), Some((px, py))) = (
             model.point_position(self.center),
             model.point_position(self.radius_point),
@@ -110,13 +110,13 @@ impl Entity for Circle {
         true
     }
 
-    fn enclosed_signed_area(&self, model: &EntityRegistry) -> Option<f64> {
+    fn enclosed_signed_area(&self, model: &dyn PointContext) -> Option<f64> {
         // By convention, a single circle loop is CCW -> positive area.
         let radius = self.radius(model);
         Some(std::f64::consts::PI * radius * radius)
     }
 
-    fn contains_point(&self, model: &EntityRegistry, x: f64, y: f64) -> bool {
+    fn contains_point(&self, model: &dyn PointContext, x: f64, y: f64) -> bool {
         let (Some((cx, cy)), Some((px, py))) = (
             model.point_position(self.center),
             model.point_position(self.radius_point),
@@ -133,7 +133,7 @@ impl Entity for Circle {
         mx: f64,
         my: f64,
         threshold: f64,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
     ) -> bool {
         let Some((cx, cy)) = model.point_position(self.center) else {
             return false;
@@ -172,7 +172,7 @@ impl Entity for Circle {
 
     fn compute_constrained(
         &self,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
         constrains_radius: &dyn Fn(u64) -> bool,
     ) -> bool {
         let center_constrained = model
@@ -189,7 +189,7 @@ impl Entity for Circle {
         center_constrained && radii_defined
     }
 
-    fn is_contained_by(&self, rect: Rect, model: &EntityRegistry) -> bool {
+    fn is_contained_by(&self, rect: Rect, model: &dyn PointContext) -> bool {
         let Some((cx, cy)) = model.point_position(self.center) else {
             return false;
         };
@@ -197,7 +197,7 @@ impl Entity for Circle {
         is_circle_inside_rect(Point::new(cx, cy), radius, rect)
     }
 
-    fn intersects_rect(&self, rect: Rect, model: &EntityRegistry) -> bool {
+    fn intersects_rect(&self, rect: Rect, model: &dyn PointContext) -> bool {
         let Some((cx, cy)) = model.point_position(self.center) else {
             return false;
         };
@@ -211,7 +211,7 @@ impl Entity for Circle {
         does_circle_intersect_rect(Point::new(cx, cy), radius, rect)
     }
 
-    fn to_geometry(&self, model: &EntityRegistry) -> Geometry {
+    fn to_geometry(&self, model: &dyn PointContext) -> Geometry {
         let mut geo = Geometry::new();
         let (Some((cx, cy)), Some((px, py))) = (
             model.point_position(self.center),
@@ -230,7 +230,7 @@ impl Entity for Circle {
         &self,
         px: f64,
         py: f64,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
     ) -> Option<f64> {
         let (cx, cy) = model.point_position(self.center)?;
         let radius = self.radius(model);

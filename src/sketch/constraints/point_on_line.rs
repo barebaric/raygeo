@@ -10,7 +10,6 @@ use crate::sketch::constraint::{
 use crate::sketch::draw::{
     draw_point_marker, CairoLike, DrawContext, DrawStyle,
 };
-use crate::sketch::registry::EntityRegistry;
 
 /// The resolved target geometry, mirroring the reference constraint's
 /// entity cases: an infinite line, or a circle/arc circumference.
@@ -208,7 +207,7 @@ impl SketchConstraint for PointOnLineConstraint {
         mx: f64,
         my: f64,
         threshold: f64,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
         to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
     ) -> bool {
         let Some(pt) = model.get_point(self.point_id) else {

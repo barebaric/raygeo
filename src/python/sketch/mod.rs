@@ -1,6 +1,7 @@
 //! Python bindings for the sketch module.
 
 pub(crate) mod constraints;
+pub(crate) mod context;
 pub(crate) mod entities;
 pub(crate) mod point;
 pub(crate) mod protocols;
@@ -77,7 +78,8 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
         .parent()
         .map(|dir| dir.join("sketch"));
     if let Some(sketch_dir) = sketch_dir {
-        let path = pyo3::types::PyList::new(py, [sketch_dir.to_string_lossy()])?;
+        let path =
+            pyo3::types::PyList::new(py, [sketch_dir.to_string_lossy()])?;
         sketch_mod.setattr("__path__", &path)?;
     }
 

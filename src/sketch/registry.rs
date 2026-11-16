@@ -12,6 +12,7 @@ use crate::sketch::entities::entity_from_json;
 use crate::sketch::entities::point::SketchPoint;
 
 use crate::sketch::constraint::PointContext;
+use crate::sketch::draw::DrawPoint;
 
 /// Stores all points and entities of a sketch document.
 #[derive(Default)]
@@ -511,8 +512,21 @@ impl Clone for EntityRegistry {
 }
 
 impl PointContext for EntityRegistry {
-    fn get_entity(&self, id: u64) -> Option<&dyn Entity> {
-        self.get_entity(id)
+    fn get_entity(&self, id: u64) -> Option<Box<dyn Entity>> {
+        EntityRegistry::get_entity(self, id).map(|e| e.clone_box())
+    }
+
+    fn point_position(&self, id: u64) -> Option<(f64, f64)> {
+        self.point_position(id)
+    }
+
+    fn get_point(&self, id: u64) -> Option<DrawPoint> {
+        self.get_point(id).map(|point| DrawPoint {
+            x: point.x,
+            y: point.y,
+            fixed: point.fixed,
+            constrained: point.constrained,
+        })
     }
 
     fn xy(&self, id: u64) -> (f64, f64) {
@@ -521,6 +535,18 @@ impl PointContext for EntityRegistry {
 
     fn set_xy(&mut self, id: u64, x: f64, y: f64) {
         let _ = self.set_point_position(id, x, y);
+    }
+
+    fn entity_ids(&self) -> Vec<u64> {
+        EntityRegistry::entity_ids(self)
+    }
+
+    fn entity_type(&self, id: u64) -> Option<std::borrow::Cow<'static, str>> {
+        EntityRegistry::entity_type(self, id).map(std::borrow::Cow::Borrowed)
+    }
+
+    fn entity_point_ids(&self, id: u64) -> Option<Vec<u64>> {
+        EntityRegistry::entity_point_ids(self, id)
     }
 }
 
@@ -531,6 +557,7 @@ impl crate::sketch::draw::DrawContext for EntityRegistry {
                 x: point.x,
                 y: point.y,
                 fixed: point.fixed,
+                constrained: point.constrained,
             })
     }
 

@@ -12,7 +12,6 @@ use crate::sketch::draw::{
     draw_conflict_underlay, draw_selection_underlay, draw_status_color,
     CairoLike, DrawContext, DrawStyle, TANGENT_OFFSET, TANGENT_RADIUS,
 };
-use crate::sketch::registry::EntityRegistry;
 
 /// Enforces a line is tangent to a circle/arc: the absolute signed
 /// distance from the center to the line equals the radius.
@@ -180,7 +179,7 @@ impl SketchConstraint for TangentConstraint {
         mx: f64,
         my: f64,
         threshold: f64,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
         to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
     ) -> bool {
         let Some((l1, l2, center, _radius_pt)) =

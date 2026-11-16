@@ -8,7 +8,6 @@ use crate::sketch::constraint::{
 use crate::sketch::draw::{
     draw_point_marker, CairoLike, DrawContext, DrawStyle,
 };
-use crate::sketch::registry::EntityRegistry;
 
 /// Enforces two points are at the same location.
 #[derive(Clone, Debug, PartialEq)]
@@ -69,7 +68,7 @@ impl SketchConstraint for CoincidentConstraint {
         mx: f64,
         my: f64,
         threshold: f64,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
         to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
     ) -> bool {
         // The reference picks the non-origin point through the

@@ -13,7 +13,6 @@ use crate::sketch::draw::{
     draw_conflict_underlay, draw_label, draw_status_color, format_value,
     screen_scale, CairoLike, DrawContext, DrawStyle, LABEL_DIST_SCREEN,
 };
-use crate::sketch::registry::EntityRegistry;
 
 /// Enforces the diameter of a circle.
 #[derive(Clone, Debug, PartialEq)]
@@ -111,7 +110,7 @@ impl SketchConstraint for DiameterConstraint {
         mx: f64,
         my: f64,
         _threshold: f64,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
         to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
     ) -> bool {
         let Some((center_id, radius_pt_id)) =

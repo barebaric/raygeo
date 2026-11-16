@@ -7,9 +7,9 @@ use crate::geo::shape::ellipse::{
     is_point_inside_ellipse, is_point_on_ellipse,
 };
 use crate::geo::types::{Point, Rect};
+use crate::sketch::constraint::PointContext;
 
 use super::entity::{Entity, EntityBase};
-use crate::sketch::registry::EntityRegistry;
 
 /// An ellipse defined by center and the two radius points.
 #[derive(Clone, Debug)]
@@ -71,7 +71,7 @@ impl Ellipse {
         EntityBase::combined_json(&base, extra)
     }
 
-    pub fn radii(&self, model: &EntityRegistry) -> (f64, f64) {
+    pub fn radii(&self, model: &dyn PointContext) -> (f64, f64) {
         let (Some((cx, cy)), Some((x1, y1)), Some((x2, y2))) = (
             model.point_position(self.center),
             model.point_position(self.radius_x_point),
@@ -82,7 +82,7 @@ impl Ellipse {
         ((x1 - cx).hypot(y1 - cy), (x2 - cx).hypot(y2 - cy))
     }
 
-    pub fn rotation(&self, model: &EntityRegistry) -> f64 {
+    pub fn rotation(&self, model: &dyn PointContext) -> f64 {
         let Some((cx, cy)) = model.point_position(self.center) else {
             return 0.0;
         };
@@ -156,26 +156,26 @@ impl Entity for Ellipse {
         ]
     }
 
-    fn characteristic_length(&self, model: &EntityRegistry) -> f64 {
+    fn characteristic_length(&self, model: &dyn PointContext) -> f64 {
         let (rx, ry) = self.radii(model);
         (rx + ry) / 2.0
     }
 
     fn tangent_at(
         &self,
-        _model: &EntityRegistry,
+        _model: &dyn PointContext,
         _point_id: u64,
     ) -> Option<(f64, f64)> {
         // No well-defined endpoints for edge traversal.
         Some((1.0, 0.0))
     }
 
-    fn enclosed_signed_area(&self, model: &EntityRegistry) -> Option<f64> {
+    fn enclosed_signed_area(&self, model: &dyn PointContext) -> Option<f64> {
         let (rx, ry) = self.radii(model);
         Some(std::f64::consts::PI * rx * ry)
     }
 
-    fn contains_point(&self, model: &EntityRegistry, x: f64, y: f64) -> bool {
+    fn contains_point(&self, model: &dyn PointContext, x: f64, y: f64) -> bool {
         let Some((cx, cy)) = model.point_position(self.center) else {
             return false;
         };
@@ -216,7 +216,7 @@ impl Entity for Ellipse {
         mx: f64,
         my: f64,
         threshold: f64,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
     ) -> bool {
         let Some((cx, cy)) = model.point_position(self.center) else {
             return false;
@@ -245,7 +245,7 @@ impl Entity for Ellipse {
 
     fn compute_constrained(
         &self,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
         constrains_radius: &dyn Fn(u64) -> bool,
     ) -> bool {
         let center_constrained = model
@@ -266,7 +266,7 @@ impl Entity for Ellipse {
         center_constrained && radii_defined
     }
 
-    fn is_contained_by(&self, rect: Rect, model: &EntityRegistry) -> bool {
+    fn is_contained_by(&self, rect: Rect, model: &dyn PointContext) -> bool {
         let Some((cx, cy)) = model.point_position(self.center) else {
             return false;
         };
@@ -277,7 +277,7 @@ impl Entity for Ellipse {
             && (cy + ry) <= rect.max.y
     }
 
-    fn intersects_rect(&self, rect: Rect, model: &EntityRegistry) -> bool {
+    fn intersects_rect(&self, rect: Rect, model: &dyn PointContext) -> bool {
         let Some((cx, cy)) = model.point_position(self.center) else {
             return false;
         };
@@ -310,7 +310,7 @@ impl Entity for Ellipse {
         dist_sq_far >= 1.0
     }
 
-    fn to_geometry(&self, model: &EntityRegistry) -> Geometry {
+    fn to_geometry(&self, model: &dyn PointContext) -> Geometry {
         let mut geo = Geometry::new();
         let Some((cx, cy)) = model.point_position(self.center) else {
             return geo;
@@ -350,7 +350,10 @@ impl Entity for Ellipse {
         geo
     }
 
-    fn create_fill_geometry(&self, model: &EntityRegistry) -> Option<Geometry> {
+    fn create_fill_geometry(
+        &self,
+        model: &dyn PointContext,
+    ) -> Option<Geometry> {
         Some(self.to_geometry(model))
     }
 }

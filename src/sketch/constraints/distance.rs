@@ -13,7 +13,6 @@ use crate::sketch::draw::{
     draw_conflict_underlay, draw_label, draw_status_color, format_value,
     screen_scale, CairoLike, DrawContext, DrawStyle,
 };
-use crate::sketch::registry::EntityRegistry;
 
 /// Enforces a fixed distance between two points.
 #[derive(Clone, Debug, PartialEq)]
@@ -86,7 +85,7 @@ impl SketchConstraint for DistanceConstraint {
         mx: f64,
         my: f64,
         threshold: f64,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
         to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
     ) -> bool {
         let (Some(p1), Some(p2)) =
@@ -98,7 +97,7 @@ impl SketchConstraint for DistanceConstraint {
         let mut has_geometry = false;
         let endpoints = HashSet::from([self.p1, self.p2]);
         for entity_id in model.entity_ids() {
-            if model.entity_type(entity_id) != Some("line") {
+            if model.entity_type(entity_id).as_deref() != Some("line") {
                 continue;
             }
             if let Some(ids) = model.entity_point_ids(entity_id) {

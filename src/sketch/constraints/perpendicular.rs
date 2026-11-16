@@ -12,7 +12,6 @@ use crate::sketch::draw::{
     draw_conflict_underlay, draw_selection_underlay, draw_status_color,
     status_color, CairoLike, DrawContext, DrawStyle,
 };
-use crate::sketch::registry::EntityRegistry;
 
 /// Screen-space radius of the line-line marker arc, matching the
 /// reference renderer.
@@ -346,7 +345,7 @@ impl SketchConstraint for PerpendicularConstraint {
         mx: f64,
         my: f64,
         threshold: f64,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
         to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
     ) -> bool {
         let Some(target) = resolve_target(model, self.e1_id, self.e2_id) else {

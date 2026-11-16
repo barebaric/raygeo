@@ -10,7 +10,7 @@ use crate::python::sketch::types::EntityId;
 use super::PyEntityBase;
 use crate::python::geo::geometry::Geometry as PyGeometry;
 use crate::python::sketch::constraints::dict_from_value;
-use crate::python::sketch::registry::PyEntityRegistry;
+use crate::python::sketch::context::PointCtx;
 use crate::sketch::entities::mirror::{MirrorAxis, MirrorDirection};
 use crate::sketch::entities::polygon::PolygonEntity as CorePolygon;
 use crate::sketch::entities::Entity;
@@ -184,22 +184,19 @@ impl PyPolygon {
     fn geometry_signature<'py>(
         &self,
         py: Python<'py>,
-        registry: &PyEntityRegistry,
+        registry: PointCtx<'_>,
     ) -> PyResult<Bound<'py, PyDict>> {
-        dict_from_value(py, &self.inner.geometry_signature(&registry.inner))
+        dict_from_value(py, &self.inner.geometry_signature(&registry))
     }
 
     /// Returns the entity's toolpath geometry in model coordinates.
     /// Returns the polygon vertices in world coordinates.
-    fn get_world_vertices(
-        &self,
-        registry: &PyEntityRegistry,
-    ) -> Vec<(f64, f64)> {
-        self.inner.get_world_vertices(&registry.inner)
+    fn get_world_vertices(&self, registry: PointCtx<'_>) -> Vec<(f64, f64)> {
+        self.inner.get_world_vertices(&registry)
     }
 
-    fn to_geometry(&self, registry: &PyEntityRegistry) -> PyGeometry {
-        let geometry = self.inner.to_geometry(&registry.inner);
+    fn to_geometry(&self, registry: PointCtx<'_>) -> PyGeometry {
+        let geometry = self.inner.to_geometry(&registry);
         PyGeometry { inner: geometry }
     }
 
@@ -207,20 +204,20 @@ impl PyPolygon {
     #[pyo3(signature = (registry, forward = true))]
     fn to_polygon_vertices(
         &self,
-        registry: &PyEntityRegistry,
+        registry: PointCtx<'_>,
         forward: bool,
     ) -> Vec<(f64, f64)> {
-        self.inner.to_polygon_vertices(&registry.inner, forward)
+        self.inner.to_polygon_vertices(&registry, forward)
     }
 
     /// Returns the entity's centerline as polyline vertices.
     #[pyo3(signature = (registry, tolerance = 0.1))]
     fn to_polyline(
         &self,
-        registry: &PyEntityRegistry,
+        registry: PointCtx<'_>,
         tolerance: f64,
     ) -> Vec<(f64, f64)> {
-        self.inner.to_polyline(&registry.inner, tolerance)
+        self.inner.to_polyline(&registry, tolerance)
     }
 
     /// Whether the entity is hit at model coordinates (mx, my).
@@ -230,19 +227,14 @@ impl PyPolygon {
         mx: f64,
         my: f64,
         threshold: f64,
-        registry: &PyEntityRegistry,
+        registry: PointCtx<'_>,
     ) -> bool {
-        self.inner.hit_test(mx, my, threshold, &registry.inner)
+        self.inner.hit_test(mx, my, threshold, &registry)
     }
 
     /// Whether the model-space point lies inside the entity.
-    fn contains_point(
-        &self,
-        registry: &PyEntityRegistry,
-        x: f64,
-        y: f64,
-    ) -> bool {
-        self.inner.contains_point(&registry.inner, x, y)
+    fn contains_point(&self, registry: PointCtx<'_>, x: f64, y: f64) -> bool {
+        self.inner.contains_point(&registry, x, y)
     }
 
     /// Signed distance from the model-space point, if defined.
@@ -250,18 +242,18 @@ impl PyPolygon {
         &self,
         px: f64,
         py: f64,
-        registry: &PyEntityRegistry,
+        registry: PointCtx<'_>,
     ) -> Option<f64> {
-        self.inner.signed_distance_to(px, py, &registry.inner)
+        self.inner.signed_distance_to(px, py, &registry)
     }
 
     /// Tangent direction at the point nearest the model-space point.
     fn tangent_at(
         &self,
-        registry: &PyEntityRegistry,
+        registry: PointCtx<'_>,
         point_id: u64,
     ) -> Option<(f64, f64)> {
-        self.inner.tangent_at(&registry.inner, point_id)
+        self.inner.tangent_at(&registry, point_id)
     }
 
     /// Mirrors the entity across the axis.
@@ -398,11 +390,8 @@ impl PyPolygon {
         Ok((py.None(), py.None(), polygon))
     }
     /// The polygon's rings in world coordinates.
-    fn get_world_rings(
-        &self,
-        registry: &PyEntityRegistry,
-    ) -> Vec<Vec<(f64, f64)>> {
-        self.inner.get_world_rings(&registry.inner)
+    fn get_world_rings(&self, registry: PointCtx<'_>) -> Vec<Vec<(f64, f64)>> {
+        self.inner.get_world_rings(&registry)
     }
 
     /// Whether the polygon is a closed loop.
@@ -413,19 +402,19 @@ impl PyPolygon {
     fn is_contained_by(
         &self,
         rect: (f64, f64, f64, f64),
-        registry: &PyEntityRegistry,
+        registry: PointCtx<'_>,
     ) -> bool {
         let r = crate::geo::types::Rect {
             min: crate::geo::types::Point::new(rect.0, rect.1),
             max: crate::geo::types::Point::new(rect.2, rect.3),
         };
-        self.inner.is_contained_by(r, &registry.inner)
+        self.inner.is_contained_by(r, &registry)
     }
 
     /// The signed area enclosed by the polygon (outer ring minus
     /// holes), or None when the frame points are missing.
-    fn enclosed_signed_area(&self, registry: &PyEntityRegistry) -> Option<f64> {
-        self.inner.enclosed_signed_area(&registry.inner)
+    fn enclosed_signed_area(&self, registry: PointCtx<'_>) -> Option<f64> {
+        self.inner.enclosed_signed_area(&registry)
     }
 }
 

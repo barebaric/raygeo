@@ -116,3 +116,18 @@ class SolverConstraint(Protocol):
         is_hovered: bool = False,
         point_radius: float = 5.0,
     ) -> None: ...
+
+
+@runtime_checkable
+class Registry(Protocol):
+    """Read view over a sketch document, addressed by point id.
+
+    ``get_point`` returns the point object (or ``(x, y)`` pair) for
+    an id and ``get_entity`` the entity object for an entity id, so
+    entity-reference constraints and entity geometry resolve their
+    operands against the caller's live document.
+    """
+
+    def get_point(self, idx): ...
+
+    def get_entity(self, idx): ...

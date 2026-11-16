@@ -9,7 +9,6 @@ use crate::sketch::draw::{
     draw_equal_symbol, screen_scale, CairoLike, DrawContext, DrawStyle,
     EQUAL_OFFSET_SCREEN,
 };
-use crate::sketch::registry::EntityRegistry;
 
 use std::f64::consts::FRAC_PI_2;
 
@@ -99,7 +98,7 @@ impl SketchConstraint for EqualDistanceConstraint {
         mx: f64,
         my: f64,
         threshold: f64,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
         to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
     ) -> bool {
         let (Some(pa), Some(pb), Some(pc), Some(pd)) = (

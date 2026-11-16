@@ -28,10 +28,10 @@ use pyo3_stub_gen::derive::gen_stub_pyclass;
 use serde_json::Value;
 use std::collections::HashMap;
 
+use crate::python::sketch::context::PointCtx;
 use crate::python::sketch::protocols::{
     Canvas, DrawContext as RegistryContext, ScreenMap,
 };
-use crate::python::sketch::registry::PyEntityRegistry;
 use crate::sketch::constraint::SketchConstraint;
 use crate::sketch::draw::{
     CairoLike, ConstraintStatus, DrawContext as DrawContextContract, DrawPoint,
@@ -142,10 +142,17 @@ impl DrawContextContract for PyDrawContext<'_> {
             Some(flag) => flag.extract::<bool>().unwrap_or(false),
             None => false,
         };
+        let constrained = self
+            .registry
+            .call_method1("point_constrained", (id,))
+            .ok()
+            .and_then(|flag| flag.extract::<bool>().ok())
+            .unwrap_or(false);
         Some(DrawPoint {
             x: xy.0,
             y: xy.1,
             fixed,
+            constrained,
         })
     }
 
@@ -356,13 +363,13 @@ pub(crate) fn constraint_is_hit(
     mx: f64,
     my: f64,
     threshold: f64,
-    registry: &PyEntityRegistry,
+    registry: &PointCtx<'_>,
     to_screen: Option<&ScreenMap<'_>>,
 ) -> bool {
     match to_screen {
         None => {
             let identity = |point: (f64, f64)| point;
-            constraint.is_hit(mx, my, threshold, &registry.inner, &identity)
+            constraint.is_hit(mx, my, threshold, registry, &identity)
         }
         Some(function) => {
             let to_screen = |point: (f64, f64)| {
@@ -372,7 +379,7 @@ pub(crate) fn constraint_is_hit(
                     .and_then(|result| result.extract::<(f64, f64)>())
                     .unwrap_or(point)
             };
-            constraint.is_hit(mx, my, threshold, &registry.inner, &to_screen)
+            constraint.is_hit(mx, my, threshold, registry, &to_screen)
         }
     }
 }
@@ -383,10 +390,9 @@ pub(crate) fn constraint_is_hit(
 /// scalar residual row.
 pub(crate) fn constraint_gradient(
     constraint: &dyn SketchConstraint,
-    registry: &PyEntityRegistry,
+    registry: &mut PointCtx<'_>,
 ) -> HashMap<u64, Vec<(f64, f64)>> {
-    let mut snapshot = registry.inner.clone();
-    let entries = constraint.gradient(&mut snapshot);
+    let entries = constraint.gradient(registry);
     let mut map: HashMap<u64, Vec<(f64, f64)>> = HashMap::new();
     for (point_id, row, dx, dy) in entries {
         let rows = map.entry(point_id).or_default();

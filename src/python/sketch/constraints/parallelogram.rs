@@ -6,8 +6,8 @@ use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use super::PyConstraintBase;
 
+use crate::python::sketch::context::PointCtx;
 use crate::python::sketch::protocols::{Canvas, DrawContext, ScreenMap};
-use crate::python::sketch::registry::PyEntityRegistry;
 use crate::sketch::constraint::SketchConstraint;
 use crate::sketch::constraints::parallelogram::ParallelogramConstraint as CoreConstraint;
 
@@ -76,22 +76,23 @@ impl PyParallelogramConstraint {
     /// Partial derivatives of the error by point id.
     fn gradient(
         &self,
-        registry: &PyEntityRegistry,
+        mut registry: PointCtx<'_>,
     ) -> std::collections::HashMap<u64, Vec<(f64, f64)>> {
-        super::constraint_gradient(&self.clone().into_constraint(), registry)
+        super::constraint_gradient(
+            &self.clone().into_constraint(),
+            &mut registry,
+        )
     }
 
     /// Point ids the constraint references.
-    fn referenced_points(&self, registry: &PyEntityRegistry) -> Vec<u64> {
-        self.clone()
-            .into_constraint()
-            .referenced_points(&registry.inner)
+    fn referenced_points(&self, registry: PointCtx<'_>) -> Vec<u64> {
+        self.clone().into_constraint().referenced_points(&registry)
     }
 
     /// Alias for referenced_points (reference naming).
     fn get_referenced_point_ids(
         &self,
-        registry: &PyEntityRegistry,
+        registry: PointCtx<'_>,
     ) -> std::collections::HashSet<u64> {
         self.referenced_points(registry).into_iter().collect()
     }
@@ -100,10 +101,10 @@ impl PyParallelogramConstraint {
     #[pyo3(signature = (registry, _ctx = None))]
     fn error(
         &self,
-        registry: &PyEntityRegistry,
+        registry: PointCtx<'_>,
         _ctx: Option<Py<PyAny>>,
     ) -> Vec<f64> {
-        self.clone().into_constraint().error(&registry.inner)
+        self.clone().into_constraint().error(&registry)
     }
 
     /// Serializes to the reference constraint dictionary shape.
@@ -143,7 +144,7 @@ impl PyParallelogramConstraint {
         mx: f64,
         my: f64,
         threshold: f64,
-        registry: &PyEntityRegistry,
+        registry: PointCtx<'_>,
         to_screen: Option<ScreenMap<'_>>,
     ) -> bool {
         let constraint = self.clone().into_constraint();
@@ -152,7 +153,7 @@ impl PyParallelogramConstraint {
             mx,
             my,
             threshold,
-            registry,
+            &registry,
             to_screen.as_ref(),
         )
     }

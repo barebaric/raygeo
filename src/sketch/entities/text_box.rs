@@ -10,9 +10,9 @@ use crate::geo::shape::text::{
     get_text_width, text_to_geometry, FontConfig as CoreFontConfig,
 };
 use crate::geo::types::{Point, Rect};
+use crate::sketch::constraint::PointContext;
 
 use super::entity::{Entity, EntityBase};
-use crate::sketch::registry::EntityRegistry;
 
 /// A text box: content rendered through raygeo into glyph geometry,
 /// framed by origin/width/height points.
@@ -121,7 +121,7 @@ impl TextBoxEntity {
     /// otherwise from the parallelogram identity.
     pub fn get_frame_polygon(
         &self,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
     ) -> Option<Vec<(f64, f64)>> {
         let origin = model.point_position(self.origin)?;
         let width = model.point_position(self.width)?;
@@ -141,7 +141,10 @@ impl TextBoxEntity {
     }
 
     /// All 4 corner point ids of the text box frame.
-    pub fn get_all_frame_point_ids(&self, model: &EntityRegistry) -> Vec<u64> {
+    pub fn get_all_frame_point_ids(
+        &self,
+        model: &dyn PointContext,
+    ) -> Vec<u64> {
         let mut ids = vec![self.origin, self.width, self.height];
         if let Some(p4_id) = self.get_fourth_corner_id(model) {
             ids.push(p4_id);
@@ -150,7 +153,10 @@ impl TextBoxEntity {
     }
 
     /// The 4th corner point id, taken from the construction line.
-    pub fn get_fourth_corner_id(&self, model: &EntityRegistry) -> Option<u64> {
+    pub fn get_fourth_corner_id(
+        &self,
+        model: &dyn PointContext,
+    ) -> Option<u64> {
         for eid in &self.construction_line_ids {
             if let Some(entity) = model.get_entity(*eid) {
                 if entity.type_name() == "line" {
@@ -195,7 +201,7 @@ impl TextBoxEntity {
 
     fn build_frame_for_content(
         &self,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
         content: &str,
     ) -> ((f64, f64), (f64, f64), (f64, f64)) {
         let Some(origin) = model.point_position(self.origin) else {
@@ -248,7 +254,7 @@ impl Entity for TextBoxEntity {
         "text_box"
     }
 
-    fn get_all_frame_point_ids(&self, model: &EntityRegistry) -> Vec<u64> {
+    fn get_all_frame_point_ids(&self, model: &dyn PointContext) -> Vec<u64> {
         TextBoxEntity::get_all_frame_point_ids(self, model)
     }
 
@@ -281,7 +287,7 @@ impl Entity for TextBoxEntity {
         mx: f64,
         my: f64,
         _threshold: f64,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
     ) -> bool {
         match self.get_frame_polygon(model) {
             Some(polygon) => is_point_inside_polygon(
@@ -337,7 +343,7 @@ impl Entity for TextBoxEntity {
 
     fn compute_constrained(
         &self,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
         _constrains_radius: &dyn Fn(u64) -> bool,
     ) -> bool {
         let o = model.get_point(self.origin).map(|p| p.constrained);
@@ -346,7 +352,7 @@ impl Entity for TextBoxEntity {
         o.unwrap_or(false) && w.unwrap_or(false) && h.unwrap_or(false)
     }
 
-    fn geometry_signature(&self, model: &EntityRegistry) -> Value {
+    fn geometry_signature(&self, model: &dyn PointContext) -> Value {
         let mut signature =
             match super::entity::points_signature(model, &self.get_point_ids())
             {
@@ -364,7 +370,7 @@ impl Entity for TextBoxEntity {
 
     fn to_polylines(
         &self,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
         tolerance: f64,
     ) -> Vec<Vec<(f64, f64)>> {
         // Every glyph contour becomes its own polyline so previews
@@ -376,7 +382,7 @@ impl Entity for TextBoxEntity {
             .collect()
     }
 
-    fn is_contained_by(&self, rect: Rect, model: &EntityRegistry) -> bool {
+    fn is_contained_by(&self, rect: Rect, model: &dyn PointContext) -> bool {
         let Some(points) = self.get_frame_polygon(model) else {
             return false;
         };
@@ -388,7 +394,7 @@ impl Entity for TextBoxEntity {
         })
     }
 
-    fn intersects_rect(&self, rect: Rect, model: &EntityRegistry) -> bool {
+    fn intersects_rect(&self, rect: Rect, model: &dyn PointContext) -> bool {
         let Some(points) = self.get_frame_polygon(model) else {
             return false;
         };
@@ -411,7 +417,7 @@ impl Entity for TextBoxEntity {
         })
     }
 
-    fn to_geometry(&self, model: &EntityRegistry) -> Geometry {
+    fn to_geometry(&self, model: &dyn PointContext) -> Geometry {
         // The reference signature takes resolved content; the model
         // uses the stored content.
         self.to_geometry(model, None)
@@ -420,7 +426,7 @@ impl Entity for TextBoxEntity {
     fn append_to_geometry(
         &self,
         _geo: &mut Geometry,
-        _model: &EntityRegistry,
+        _model: &dyn PointContext,
         _forward: bool,
     ) {
     }
@@ -469,7 +475,7 @@ impl TextBoxEntity {
     /// resolved content.
     pub fn to_geometry(
         &self,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
         resolved_content: Option<&str>,
     ) -> Geometry {
         let text = resolved_content.unwrap_or(self.content.as_str());

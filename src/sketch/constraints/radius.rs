@@ -14,7 +14,6 @@ use crate::sketch::draw::{
     screen_scale, CairoLike, DrawContext, DrawStyle, LABEL_DIST_SCREEN,
 };
 use crate::sketch::entities::arc::Arc;
-use crate::sketch::registry::EntityRegistry;
 
 /// Enforces the radius of a circle or arc.
 #[derive(Clone, Debug, PartialEq)]
@@ -114,7 +113,7 @@ impl SketchConstraint for RadiusConstraint {
         mx: f64,
         my: f64,
         _threshold: f64,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
         to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
     ) -> bool {
         let Some((center_id, radius_pt_id)) =
@@ -135,17 +134,14 @@ impl SketchConstraint for RadiusConstraint {
         // The label angles along the arc midpoint for arcs and along
         // the radius point direction for circles, mirroring the
         // reference implementation.
-        let mid_angle = if let Some(arc) = model
-            .get_entity(self.entity_id)
-            .and_then(|e| e.as_any().downcast_ref::<Arc>())
-        {
-            let Some(midpoint) = arc.get_midpoint(model) else {
-                return false;
-            };
-            (midpoint.1 - center.y).atan2(midpoint.0 - center.x)
-        } else {
+        let arc_mid_angle = model.get_entity(self.entity_id).and_then(|e| {
+            let arc = e.as_any().downcast_ref::<Arc>()?;
+            let midpoint = arc.get_midpoint(model)?;
+            Some((midpoint.1 - center.y).atan2(midpoint.0 - center.x))
+        });
+        let mid_angle = arc_mid_angle.unwrap_or_else(|| {
             (radius_pt.y - center.y).atan2(radius_pt.x - center.x)
-        };
+        });
 
         let p0 = to_screen((0.0, 0.0));
         let p1 = to_screen((1.0, 0.0));

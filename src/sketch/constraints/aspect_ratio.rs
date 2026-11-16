@@ -9,7 +9,6 @@ use crate::sketch::draw::{
     draw_status_color, CairoLike, ConstraintStatus, DrawContext, DrawStyle,
     ICON_SIZE,
 };
-use crate::sketch::registry::EntityRegistry;
 
 /// Enforces `dist(p1, p2) == ratio * dist(p3, p4)`.
 #[derive(Clone, Debug, PartialEq)]
@@ -77,7 +76,7 @@ impl SketchConstraint for AspectRatioConstraint {
         mx: f64,
         my: f64,
         threshold: f64,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
         to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
     ) -> bool {
         let (Some(p1), Some(p2), Some(p3), Some(p4)) = (

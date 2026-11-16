@@ -61,12 +61,14 @@ impl Default for DrawStyle {
     }
 }
 
-/// One point as seen by the symbol layout: position and fixed flag.
+/// One point as seen by geometry and symbol layout: position,
+/// fixed flag, and solver-constrained flag.
 #[derive(Clone, Copy, Debug)]
 pub struct DrawPoint {
     pub x: f64,
     pub y: f64,
     pub fixed: bool,
+    pub constrained: bool,
 }
 
 /// Read view over the caller's sketch document, addressed by point

@@ -9,7 +9,6 @@ use crate::sketch::draw::{
     draw_conflict_underlay, draw_selection_underlay, draw_status_color,
     CairoLike, DrawContext, DrawStyle, MARKER_OFFSET, MARKER_SIZE, MARKER_T,
 };
-use crate::sketch::registry::EntityRegistry;
 
 /// Enforces two points have the same X coordinate.
 #[derive(Clone, Debug, PartialEq)]
@@ -63,7 +62,7 @@ impl SketchConstraint for VerticalConstraint {
         mx: f64,
         my: f64,
         threshold: f64,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
         to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
     ) -> bool {
         let (Some(p1), Some(p2)) =

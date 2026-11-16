@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 
 use crate::sketch::constraint::{PointContext, SketchConstraint};
+use crate::sketch::draw::DrawPoint;
 use crate::sketch::entities::Entity;
 
 /// Read/write coordinate table over the sketch's points, addressed by
@@ -116,8 +117,22 @@ impl Evaluator {
 }
 
 impl PointContext for Evaluator {
-    fn get_entity(&self, id: u64) -> Option<&dyn Entity> {
-        self.registry.get_entity(id)
+    fn get_entity(&self, id: u64) -> Option<Box<dyn Entity>> {
+        self.registry.get_entity(id).map(|e| e.clone_box())
+    }
+
+    fn point_position(&self, id: u64) -> Option<(f64, f64)> {
+        let slot = *self.slot_of.get(&id)?;
+        Some((self.coords[2 * slot], self.coords[2 * slot + 1]))
+    }
+
+    fn get_point(&self, id: u64) -> Option<DrawPoint> {
+        self.registry.get_point(id).map(|point| DrawPoint {
+            x: point.x,
+            y: point.y,
+            fixed: point.fixed,
+            constrained: point.constrained,
+        })
     }
 
     fn xy(&self, id: u64) -> (f64, f64) {
@@ -129,5 +144,19 @@ impl PointContext for Evaluator {
         let slot = self.slot_of[&id];
         self.coords[2 * slot] = x;
         self.coords[2 * slot + 1] = y;
+    }
+
+    fn entity_ids(&self) -> Vec<u64> {
+        self.registry.entity_ids()
+    }
+
+    fn entity_type(&self, id: u64) -> Option<std::borrow::Cow<'static, str>> {
+        self.registry
+            .entity_type(id)
+            .map(std::borrow::Cow::Borrowed)
+    }
+
+    fn entity_point_ids(&self, id: u64) -> Option<Vec<u64>> {
+        self.registry.entity_point_ids(id)
     }
 }
