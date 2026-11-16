@@ -443,6 +443,73 @@ impl PyCircle {
         self.inner.base_mut().constrained = constrained;
         Ok(())
     }
+
+    /// Whether the entity is fully contained by the given rect.
+    fn is_contained_by(
+        &self,
+        rect: (f64, f64, f64, f64),
+        registry: PointCtx<'_>,
+    ) -> bool {
+        let rect = crate::geo::types::Rect {
+            min: crate::geo::types::Point::new(rect.0, rect.1),
+            max: crate::geo::types::Point::new(rect.2, rect.3),
+        };
+        self.inner.is_contained_by(rect, &registry)
+    }
+
+    /// Whether the entity intersects the given rect.
+    fn intersects_rect(
+        &self,
+        rect: (f64, f64, f64, f64),
+        registry: PointCtx<'_>,
+    ) -> bool {
+        let rect = crate::geo::types::Rect {
+            min: crate::geo::types::Point::new(rect.0, rect.1),
+            max: crate::geo::types::Point::new(rect.2, rect.3),
+        };
+        self.inner.intersects_rect(rect, &registry)
+    }
+
+    /// Appends the entity's outline to the geometry.
+    #[pyo3(signature = (geo, registry, forward = true))]
+    fn append_to_geometry(
+        &self,
+        geo: &mut crate::python::geo::geometry::Geometry,
+        registry: PointCtx<'_>,
+        forward: bool,
+    ) {
+        self.inner
+            .append_to_geometry(&mut geo.inner, &registry, forward);
+    }
+
+    /// The fill geometry of the entity, if it supports fills.
+    fn create_fill_geometry(
+        &self,
+        registry: PointCtx<'_>,
+    ) -> Option<crate::python::geo::geometry::Geometry> {
+        self.inner
+            .create_fill_geometry(&registry)
+            .map(|geometry| crate::python::geo::geometry::Geometry {
+                inner: geometry,
+            })
+    }
+
+    /// Builds an entity from its reference dictionary shape.
+    #[staticmethod]
+    fn from_dict(py: Python<'_>, data: &Bound<'_, PyDict>) -> PyResult<Py<PyCircle>> {
+        let value = value_from_dict(data)?;
+        let inner = CoreCircle::from_json(&value).ok_or_else(|| {
+            PyValueError::new_err("invalid circle dict")
+        })?;
+        Py::new(
+            py,
+            PyClassInitializer::from(PyEntityBase).add_subclass(
+                PyCircle {
+                    inner,
+                    registry: None,
+            }),
+        )
+    }
 }
 
 /// Registers the circle class with the given module.
