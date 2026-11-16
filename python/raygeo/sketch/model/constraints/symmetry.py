@@ -6,9 +6,13 @@ from gettext import gettext as _
 from typing import TYPE_CHECKING, Any
 
 import cairo
-from raygeo.geo.types import Point
 
-from ..entities import Line
+from raygeo.geo.types import Point
+from raygeo.sketch.constraints.symmetry import (
+    SymmetryConstraint as _CoreSymmetryConstraint,
+)
+from raygeo.sketch.entities import Line
+
 from ..types import EntityID
 from .base import Constraint, ConstraintStatus
 
@@ -47,7 +51,8 @@ def draw_symmetry_arrows(
 
 
 if TYPE_CHECKING:
-    from ..entities import Entity
+    from raygeo.sketch.entities import Entity
+
     from ..params import ParameterContext
     from ..registry import EntityRegistry
     from ..selection import SketchSelection

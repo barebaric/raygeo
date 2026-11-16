@@ -6,14 +6,17 @@ from gettext import gettext as _
 from typing import TYPE_CHECKING, Any
 
 import cairo
-from raygeo.geo.types import Point
 
-from ..entities import Bezier, TextBoxEntity
+from raygeo.geo.types import Point
+from raygeo.sketch.entities import Bezier
+from raygeo.sketch.entities import TextBox as TextBoxEntity
+
 from ..types import EntityID
 from .base import Constraint, ConstraintStatus
 
 if TYPE_CHECKING:
-    from ..entities import Entity
+    from raygeo.sketch.entities import Entity
+
     from ..params import ParameterContext
     from ..registry import EntityRegistry
     from ..selection import SketchSelection

@@ -153,44 +153,6 @@ class VerticalConstraint(_CoreVerticalConstraint, Constraint):
         ctx.stroke()
         ctx.restore()
 
-    def draw(
-        self,
-        ctx: cairo.Context,
-        registry: EntityRegistry,
-        to_screen: Callable[[Point], Point],
-        is_selected: bool = False,
-        is_hovered: bool = False,
-        point_radius: float = 5.0,
-    ) -> None:
-        try:
-            p1 = registry.get_point(self.p1)
-            p2 = registry.get_point(self.p2)
-        except IndexError:
-            return
-
-        s1 = to_screen((p1.x, p1.y))
-        s2 = to_screen((p2.x, p2.y))
-
-        t_marker = 0.2
-        mx = s1[0] + (s2[0] - s1[0]) * t_marker
-        my = s1[1] + (s2[1] - s1[1]) * t_marker
-
-        size = 8
-        ctx.save()
-        ctx.set_line_width(2)
-        ctx.move_to(mx + 10, my - size)
-        ctx.line_to(mx + 10, my + size)
-
-        if is_selected:
-            self._draw_selection_underlay(ctx)
-
-        if self.status == ConstraintStatus.CONFLICTING:
-            self._draw_conflict_underlay(ctx)
-
-        self._set_color(ctx, is_hovered)
-        ctx.stroke()
-        ctx.restore()
-
     def error(self, reg: EntityRegistry, params: ParameterContext) -> float:
         return super().error(reg)[0]
 

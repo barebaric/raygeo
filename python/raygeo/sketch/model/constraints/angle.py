@@ -15,8 +15,9 @@ from raygeo.sketch.constraints.angle import (
     AngleConstraint as _CoreAngleConstraint,
 )
 from raygeo.sketch.entities import Line
+from raygeo.sketch.model.text import create_text_layout
 
-from .base import Constraint
+from .base import Constraint, ConstraintStatus
 
 if TYPE_CHECKING:
     from raygeo.sketch.entities import Entity, Line

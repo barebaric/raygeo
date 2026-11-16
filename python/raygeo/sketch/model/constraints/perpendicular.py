@@ -6,7 +6,6 @@ from gettext import gettext as _
 from typing import TYPE_CHECKING, Any
 
 import cairo
-from gi.repository import PangoCairo
 
 from raygeo.geo.shape.circle import get_circle_circle_intersections
 from raygeo.geo.shape.line import (
@@ -18,8 +17,6 @@ from raygeo.sketch.constraints.perpendicular import (
     PerpendicularConstraint as _CorePerpendicularConstraint,
 )
 from raygeo.sketch.entities import Arc, Circle, Line
-
-from raygeo.sketch.model.text import create_text_layout
 
 from .base import Constraint, ConstraintStatus
 
