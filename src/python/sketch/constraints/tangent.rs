@@ -21,18 +21,12 @@ use crate::sketch::constraints::tangent::TangentConstraint as CoreConstraint;
 )]
 #[derive(Clone, PartialEq)]
 pub struct PyTangentConstraint {
-    /// First point of the line.
+    /// The tangent line.
     #[pyo3(get)]
-    pub l1: u64,
-    /// Second point of the line.
+    pub line_id: u64,
+    /// The tangent circle or arc.
     #[pyo3(get)]
-    pub l2: u64,
-    /// Center point of the circle/arc.
-    #[pyo3(get)]
-    pub center: u64,
-    /// Radius-bearing point (circle radius point or arc start).
-    #[pyo3(get)]
-    pub radius_point: u64,
+    pub shape_id: u64,
     /// Reference user-visibility flag.
     #[pyo3(get)]
     pub user_visible: bool,
@@ -44,22 +38,18 @@ pub struct PyTangentConstraint {
 #[gen_stub_pymethods]
 #[pymethods]
 impl PyTangentConstraint {
-    /// Creates the constraint from its resolved points and values.
+    /// Creates the constraint between a line and a circle/arc.
     #[new]
-    #[pyo3(signature = (l1, l2, center, radius_point, user_visible = true))]
+    #[pyo3(signature = (line_id, shape_id, user_visible = true))]
     fn new(
-        l1: u64,
-        l2: u64,
-        center: u64,
-        radius_point: u64,
+        line_id: u64,
+        shape_id: u64,
         user_visible: bool,
     ) -> PyClassInitializer<Self> {
         PyClassInitializer::from(PyConstraintBase).add_subclass(
             PyTangentConstraint {
-                l1,
-                l2,
-                center,
-                radius_point,
+                line_id,
+                shape_id,
                 user_visible,
                 status: 1,
             },
@@ -77,14 +67,27 @@ impl PyTangentConstraint {
         self.clone().into_constraint().error(&registry.inner)
     }
 
+    /// Partial derivatives of the error by point id.
+    fn gradient(
+        &self,
+        registry: &PyEntityRegistry,
+    ) -> std::collections::HashMap<u64, Vec<(f64, f64)>> {
+        super::constraint_gradient(&self.clone().into_constraint(), registry)
+    }
+
     /// Point ids the constraint references.
-    fn referenced_points(&self) -> Vec<u64> {
-        self.clone().into_constraint().referenced_points()
+    fn referenced_points(&self, registry: &PyEntityRegistry) -> Vec<u64> {
+        self.clone()
+            .into_constraint()
+            .referenced_points(&registry.inner)
     }
 
     /// Alias for referenced_points (reference naming).
-    fn get_referenced_point_ids(&self) -> std::collections::HashSet<u64> {
-        self.referenced_points().into_iter().collect()
+    fn get_referenced_point_ids(
+        &self,
+        registry: &PyEntityRegistry,
+    ) -> std::collections::HashSet<u64> {
+        self.referenced_points(registry).into_iter().collect()
     }
 
     /// Serializes to the reference constraint dictionary shape.
@@ -147,24 +150,9 @@ impl PyTangentConstraint {
 impl PyTangentConstraint {
     pub(crate) fn into_constraint(self) -> CoreConstraint {
         CoreConstraint {
+            line_id: self.line_id,
+            shape_id: self.shape_id,
             user_visible: self.user_visible,
-            ..CoreConstraint::new(
-                self.l1,
-                self.l2,
-                self.center,
-                self.radius_point,
-            )
-        }
-    }
-
-    pub(crate) fn from_core(core: CoreConstraint) -> Self {
-        PyTangentConstraint {
-            l1: core.l1,
-            l2: core.l2,
-            center: core.center,
-            radius_point: core.radius_point,
-            user_visible: core.user_visible,
-            status: 1,
         }
     }
 }

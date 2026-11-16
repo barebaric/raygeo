@@ -136,7 +136,8 @@ impl SketchSolver {
         let mut all_refs: Vec<&dyn SketchConstraint> = Vec::new();
         all_refs.extend(self.hard.iter().map(|c| c.as_ref()));
         all_refs.extend(self.auxiliary.iter().map(|c| c.as_ref()));
-        let components = compute_constraint_components(&self.registry, &all_refs);
+        let components =
+            compute_constraint_components(&self.registry, &all_refs);
 
         let mut component_of: HashMap<u64, usize> = HashMap::new();
         for (index, component) in components.iter().enumerate() {
@@ -290,8 +291,7 @@ impl SketchSolver {
         let success = result.status > 0 && result.cost <= tolerance;
 
         if success && update_dof {
-            let mut dof_evaluator =
-                Evaluator::new(
+            let mut dof_evaluator = Evaluator::new(
                 self.slot_of.clone(),
                 self.coords.clone(),
                 self.registry.clone(),
@@ -336,10 +336,10 @@ impl SketchSolver {
     /// residual exceeds `threshold` at the final positions.
     pub fn conflicting(&self, threshold: f64) -> Vec<usize> {
         let lookup = Evaluator::new(
-                self.slot_of.clone(),
-                self.coords.clone(),
-                self.registry.clone(),
-            );
+            self.slot_of.clone(),
+            self.coords.clone(),
+            self.registry.clone(),
+        );
         let constraints: Vec<&dyn SketchConstraint> =
             self.hard.iter().map(|c| c.as_ref()).collect();
         lookup
@@ -356,10 +356,10 @@ impl SketchSolver {
     /// debugging.
     pub fn residuals(&self) -> Vec<f64> {
         let lookup = Evaluator::new(
-                self.slot_of.clone(),
-                self.coords.clone(),
-                self.registry.clone(),
-            );
+            self.slot_of.clone(),
+            self.coords.clone(),
+            self.registry.clone(),
+        );
         let constraints: Vec<&dyn SketchConstraint> =
             self.hard.iter().map(|c| c.as_ref()).collect();
         lookup.residuals(&constraints)
@@ -381,10 +381,10 @@ impl SketchSolver {
     /// the final positions (aligned with the hard constraint order).
     pub fn max_residuals(&self) -> Vec<f64> {
         let lookup = Evaluator::new(
-                self.slot_of.clone(),
-                self.coords.clone(),
-                self.registry.clone(),
-            );
+            self.slot_of.clone(),
+            self.coords.clone(),
+            self.registry.clone(),
+        );
         let constraints: Vec<&dyn SketchConstraint> =
             self.hard.iter().map(|c| c.as_ref()).collect();
         lookup.max_residuals(&constraints)
@@ -414,12 +414,11 @@ impl SketchSolver {
             state_col_of.insert(id, 2 * state_ids.len());
             state_ids.push(id);
         }
-        let mut evaluator =
-            Evaluator::new(
-                self.slot_of.clone(),
-                self.coords.clone(),
-                self.registry.clone(),
-            );
+        let mut evaluator = Evaluator::new(
+            self.slot_of.clone(),
+            self.coords.clone(),
+            self.registry.clone(),
+        );
         let n_vars = 2 * state_ids.len();
         let hard: Vec<&dyn SketchConstraint> =
             self.hard.iter().map(|c| c.as_ref()).collect();

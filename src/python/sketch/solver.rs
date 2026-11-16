@@ -14,6 +14,7 @@ use super::constraints::{
     vertical,
 };
 use super::point::PyPointDef;
+use crate::python::sketch::registry::PyEntityRegistry;
 
 /// Converts a Python constraint object into its core representation.
 fn constraint_from_py(
@@ -66,12 +67,15 @@ pub struct PySketchSolver {
 #[gen_stub_pymethods]
 #[pymethods]
 impl PySketchSolver {
-    /// Builds a solver from point definitions, hard constraints,
+    /// Builds a solver from point definitions, the entity registry
+    /// backing entity-reference constraints, hard constraints,
     /// auxiliary (weak) constraints, and an optional point filter.
     #[new]
-    #[pyo3(signature = (points, hard, auxiliary = None, point_filter = None))]
+    #[pyo3(signature = (points, registry, hard, auxiliary = None,
+                        point_filter = None))]
     fn new(
         points: Vec<PyPointDef>,
+        registry: &PyEntityRegistry,
         hard: Vec<Bound<'_, PyAny>>,
         auxiliary: Option<Vec<Bound<'_, PyAny>>>,
         point_filter: Option<Vec<u64>>,
@@ -86,6 +90,7 @@ impl PySketchSolver {
         Ok(PySketchSolver {
             inner: SketchSolver::new(
                 point_defs,
+                registry.inner.clone(),
                 hard_constraints,
                 aux_constraints,
                 point_filter,

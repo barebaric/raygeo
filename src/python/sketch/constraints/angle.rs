@@ -13,8 +13,8 @@ use crate::sketch::constraints::angle::AngleConstraint as CoreConstraint;
 
 /// Enforces a clockwise angle in degrees between two lines.  The
 /// angle is measured at the lines' intersection between the rays
-/// selected by `e1_far`/`e2_far` (endpoint ids; `None` picks the
-/// endpoint farther from the intersection).
+/// selected by `e1_far_idx`/`e2_far_idx` (endpoint ids; `None` picks
+/// the endpoint farther from the intersection).
 #[gen_stub_pyclass]
 #[pyclass(
     extends = PyConstraintBase,
@@ -25,27 +25,21 @@ use crate::sketch::constraints::angle::AngleConstraint as CoreConstraint;
 )]
 #[derive(Clone, PartialEq)]
 pub struct PyAngleConstraint {
-    /// First point of the anchor line.
+    /// The anchor line entity.
     #[pyo3(get)]
-    pub p1: u64,
-    /// Second point of the anchor line.
+    pub e1_id: u64,
+    /// The other line entity.
     #[pyo3(get)]
-    pub p2: u64,
-    /// First point of the other line.
-    #[pyo3(get)]
-    pub p3: u64,
-    /// Second point of the other line.
-    #[pyo3(get)]
-    pub p4: u64,
+    pub e2_id: u64,
     /// Far point of the anchor line.
-    #[pyo3(get)]
-    pub e1_far: Option<u64>,
+    #[pyo3(get, set)]
+    pub e1_far_idx: Option<u64>,
     /// Far point of the other line.
+    #[pyo3(get, set)]
+    pub e2_far_idx: Option<u64>,
+    /// Angle value in degrees.
     #[pyo3(get)]
-    pub e2_far: Option<u64>,
-    /// Resolved angle value in degrees.
-    #[pyo3(get)]
-    pub value_deg: f64,
+    pub value: f64,
     /// Reference user-visibility flag.
     #[pyo3(get)]
     pub user_visible: bool,
@@ -59,39 +53,32 @@ pub struct PyAngleConstraint {
 #[gen_stub_pymethods]
 #[pymethods]
 impl PyAngleConstraint {
-    /// Creates the angle constraint from its resolved points and
-    /// value.
+    /// Creates the angle constraint between two lines.
     #[new]
     #[allow(clippy::too_many_arguments)]
     #[pyo3(signature = (
-        p1,
-        p2,
-        p3,
-        p4,
-        value_deg,
-        e1_far = None,
-        e2_far = None,
+        e1_id,
+        e2_id,
+        value,
         user_visible = true,
+        e1_far_idx = None,
+        e2_far_idx = None,
     ))]
     fn new(
-        p1: u64,
-        p2: u64,
-        p3: u64,
-        p4: u64,
-        value_deg: f64,
-        e1_far: Option<u64>,
-        e2_far: Option<u64>,
+        e1_id: u64,
+        e2_id: u64,
+        value: f64,
         user_visible: bool,
+        e1_far_idx: Option<u64>,
+        e2_far_idx: Option<u64>,
     ) -> PyClassInitializer<Self> {
         PyClassInitializer::from(PyConstraintBase).add_subclass(
             PyAngleConstraint {
-                p1,
-                p2,
-                p3,
-                p4,
-                e1_far,
-                e2_far,
-                value_deg,
+                e1_id,
+                e2_id,
+                e1_far_idx,
+                e2_far_idx,
+                value,
                 user_visible,
                 status: 1,
                 expression: None,
@@ -101,34 +88,41 @@ impl PyAngleConstraint {
 
     /// Returns the constraint error at the registry's point
     /// positions.
-    #[pyo3(signature = (registry, _ctx = None))]
+    #[pyo3(signature = (registry, _params = None))]
     fn error(
         &self,
         registry: &PyEntityRegistry,
-        _ctx: Option<Py<PyAny>>,
+        _params: Option<Py<PyAny>>,
     ) -> Vec<f64> {
         self.clone().into_constraint().error(&registry.inner)
     }
 
+    /// Sets the angle value in degrees.
+    fn set_value(&mut self, value: f64) {
+        self.value = value;
+    }
+
+    /// Partial derivatives of the error by point id.
+    fn gradient(
+        &self,
+        registry: &PyEntityRegistry,
+    ) -> std::collections::HashMap<u64, Vec<(f64, f64)>> {
+        super::constraint_gradient(&self.clone().into_constraint(), registry)
+    }
+
     /// Point ids the constraint references.
-    fn referenced_points(&self) -> Vec<u64> {
-        self.clone().into_constraint().referenced_points()
+    fn referenced_points(&self, registry: &PyEntityRegistry) -> Vec<u64> {
+        self.clone()
+            .into_constraint()
+            .referenced_points(&registry.inner)
     }
 
     /// Alias for referenced_points (reference naming).
-    fn get_referenced_point_ids(&self) -> std::collections::HashSet<u64> {
-        self.referenced_points().into_iter().collect()
-    }
-
-    /// The angle value in degrees (alias of ``value_deg``).
-    #[getter]
-    fn value(&self) -> f64 {
-        self.value_deg
-    }
-
-    /// Sets the angle value in degrees.
-    fn set_value(&mut self, value_deg: f64) {
-        self.value_deg = value_deg;
+    fn get_referenced_point_ids(
+        &self,
+        registry: &PyEntityRegistry,
+    ) -> std::collections::HashSet<u64> {
+        self.referenced_points(registry).into_iter().collect()
     }
 
     /// Serializes to the reference constraint dictionary shape.
@@ -207,38 +201,20 @@ impl PyAngleConstraint {
     }
     /// Mirrors the angle value (negates it).
     fn mirror(&mut self) {
-        self.value_deg = -self.value_deg;
+        self.value = -self.value;
     }
 }
 
 impl PyAngleConstraint {
     pub(crate) fn into_constraint(self) -> CoreConstraint {
-        let mut core = CoreConstraint::new(
-            self.p1,
-            self.p2,
-            self.p3,
-            self.p4,
-            self.e1_far,
-            self.e2_far,
-            self.value_deg,
-        );
-        core.user_visible = self.user_visible;
-        core.set_expression(self.expression);
-        core
-    }
-
-    pub(crate) fn from_core(core: CoreConstraint) -> Self {
-        PyAngleConstraint {
-            p1: core.p1,
-            p2: core.p2,
-            p3: core.p3,
-            p4: core.p4,
-            e1_far: core.e1_far,
-            e2_far: core.e2_far,
-            value_deg: core.value_deg,
-            user_visible: core.user_visible,
-            status: 1,
-            expression: core.expression,
+        CoreConstraint {
+            e1_id: self.e1_id,
+            e2_id: self.e2_id,
+            e1_far_idx: self.e1_far_idx,
+            e2_far_idx: self.e2_far_idx,
+            value_deg: self.value,
+            user_visible: self.user_visible,
+            expression: self.expression,
         }
     }
 }

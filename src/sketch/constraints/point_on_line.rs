@@ -22,24 +22,49 @@ pub enum PointOnTarget {
     RadiusCurve { center: u64, radius_point: u64 },
 }
 
+/// Resolves the target shape to the constraint's geometry cases:
+/// an infinite line, or a circle/arc circumference.
+fn resolve_target(
+    ctx: &dyn PointContext,
+    shape_id: u64,
+) -> Option<PointOnTarget> {
+    let entity = ctx.get_entity(shape_id)?;
+    let ids = entity.get_point_ids();
+    match entity.type_name() {
+        "line" => Some(PointOnTarget::Line {
+            l1: ids[0],
+            l2: ids[1],
+        }),
+        "circle" => Some(PointOnTarget::RadiusCurve {
+            center: ids[0],
+            radius_point: ids[1],
+        }),
+        "arc" => Some(PointOnTarget::RadiusCurve {
+            center: ids[2],
+            radius_point: ids[0],
+        }),
+        _ => None,
+    }
+}
+
 /// Enforces a point lies on a line or circle/arc circumference.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PointOnLineConstraint {
     /// The constrained point.
-    pub point: u64,
-    /// Resolved target geometry.
-    pub target: PointOnTarget,
+    pub point_id: u64,
+    /// The target shape (line or radius-bearing entity).
+    pub shape_id: u64,
     /// Reference user-visibility flag.
     pub user_visible: bool,
 }
 
 impl PointOnLineConstraint {
     /// Creates a point-on-line/curve constraint.
-    pub fn new(point: u64, target: PointOnTarget) -> Self {
+    pub fn new(point_id: u64, shape_id: u64) -> Self {
         PointOnLineConstraint {
             user_visible: true,
-            point,
-            target,
+            point_id,
+            shape_id,
         }
     }
 }
@@ -53,19 +78,21 @@ impl SketchConstraint for PointOnLineConstraint {
         PointOnLineConstraint::to_json(self)
     }
 
-    fn referenced_points(&self, _ctx: &dyn PointContext) -> Vec<u64> {
-        let mut ids = vec![self.point];
-        match &self.target {
-            PointOnTarget::Line { l1, l2 } => {
-                ids.push(*l1);
-                ids.push(*l2);
-            }
-            PointOnTarget::RadiusCurve {
-                center,
-                radius_point,
-            } => {
-                ids.push(*center);
-                ids.push(*radius_point);
+    fn referenced_points(&self, ctx: &dyn PointContext) -> Vec<u64> {
+        let mut ids = vec![self.point_id];
+        if let Some(target) = resolve_target(ctx, self.shape_id) {
+            match target {
+                PointOnTarget::Line { l1, l2 } => {
+                    ids.push(l1);
+                    ids.push(l2);
+                }
+                PointOnTarget::RadiusCurve {
+                    center,
+                    radius_point,
+                } => {
+                    ids.push(center);
+                    ids.push(radius_point);
+                }
             }
         }
         ids
@@ -76,10 +103,16 @@ impl SketchConstraint for PointOnLineConstraint {
     }
 
     fn error(&self, reg: &dyn PointContext) -> Vec<f64> {
-        match &self.target {
+        let Some(target) = resolve_target(reg, self.shape_id) else {
+            return vec![0.0];
+        };
+        match &target {
             PointOnTarget::Line { l1, l2 } => {
                 let signed = get_point_line_signed_distance(
-                    Point::new(reg.xy(self.point).0, reg.xy(self.point).1),
+                    Point::new(
+                        reg.xy(self.point_id).0,
+                        reg.xy(self.point_id).1,
+                    ),
                     Point::new(reg.xy(*l1).0, reg.xy(*l1).1),
                     Point::new(reg.xy(*l2).0, reg.xy(*l2).1),
                 );
@@ -89,7 +122,7 @@ impl SketchConstraint for PointOnLineConstraint {
                 center,
                 radius_point,
             } => {
-                let (px, py) = reg.xy(self.point);
+                let (px, py) = reg.xy(self.point_id);
                 let (cx, cy) = reg.xy(*center);
                 let (rx, ry) = reg.xy(*radius_point);
                 let radius = (rx - cx).hypot(ry - cy);
@@ -99,9 +132,12 @@ impl SketchConstraint for PointOnLineConstraint {
     }
 
     fn gradient(&self, reg: &mut dyn PointContext) -> Vec<JacobianEntry> {
-        let (px, py) = reg.xy(self.point);
+        let Some(target) = resolve_target(reg, self.shape_id) else {
+            return vec![];
+        };
+        let (px, py) = reg.xy(self.point_id);
         let mut entries = Vec::new();
-        match &self.target {
+        match &target {
             PointOnTarget::Line { l1, l2 } => {
                 let (lx1, ly1) = reg.xy(*l1);
                 let (lx2, ly2) = reg.xy(*l2);
@@ -118,7 +154,7 @@ impl SketchConstraint for PointOnLineConstraint {
                     }
                     let ux = dpx / dist;
                     let uy = dpy / dist;
-                    entries.push((self.point, 0, ux, uy));
+                    entries.push((self.point_id, 0, ux, uy));
                     entries.push((*l1, 0, -ux, -uy));
                     return entries;
                 }
@@ -128,7 +164,7 @@ impl SketchConstraint for PointOnLineConstraint {
                 let inv_len_sq = inv_len * inv_len;
                 let nx = -dy * inv_len;
                 let ny = dx * inv_len;
-                entries.push((self.point, 0, nx, ny));
+                entries.push((self.point_id, 0, nx, ny));
 
                 let err = get_point_line_signed_distance(
                     Point::new(px, py),
@@ -151,7 +187,7 @@ impl SketchConstraint for PointOnLineConstraint {
                 } else {
                     (0.0, 0.0)
                 };
-                entries.push((self.point, 0, ux, uy));
+                entries.push((self.point_id, 0, ux, uy));
 
                 let (rx, ry) = reg.xy(*radius_point);
                 let radius = (rx - cx).hypot(ry - cy);
@@ -175,7 +211,7 @@ impl SketchConstraint for PointOnLineConstraint {
         model: &EntityRegistry,
         to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
     ) -> bool {
-        let Some(pt) = model.get_point(self.point) else {
+        let Some(pt) = model.get_point(self.point_id) else {
             return false;
         };
         let s_pt = to_screen((pt.x, pt.y));
@@ -190,10 +226,10 @@ impl SketchConstraint for PointOnLineConstraint {
         style: &DrawStyle,
     ) {
         // Hide the constraint if its point is part of a text box.
-        if context.point_in_text_box_frame(self.point) {
+        if context.point_in_text_box_frame(self.point_id) {
             return;
         }
-        let Some(pt) = context.get_point(self.point) else {
+        let Some(pt) = context.get_point(self.point_id) else {
             return;
         };
         let (sx, sy) = to_screen((pt.x, pt.y));
@@ -214,11 +250,11 @@ impl PointOnLineConstraint {
 
     /// Serializes to the reference constraint dictionary shape.
     pub fn to_json(&self) -> Value {
-        let data = json!({
+        json!({
             "type": "PointOnLineConstraint",
+            "point_id": self.point_id,
+            "shape_id": self.shape_id,
             "user_visible": self.user_visible,
-        });
-        let _ = (self.point, &self.target);
-        data
+        })
     }
 }

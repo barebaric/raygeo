@@ -1,4 +1,8 @@
 //! Diameter constraint: diameter of a circle.
+//!
+//! References the constrained circle by id and resolves it through
+//! the point context at residual time, mirroring the reference
+//! model's entity-reference design.
 
 use serde_json::{json, Value};
 
@@ -11,15 +15,12 @@ use crate::sketch::draw::{
 };
 use crate::sketch::registry::EntityRegistry;
 
-/// Enforces the diameter of a circle: twice the distance between the
-/// center point and the radius point equals `value`.
+/// Enforces the diameter of a circle.
 #[derive(Clone, Debug, PartialEq)]
 pub struct DiameterConstraint {
-    /// Center point of the circle.
-    pub center: u64,
-    /// Radius-bearing point of the circle.
-    pub radius_point: u64,
-    /// Resolved diameter value.
+    /// The constrained circle.
+    pub circle_id: u64,
+    /// Target diameter value.
     pub value: f64,
     /// Reference user-visibility flag.
     pub user_visible: bool,
@@ -27,12 +28,24 @@ pub struct DiameterConstraint {
     pub expression: Option<String>,
 }
 
+/// Resolves a circle entity to its `(center, radius_point)` pair.
+fn resolve_circle_points(
+    ctx: &dyn PointContext,
+    circle_id: u64,
+) -> Option<(u64, u64)> {
+    let entity = ctx.get_entity(circle_id)?;
+    if entity.type_name() != "circle" {
+        return None;
+    }
+    let ids = entity.get_point_ids();
+    Some((ids[0], ids[1]))
+}
+
 impl DiameterConstraint {
-    /// Creates a diameter constraint with a resolved value.
-    pub fn new(center: u64, radius_point: u64, value: f64) -> Self {
+    /// Creates a diameter constraint for the given circle.
+    pub fn new(circle_id: u64, value: f64) -> Self {
         DiameterConstraint {
-            center,
-            radius_point,
+            circle_id,
             value,
             user_visible: true,
             expression: None,
@@ -49,8 +62,11 @@ impl SketchConstraint for DiameterConstraint {
         DiameterConstraint::to_json(self)
     }
 
-    fn referenced_points(&self, _ctx: &dyn PointContext) -> Vec<u64> {
-        vec![self.center, self.radius_point]
+    fn referenced_points(&self, ctx: &dyn PointContext) -> Vec<u64> {
+        match resolve_circle_points(ctx, self.circle_id) {
+            Some((center, radius_pt)) => vec![center, radius_pt],
+            None => vec![],
+        }
     }
 
     fn residual_count(&self, _ctx: &dyn PointContext) -> usize {
@@ -58,26 +74,36 @@ impl SketchConstraint for DiameterConstraint {
     }
 
     fn error(&self, reg: &dyn PointContext) -> Vec<f64> {
-        let (cx, cy) = reg.xy(self.center);
-        let (px, py) = reg.xy(self.radius_point);
-        vec![2.0 * ((px - cx).hypot(py - cy)) - self.value]
+        match resolve_circle_points(reg, self.circle_id) {
+            Some((center, radius_pt)) => {
+                let (cx, cy) = reg.xy(center);
+                let (px, py) = reg.xy(radius_pt);
+                vec![2.0 * (px - cx).hypot(py - cy) - self.value]
+            }
+            None => vec![0.0],
+        }
     }
 
     fn gradient(&self, reg: &mut dyn PointContext) -> Vec<JacobianEntry> {
-        let (cx, cy) = reg.xy(self.center);
-        let (px, py) = reg.xy(self.radius_point);
-        let dx = px - cx;
-        let dy = py - cy;
-        let dist = dx.hypot(dy);
-        let (ux, uy) = if dist > 1e-9 {
-            (dx / dist, dy / dist)
-        } else {
-            (1.0, 0.0)
-        };
-        vec![
-            (self.radius_point, 0, 2.0 * ux, 2.0 * uy),
-            (self.center, 0, -2.0 * ux, -2.0 * uy),
-        ]
+        match resolve_circle_points(reg, self.circle_id) {
+            Some((center, radius_pt)) => {
+                let (cx, cy) = reg.xy(center);
+                let (px, py) = reg.xy(radius_pt);
+                let dx = px - cx;
+                let dy = py - cy;
+                let dist = dx.hypot(dy);
+                let (ux, uy) = if dist > 1e-9 {
+                    (dx / dist, dy / dist)
+                } else {
+                    (1.0, 0.0)
+                };
+                vec![
+                    (radius_pt, 0, 2.0 * ux, 2.0 * uy),
+                    (center, 0, -2.0 * ux, -2.0 * uy),
+                ]
+            }
+            None => vec![],
+        }
     }
 
     fn is_hit(
@@ -88,19 +114,21 @@ impl SketchConstraint for DiameterConstraint {
         model: &EntityRegistry,
         to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
     ) -> bool {
-        // The reference delegates to the radius constraint's label
-        // position; mirror that circle-branch math here (see the
-        // radius constraint's is_hit for the arc caveat).
-        let (Some(center), Some(radius_pt)) = (
-            model.get_point(self.center),
-            model.get_point(self.radius_point),
-        ) else {
+        let Some((center_id, radius_pt_id)) =
+            resolve_circle_points(model, self.circle_id)
+        else {
+            return false;
+        };
+        let (Some(center), Some(radius_pt)) =
+            (model.get_point(center_id), model.get_point(radius_pt_id))
+        else {
             return false;
         };
         let radius = (radius_pt.x - center.x).hypot(radius_pt.y - center.y);
         if radius == 0.0 {
             return false;
         }
+        let mid_angle = (radius_pt.y - center.y).atan2(radius_pt.x - center.x);
 
         let p0 = to_screen((0.0, 0.0));
         let p1 = to_screen((1.0, 0.0));
@@ -109,7 +137,6 @@ impl SketchConstraint for DiameterConstraint {
             scale = 1.0;
         }
 
-        let mid_angle = (radius_pt.y - center.y).atan2(radius_pt.x - center.x);
         let label_dist = radius + 20.0 / scale;
         let (label_sx, label_sy) = to_screen((
             center.x + label_dist * mid_angle.cos(),
@@ -136,11 +163,15 @@ impl SketchConstraint for DiameterConstraint {
         ctx: &dyn CairoLike,
         style: &DrawStyle,
     ) {
-        // Label position mirroring the reference circle branch (see
-        // the radius constraint's draw for the arc caveat).
+        let Some(point_ids) = context.entity_point_ids(self.circle_id) else {
+            return;
+        };
+        if point_ids.len() < 2 {
+            return;
+        }
         let (Some(center), Some(radius_pt)) = (
-            context.get_point(self.center),
-            context.get_point(self.radius_point),
+            context.get_point(point_ids[0]),
+            context.get_point(point_ids[1]),
         ) else {
             return;
         };
@@ -199,11 +230,10 @@ impl DiameterConstraint {
     pub fn to_json(&self) -> Value {
         let mut data = json!({
             "type": "DiameterConstraint",
+            "circle_id": self.circle_id,
+            "value": self.value,
             "user_visible": self.user_visible,
         });
-        data["center_idx"] = json!(self.center);
-        data["radius_pt_idx"] = json!(self.radius_point);
-        data["value"] = json!(self.value);
         if let Some(expression) = &self.expression {
             data["expression"] = json!(expression);
         }

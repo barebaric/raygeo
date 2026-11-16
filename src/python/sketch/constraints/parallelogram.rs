@@ -72,14 +72,27 @@ impl PyParallelogramConstraint {
         self.user_visible = value;
     }
 
+    /// Partial derivatives of the error by point id.
+    fn gradient(
+        &self,
+        registry: &PyEntityRegistry,
+    ) -> std::collections::HashMap<u64, Vec<(f64, f64)>> {
+        super::constraint_gradient(&self.clone().into_constraint(), registry)
+    }
+
     /// Point ids the constraint references.
-    fn referenced_points(&self) -> Vec<u64> {
-        self.clone().into_constraint().referenced_points()
+    fn referenced_points(&self, registry: &PyEntityRegistry) -> Vec<u64> {
+        self.clone()
+            .into_constraint()
+            .referenced_points(&registry.inner)
     }
 
     /// Alias for referenced_points (reference naming).
-    fn get_referenced_point_ids(&self) -> std::collections::HashSet<u64> {
-        self.referenced_points().into_iter().collect()
+    fn get_referenced_point_ids(
+        &self,
+        registry: &PyEntityRegistry,
+    ) -> std::collections::HashSet<u64> {
+        self.referenced_points(registry).into_iter().collect()
     }
 
     /// Returns the constraint error at the registry's point positions.
@@ -154,17 +167,6 @@ impl PyParallelogramConstraint {
         );
         core.user_visible = self.user_visible;
         core
-    }
-
-    pub(crate) fn from_core(core: CoreConstraint) -> Self {
-        PyParallelogramConstraint {
-            status: 1,
-            p_origin: core.p_origin,
-            p_width: core.p_width,
-            p_height: core.p_height,
-            p4: core.p4,
-            user_visible: core.user_visible,
-        }
     }
 }
 

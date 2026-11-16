@@ -11,38 +11,48 @@ use crate::sketch::draw::{
 };
 use crate::sketch::registry::EntityRegistry;
 
-/// The symmetry reference, mirroring the reference constraint's two
-/// cases: point symmetry about a center, or line symmetry about an
-/// axis line.
-#[derive(Clone, Debug, PartialEq)]
-pub enum SymmetryTarget {
-    /// The center is the midpoint of `p1` and `p2`.
-    Point { center: u64 },
-    /// `p1` and `p2` are mirrored across the line `(l1, l2)`.
-    Line { l1: u64, l2: u64 },
-}
-
-/// Enforces two points are symmetric about a point or a line.
+/// Enforces two points are symmetric about a center point or about
+/// an axis line (referenced by entity id, resolved to its defining
+/// points at residual time), mirroring the reference model's
+/// entity-reference design.
 #[derive(Clone, Debug, PartialEq)]
 pub struct SymmetryConstraint {
     /// First point.
     pub p1: u64,
     /// Second point.
     pub p2: u64,
-    /// Symmetry reference.
-    pub target: SymmetryTarget,
+    /// Symmetry center point, for point symmetry.
+    pub center: Option<u64>,
+    /// Symmetry axis line entity, for line symmetry.
+    pub axis: Option<u64>,
     /// Reference user-visibility flag.
     pub user_visible: bool,
 }
 
+/// Resolves the axis entity to its defining line points.
+fn resolve_axis(ctx: &dyn PointContext, axis: u64) -> Option<(u64, u64)> {
+    let entity = ctx.get_entity(axis)?;
+    if entity.type_name() != "line" {
+        return None;
+    }
+    let ids = entity.get_point_ids();
+    Some((ids[0], ids[1]))
+}
+
 impl SymmetryConstraint {
     /// Creates a symmetry constraint.
-    pub fn new(p1: u64, p2: u64, target: SymmetryTarget) -> Self {
+    pub fn new(
+        p1: u64,
+        p2: u64,
+        center: Option<u64>,
+        axis: Option<u64>,
+    ) -> Self {
         SymmetryConstraint {
             user_visible: true,
             p1,
             p2,
-            target,
+            center,
+            axis,
         }
     }
 }
@@ -56,13 +66,15 @@ impl SketchConstraint for SymmetryConstraint {
         SymmetryConstraint::to_json(self)
     }
 
-    fn referenced_points(&self, _ctx: &dyn PointContext) -> Vec<u64> {
+    fn referenced_points(&self, ctx: &dyn PointContext) -> Vec<u64> {
         let mut ids = vec![self.p1, self.p2];
-        match &self.target {
-            SymmetryTarget::Point { center } => ids.push(*center),
-            SymmetryTarget::Line { l1, l2 } => {
-                ids.push(*l1);
-                ids.push(*l2);
+        if let Some(center) = self.center {
+            ids.push(center);
+        }
+        if let Some(axis) = self.axis {
+            if let Some((l1, l2)) = resolve_axis(ctx, axis) {
+                ids.push(l1);
+                ids.push(l2);
             }
         }
         ids
@@ -75,58 +87,64 @@ impl SketchConstraint for SymmetryConstraint {
     fn error(&self, reg: &dyn PointContext) -> Vec<f64> {
         let (x1, y1) = reg.xy(self.p1);
         let (x2, y2) = reg.xy(self.p2);
-        match &self.target {
-            SymmetryTarget::Point { center } => {
-                let (cx, cy) = reg.xy(*center);
-                vec![(x1 + x2) - 2.0 * cx, (y1 + y2) - 2.0 * cy]
-            }
-            SymmetryTarget::Line { l1, l2 } => {
-                let (lx1, ly1) = reg.xy(*l1);
-                let (lx2, ly2) = reg.xy(*l2);
-                let dx_l = lx2 - lx1;
-                let dy_l = ly2 - ly1;
-                let dx_p = x2 - x1;
-                let dy_p = y2 - y1;
-                let err_perp = dx_p * dx_l + dy_p * dy_l;
-                let mx = (x1 + x2) * 0.5;
-                let my = (y1 + y2) * 0.5;
-                let err_collinear = (mx - lx1) * dy_l - (my - ly1) * dx_l;
-                vec![err_perp, err_collinear]
-            }
+        if let Some(center) = self.center {
+            let (cx, cy) = reg.xy(center);
+            return vec![(x1 + x2) - 2.0 * cx, (y1 + y2) - 2.0 * cy];
         }
+        if let Some(axis) = self.axis {
+            let Some((l1, l2)) = resolve_axis(reg, axis) else {
+                return vec![0.0, 0.0];
+            };
+            let (lx1, ly1) = reg.xy(l1);
+            let (lx2, ly2) = reg.xy(l2);
+            let dx_l = lx2 - lx1;
+            let dy_l = ly2 - ly1;
+            let dx_p = x2 - x1;
+            let dy_p = y2 - y1;
+            let err_perp = dx_p * dx_l + dy_p * dy_l;
+            let mx = (x1 + x2) * 0.5;
+            let my = (y1 + y2) * 0.5;
+            let err_collinear = (mx - lx1) * dy_l - (my - ly1) * dx_l;
+            return vec![err_perp, err_collinear];
+        }
+        vec![0.0, 0.0]
     }
 
     fn gradient(&self, reg: &mut dyn PointContext) -> Vec<JacobianEntry> {
-        match &self.target {
-            SymmetryTarget::Point { center } => vec![
+        if let Some(center) = self.center {
+            return vec![
                 (self.p1, 0, 1.0, 0.0),
                 (self.p1, 1, 0.0, 1.0),
                 (self.p2, 0, 1.0, 0.0),
                 (self.p2, 1, 0.0, 1.0),
-                (*center, 0, -2.0, 0.0),
-                (*center, 1, 0.0, -2.0),
-            ],
-            SymmetryTarget::Line { l1, l2 } => {
-                let (x1, y1) = reg.xy(self.p1);
-                let (x2, y2) = reg.xy(self.p2);
-                let (lx1, ly1) = reg.xy(*l1);
-                let (lx2, ly2) = reg.xy(*l2);
-                let dxl = lx2 - lx1;
-                let dyl = ly2 - ly1;
-                let mx = (x1 + x2) * 0.5;
-                let my = (y1 + y2) * 0.5;
-                vec![
-                    (self.p1, 0, -dxl, -dyl),
-                    (self.p2, 0, dxl, dyl),
-                    (*l1, 0, -(x2 - x1), -(y2 - y1)),
-                    (*l2, 0, x2 - x1, y2 - y1),
-                    (self.p1, 1, 0.5 * dyl, -0.5 * dxl),
-                    (self.p2, 1, 0.5 * dyl, -0.5 * dxl),
-                    (*l1, 1, my - ly1 - dyl, dxl - (mx - lx1)),
-                    (*l2, 1, -(my - ly1), mx - lx1),
-                ]
-            }
+                (center, 0, -2.0, 0.0),
+                (center, 1, 0.0, -2.0),
+            ];
         }
+        if let Some(axis) = self.axis {
+            let Some((l1, l2)) = resolve_axis(reg, axis) else {
+                return vec![];
+            };
+            let (x1, y1) = reg.xy(self.p1);
+            let (x2, y2) = reg.xy(self.p2);
+            let (lx1, ly1) = reg.xy(l1);
+            let (lx2, ly2) = reg.xy(l2);
+            let dxl = lx2 - lx1;
+            let dyl = ly2 - ly1;
+            let mx = (x1 + x2) * 0.5;
+            let my = (y1 + y2) * 0.5;
+            return vec![
+                (self.p1, 0, -dxl, -dyl),
+                (self.p2, 0, dxl, dyl),
+                (l1, 0, -(x2 - x1), -(y2 - y1)),
+                (l2, 0, x2 - x1, y2 - y1),
+                (self.p1, 1, 0.5 * dyl, -0.5 * dxl),
+                (self.p2, 1, 0.5 * dyl, -0.5 * dxl),
+                (l1, 1, my - ly1 - dyl, dxl - (mx - lx1)),
+                (l2, 1, -(my - ly1), mx - lx1),
+            ];
+        }
+        vec![]
     }
 
     fn is_hit(
@@ -199,21 +217,13 @@ impl SymmetryConstraint {
 
     /// Serializes to the reference constraint dictionary shape.
     pub fn to_json(&self) -> Value {
-        let mut data = json!({
+        json!({
             "type": "SymmetryConstraint",
+            "p1": self.p1,
+            "p2": self.p2,
+            "center": self.center,
+            "axis": self.axis,
             "user_visible": self.user_visible,
-        });
-        data["p1"] = json!(self.p1);
-        data["p2"] = json!(self.p2);
-        match &self.target {
-            SymmetryTarget::Point { center } => {
-                data["center"] = json!(center);
-            }
-            SymmetryTarget::Line { l1, l2 } => {
-                data["l1"] = json!(l1);
-                data["l2"] = json!(l2);
-            }
-        }
-        data
+        })
     }
 }

@@ -11,7 +11,7 @@ pub use crate::sketch::entities::entity::FontConfig;
 use crate::sketch::entities::entity_from_json;
 use crate::sketch::entities::point::SketchPoint;
 
-use crate::sketch::constraint::{PointContext, SketchConstraint};
+use crate::sketch::constraint::PointContext;
 
 /// Stores all points and entities of a sketch document.
 #[derive(Default)]

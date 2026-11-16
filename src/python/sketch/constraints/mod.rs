@@ -22,13 +22,11 @@ pub(crate) mod tangent;
 pub(crate) mod vertical;
 
 use pyo3::call::PyCallArgs;
-use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyDict};
 use pyo3_stub_gen::derive::gen_stub_pyclass;
-use pyo3_stub_gen::{ImportKind, ImportRef, ModuleRef, PyStubType, TypeInfo};
 use serde_json::Value;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use crate::python::sketch::protocols::{
     Canvas, DrawContext as RegistryContext, ScreenMap,
@@ -379,206 +377,26 @@ pub(crate) fn constraint_is_hit(
     }
 }
 
-/// Whether the entity references all the given points.
-pub(crate) fn entity_contains_points(
-    registry: &PyEntityRegistry,
-    entity_id: u64,
-    points: &[u64],
-) -> bool {
-    match registry.inner.entity_point_ids(entity_id) {
-        Some(ids) => points.iter().all(|point| ids.contains(point)),
-        None => false,
-    }
-}
-
-/// Builds the Python object for a stored constraint by downcasting
-/// through the trait's `as_any` hook and converting field-wise.
-pub(crate) fn constraint_to_py<'py>(
-    py: Python<'py>,
+/// Runs the core [`SketchConstraint::gradient`] against the
+/// registry, returning the reference mapping shape
+/// `{point_id: [(d_error_dx, d_error_dy), ...]}` with one entry per
+/// scalar residual row.
+pub(crate) fn constraint_gradient(
     constraint: &dyn SketchConstraint,
-) -> PyResult<Bound<'py, PyAny>> {
-    use crate::sketch::constraints::angle::AngleConstraint;
-    use crate::sketch::constraints::aspect_ratio::AspectRatioConstraint;
-    use crate::sketch::constraints::coincident::CoincidentConstraint;
-    use crate::sketch::constraints::collinear::CollinearConstraint;
-    use crate::sketch::constraints::diameter::DiameterConstraint;
-    use crate::sketch::constraints::distance::DistanceConstraint;
-    use crate::sketch::constraints::drag::DragConstraint;
-    use crate::sketch::constraints::equal_distance::EqualDistanceConstraint;
-    use crate::sketch::constraints::equal_length::EqualLengthConstraint;
-    use crate::sketch::constraints::horizontal::HorizontalConstraint;
-    use crate::sketch::constraints::parallelogram::ParallelogramConstraint;
-    use crate::sketch::constraints::perpendicular::PerpendicularConstraint;
-    use crate::sketch::constraints::point_on_curve::PointOnCurveConstraint;
-    use crate::sketch::constraints::point_on_line::PointOnLineConstraint;
-    use crate::sketch::constraints::radius::RadiusConstraint;
-    use crate::sketch::constraints::rotational::RotationalConstraint;
-    use crate::sketch::constraints::symmetry::SymmetryConstraint;
-    use crate::sketch::constraints::tangent::TangentConstraint;
-    use crate::sketch::constraints::vertical::VerticalConstraint;
-
-    macro_rules! try_downcast {
-        ($any:ident, $core:ty, $pyclass:path, $base:path) => {
-            if let Some(core) = $any.downcast_ref::<$core>() {
-                let core = core.clone();
-                let initialized = PyClassInitializer::from($base)
-                    .add_subclass(<$pyclass>::from_core(core));
-                let object = Py::new(py, initialized)?;
-                return Ok(object.bind(py).clone().into_any());
-            }
-        };
+    registry: &PyEntityRegistry,
+) -> HashMap<u64, Vec<(f64, f64)>> {
+    let mut snapshot = registry.inner.clone();
+    let entries = constraint.gradient(&mut snapshot);
+    let mut map: HashMap<u64, Vec<(f64, f64)>> = HashMap::new();
+    for (point_id, row, dx, dy) in entries {
+        let rows = map.entry(point_id).or_default();
+        if rows.len() <= row {
+            rows.resize(row + 1, (0.0, 0.0));
+        }
+        let (ox, oy) = rows[row];
+        rows[row] = (ox + dx, oy + dy);
     }
-
-    let any = constraint.as_any();
-    try_downcast!(
-        any,
-        AngleConstraint,
-        angle::PyAngleConstraint,
-        PyConstraintBase
-    );
-    try_downcast!(
-        any,
-        AspectRatioConstraint,
-        aspect_ratio::PyAspectRatioConstraint,
-        PyConstraintBase
-    );
-    try_downcast!(
-        any,
-        CoincidentConstraint,
-        coincident::PyCoincidentConstraint,
-        PyConstraintBase
-    );
-    try_downcast!(
-        any,
-        CollinearConstraint,
-        collinear::PyCollinearConstraint,
-        PyConstraintBase
-    );
-    try_downcast!(
-        any,
-        DiameterConstraint,
-        diameter::PyDiameterConstraint,
-        PyConstraintBase
-    );
-    try_downcast!(
-        any,
-        DistanceConstraint,
-        distance::PyDistanceConstraint,
-        PyConstraintBase
-    );
-    try_downcast!(
-        any,
-        DragConstraint,
-        drag::PyDragConstraint,
-        PyConstraintBase
-    );
-    try_downcast!(
-        any,
-        EqualDistanceConstraint,
-        equal_distance::PyEqualDistanceConstraint,
-        PyConstraintBase
-    );
-    try_downcast!(
-        any,
-        EqualLengthConstraint,
-        equal_length::PyEqualLengthConstraint,
-        PyConstraintBase
-    );
-    try_downcast!(
-        any,
-        HorizontalConstraint,
-        horizontal::PyHorizontalConstraint,
-        PyConstraintBase
-    );
-    try_downcast!(
-        any,
-        ParallelogramConstraint,
-        parallelogram::PyParallelogramConstraint,
-        PyConstraintBase
-    );
-    try_downcast!(
-        any,
-        PerpendicularConstraint,
-        perpendicular::PyPerpendicularConstraint,
-        PyConstraintBase
-    );
-    try_downcast!(
-        any,
-        PointOnCurveConstraint,
-        point_on_curve::PyPointOnCurveConstraint,
-        PyConstraintBase
-    );
-    try_downcast!(
-        any,
-        PointOnLineConstraint,
-        point_on_line::PyPointOnLineConstraint,
-        PyConstraintBase
-    );
-    try_downcast!(
-        any,
-        RadiusConstraint,
-        radius::PyRadiusConstraint,
-        PyConstraintBase
-    );
-    try_downcast!(
-        any,
-        RotationalConstraint,
-        rotational::PyRotationalConstraint,
-        PyConstraintBase
-    );
-    try_downcast!(
-        any,
-        SymmetryConstraint,
-        symmetry::PySymmetryConstraint,
-        PyConstraintBase
-    );
-    try_downcast!(
-        any,
-        TangentConstraint,
-        tangent::PyTangentConstraint,
-        PyConstraintBase
-    );
-    try_downcast!(
-        any,
-        VerticalConstraint,
-        vertical::PyVerticalConstraint,
-        PyConstraintBase
-    );
-    Err(PyTypeError::new_err("unsupported constraint kind"))
-}
-
-/// Extracts an owned constraint from a Python constraint object.
-pub(crate) fn extract_constraint(
-    obj: &Bound<'_, PyAny>,
-) -> PyResult<Box<dyn SketchConstraint>> {
-    macro_rules! try_extract {
-        ($pyclass:ty) => {
-            if let Ok(constraint) = obj.extract::<PyRef<'_, $pyclass>>() {
-                return Ok(Box::new(constraint.clone().into_constraint()));
-            }
-        };
-    }
-
-    try_extract!(angle::PyAngleConstraint);
-    try_extract!(aspect_ratio::PyAspectRatioConstraint);
-    try_extract!(coincident::PyCoincidentConstraint);
-    try_extract!(collinear::PyCollinearConstraint);
-    try_extract!(diameter::PyDiameterConstraint);
-    try_extract!(distance::PyDistanceConstraint);
-    try_extract!(drag::PyDragConstraint);
-    try_extract!(equal_distance::PyEqualDistanceConstraint);
-    try_extract!(equal_length::PyEqualLengthConstraint);
-    try_extract!(horizontal::PyHorizontalConstraint);
-    try_extract!(parallelogram::PyParallelogramConstraint);
-    try_extract!(perpendicular::PyPerpendicularConstraint);
-    try_extract!(point_on_curve::PyPointOnCurveConstraint);
-    try_extract!(point_on_line::PyPointOnLineConstraint);
-    try_extract!(radius::PyRadiusConstraint);
-    try_extract!(rotational::PyRotationalConstraint);
-    try_extract!(symmetry::PySymmetryConstraint);
-    try_extract!(tangent::PyTangentConstraint);
-    try_extract!(vertical::PyVerticalConstraint);
-    Err(PyTypeError::new_err("expected a sketch constraint object"))
+    map
 }
 
 /// The common base class of every constraint binding: a nominal
@@ -589,48 +407,6 @@ pub(crate) fn extract_constraint(
 #[pyclass(subclass, module = "raygeo.sketch.constraints", name = "Constraint")]
 #[derive(Default)]
 pub struct PyConstraintBase;
-
-/// The base of all constraint classes, for typed registry returns.
-pub struct AnyConstraint<'py>(pub Bound<'py, PyAny>);
-
-impl<'a, 'py> FromPyObject<'a, 'py> for AnyConstraint<'py> {
-    type Error = PyErr;
-
-    fn extract(ob: pyo3::Borrowed<'_, 'py, PyAny>) -> PyResult<Self> {
-        Ok(AnyConstraint(ob.to_owned()))
-    }
-}
-
-impl<'py> IntoPyObject<'py> for AnyConstraint<'py> {
-    type Target = PyAny;
-    type Output = Bound<'py, PyAny>;
-    type Error = PyErr;
-
-    fn into_pyobject(
-        self,
-        _py: Python<'py>,
-    ) -> Result<Self::Output, Self::Error> {
-        Ok(self.0)
-    }
-}
-
-impl PyStubType for AnyConstraint<'_> {
-    fn type_output() -> TypeInfo {
-        let module = ModuleRef::Named("raygeo.sketch.constraints".to_string());
-        TypeInfo {
-            name: "Constraint".to_string(),
-            source_module: None,
-            import: HashSet::from([ImportRef::Module(module.clone())]),
-            type_refs: HashMap::from([(
-                "Constraint".to_string(),
-                pyo3_stub_gen::TypeIdentifierRef {
-                    module,
-                    import_kind: ImportKind::Module,
-                },
-            )]),
-        }
-    }
-}
 
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = m.py();

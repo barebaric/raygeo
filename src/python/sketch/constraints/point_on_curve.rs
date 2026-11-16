@@ -1,5 +1,7 @@
 //! Bindings for the point-on-curve constraint.
 
+use std::collections::{HashMap, HashSet};
+
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
@@ -10,10 +12,7 @@ use crate::python::sketch::registry::PyEntityRegistry;
 use crate::sketch::constraint::SketchConstraint;
 use crate::sketch::constraints::point_on_curve::PointOnCurveConstraint as CoreConstraint;
 
-/// Enforces a point lies on a cubic Bezier curve.  The control
-/// points are stored as offsets from their owning endpoints; curves
-/// without control points use the straight-segment residual
-/// (`is_line`).
+/// Enforces a point lies on a cubic Bezier curve.
 #[gen_stub_pyclass]
 #[pyclass(
     extends = PyConstraintBase,
@@ -26,28 +25,13 @@ use crate::sketch::constraints::point_on_curve::PointOnCurveConstraint as CoreCo
 pub struct PyPointOnCurveConstraint {
     /// The constrained point.
     #[pyo3(get)]
-    pub point: u64,
-    /// Curve start point.
+    pub point_id: u64,
+    /// The constrained curve.
     #[pyo3(get)]
-    pub start: u64,
-    /// Curve end point.
-    #[pyo3(get)]
-    pub end: u64,
-    /// First control point as offset from the start point.
-    #[pyo3(get)]
-    pub cp1_offset: (f64, f64),
-    /// Second control point as offset from the end point.
-    #[pyo3(get)]
-    pub cp2_offset: (f64, f64),
-    /// Whether the curve degenerates to a straight segment.
-    #[pyo3(get)]
-    pub is_line: bool,
+    pub shape_id: u64,
     /// Reference user-visibility flag.
     #[pyo3(get)]
     pub user_visible: bool,
-    /// Reference shape entity id (resolved from the registry).
-    #[pyo3(get, set)]
-    pub shape_id: Option<u64>,
     /// Reference validation status ordinal.
     #[pyo3(get, set)]
     pub status: u8,
@@ -58,34 +42,17 @@ pub struct PyPointOnCurveConstraint {
 impl PyPointOnCurveConstraint {
     /// Creates the point-on-curve constraint.
     #[new]
-    #[pyo3(signature = (
-        point,
-        start,
-        end,
-        cp1_offset,
-        cp2_offset,
-        is_line,
-        user_visible = true,
-    ))]
+    #[pyo3(signature = (point_id, shape_id, user_visible = true))]
     fn new(
-        point: u64,
-        start: u64,
-        end: u64,
-        cp1_offset: (f64, f64),
-        cp2_offset: (f64, f64),
-        is_line: bool,
+        point_id: u64,
+        shape_id: u64,
         user_visible: bool,
     ) -> PyClassInitializer<Self> {
         PyClassInitializer::from(PyConstraintBase).add_subclass(
             PyPointOnCurveConstraint {
-                point,
-                start,
-                end,
-                cp1_offset,
-                cp2_offset,
-                is_line,
+                point_id,
+                shape_id,
                 user_visible,
-                shape_id: None,
                 status: 1,
             },
         )
@@ -93,29 +60,36 @@ impl PyPointOnCurveConstraint {
 
     /// Returns the constraint error at the registry's point
     /// positions.
-    #[pyo3(signature = (registry, _ctx = None))]
+    #[pyo3(signature = (registry, _params = None))]
     fn error(
         &self,
         registry: &PyEntityRegistry,
-        _ctx: Option<Py<PyAny>>,
+        _params: Option<Py<PyAny>>,
     ) -> Vec<f64> {
         self.clone().into_constraint().error(&registry.inner)
     }
 
-    /// Point ids the constraint references.
-    /// Alias for point (reference naming).
-    #[getter]
-    fn point_id(&self) -> u64 {
-        self.point
+    /// Partial derivatives of the error by point id.
+    fn gradient(
+        &self,
+        registry: &PyEntityRegistry,
+    ) -> HashMap<u64, Vec<(f64, f64)>> {
+        super::constraint_gradient(&self.clone().into_constraint(), registry)
     }
 
-    fn referenced_points(&self) -> Vec<u64> {
-        self.clone().into_constraint().referenced_points()
+    /// Point ids the constraint references.
+    fn referenced_points(&self, registry: &PyEntityRegistry) -> Vec<u64> {
+        self.clone()
+            .into_constraint()
+            .referenced_points(&registry.inner)
     }
 
     /// Alias for referenced_points (reference naming).
-    fn get_referenced_point_ids(&self) -> std::collections::HashSet<u64> {
-        self.referenced_points().into_iter().collect()
+    fn get_referenced_point_ids(
+        &self,
+        registry: &PyEntityRegistry,
+    ) -> HashSet<u64> {
+        self.referenced_points(registry).into_iter().collect()
     }
 
     /// Serializes to the reference constraint dictionary shape.
@@ -177,29 +151,10 @@ impl PyPointOnCurveConstraint {
 
 impl PyPointOnCurveConstraint {
     pub(crate) fn into_constraint(self) -> CoreConstraint {
-        let mut core = CoreConstraint::new(
-            self.point,
-            self.start,
-            self.end,
-            [self.cp1_offset.0, self.cp1_offset.1],
-            [self.cp2_offset.0, self.cp2_offset.1],
-            self.is_line,
-        );
-        core.user_visible = self.user_visible;
-        core
-    }
-
-    pub(crate) fn from_core(core: CoreConstraint) -> Self {
-        PyPointOnCurveConstraint {
-            point: core.point,
-            start: core.start,
-            end: core.end,
-            cp1_offset: (core.cp1_offset[0], core.cp1_offset[1]),
-            cp2_offset: (core.cp2_offset[0], core.cp2_offset[1]),
-            is_line: core.is_line,
-            user_visible: core.user_visible,
-            shape_id: None,
-            status: 1,
+        CoreConstraint {
+            point_id: self.point_id,
+            shape_id: self.shape_id,
+            user_visible: self.user_visible,
         }
     }
 }

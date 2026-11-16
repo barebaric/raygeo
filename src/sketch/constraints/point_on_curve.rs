@@ -11,6 +11,7 @@ use crate::sketch::constraint::{
 use crate::sketch::draw::{
     draw_point_marker, CairoLike, DrawContext, DrawStyle,
 };
+use crate::sketch::entities::bezier::Bezier;
 use crate::sketch::registry::EntityRegistry;
 
 /// Minimum distance below which the closest-point direction is
@@ -32,55 +33,56 @@ fn get_bezier_endpoint_weights(t: f64) -> (f64, f64) {
     (w_start, w_end)
 }
 
-/// Enforces a point lies on a cubic Bezier curve.  The control
-/// points are stored as offsets from their owning endpoints; curves
-/// without control points use the straight-segment residual
-/// (`is_line`).
+/// Resolves the constrained bezier: `(point on curve ok, start, end,
+/// cp1 offset, cp2 offset)`.
+fn resolve_bezier(
+    ctx: &dyn PointContext,
+    shape_id: u64,
+) -> Option<(u64, u64, Option<[f64; 2]>, Option<[f64; 2]>)> {
+    let entity = ctx.get_entity(shape_id)?;
+    if entity.type_name() != "bezier" {
+        return None;
+    }
+    let bezier = entity.as_any().downcast_ref::<Bezier>()?;
+    Some((bezier.start, bezier.end, bezier.cp1, bezier.cp2))
+}
+
+/// Enforces a point lies on a cubic Bezier curve.
+///
+/// References the point and the curve by id and resolves them
+/// through the point context at residual time, mirroring the
+/// reference model's entity-reference design.  Curves without
+/// control points degenerate to the straight-segment residual.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PointOnCurveConstraint {
     /// The constrained point.
-    pub point: u64,
-    /// Curve start point.
-    pub start: u64,
-    /// Curve end point.
-    pub end: u64,
-    /// First control point as offset from the start point.
-    pub cp1_offset: [f64; 2],
-    /// Second control point as offset from the end point.
-    pub cp2_offset: [f64; 2],
-    /// Whether the curve degenerates to a straight segment.
-    pub is_line: bool,
+    pub point_id: u64,
+    /// The constrained curve.
+    pub shape_id: u64,
     /// Reference user-visibility flag.
     pub user_visible: bool,
 }
 
 impl PointOnCurveConstraint {
     /// Creates a point-on-curve constraint.
-    pub fn new(
-        point: u64,
-        start: u64,
-        end: u64,
-        cp1_offset: [f64; 2],
-        cp2_offset: [f64; 2],
-        is_line: bool,
-    ) -> Self {
+    pub fn new(point_id: u64, shape_id: u64) -> Self {
         PointOnCurveConstraint {
-            point,
-            start,
-            end,
-            cp1_offset,
-            cp2_offset,
-            is_line,
+            point_id,
+            shape_id,
             user_visible: true,
         }
     }
 
     /// Absolute distance from the constrained point to the curve.
     fn distance(&self, reg: &dyn PointContext) -> f64 {
-        let (px, py) = reg.xy(self.point);
-        let (sx, sy) = reg.xy(self.start);
-        let (ex, ey) = reg.xy(self.end);
-        if self.is_line {
+        let Some((start, end, cp1, cp2)) = resolve_bezier(reg, self.shape_id)
+        else {
+            return 0.0;
+        };
+        let (px, py) = reg.xy(self.point_id);
+        let (sx, sy) = reg.xy(start);
+        let (ex, ey) = reg.xy(end);
+        if cp1.is_none() && cp2.is_none() {
             let (_, _, dist_sq) = get_line_segment_closest_point(
                 Point::new(sx, sy),
                 Point::new(ex, ey),
@@ -89,10 +91,10 @@ impl PointOnCurveConstraint {
             );
             return dist_sq.sqrt();
         }
-        let cp1x = sx + self.cp1_offset[0];
-        let cp1y = sy + self.cp1_offset[1];
-        let cp2x = ex + self.cp2_offset[0];
-        let cp2y = ey + self.cp2_offset[1];
+        let cp1x = sx + cp1.unwrap_or([0.0, 0.0])[0];
+        let cp1y = sy + cp1.unwrap_or([0.0, 0.0])[1];
+        let cp2x = ex + cp2.unwrap_or([0.0, 0.0])[0];
+        let cp2y = ey + cp2.unwrap_or([0.0, 0.0])[1];
         match get_bezier_closest_point(
             Point3D::new(ex, ey, 0.0),
             Point3D::new(cp1x, cp1y, 0.0),
@@ -116,8 +118,13 @@ impl SketchConstraint for PointOnCurveConstraint {
         PointOnCurveConstraint::to_json(self)
     }
 
-    fn referenced_points(&self, _ctx: &dyn PointContext) -> Vec<u64> {
-        vec![self.point, self.start, self.end]
+    fn referenced_points(&self, ctx: &dyn PointContext) -> Vec<u64> {
+        match resolve_bezier(ctx, self.shape_id) {
+            Some((start, end, _, _)) => {
+                vec![self.point_id, start, end]
+            }
+            None => vec![],
+        }
     }
 
     fn residual_count(&self, _ctx: &dyn PointContext) -> usize {
@@ -129,15 +136,19 @@ impl SketchConstraint for PointOnCurveConstraint {
     }
 
     fn gradient(&self, reg: &mut dyn PointContext) -> Vec<JacobianEntry> {
-        let (px, py) = reg.xy(self.point);
-        let (sx, sy) = reg.xy(self.start);
-        let (ex, ey) = reg.xy(self.end);
-        let cp1x = sx + self.cp1_offset[0];
-        let cp1y = sy + self.cp1_offset[1];
-        let cp2x = ex + self.cp2_offset[0];
-        let cp2y = ey + self.cp2_offset[1];
+        let Some((start, end, cp1, cp2)) = resolve_bezier(reg, self.shape_id)
+        else {
+            return Vec::new();
+        };
+        let (px, py) = reg.xy(self.point_id);
+        let (sx, sy) = reg.xy(start);
+        let (ex, ey) = reg.xy(end);
+        let cp1x = sx + cp1.unwrap_or([0.0, 0.0])[0];
+        let cp1y = sy + cp1.unwrap_or([0.0, 0.0])[1];
+        let cp2x = ex + cp2.unwrap_or([0.0, 0.0])[0];
+        let cp2y = ey + cp2.unwrap_or([0.0, 0.0])[1];
 
-        let closest = if self.is_line {
+        let closest = if cp1.is_none() && cp2.is_none() {
             let (_, closest, dist_sq) = get_line_segment_closest_point(
                 Point::new(sx, sy),
                 Point::new(ex, ey),
@@ -177,9 +188,9 @@ impl SketchConstraint for PointOnCurveConstraint {
 
         let (w_start, w_end) = get_bezier_endpoint_weights(t);
         vec![
-            (self.point, 0, -ux, -uy),
-            (self.start, 0, w_start * ux, w_start * uy),
-            (self.end, 0, w_end * ux, w_end * uy),
+            (self.point_id, 0, -ux, -uy),
+            (start, 0, w_start * ux, w_start * uy),
+            (end, 0, w_end * ux, w_end * uy),
         ]
     }
 
@@ -191,7 +202,7 @@ impl SketchConstraint for PointOnCurveConstraint {
         model: &EntityRegistry,
         to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
     ) -> bool {
-        let Some(pt) = model.get_point(self.point) else {
+        let Some(pt) = model.get_point(self.point_id) else {
             return false;
         };
         let s_pt = to_screen((pt.x, pt.y));
@@ -206,10 +217,10 @@ impl SketchConstraint for PointOnCurveConstraint {
         style: &DrawStyle,
     ) {
         // Hide the constraint if its point is part of a text box.
-        if context.point_in_text_box_frame(self.point) {
+        if context.point_in_text_box_frame(self.point_id) {
             return;
         }
-        let Some(pt) = context.get_point(self.point) else {
+        let Some(pt) = context.get_point(self.point_id) else {
             return;
         };
         let (sx, sy) = to_screen((pt.x, pt.y));
@@ -230,11 +241,11 @@ impl PointOnCurveConstraint {
 
     /// Serializes to the reference constraint dictionary shape.
     pub fn to_json(&self) -> Value {
-        let data = json!({
+        json!({
             "type": "PointOnCurveConstraint",
+            "point_id": self.point_id,
+            "shape_id": self.shape_id,
             "user_visible": self.user_visible,
-        });
-        let _ = (self.point, self.start, self.end);
-        data
+        })
     }
 }

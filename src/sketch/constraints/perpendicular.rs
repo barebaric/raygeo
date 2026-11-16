@@ -18,10 +18,10 @@ use crate::sketch::registry::EntityRegistry;
 /// reference renderer.
 const VISUAL_RADIUS: f64 = 16.0;
 
-/// The resolved geometry of the two perpendicular operands, mirroring
-/// the reference constraint's entity-type cases: two lines, a line
-/// through a circle/arc center, or two circles meeting at a right
-/// angle.
+/// The resolved geometry of the two perpendicular operands,
+/// mirroring the reference constraint's entity-type cases: two
+/// lines, a line through a circle/arc center, or two circles
+/// meeting at a right angle.
 #[derive(Clone, Debug, PartialEq)]
 pub enum PerpendicularTarget {
     /// Line-line: direction dot product.
@@ -37,21 +37,146 @@ pub enum PerpendicularTarget {
     },
 }
 
+/// Resolves the operand pair to the constraint's geometry cases:
+/// two lines, a line through a circle/arc center, or two circles
+/// meeting at a right angle.
+fn resolve_target(
+    ctx: &dyn PointContext,
+    e1_id: u64,
+    e2_id: u64,
+) -> Option<PerpendicularTarget> {
+    let e1 = ctx.get_entity(e1_id)?;
+    let e2 = ctx.get_entity(e2_id)?;
+    let t1 = e1.type_name();
+    let t2 = e2.type_name();
+    let ids1 = e1.get_point_ids();
+    let ids2 = e2.get_point_ids();
+    if t1 == "line" && t2 == "line" {
+        return Some(PerpendicularTarget::LineLine {
+            a1: ids1[0],
+            a2: ids1[1],
+            b1: ids2[0],
+            b2: ids2[1],
+        });
+    }
+    let (line_ids, shape_ids) = if t1 == "line" {
+        (ids1.clone(), ids2.clone())
+    } else {
+        (ids2.clone(), ids1.clone())
+    };
+    let shape_type = if t1 == "line" { t2 } else { t1 };
+    match shape_type {
+        "circle" | "arc" => {
+            let (center, _radius_pt) = if shape_type == "circle" {
+                (shape_ids[0], shape_ids[1])
+            } else {
+                (shape_ids[2], shape_ids[0])
+            };
+            return Some(PerpendicularTarget::LineCenter {
+                l1: line_ids[0],
+                l2: line_ids[1],
+                center,
+            });
+        }
+        _ => {}
+    }
+    let (c1, r1, c2, r2) = radius_points(t1, &ids1, t2, &ids2)?;
+    Some(PerpendicularTarget::Circles {
+        c1,
+        r1_point: r1,
+        c2,
+        r2_point: r2,
+    })
+}
+
+/// Resolves the operand pair for the draw path, where entities are
+/// inspected through the draw context's duck-typed surface.
+fn resolve_target_of_context(
+    context: &dyn DrawContext,
+    e1_id: u64,
+    e2_id: u64,
+) -> Option<PerpendicularTarget> {
+    let t1 = context.entity_type(e1_id)?.as_ref().to_owned();
+    let t2 = context.entity_type(e2_id)?.as_ref().to_owned();
+    let ids1 = context.entity_point_ids(e1_id)?;
+    let ids2 = context.entity_point_ids(e2_id)?;
+    if t1 == "line" && t2 == "line" {
+        return Some(PerpendicularTarget::LineLine {
+            a1: ids1[0],
+            a2: ids1[1],
+            b1: ids2[0],
+            b2: ids2[1],
+        });
+    }
+    let (line_ids, shape_ids) = if t1 == "line" {
+        (ids1.clone(), ids2.clone())
+    } else {
+        (ids2.clone(), ids1.clone())
+    };
+    let shape_type = if t1 == "line" { t2.clone() } else { t1.clone() };
+    match shape_type.as_str() {
+        "circle" => {
+            return Some(PerpendicularTarget::LineCenter {
+                l1: line_ids[0],
+                l2: line_ids[1],
+                center: shape_ids[0],
+            });
+        }
+        "arc" => {
+            return Some(PerpendicularTarget::LineCenter {
+                l1: line_ids[0],
+                l2: line_ids[1],
+                center: shape_ids[2],
+            });
+        }
+        _ => {}
+    }
+    let (c1, r1, c2, r2) = radius_points(&t1, &ids1, &t2, &ids2)?;
+    Some(PerpendicularTarget::Circles {
+        c1,
+        r1_point: r1,
+        c2,
+        r2_point: r2,
+    })
+}
+
+/// Center and radius-bearing point ids of a circle/arc.
+fn radius_points(
+    t1: &str,
+    ids1: &[u64],
+    t2: &str,
+    ids2: &[u64],
+) -> Option<(u64, u64, u64, u64)> {
+    let shape_points = |t: &str, ids: &[u64]| -> Option<(u64, u64)> {
+        match t {
+            "circle" => Some((ids[0], ids[1])),
+            "arc" => Some((ids[2], ids[0])),
+            _ => None,
+        }
+    };
+    let (c1, r1) = shape_points(t1, ids1)?;
+    let (c2, r2) = shape_points(t2, ids2)?;
+    Some((c1, r1, c2, r2))
+}
+
 /// Enforces perpendicularity between two entities.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PerpendicularConstraint {
-    /// Resolved operand geometry.
-    pub target: PerpendicularTarget,
+    /// First operand entity.
+    pub e1_id: u64,
+    /// Second operand entity.
+    pub e2_id: u64,
     /// Reference user-visibility flag.
     pub user_visible: bool,
 }
 
 impl PerpendicularConstraint {
-    /// Creates a perpendicular constraint from resolved operands.
-    pub fn new(target: PerpendicularTarget) -> Self {
+    /// Creates a perpendicular constraint between two entities.
+    pub fn new(e1_id: u64, e2_id: u64) -> Self {
         PerpendicularConstraint {
+            e1_id,
+            e2_id,
             user_visible: true,
-            target,
         }
     }
 }
@@ -65,35 +190,37 @@ impl SketchConstraint for PerpendicularConstraint {
         PerpendicularConstraint::to_json(self)
     }
 
-    fn referenced_points(&self, _ctx: &dyn PointContext) -> Vec<u64> {
+    fn referenced_points(&self, ctx: &dyn PointContext) -> Vec<u64> {
         let mut ids = Vec::new();
         let mut push = |id: u64| {
             if !ids.contains(&id) {
                 ids.push(id);
             }
         };
-        match &self.target {
-            PerpendicularTarget::LineLine { a1, a2, b1, b2 } => {
-                push(*a1);
-                push(*a2);
-                push(*b1);
-                push(*b2);
-            }
-            PerpendicularTarget::LineCenter { l1, l2, center } => {
-                push(*l1);
-                push(*l2);
-                push(*center);
-            }
-            PerpendicularTarget::Circles {
-                c1,
-                r1_point,
-                c2,
-                r2_point,
-            } => {
-                push(*c1);
-                push(*r1_point);
-                push(*c2);
-                push(*r2_point);
+        if let Some(target) = resolve_target(ctx, self.e1_id, self.e2_id) {
+            match target {
+                PerpendicularTarget::LineLine { a1, a2, b1, b2 } => {
+                    push(a1);
+                    push(a2);
+                    push(b1);
+                    push(b2);
+                }
+                PerpendicularTarget::LineCenter { l1, l2, center } => {
+                    push(l1);
+                    push(l2);
+                    push(center);
+                }
+                PerpendicularTarget::Circles {
+                    c1,
+                    r1_point,
+                    c2,
+                    r2_point,
+                } => {
+                    push(c1);
+                    push(r1_point);
+                    push(c2);
+                    push(r2_point);
+                }
             }
         }
         ids
@@ -104,7 +231,10 @@ impl SketchConstraint for PerpendicularConstraint {
     }
 
     fn error(&self, reg: &dyn PointContext) -> Vec<f64> {
-        match &self.target {
+        let Some(target) = resolve_target(reg, self.e1_id, self.e2_id) else {
+            return vec![0.0];
+        };
+        match &target {
             PerpendicularTarget::LineLine { a1, a2, b1, b2 } => {
                 let (ax1, ay1) = reg.xy(*a1);
                 let (ax2, ay2) = reg.xy(*a2);
@@ -141,8 +271,11 @@ impl SketchConstraint for PerpendicularConstraint {
     }
 
     fn gradient(&self, reg: &mut dyn PointContext) -> Vec<JacobianEntry> {
+        let Some(target) = resolve_target(reg, self.e1_id, self.e2_id) else {
+            return vec![];
+        };
         let mut entries = Vec::new();
-        match &self.target {
+        match &target {
             PerpendicularTarget::LineLine { a1, a2, b1, b2 } => {
                 let (ax1, ay1) = reg.xy(*a1);
                 let (ax2, ay2) = reg.xy(*a2);
@@ -216,7 +349,10 @@ impl SketchConstraint for PerpendicularConstraint {
         model: &EntityRegistry,
         to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
     ) -> bool {
-        match &self.target {
+        let Some(target) = resolve_target(model, self.e1_id, self.e2_id) else {
+            return false;
+        };
+        match &target {
             PerpendicularTarget::LineLine { a1, a2, b1, b2 } => {
                 let (Some(p1), Some(p2), Some(p3), Some(p4)) = (
                     model.get_point(*a1),
@@ -335,7 +471,15 @@ impl SketchConstraint for PerpendicularConstraint {
     ) {
         ctx.save();
         ctx.set_line_width(1.5);
-        match &self.target {
+        let target =
+            match resolve_target_of_context(context, self.e1_id, self.e2_id) {
+                Some(target) => target,
+                None => {
+                    ctx.restore();
+                    return;
+                }
+            };
+        match &target {
             PerpendicularTarget::LineLine { a1, a2, b1, b2 } => {
                 let (Some(p1), Some(p2), Some(p3), Some(p4)) = (
                     context.get_point(*a1),
@@ -492,34 +636,11 @@ impl PerpendicularConstraint {
 
     /// Serializes to the reference constraint dictionary shape.
     pub fn to_json(&self) -> Value {
-        let mut data = json!({
+        json!({
             "type": "PerpendicularConstraint",
+            "e1_id": self.e1_id,
+            "e2_id": self.e2_id,
             "user_visible": self.user_visible,
-        });
-        match &self.target {
-            PerpendicularTarget::LineLine { a1, a2, b1, b2 } => {
-                data["a1_idx"] = json!(a1);
-                data["a2_idx"] = json!(a2);
-                data["b1_idx"] = json!(b1);
-                data["b2_idx"] = json!(b2);
-            }
-            PerpendicularTarget::LineCenter { l1, l2, center } => {
-                data["l1_idx"] = json!(l1);
-                data["l2_idx"] = json!(l2);
-                data["center_idx"] = json!(center);
-            }
-            PerpendicularTarget::Circles {
-                c1,
-                r1_point,
-                c2,
-                r2_point,
-            } => {
-                data["c1_idx"] = json!(c1);
-                data["r1_pt_idx"] = json!(r1_point);
-                data["c2_idx"] = json!(c2);
-                data["r2_pt_idx"] = json!(r2_point);
-            }
-        }
-        data
+        })
     }
 }

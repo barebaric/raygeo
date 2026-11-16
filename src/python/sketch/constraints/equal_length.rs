@@ -25,15 +25,12 @@ use crate::sketch::constraints::equal_length::EqualLengthConstraint as CoreConst
 )]
 #[derive(Clone, PartialEq)]
 pub struct PyEqualLengthConstraint {
-    /// Resolved characteristic-length pairs.
-    #[pyo3(get)]
-    pub pairs: Vec<[u64; 4]>,
+    /// The constrained entities.
+    #[pyo3(get, set)]
+    pub entity_ids: Vec<u64>,
     /// Reference user-visibility flag.
     #[pyo3(get)]
     pub user_visible: bool,
-    /// Reference entity ids (resolved from the registry).
-    #[pyo3(get, set)]
-    pub entity_ids: Vec<u64>,
     /// Reference validation status ordinal.
     #[pyo3(get, set)]
     pub status: u8,
@@ -42,18 +39,17 @@ pub struct PyEqualLengthConstraint {
 #[gen_stub_pymethods]
 #[pymethods]
 impl PyEqualLengthConstraint {
-    /// Creates the constraint from resolved pairs.
+    /// Creates the constraint for the given entities.
     #[new]
-    #[pyo3(signature = (pairs, user_visible = true))]
+    #[pyo3(signature = (entity_ids, user_visible = true))]
     fn new(
-        pairs: Vec<[u64; 4]>,
+        entity_ids: Vec<u64>,
         user_visible: bool,
     ) -> PyClassInitializer<Self> {
         PyClassInitializer::from(PyConstraintBase).add_subclass(
             PyEqualLengthConstraint {
-                pairs,
+                entity_ids,
                 user_visible,
-                entity_ids: Vec::new(),
                 status: 1,
             },
         )
@@ -70,14 +66,27 @@ impl PyEqualLengthConstraint {
         self.clone().into_constraint().error(&registry.inner)
     }
 
+    /// Partial derivatives of the error by point id.
+    fn gradient(
+        &self,
+        registry: &PyEntityRegistry,
+    ) -> std::collections::HashMap<u64, Vec<(f64, f64)>> {
+        super::constraint_gradient(&self.clone().into_constraint(), registry)
+    }
+
     /// Point ids the constraint references.
-    fn referenced_points(&self) -> Vec<u64> {
-        self.clone().into_constraint().referenced_points()
+    fn referenced_points(&self, registry: &PyEntityRegistry) -> Vec<u64> {
+        self.clone()
+            .into_constraint()
+            .referenced_points(&registry.inner)
     }
 
     /// Alias for referenced_points (reference naming).
-    fn get_referenced_point_ids(&self) -> std::collections::HashSet<u64> {
-        self.referenced_points().into_iter().collect()
+    fn get_referenced_point_ids(
+        &self,
+        registry: &PyEntityRegistry,
+    ) -> std::collections::HashSet<u64> {
+        self.referenced_points(registry).into_iter().collect()
     }
 
     /// Serializes to the reference constraint dictionary shape.
@@ -116,32 +125,24 @@ impl PyEqualLengthConstraint {
     }
 
     /// Whether this constraint restricts the length of the given
-    /// entity, matched through the registry by its defining points
-    /// (the point ids are ignored, mirroring the reference).
-    #[pyo3(signature = (p1, p2, entity_id, registry))]
+    /// entity.
     fn targets_segment(
         &self,
-        p1: u64,
-        p2: u64,
+        _p1: u64,
+        _p2: u64,
         entity_id: Option<u64>,
-        registry: &PyEntityRegistry,
     ) -> bool {
-        let _ = (p1, p2);
-        match entity_id {
-            Some(id) => self.covers_entity(registry, id),
-            None => false,
-        }
+        entity_id.is_some_and(|eid| self.entity_ids.contains(&eid))
     }
 
     /// Whether this constraint explicitly defines the radius/length
-    /// of the given entity, matched through the registry by its
-    /// defining points.
+    /// of the given entity.
     fn constrains_radius(
         &self,
-        registry: &PyEntityRegistry,
+        _registry: &PyEntityRegistry,
         entity_id: u64,
     ) -> bool {
-        self.covers_entity(registry, entity_id)
+        self.entity_ids.contains(&entity_id)
     }
 
     /// Whether the constraint's rendered symbol is hit at (mx, my).
@@ -167,37 +168,10 @@ impl PyEqualLengthConstraint {
 }
 
 impl PyEqualLengthConstraint {
-    /// Whether any resolved pair belongs to the entity, matched
-    /// through its defining points (either the base or the other
-    /// segment of a pair).
-    fn covers_entity(
-        &self,
-        registry: &PyEntityRegistry,
-        entity_id: u64,
-    ) -> bool {
-        let Some(ids) = registry.inner.entity_point_ids(entity_id) else {
-            return false;
-        };
-        self.pairs.iter().any(|pair| {
-            (ids.contains(&pair[0]) && ids.contains(&pair[1]))
-                || (ids.contains(&pair[2]) && ids.contains(&pair[3]))
-        })
-    }
-}
-
-impl PyEqualLengthConstraint {
     pub(crate) fn into_constraint(self) -> CoreConstraint {
-        let mut core = CoreConstraint::new(self.pairs);
-        core.user_visible = self.user_visible;
-        core
-    }
-
-    pub(crate) fn from_core(core: CoreConstraint) -> Self {
-        PyEqualLengthConstraint {
-            pairs: core.pairs,
-            user_visible: core.user_visible,
-            entity_ids: Vec::new(),
-            status: 1,
+        CoreConstraint {
+            entity_ids: self.entity_ids,
+            user_visible: self.user_visible,
         }
     }
 }

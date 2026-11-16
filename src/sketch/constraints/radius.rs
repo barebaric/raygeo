@@ -14,7 +14,6 @@ use crate::sketch::draw::{
     screen_scale, CairoLike, DrawContext, DrawStyle, LABEL_DIST_SCREEN,
 };
 use crate::sketch::entities::arc::Arc;
-use crate::sketch::entities::circle::Circle;
 use crate::sketch::registry::EntityRegistry;
 
 /// Enforces the radius of a circle or arc.
@@ -104,10 +103,7 @@ impl SketchConstraint for RadiusConstraint {
                 } else {
                     (1.0, 0.0)
                 };
-                vec![
-                    (radius_pt, 0, ux, uy),
-                    (center, 0, -ux, -uy),
-                ]
+                vec![(radius_pt, 0, ux, uy), (center, 0, -ux, -uy)]
             }
             None => vec![],
         }
@@ -126,10 +122,9 @@ impl SketchConstraint for RadiusConstraint {
         else {
             return false;
         };
-        let (Some(center), Some(radius_pt)) = (
-            model.get_point(center_id),
-            model.get_point(radius_pt_id),
-        ) else {
+        let (Some(center), Some(radius_pt)) =
+            (model.get_point(center_id), model.get_point(radius_pt_id))
+        else {
             return false;
         };
         let radius = (radius_pt.x - center.x).hypot(radius_pt.y - center.y);
@@ -145,8 +140,8 @@ impl SketchConstraint for RadiusConstraint {
             .and_then(|e| e.as_any().downcast_ref::<Arc>())
         {
             let Some(midpoint) = arc.get_midpoint(model) else {
-            return false;
-        };
+                return false;
+            };
             (midpoint.1 - center.y).atan2(midpoint.0 - center.x)
         } else {
             (radius_pt.y - center.y).atan2(radius_pt.x - center.x)

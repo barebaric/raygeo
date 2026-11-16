@@ -73,14 +73,27 @@ impl PyCollinearConstraint {
         self.clone().into_constraint().error(&registry.inner)
     }
 
+    /// Partial derivatives of the error by point id.
+    fn gradient(
+        &self,
+        registry: &PyEntityRegistry,
+    ) -> std::collections::HashMap<u64, Vec<(f64, f64)>> {
+        super::constraint_gradient(&self.clone().into_constraint(), registry)
+    }
+
     /// Point ids the constraint references.
-    fn referenced_points(&self) -> Vec<u64> {
-        self.clone().into_constraint().referenced_points()
+    fn referenced_points(&self, registry: &PyEntityRegistry) -> Vec<u64> {
+        self.clone()
+            .into_constraint()
+            .referenced_points(&registry.inner)
     }
 
     /// Alias for referenced_points (reference naming).
-    fn get_referenced_point_ids(&self) -> std::collections::HashSet<u64> {
-        self.referenced_points().into_iter().collect()
+    fn get_referenced_point_ids(
+        &self,
+        registry: &PyEntityRegistry,
+    ) -> std::collections::HashSet<u64> {
+        self.referenced_points(registry).into_iter().collect()
     }
 
     /// Serializes to the reference constraint dictionary shape.
@@ -145,16 +158,6 @@ impl PyCollinearConstraint {
         CoreConstraint {
             user_visible: self.user_visible,
             ..CoreConstraint::new(self.p1, self.p2, self.p3)
-        }
-    }
-
-    pub(crate) fn from_core(core: CoreConstraint) -> Self {
-        PyCollinearConstraint {
-            p1: core.p1,
-            p2: core.p2,
-            p3: core.p3,
-            user_visible: core.user_visible,
-            status: 1,
         }
     }
 }

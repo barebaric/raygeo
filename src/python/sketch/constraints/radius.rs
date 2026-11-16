@@ -1,5 +1,7 @@
 //! Bindings for the radius constraint.
 
+use std::collections::{HashMap, HashSet};
+
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
@@ -21,21 +23,15 @@ use crate::sketch::constraints::radius::RadiusConstraint as CoreConstraint;
 )]
 #[derive(Clone, PartialEq)]
 pub struct PyRadiusConstraint {
-    /// Center point of the circle/arc.
+    /// The constrained entity (circle or arc).
     #[pyo3(get)]
-    pub center: u64,
-    /// Radius-bearing point (circle radius point or arc start).
-    #[pyo3(get)]
-    pub radius_point: u64,
-    /// Resolved radius value.
+    pub entity_id: u64,
+    /// Target radius value.
     #[pyo3(get)]
     pub value: f64,
     /// Reference user-visibility flag.
     #[pyo3(get)]
     pub user_visible: bool,
-    /// Reference validation status ordinal.
-    #[pyo3(get, set)]
-    pub status: u8,
     /// Stored expression string (evaluated caller-side).
     pub expression: Option<String>,
 }
@@ -43,49 +39,58 @@ pub struct PyRadiusConstraint {
 #[gen_stub_pymethods]
 #[pymethods]
 impl PyRadiusConstraint {
-    /// Creates the constraint from its resolved points and values.
+    /// Creates the constraint for an entity.
     #[new]
-    #[pyo3(signature = (center, radius_point, value, user_visible = true))]
+    #[pyo3(signature = (entity_id, value, user_visible = true))]
     fn new(
-        center: u64,
-        radius_point: u64,
+        entity_id: u64,
         value: f64,
         user_visible: bool,
     ) -> PyClassInitializer<Self> {
         PyClassInitializer::from(PyConstraintBase).add_subclass(
             PyRadiusConstraint {
-                center,
-                radius_point,
+                entity_id,
                 value,
                 user_visible,
-                status: 1,
                 expression: None,
             },
         )
     }
 
-    /// Returns the constraint error at the registry's point
-    /// positions.
-    #[pyo3(signature = (registry, _ctx = None))]
+    /// Returns the constraint error at the registry's point positions.
+    #[pyo3(signature = (registry, _params = None))]
     fn error(
         &self,
         registry: &PyEntityRegistry,
-        _ctx: Option<Py<PyAny>>,
+        _params: Option<Py<PyAny>>,
     ) -> Vec<f64> {
         self.clone().into_constraint().error(&registry.inner)
     }
 
+    /// Partial derivatives of the error by point id.
+    fn gradient(
+        &self,
+        registry: &PyEntityRegistry,
+    ) -> HashMap<u64, Vec<(f64, f64)>> {
+        super::constraint_gradient(&self.clone().into_constraint(), registry)
+    }
+
     /// Point ids the constraint references.
-    fn referenced_points(&self) -> Vec<u64> {
-        self.clone().into_constraint().referenced_points()
+    fn referenced_points(&self, registry: &PyEntityRegistry) -> Vec<u64> {
+        self.clone()
+            .into_constraint()
+            .referenced_points(&registry.inner)
     }
 
     /// Alias for referenced_points (reference naming).
-    fn get_referenced_point_ids(&self) -> std::collections::HashSet<u64> {
-        self.referenced_points().into_iter().collect()
+    fn get_referenced_point_ids(
+        &self,
+        registry: &PyEntityRegistry,
+    ) -> HashSet<u64> {
+        self.referenced_points(registry).into_iter().collect()
     }
 
-    /// Sets the resolved dimensional value.
+    /// Sets the target radius value.
     fn set_value(&mut self, value: f64) {
         self.value = value;
     }
@@ -97,7 +102,7 @@ impl PyRadiusConstraint {
 
     /// Draws the constraint's symbol onto the cairo context.
     #[pyo3(signature = (ctx, registry, to_screen, is_selected = false,
-                        is_hovered = false, point_radius = 5.0))]
+                        is_hovered = false, point_radius = 5.0, status = 1))]
     #[allow(clippy::too_many_arguments)]
     fn draw<'py>(
         &self,
@@ -107,6 +112,7 @@ impl PyRadiusConstraint {
         is_selected: bool,
         is_hovered: bool,
         point_radius: f64,
+        status: u8,
     ) -> PyResult<()> {
         super::constraint_draw(
             &self.clone().into_constraint(),
@@ -116,7 +122,7 @@ impl PyRadiusConstraint {
             is_selected,
             is_hovered,
             point_radius,
-            self.status,
+            status,
         )
     }
 
@@ -137,42 +143,24 @@ impl PyRadiusConstraint {
         self.expression = expression;
     }
 
-    /// Whether this constraint restricts the given entity.  The
-    /// entity is matched through the registry by its defining
-    /// points, mirroring the reference's stored entity id.
-    #[pyo3(signature = (p1, p2, entity_id, registry))]
+    /// Whether this constraint restricts the given entity.
     fn targets_segment(
         &self,
-        p1: u64,
-        p2: u64,
+        _p1: u64,
+        _p2: u64,
         entity_id: Option<u64>,
-        registry: &PyEntityRegistry,
     ) -> bool {
-        let _ = (p1, p2);
-        match entity_id {
-            Some(id) => super::entity_contains_points(
-                registry,
-                id,
-                &[self.center, self.radius_point],
-            ),
-            None => false,
-        }
+        entity_id.is_some_and(|eid| eid == self.entity_id)
     }
 
     /// Whether this constraint explicitly defines the radius of the
-    /// given entity.  The entity is matched through the registry by
-    /// its defining points, mirroring the reference's stored entity
-    /// id.
+    /// given entity.
     fn constrains_radius(
         &self,
-        registry: &PyEntityRegistry,
+        _registry: &PyEntityRegistry,
         entity_id: u64,
     ) -> bool {
-        super::entity_contains_points(
-            registry,
-            entity_id,
-            &[self.center, self.radius_point],
-        )
+        self.entity_id == entity_id
     }
 
     /// Whether the constraint's rendered symbol is hit at (mx, my).
@@ -199,21 +187,11 @@ impl PyRadiusConstraint {
 
 impl PyRadiusConstraint {
     pub(crate) fn into_constraint(self) -> CoreConstraint {
-        let mut core =
-            CoreConstraint::new(self.center, self.radius_point, self.value);
-        core.user_visible = self.user_visible;
-        core.set_expression(self.expression);
-        core
-    }
-
-    pub(crate) fn from_core(core: CoreConstraint) -> Self {
-        PyRadiusConstraint {
-            center: core.center,
-            radius_point: core.radius_point,
-            value: core.value,
-            user_visible: core.user_visible,
-            status: 1,
-            expression: core.expression,
+        CoreConstraint {
+            entity_id: self.entity_id,
+            value: self.value,
+            user_visible: self.user_visible,
+            expression: self.expression,
         }
     }
 }

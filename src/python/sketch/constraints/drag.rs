@@ -62,14 +62,27 @@ impl PyDragConstraint {
         )
     }
 
+    /// Partial derivatives of the error by point id.
+    fn gradient(
+        &self,
+        registry: &PyEntityRegistry,
+    ) -> std::collections::HashMap<u64, Vec<(f64, f64)>> {
+        super::constraint_gradient(&self.clone().into_constraint(), registry)
+    }
+
     /// Point ids the constraint references.
-    fn referenced_points(&self) -> Vec<u64> {
-        self.clone().into_constraint().referenced_points()
+    fn referenced_points(&self, registry: &PyEntityRegistry) -> Vec<u64> {
+        self.clone()
+            .into_constraint()
+            .referenced_points(&registry.inner)
     }
 
     /// Alias for referenced_points (reference naming).
-    fn get_referenced_point_ids(&self) -> std::collections::HashSet<u64> {
-        self.referenced_points().into_iter().collect()
+    fn get_referenced_point_ids(
+        &self,
+        registry: &PyEntityRegistry,
+    ) -> std::collections::HashSet<u64> {
+        self.referenced_points(registry).into_iter().collect()
     }
 
     /// Sets the target coordinates and pull strength.
@@ -149,16 +162,6 @@ impl PyDragConstraint {
             self.target_y,
             self.weight,
         )
-    }
-
-    pub(crate) fn from_core(core: CoreConstraint) -> Self {
-        PyDragConstraint {
-            status: 1,
-            point: core.point,
-            target_x: core.target_x,
-            target_y: core.target_y,
-            weight: core.weight,
-        }
     }
 }
 

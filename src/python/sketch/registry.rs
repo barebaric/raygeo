@@ -9,9 +9,6 @@ use serde_json::Value;
 use super::types::EntityId;
 use crate::geo::types::Rect;
 use crate::python::geo::geometry::Geometry as PyGeometry;
-use crate::python::sketch::constraints::{
-    constraint_to_py, extract_constraint, AnyConstraint,
-};
 use crate::python::sketch::entities::{
     entity_to_py, extract_entity, point::PySketchPoint, AnyEntity,
 };
@@ -506,126 +503,6 @@ impl PyEntityRegistry {
             return;
         };
         entity.base_mut().construction = construction;
-    }
-
-    /// Adds a constraint from a reference constraint dictionary
-    /// (`.ryp` shape), resolving entity references through the
-    /// registry.  Returns the constraint handle.
-    fn add_constraint_json(
-        &mut self,
-        dict: &Bound<'_, PyDict>,
-    ) -> PyResult<u64> {
-        let value = value_from_dict(dict)?;
-        self.inner
-            .add_constraint_json(&value)
-            .map_err(PyValueError::new_err)
-    }
-
-    /// Number of stored constraints.
-    fn constraint_count(&self) -> usize {
-        self.inner.constraint_count()
-    }
-
-    /// The stored reference dictionary of a constraint.
-    fn constraint_dict<'py>(
-        &self,
-        py: Python<'py>,
-        index: u64,
-    ) -> PyResult<Bound<'py, PyDict>> {
-        let Some(value) = self.inner.constraint_dict(index) else {
-            return Err(PyValueError::new_err("constraint index out of range"));
-        };
-        let dict = PyDict::new(py);
-        if let Value::Object(map) = &value {
-            for (key, item) in map {
-                dict.set_item(key, value_to_py(py, item)?)?;
-            }
-        }
-        Ok(dict)
-    }
-
-    /// Removes a constraint by handle.
-    fn remove_constraint(&mut self, index: u64) {
-        self.inner.remove_constraint(index);
-    }
-
-    /// Residual values of all stored constraints at the current
-    /// point positions.
-    fn constraint_residuals(&self) -> Vec<f64> {
-        self.inner.constraint_residuals()
-    }
-
-    /// All stored constraints as their concrete classes.
-    fn constraints<'py>(
-        &self,
-        py: Python<'py>,
-    ) -> PyResult<Vec<AnyConstraint<'py>>> {
-        let count = self.inner.constraint_count() as u64;
-        let mut result = Vec::with_capacity(count as usize);
-        for index in 0..count {
-            if let Some(object) = self.get_constraint_object(py, index)? {
-                result.push(object);
-            }
-        }
-        Ok(result)
-    }
-
-    /// The constraint object for a handle, or None.
-    fn get_constraint_object<'py>(
-        &self,
-        py: Python<'py>,
-        index: u64,
-    ) -> PyResult<Option<AnyConstraint<'py>>> {
-        match self.inner.get_constraint(index) {
-            Some(constraint) => {
-                let object = constraint_to_py(py, constraint)?;
-                if let Some(dict) = self.inner.constraint_dict(index) {
-                    if let Some(ids) =
-                        dict.get("entity_ids").and_then(|v| v.as_array())
-                    {
-                        let ids: Vec<u64> =
-                            ids.iter().filter_map(|v| v.as_u64()).collect();
-                        let _ = object.setattr("entity_ids", ids);
-                    }
-                    if let Some(sid) =
-                        dict.get("shape_id").and_then(|v| v.as_u64())
-                    {
-                        let _ = object.setattr("shape_id", sid);
-                    }
-                    if let Some(expr) =
-                        dict.get("expression").and_then(|v| v.as_str())
-                    {
-                        let _ = object.setattr("expression", expr);
-                    }
-                    if let Some(uv) =
-                        dict.get("user_visible").and_then(|v| v.as_bool())
-                    {
-                        let _ = object.call_method1("set_user_visible", (uv,));
-                    }
-                }
-                Ok(Some(AnyConstraint(object)))
-            }
-            None => Ok(None),
-        }
-    }
-
-    /// Adds a constraint object to the registry and returns its
-    /// handle.
-    fn add_constraint(&mut self, obj: &Bound<'_, PyAny>) -> PyResult<u64> {
-        let constraint = extract_constraint(obj)?;
-        Ok(self.inner.add_constraint_object(constraint))
-    }
-
-    /// Replaces the stored constraint at the given handle.
-    fn replace_constraint(
-        &mut self,
-        index: u64,
-        obj: &Bound<'_, PyAny>,
-    ) -> PyResult<()> {
-        let constraint = extract_constraint(obj)?;
-        self.inner
-            .replace_constraint(index, constraint)
-            .map_err(PyValueError::new_err)
     }
 
     /// Whether the point is solver-constrained.
