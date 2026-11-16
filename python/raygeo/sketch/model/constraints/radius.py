@@ -12,6 +12,7 @@ from raygeo.geo.types import Point
 from raygeo.sketch.constraints.radius import (
     RadiusConstraint as _CoreRadiusConstraint,
 )
+from raygeo.sketch.entities import Arc, Circle
 from raygeo.sketch.model.text import create_text_layout
 
 from .base import Constraint, ConstraintStatus

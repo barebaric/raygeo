@@ -5,22 +5,24 @@ from collections.abc import Callable, Sequence
 from gettext import gettext as _
 from typing import TYPE_CHECKING, Any
 
+import cairo
 from raygeo.geo.types import Point
-from raygeo.sketch.constraints.point_on_curve import (
-    PointOnCurveConstraint as _CorePointOnCurveConstraint,
-)
-from raygeo.sketch.entities import Bezier
 
-from .base import Constraint
+from ..entities import Bezier, TextBoxEntity
+from ..types import EntityID
+from .base import Constraint, ConstraintStatus
 
 if TYPE_CHECKING:
-    from raygeo.sketch.model.protocols import (
-        ParameterContext,
-        Sketch,
-        SketchSelection,
-    )
-    from raygeo.sketch.registry import EntityRegistry
-    from raygeo.sketch.types import EntityID
+    from ..entities import Entity
+    from ..params import ParameterContext
+    from ..registry import EntityRegistry
+    from ..selection import SketchSelection
+    from ..sketch import Sketch
+
+CurveCoeffs = tuple[
+    tuple[float, float, float, float],
+    tuple[float, float, float, float],
+]
 
 _CURVE_SAMPLES = 24
 _NEWTON_ITERATIONS = 12
@@ -104,26 +106,20 @@ def closest_point_on_bezier(
     return t, bx, by
 
 
-if TYPE_CHECKING:
-    from raygeo.sketch.entities import Entity
-    from raygeo.sketch.model.protocols import (
-        ParameterContext,
-        Sketch,
-        SketchSelection,
-    )
-    from raygeo.sketch.registry import EntityRegistry
-    from raygeo.sketch.types import EntityID
-
-_CURVE_SAMPLES = 24
-_NEWTON_ITERATIONS = 12
-_MIN_DISTANCE = 1e-9
+def _get_curve_coeffs(bez: Bezier, reg: EntityRegistry) -> CurveCoeffs:
+    start = reg.get_point(bez.start_idx)
+    end = reg.get_point(bez.end_idx)
+    cp1x, cp1y, cp2x, cp2y = bez.get_control_points_or_endpoints(reg)
+    xs = (start.x, cp1x, cp2x, end.x)
+    ys = (start.y, cp1y, cp2y, end.y)
+    return xs, ys
 
 
 class PointOnCurveConstraint(_CorePointOnCurveConstraint, Constraint):
-    """Enforces a point lies on a Bezier curve."""
-
     def __new__(cls, point_id, shape_id, user_visible=True):
         return super().__new__(cls, point_id, shape_id, user_visible)
+
+    """Enforces a point lies on a Bezier curve."""
 
     def __init__(
         self, point_id: EntityID, shape_id: EntityID, user_visible: bool = True
@@ -169,6 +165,9 @@ class PointOnCurveConstraint(_CorePointOnCurveConstraint, Constraint):
             return _("Point at {}").format(self._format_coord(pt.x, pt.y))
         return ""
 
+    def to_dict(self) -> dict[str, Any]:
+        return super().to_dict()
+
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> PointOnCurveConstraint:
         return cls(
@@ -180,6 +179,14 @@ class PointOnCurveConstraint(_CorePointOnCurveConstraint, Constraint):
     def _get_bezier(self, reg: EntityRegistry) -> Bezier | None:
         bez = reg.get_entity(self.shape_id)
         return bez if isinstance(bez, Bezier) else None
+
+    def error(self, reg: EntityRegistry, params: ParameterContext) -> float:
+        return super().error(reg)[0]
+
+    def gradient(
+        self, reg: EntityRegistry, params: ParameterContext
+    ) -> dict[EntityID, list[Point]]:
+        return super().gradient(reg)
 
     def is_hit(
         self,
@@ -196,36 +203,49 @@ class PointOnCurveConstraint(_CorePointOnCurveConstraint, Constraint):
             return math.hypot(sx - s_pt[0], sy - s_pt[1]) < threshold
         return False
 
-    def get_draggable_point(self) -> EntityID:
-        """Returns the point that lies on the curve."""
-        return self.point_id
-
-    def error(self, reg: EntityRegistry, params: ParameterContext) -> float:
-        return super().error(reg)[0]
-
-    def gradient(
-        self, reg: EntityRegistry, params: ParameterContext
-    ) -> dict[EntityID, list[Point]]:
-        return super().gradient(reg)
-
-    def to_dict(self) -> dict[str, Any]:
-        return super().to_dict()
-
     def draw(
         self,
-        ctx: Any,
+        ctx: cairo.Context,
         registry: EntityRegistry,
         to_screen: Callable[[Point], Point],
         is_selected: bool = False,
         is_hovered: bool = False,
         point_radius: float = 5.0,
     ) -> None:
-        return super().draw(
-            ctx,
-            registry,
-            to_screen,
-            is_selected,
-            is_hovered,
-            point_radius,
-            status=int(self.status),
-        )
+        # Hide constraint if its point is part of a text box
+        text_box_point_ids = set()
+        for entity in registry.entities:
+            if isinstance(entity, TextBoxEntity):
+                text_box_point_ids.update(
+                    entity.get_all_frame_point_ids(registry)
+                )
+        if self.point_id in text_box_point_ids:
+            return
+
+        try:
+            p = registry.get_point(self.point_id)
+        except IndexError:
+            return
+
+        sx, sy = to_screen((p.x, p.y))
+
+        ctx.save()
+        ctx.set_line_width(1.5)
+
+        radius = point_radius + 4
+        ctx.new_sub_path()
+        ctx.arc(sx, sy, radius, 0, 2 * math.pi)
+
+        if is_selected:
+            self._draw_selection_underlay(ctx)
+
+        if self.status == ConstraintStatus.CONFLICTING:
+            self._draw_conflict_underlay(ctx)
+
+        self._set_color(ctx, is_hovered)
+        ctx.stroke()
+        ctx.restore()
+
+    def get_draggable_point(self) -> EntityID:
+        """Returns the point that lies on the curve."""
+        return self.point_id

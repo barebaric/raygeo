@@ -5,34 +5,64 @@ from collections.abc import Callable, Sequence
 from gettext import gettext as _
 from typing import TYPE_CHECKING, Any
 
+import cairo
 from raygeo.geo.types import Point
-from raygeo.sketch.constraints.symmetry import (
-    SymmetryConstraint as _CoreSymmetryConstraint,
-)
-from raygeo.sketch.entities import Line
 
-from .base import Constraint
+from ..entities import Line
+from ..types import EntityID
+from .base import Constraint, ConstraintStatus
+
+
+def draw_symmetry_arrows(
+    ctx: cairo.Context,
+    s1: Point,
+    s2: Point,
+) -> None:
+    mx = (s1[0] + s2[0]) / 2.0
+    my = (s1[1] + s2[1]) / 2.0
+    angle = math.atan2(s2[1] - s1[1], s2[0] - s1[0])
+    offset = 12.0
+
+    lx = mx - offset * math.cos(angle)
+    ly = my - offset * math.sin(angle)
+
+    ctx.save()
+    ctx.translate(lx, ly)
+    ctx.rotate(angle)
+    ctx.move_to(-3, -4)
+    ctx.line_to(3, 0)
+    ctx.line_to(-3, 4)
+    ctx.restore()
+
+    rx = mx + offset * math.cos(angle)
+    ry = my + offset * math.sin(angle)
+
+    ctx.save()
+    ctx.translate(rx, ry)
+    ctx.rotate(angle)
+    ctx.move_to(3, -4)
+    ctx.line_to(-3, 0)
+    ctx.line_to(3, 4)
+    ctx.restore()
+
 
 if TYPE_CHECKING:
-    from raygeo.sketch.entities import Entity
-    from raygeo.sketch.model.protocols import (
-        ParameterContext,
-        Sketch,
-        SketchSelection,
-    )
-    from raygeo.sketch.registry import EntityRegistry
-    from raygeo.sketch.types import EntityID
+    from ..entities import Entity
+    from ..params import ParameterContext
+    from ..registry import EntityRegistry
+    from ..selection import SketchSelection
+    from ..sketch import Sketch
 
 
 class SymmetryConstraint(_CoreSymmetryConstraint, Constraint):
+    def __new__(cls, p1, p2, center=None, axis=None, user_visible=True):
+        return super().__new__(cls, p1, p2, center, axis, user_visible)
+
     """
     Enforces symmetry between two points (p1, p2) with respect to:
     1. A Center Point (Point Symmetry)
     2. An Axis Line (Line Symmetry)
     """
-
-    def __new__(cls, p1, p2, center=None, axis=None, user_visible=True):
-        return super().__new__(cls, p1, p2, center, axis, user_visible)
 
     def __init__(
         self,
@@ -89,6 +119,9 @@ class SymmetryConstraint(_CoreSymmetryConstraint, Constraint):
             )
         return ""
 
+    def to_dict(self) -> dict[str, Any]:
+        return super().to_dict()
+
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> SymmetryConstraint:
         return cls(
@@ -98,6 +131,16 @@ class SymmetryConstraint(_CoreSymmetryConstraint, Constraint):
             axis=data.get("axis"),
             user_visible=data.get("user_visible", True),
         )
+
+    def error(
+        self, reg: EntityRegistry, params: ParameterContext
+    ) -> list[float]:
+        return super().error(reg)
+
+    def gradient(
+        self, reg: EntityRegistry, params: ParameterContext
+    ) -> dict[EntityID, list[Point]]:
+        return super().gradient(reg)
 
     def is_hit(
         self,
@@ -126,34 +169,36 @@ class SymmetryConstraint(_CoreSymmetryConstraint, Constraint):
             return True
         return math.hypot(sx - rx, sy - ry) < threshold
 
-    def error(
-        self, reg: EntityRegistry, params: ParameterContext
-    ) -> list[float]:
-        return super().error(reg)
-
-    def gradient(
-        self, reg: EntityRegistry, params: ParameterContext
-    ) -> dict[EntityID, list[Point]]:
-        return super().gradient(reg)
-
-    def to_dict(self) -> dict[str, Any]:
-        return super().to_dict()
-
     def draw(
         self,
-        ctx: Any,
+        ctx: cairo.Context,
         registry: EntityRegistry,
         to_screen: Callable[[Point], Point],
         is_selected: bool = False,
         is_hovered: bool = False,
         point_radius: float = 5.0,
     ) -> None:
-        return super().draw(
-            ctx,
-            registry,
-            to_screen,
-            is_selected,
-            is_hovered,
-            point_radius,
-            status=int(self.status),
-        )
+        try:
+            p1 = registry.get_point(self.p1)
+            p2 = registry.get_point(self.p2)
+        except IndexError:
+            return
+
+        s1 = to_screen((p1.x, p1.y))
+        s2 = to_screen((p2.x, p2.y))
+
+        ctx.save()
+        ctx.set_line_width(1.5)
+        ctx.new_sub_path()
+
+        draw_symmetry_arrows(ctx, s1, s2)
+
+        if is_selected:
+            self._draw_selection_underlay(ctx)
+
+        if self.status == ConstraintStatus.CONFLICTING:
+            self._draw_conflict_underlay(ctx)
+
+        self._set_color(ctx, is_hovered)
+        ctx.stroke()
+        ctx.restore()

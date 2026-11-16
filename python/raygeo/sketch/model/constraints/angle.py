@@ -5,12 +5,16 @@ from collections.abc import Callable, Sequence
 from gettext import gettext as _
 from typing import TYPE_CHECKING, Any
 
+import cairo
+from gi.repository import PangoCairo
+
 from raygeo.geo.shape.arc import normalize_angle
 from raygeo.geo.shape.line import get_line_line_intersection
 from raygeo.geo.types import Point
 from raygeo.sketch.constraints.angle import (
     AngleConstraint as _CoreAngleConstraint,
 )
+from raygeo.sketch.entities import Line
 
 from .base import Constraint
 
@@ -285,6 +289,82 @@ class AngleConstraint(_CoreAngleConstraint, Constraint):
 
         return click_from_anchor <= ccw_diff
 
+    def draw(
+        self,
+        ctx: cairo.Context,
+        registry: EntityRegistry,
+        to_screen: Callable[[Point], Point],
+        is_selected: bool = False,
+        is_hovered: bool = False,
+        point_radius: float = 5.0,
+    ) -> None:
+        visuals = self.get_visuals(registry, to_screen)
+        if visuals is None:
+            return
+
+        sx, sy, anchor_ang, other_ang = visuals
+
+        ctx.save()
+        ctx.set_line_width(1.5)
+
+        ctx.new_sub_path()
+        ctx.arc(sx, sy, ARC_RADIUS, anchor_ang, other_ang)
+
+        if is_selected:
+            self._draw_selection_underlay(ctx)
+
+        if self.status == ConstraintStatus.CONFLICTING:
+            self._draw_conflict_underlay(ctx)
+
+        self._set_color(ctx, is_hovered)
+        ctx.stroke()
+
+        label = self._format_value() + "°"
+        layout = create_text_layout(ctx, label)
+        ext, _ = layout.get_pixel_extents()
+
+        ccw_diff = normalize_angle(other_ang - anchor_ang)
+
+        mid = anchor_ang + ccw_diff / 2
+        label_x = sx + math.cos(mid) * LABEL_RADIUS
+        label_y = sy + math.sin(mid) * LABEL_RADIUS
+
+        if is_selected:
+            ctx.set_source_rgba(0.2, 0.6, 1.0, 0.4)
+        elif is_hovered:
+            ctx.set_source_rgba(1.0, 0.95, 0.85, 0.9)
+        elif self.status == ConstraintStatus.CONFLICTING:
+            ctx.set_source_rgba(1.0, 0.6, 0.6, 0.9)
+        elif self.status == ConstraintStatus.ERROR:
+            ctx.set_source_rgba(1.0, 0.8, 0.8, 0.9)
+        elif self.status == ConstraintStatus.EXPRESSION_BASED:
+            ctx.set_source_rgba(1.0, 0.9, 0.7, 0.9)
+        else:
+            ctx.set_source_rgba(1, 1, 1, 0.8)
+
+        bg_x = label_x - ext.width / 2 - 4
+        bg_y = label_y - ext.height / 2 - 4
+        ctx.rectangle(bg_x, bg_y, ext.width + 8, ext.height + 8)
+        ctx.fill()
+        ctx.new_path()
+
+        if self.status in (
+            ConstraintStatus.ERROR,
+            ConstraintStatus.CONFLICTING,
+        ):
+            ctx.set_source_rgb(0.8, 0.0, 0.0)
+        else:
+            ctx.set_source_rgb(0, 0, 0.5)
+
+        ctx.move_to(
+            label_x - ext.width / 2 - ext.x,
+            label_y - ext.height / 2 - ext.y,
+        )
+        PangoCairo.show_layout(ctx, layout)
+        ctx.new_path()
+
+        ctx.restore()
+
     def error(self, reg: EntityRegistry, params: ParameterContext) -> float:
         return super().error(reg)[0]
 
@@ -295,22 +375,3 @@ class AngleConstraint(_CoreAngleConstraint, Constraint):
 
     def to_dict(self) -> dict[str, Any]:
         return super().to_dict()
-
-    def draw(
-        self,
-        ctx: Any,
-        registry: EntityRegistry,
-        to_screen: Callable[[Point], Point],
-        is_selected: bool = False,
-        is_hovered: bool = False,
-        point_radius: float = 5.0,
-    ) -> None:
-        return super().draw(
-            ctx,
-            registry,
-            to_screen,
-            is_selected,
-            is_hovered,
-            point_radius,
-            status=int(self.status),
-        )

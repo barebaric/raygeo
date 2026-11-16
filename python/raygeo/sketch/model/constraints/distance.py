@@ -12,6 +12,7 @@ from raygeo.geo.types import Point
 from raygeo.sketch.constraints.distance import (
     DistanceConstraint as _CoreDistanceConstraint,
 )
+from raygeo.sketch.entities import Line
 from raygeo.sketch.model.text import create_text_layout
 
 from .base import Constraint, ConstraintStatus

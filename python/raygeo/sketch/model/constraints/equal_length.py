@@ -12,6 +12,7 @@ from raygeo.geo.types import Point
 from raygeo.sketch.constraints.equal_length import (
     EqualLengthConstraint as _CoreEqualLengthConstraint,
 )
+from raygeo.sketch.entities import Arc, Circle, Ellipse, Line
 from raygeo.sketch.model.text import create_text_layout
 
 from .base import Constraint, ConstraintStatus

@@ -5,6 +5,9 @@ from collections.abc import Callable, Sequence
 from gettext import gettext as _
 from typing import TYPE_CHECKING, Any
 
+import cairo
+from gi.repository import PangoCairo
+
 from raygeo.geo.shape.circle import get_circle_circle_intersections
 from raygeo.geo.shape.line import (
     get_line_line_intersection,
@@ -16,7 +19,9 @@ from raygeo.sketch.constraints.perpendicular import (
 )
 from raygeo.sketch.entities import Arc, Circle, Line
 
-from .base import Constraint
+from raygeo.sketch.model.text import create_text_layout
+
+from .base import Constraint, ConstraintStatus
 
 if TYPE_CHECKING:
     from raygeo.sketch.entities import Entity
@@ -307,6 +312,70 @@ class PerpendicularConstraint(_CorePerpendicularConstraint, Constraint):
             # The marker is a square box at the intersection/anchor.
             return math.hypot(sx - cx, sy - cy) < threshold
 
+    def draw(
+        self,
+        ctx: cairo.Context,
+        registry: EntityRegistry,
+        to_screen: Callable[[Point], Point],
+        is_selected: bool = False,
+        is_hovered: bool = False,
+        point_radius: float = 5.0,
+    ) -> None:
+        data = self.get_visuals(registry, to_screen)
+        if not data:
+            return
+
+        sx, sy, ang1, ang2 = data
+
+        ctx.save()
+        ctx.set_line_width(1.5)
+
+        if ang1 is not None and ang2 is not None:
+            radius = 16.0
+            diff = ang2 - ang1
+            while diff <= -math.pi:
+                diff += 2 * math.pi
+            while diff > math.pi:
+                diff -= 2 * math.pi
+
+            ctx.new_sub_path()
+            if diff > 0:
+                ctx.arc(sx, sy, radius, ang1, ang2)
+            else:
+                ctx.arc_negative(sx, sy, radius, ang1, ang2)
+
+            if is_selected:
+                self._draw_selection_underlay(ctx)
+
+            if self.status == ConstraintStatus.CONFLICTING:
+                self._draw_conflict_underlay(ctx)
+
+            self._set_color(ctx, is_hovered)
+            ctx.stroke()
+
+            # Dot
+            mid = ang1 + diff / 2
+            dx = sx + math.cos(mid) * radius * 0.6
+            dy = sy + math.sin(mid) * radius * 0.6
+            ctx.new_sub_path()
+            ctx.arc(dx, dy, 2.0, 0, 2 * math.pi)
+            ctx.fill()
+        else:
+            sz = 8.0
+            ctx.new_sub_path()
+            ctx.rectangle(sx - sz, sy - sz, sz * 2, sz * 2)
+
+            if is_selected:
+                self._draw_selection_underlay(ctx)
+
+            if self.status == ConstraintStatus.CONFLICTING:
+                self._draw_conflict_underlay(ctx)
+
+            self._set_color(ctx, is_hovered)
+            ctx.stroke()
+
+        ctx.restore()
+
     def error(self, reg: EntityRegistry, params: ParameterContext) -> float:
         return super().error(reg)[0]
 
@@ -317,22 +386,3 @@ class PerpendicularConstraint(_CorePerpendicularConstraint, Constraint):
 
     def to_dict(self) -> dict[str, Any]:
         return super().to_dict()
-
-    def draw(
-        self,
-        ctx: Any,
-        registry: EntityRegistry,
-        to_screen: Callable[[Point], Point],
-        is_selected: bool = False,
-        is_hovered: bool = False,
-        point_radius: float = 5.0,
-    ) -> None:
-        return super().draw(
-            ctx,
-            registry,
-            to_screen,
-            is_selected,
-            is_hovered,
-            point_radius,
-            status=int(self.status),
-        )
