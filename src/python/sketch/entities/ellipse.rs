@@ -458,6 +458,37 @@ impl PyEllipse {
     fn get_midpoint(&self, registry: PointCtx<'_>) -> Option<(f64, f64)> {
         registry.point_position(self.inner.radius_x_point)
     }
+
+    /// Updates the constrained flag from defining-point status and
+    /// constraints that dimension this entity's radius or length.
+    fn update_constrained_status(
+        &mut self,
+        registry: PointCtx<'_>,
+        constraints: &Bound<'_, PyAny>,
+    ) -> PyResult<()> {
+        let constrained = self.inner.compute_constrained(&registry, &|eid: u64| {
+            Python::attach(|py| {
+                let registry = registry.0.clone();
+                let mut constrained = false;
+                if let Ok(iter) = constraints.try_iter() {
+                    for constraint in iter.flatten() {
+                        if let Ok(flag) = constraint
+                            .call_method1("constrains_radius", (&registry, eid))
+                            .and_then(|v| v.extract::<bool>())
+                        {
+                            if flag {
+                                constrained = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+                constrained
+            })
+        });
+        self.inner.base_mut().constrained = constrained;
+        Ok(())
+    }
 }
 
 /// Registers the ellipse class with the given module.

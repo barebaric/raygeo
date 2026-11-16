@@ -69,4 +69,5 @@ class DragConstraint(_CoreDragConstraint, Constraint):
         return super().gradient(reg)
 
     def to_dict(self) -> dict[str, Any]:
-        return super().to_dict()
+        # The reference drag constraint is not serializable.
+        return {}

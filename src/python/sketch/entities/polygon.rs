@@ -12,6 +12,7 @@ use super::PyEntityBase;
 use crate::python::geo::geometry::Geometry as PyGeometry;
 use crate::python::sketch::constraints::dict_from_value;
 use crate::python::sketch::context::PointCtx;
+use crate::sketch::constraint::PointContext;
 use crate::sketch::entities::mirror::{MirrorAxis, MirrorDirection};
 use crate::sketch::entities::polygon::PolygonEntity as CorePolygon;
 use crate::sketch::entities::Entity;
@@ -516,6 +517,37 @@ impl PyPolygon {
     fn set_state(&mut self, state: &Bound<'_, PyDict>) -> PyResult<()> {
         let value = value_from_dict(state)?;
         self.inner.set_state(&value);
+        Ok(())
+    }
+
+    /// Updates the constrained flag from defining-point status and
+    /// constraints that dimension this entity's radius or length.
+    fn update_constrained_status(
+        &mut self,
+        registry: PointCtx<'_>,
+        constraints: &Bound<'_, PyAny>,
+    ) -> PyResult<()> {
+        let constrained = self.inner.compute_constrained(&registry, &|eid: u64| {
+            Python::attach(|py| {
+                let registry = registry.0.clone();
+                let mut constrained = false;
+                if let Ok(iter) = constraints.try_iter() {
+                    for constraint in iter.flatten() {
+                        if let Ok(flag) = constraint
+                            .call_method1("constrains_radius", (&registry, eid))
+                            .and_then(|v| v.extract::<bool>())
+                        {
+                            if flag {
+                                constrained = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+                constrained
+            })
+        });
+        self.inner.base_mut().constrained = constrained;
         Ok(())
     }
 }
