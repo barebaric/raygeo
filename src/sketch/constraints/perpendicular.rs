@@ -58,26 +58,29 @@ fn resolve_target(
             b2: ids2[1],
         });
     }
-    let (line_ids, shape_ids) = if t1 == "line" {
-        (ids1.clone(), ids2.clone())
-    } else {
-        (ids2.clone(), ids1.clone())
-    };
-    let shape_type = if t1 == "line" { t2 } else { t1 };
-    match shape_type {
-        "circle" | "arc" => {
-            let (center, _radius_pt) = if shape_type == "circle" {
-                (shape_ids[0], shape_ids[1])
-            } else {
-                (shape_ids[2], shape_ids[0])
-            };
-            return Some(PerpendicularTarget::LineCenter {
-                l1: line_ids[0],
-                l2: line_ids[1],
-                center,
-            });
+    if t1 == "line" || t2 == "line" {
+        let (line_ids, shape_ids) = if t1 == "line" {
+            (ids1.clone(), ids2.clone())
+        } else {
+            (ids2.clone(), ids1.clone())
+        };
+        let shape_type = if t1 == "line" { t2 } else { t1 };
+        match shape_type {
+            "circle" | "arc" => {
+                let (center, _radius_pt) = if shape_type == "circle" {
+                    (shape_ids[0], shape_ids[1])
+                } else {
+                    (shape_ids[2], shape_ids[0])
+                };
+                return Some(PerpendicularTarget::LineCenter {
+                    l1: line_ids[0],
+                    l2: line_ids[1],
+                    center,
+                });
+            }
+            _ => {}
         }
-        _ => {}
+        return None;
     }
     let (c1, r1, c2, r2) = radius_points(t1, &ids1, t2, &ids2)?;
     Some(PerpendicularTarget::Circles {
@@ -107,28 +110,31 @@ fn resolve_target_of_context(
             b2: ids2[1],
         });
     }
-    let (line_ids, shape_ids) = if t1 == "line" {
-        (ids1.clone(), ids2.clone())
-    } else {
-        (ids2.clone(), ids1.clone())
-    };
-    let shape_type = if t1 == "line" { t2.clone() } else { t1.clone() };
-    match shape_type.as_str() {
-        "circle" => {
-            return Some(PerpendicularTarget::LineCenter {
-                l1: line_ids[0],
-                l2: line_ids[1],
-                center: shape_ids[0],
-            });
+    if t1 == "line" || t2 == "line" {
+        let (line_ids, shape_ids) = if t1 == "line" {
+            (ids1.clone(), ids2.clone())
+        } else {
+            (ids2.clone(), ids1.clone())
+        };
+        let shape_type = if t1 == "line" { t2.clone() } else { t1.clone() };
+        match shape_type.as_str() {
+            "circle" => {
+                return Some(PerpendicularTarget::LineCenter {
+                    l1: line_ids[0],
+                    l2: line_ids[1],
+                    center: shape_ids[0],
+                });
+            }
+            "arc" => {
+                return Some(PerpendicularTarget::LineCenter {
+                    l1: line_ids[0],
+                    l2: line_ids[1],
+                    center: shape_ids[2],
+                });
+            }
+            _ => {}
         }
-        "arc" => {
-            return Some(PerpendicularTarget::LineCenter {
-                l1: line_ids[0],
-                l2: line_ids[1],
-                center: shape_ids[2],
-            });
-        }
-        _ => {}
+        return None;
     }
     let (c1, r1, c2, r2) = radius_points(&t1, &ids1, &t2, &ids2)?;
     Some(PerpendicularTarget::Circles {
