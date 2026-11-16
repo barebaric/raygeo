@@ -547,13 +547,15 @@ impl PyEllipse {
         let inner = CoreEllipse::from_json(&value).ok_or_else(|| {
             PyValueError::new_err("invalid ellipse dict")
         })?;
+        let helper_line_ids = inner.helper_line_ids.clone();
         Py::new(
             py,
             PyClassInitializer::from(PyEntityBase).add_subclass(
                 PyEllipse {
                     inner,
+                    helper_line_ids,
                     registry: None,
-            }),
+                }),
         )
     }
 }
