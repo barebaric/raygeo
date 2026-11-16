@@ -2,6 +2,9 @@
 
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
+
+use crate::python::sketch::context::PointCtx;
+use crate::sketch::constraint::PointContext;
 use pyo3::types::PyTuple;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
@@ -301,6 +304,98 @@ impl PySketchPoint {
             "SketchPoint(id={}, x={}, y={}, fixed={})",
             self.inner.id, self.inner.x, self.inner.y, self.inner.fixed
         )
+    }
+
+    /// Whether the waypoint role is sharp.
+    fn is_sharp(&self) -> bool {
+        self.current().waypoint_type
+            == crate::sketch::entities::point::WaypointType::Sharp
+    }
+
+    /// Whether the waypoint role is smooth.
+    fn is_smooth(&self) -> bool {
+        self.current().waypoint_type
+            == crate::sketch::entities::point::WaypointType::Smooth
+    }
+
+    /// Whether the waypoint role is symmetric.
+    fn is_symmetric(&self) -> bool {
+        self.current().waypoint_type
+            == crate::sketch::entities::point::WaypointType::Symmetric
+    }
+
+    /// Whether the point lies inside the given rect.
+    fn is_in_rect(&self, rect: (f64, f64, f64, f64)) -> bool {
+        let point = self.current();
+        crate::geo::shape::line::is_point_inside_rect(
+            crate::geo::types::Point::new(point.x, point.y),
+            crate::geo::types::Rect {
+                min: crate::geo::types::Point::new(rect.0, rect.1),
+                max: crate::geo::types::Point::new(rect.2, rect.3),
+            },
+        )
+    }
+
+    /// The bezier entities connected to this point.
+    #[pyo3(signature = (registry, sketch = None))]
+    fn get_connected_beziers<'py>(
+        &self,
+        py: Python<'py>,
+        registry: PointCtx<'py>,
+        sketch: Option<&Bound<'py, PyAny>>,
+    ) -> PyResult<Vec<Bound<'py, PyAny>>> {
+        let mut point_ids = vec![self.inner.id];
+        if let Some(sketch) = sketch {
+            if let Ok(ids) =
+                sketch.call_method1("get_coincident_points", (self.inner.id,))
+                    .and_then(|v| v.extract::<Vec<u64>>())
+            {
+                point_ids.extend(ids);
+            }
+        }
+        let mut connected = Vec::new();
+        for eid in registry.entity_ids() {
+            let Some(entity) = registry.get_entity(eid) else {
+                continue;
+            };
+            if entity.type_name() != "bezier" {
+                continue;
+            }
+            let ids = entity.get_point_ids();
+            if ids.iter().any(|pid| point_ids.contains(pid)) {
+                connected.push((eid, entity));
+            }
+        }
+        connected
+            .into_iter()
+            .map(|(eid, entity)| {
+                super::entity_to_py(py, entity.as_ref(), &registry.0)
+            })
+            .collect()
+    }
+
+    /// The two bezier entities joined at this point, if any.
+    #[pyo3(signature = (registry, sketch = None))]
+    fn get_paired_beziers<'py>(
+        &self,
+        py: Python<'py>,
+        registry: PointCtx<'py>,
+        sketch: Option<&Bound<'py, PyAny>>,
+    ) -> PyResult<Py<PyAny>> {
+        let connected = self.get_connected_beziers(py, registry, sketch)?;
+        let pair: Vec<Bound<'_, PyAny>> = match connected.len() {
+            0 => vec![
+                py.None().into_bound(py),
+                py.None().into_bound(py),
+            ],
+            1 => vec![
+                connected[0].clone(),
+                py.None().into_bound(py),
+            ],
+            _ => vec![connected[0].clone(), connected[1].clone()],
+        };
+        let list = pyo3::types::PyTuple::new(py, pair)?;
+        Ok(list.into_any().unbind())
     }
 }
 

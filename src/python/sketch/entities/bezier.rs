@@ -540,6 +540,99 @@ impl PyBezier {
             }),
         )
     }
+
+    /// First control point as a ``(dx, dy)`` offset from the start
+    /// point, or ``None``.
+    #[getter]
+    fn cp1(&self) -> Option<(f64, f64)> {
+        self.inner.cp1.map(|cp| (cp[0], cp[1]))
+    }
+
+    #[setter]
+    fn set_cp1(&mut self, value: Option<(f64, f64)>) {
+        self.inner.cp1 = value.map(|cp| [cp.0, cp.1]);
+    }
+
+    /// Second control point as a ``(dx, dy)`` offset from the end
+    /// point, or ``None``.
+    #[getter]
+    fn cp2(&self) -> Option<(f64, f64)> {
+        self.inner.cp2.map(|cp| (cp[0], cp[1]))
+    }
+
+    #[setter]
+    fn set_cp2(&mut self, value: Option<(f64, f64)>) {
+        self.inner.cp2 = value.map(|cp| [cp.0, cp.1]);
+    }
+
+    /// Absolute control point coordinates, ``None`` per absent
+    /// control point.
+    fn get_control_points(
+        &self,
+        registry: PointCtx<'_>,
+    ) -> (Option<f64>, Option<f64>, Option<f64>, Option<f64>) {
+        self.get_control_points_impl(&registry)
+    }
+
+
+    /// Absolute control point coordinates, falling back to the
+    /// owning endpoint per absent control point.
+    /// Absolute control point coordinates, falling back to the
+    /// owning endpoint per absent control point.
+    fn get_control_points_or_endpoints(
+        &self,
+        registry: PointCtx<'_>,
+    ) -> (f64, f64, f64, f64) {
+        self.get_control_points_or_endpoints_impl(&registry)
+    }
+
+}
+
+
+impl PyBezier {
+    fn get_control_points_impl(
+        &self,
+        registry: &PointCtx<'_>,
+    ) -> (Option<f64>, Option<f64>, Option<f64>, Option<f64>) {
+        let start = registry.point_position(self.inner.start);
+        let cp1 = self
+            .inner
+            .cp1
+            .zip(start)
+            .map(|(cp, (sx, sy))| (Some(sx + cp[0]), Some(sy + cp[1])));
+        let end = registry.point_position(self.inner.end);
+        let cp2 = self
+            .inner
+            .cp2
+            .zip(end)
+            .map(|(cp, (ex, ey))| (Some(ex + cp[0]), Some(ey + cp[1])));
+        match (cp1, cp2) {
+            (Some((x, y)), Some((x2, y2))) => (x, y, x2, y2),
+            (Some((x, y)), None) => (x, y, None, None),
+            (None, Some((x, y))) => (None, None, x, y),
+            (None, None) => (None, None, None, None),
+        }
+    }
+
+    fn get_control_points_or_endpoints_impl(
+        &self,
+        registry: &PointCtx<'_>,
+    ) -> (f64, f64, f64, f64) {
+        let (cp1_x, cp1_y, cp2_x, cp2_y) =
+            self.get_control_points_impl(registry);
+        let start = registry
+            .point_position(self.inner.start)
+            .unwrap_or((0.0, 0.0));
+        let end = registry
+            .point_position(self.inner.end)
+            .unwrap_or((0.0, 0.0));
+        (
+            cp1_x.unwrap_or(start.0),
+            cp1_y.unwrap_or(start.1),
+            cp2_x.unwrap_or(end.0),
+            cp2_y.unwrap_or(end.1),
+        )
+    }
 }
 
 /// Registers the bezier class with the given module.
