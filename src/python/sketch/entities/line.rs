@@ -28,12 +28,17 @@ pub struct PyLine {
 #[gen_stub_pymethods]
 #[pymethods]
 impl PyLine {
-    /// Creates an unattached line; an id is assigned on insertion.
+    /// Creates a line with the given id and endpoint point ids.
     #[new]
-    #[pyo3(signature = (p1, p2, construction = false))]
-    fn new(p1: u64, p2: u64, construction: bool) -> PyClassInitializer<Self> {
+    #[pyo3(signature = (id, p1_idx, p2_idx, construction = false))]
+    fn new(
+        id: u64,
+        p1_idx: u64,
+        p2_idx: u64,
+        construction: bool,
+    ) -> PyClassInitializer<Self> {
         PyClassInitializer::from(PyEntityBase).add_subclass(PyLine {
-            inner: CoreLine::new(0, p1, p2, construction),
+            inner: CoreLine::new(id, p1_idx, p2_idx, construction),
             registry: None,
         })
     }
@@ -55,10 +60,20 @@ impl PyLine {
         self.inner.p1
     }
 
+    #[setter]
+    fn set_p1_idx(&mut self, value: u64) {
+        self.inner.p1 = value;
+    }
+
     /// Second endpoint point id.
     #[getter]
     fn p2_idx(&self) -> u64 {
         self.inner.p2
+    }
+
+    #[setter]
+    fn set_p2_idx(&mut self, value: u64) {
+        self.inner.p2 = value;
     }
 
     /// Whether the entity is construction geometry.

@@ -29,13 +29,14 @@ pub struct PyPolygon {
 #[gen_stub_pymethods]
 #[pymethods]
 impl PyPolygon {
-    /// Creates an unattached polygon; an id is assigned on
-    /// insertion.
+    /// Creates a polygon with the given id and defining point ids.
     #[new]
-    #[pyo3(signature = (center, handle, vertices, closed = false, construction = false, rings = None))]
+    #[pyo3(signature = (id, center_idx, handle_idx, vertices, closed = false,
+                        construction = false, rings = None))]
     fn new(
-        center: u64,
-        handle: u64,
+        id: u64,
+        center_idx: u64,
+        handle_idx: u64,
         vertices: Vec<(f64, f64)>,
         closed: bool,
         construction: bool,
@@ -43,9 +44,9 @@ impl PyPolygon {
     ) -> PyClassInitializer<Self> {
         PyClassInitializer::from(PyEntityBase).add_subclass(PyPolygon {
             inner: CorePolygon::new(
-                0,
-                center,
-                handle,
+                id,
+                center_idx,
+                handle_idx,
                 vertices,
                 closed,
                 construction,

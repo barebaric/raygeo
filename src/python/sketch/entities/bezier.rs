@@ -28,22 +28,23 @@ pub struct PyBezier {
 #[gen_stub_pymethods]
 #[pymethods]
 impl PyBezier {
-    /// Creates an unattached bezier; an id is assigned on
-    /// insertion.
+    /// Creates a bezier with the given id and defining point ids.
     #[new]
-    #[pyo3(signature = (start, end, construction = false, cp1 = None, cp2 = None))]
+    #[pyo3(signature = (id, start_idx, end_idx, construction = false,
+                        cp1 = None, cp2 = None))]
     fn new(
-        start: u64,
-        end: u64,
+        id: u64,
+        start_idx: u64,
+        end_idx: u64,
         construction: bool,
         cp1: Option<(f64, f64)>,
         cp2: Option<(f64, f64)>,
     ) -> PyClassInitializer<Self> {
         PyClassInitializer::from(PyEntityBase).add_subclass(PyBezier {
             inner: CoreBezier::new(
-                0,
-                start,
-                end,
+                id,
+                start_idx,
+                end_idx,
                 construction,
                 cp1.map(|p| [p.0, p.1]),
                 cp2.map(|p| [p.0, p.1]),
@@ -69,10 +70,20 @@ impl PyBezier {
         self.inner.start
     }
 
+    #[setter]
+    fn set_start_idx(&mut self, value: u64) {
+        self.inner.start = value;
+    }
+
     /// End point id.
     #[getter]
     fn end_idx(&self) -> u64 {
         self.inner.end
+    }
+
+    #[setter]
+    fn set_end_idx(&mut self, value: u64) {
+        self.inner.end = value;
     }
 
     /// First control point offset, if any.

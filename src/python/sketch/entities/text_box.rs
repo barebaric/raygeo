@@ -58,26 +58,40 @@ impl PyTextBox {
 #[gen_stub_pymethods]
 #[pymethods]
 impl PyTextBox {
-    /// Creates an unattached text box; an id is assigned on
-    /// insertion.
+    /// Creates a text box with the given id and frame point ids.
     #[new]
-    #[pyo3(signature = (origin, width, height, content = String::new(), font_family = "sans-serif".to_string(), font_size = 10.0, bold = false, italic = false))]
+    #[pyo3(signature = (id, origin_id, width_id, height_id,
+                        content = String::new(), font_config = None,
+                        construction = false))]
     #[allow(clippy::too_many_arguments)]
     fn new(
-        origin: u64,
-        width: u64,
-        height: u64,
+        id: u64,
+        origin_id: u64,
+        width_id: u64,
+        height_id: u64,
         content: String,
-        font_family: String,
-        font_size: f64,
-        bold: bool,
-        italic: bool,
+        font_config: Option<&Bound<'_, PyAny>>,
+        construction: bool,
     ) -> PyClassInitializer<Self> {
         let mut inner =
-            CoreTextBox::new(0, origin, width, height, content, false);
-        inner.font_config = CoreFontConfig::new(&font_family, font_size)
-            .bold(bold)
-            .italic(italic);
+            CoreTextBox::new(id, origin_id, width_id, height_id, content, construction);
+        if let Some(config) = font_config {
+            if let Ok(size) = config.getattr("size").and_then(|v| v.extract::<f64>()) {
+                let family: String = config
+                    .getattr("family")
+                    .and_then(|v| v.extract())
+                    .unwrap_or_else(|_| "sans-serif".to_string());
+                inner.font_config = CoreFontConfig::new(&family, size)
+                    .bold(config
+                        .getattr("bold")
+                        .and_then(|v| v.extract())
+                        .unwrap_or(false))
+                    .italic(config
+                        .getattr("italic")
+                        .and_then(|v| v.extract())
+                        .unwrap_or(false));
+            }
+        }
         PyClassInitializer::from(PyEntityBase).add_subclass(PyTextBox {
             inner,
             registry: None,

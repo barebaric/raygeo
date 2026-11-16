@@ -75,6 +75,7 @@ pub(crate) fn entity_to_py<'py>(
             py,
             PyClassInitializer::from(PyEntityBase).add_subclass(PyEllipse {
                 inner: ellipse.clone(),
+                helper_line_ids: ellipse.helper_line_ids.clone(),
                 registry: Some(registry.clone().unbind()),
             }),
         )?;

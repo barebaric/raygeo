@@ -28,18 +28,28 @@ pub struct PyArc {
 #[gen_stub_pymethods]
 #[pymethods]
 impl PyArc {
-    /// Creates an unattached arc; an id is assigned on insertion.
+    /// Creates an arc with the given id and defining point ids.
     #[new]
-    #[pyo3(signature = (start, end, center, clockwise = false, construction = false))]
+    #[pyo3(signature = (id, start_idx, end_idx, center_idx,
+                        clockwise = false, construction = false))]
+    #[allow(clippy::too_many_arguments)]
     fn new(
-        start: u64,
-        end: u64,
-        center: u64,
+        id: u64,
+        start_idx: u64,
+        end_idx: u64,
+        center_idx: u64,
         clockwise: bool,
         construction: bool,
     ) -> PyClassInitializer<Self> {
         PyClassInitializer::from(PyEntityBase).add_subclass(PyArc {
-            inner: CoreArc::new(0, start, end, center, clockwise, construction),
+            inner: CoreArc::new(
+                id,
+                start_idx,
+                end_idx,
+                center_idx,
+                clockwise,
+                construction,
+            ),
             registry: None,
         })
     }
@@ -61,16 +71,31 @@ impl PyArc {
         self.inner.start
     }
 
+    #[setter]
+    fn set_start_idx(&mut self, value: u64) {
+        self.inner.start = value;
+    }
+
     /// End point id.
     #[getter]
     fn end_idx(&self) -> u64 {
         self.inner.end
     }
 
+    #[setter]
+    fn set_end_idx(&mut self, value: u64) {
+        self.inner.end = value;
+    }
+
     /// Center point id.
     #[getter]
     fn center_idx(&self) -> u64 {
         self.inner.center
+    }
+
+    #[setter]
+    fn set_center_idx(&mut self, value: u64) {
+        self.inner.center = value;
     }
 
     /// Whether the arc sweeps clockwise from start to end.

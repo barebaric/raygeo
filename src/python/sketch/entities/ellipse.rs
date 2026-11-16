@@ -21,6 +21,8 @@ use crate::sketch::entities::Entity;
     extends = PyEntityBase,module = "raygeo.sketch.entities.ellipse", name = "Ellipse")]
 pub struct PyEllipse {
     pub inner: CoreEllipse,
+    /// Construction helper line entity ids.
+    pub helper_line_ids: Vec<u64>,
     /// Live back-reference to the owning registry, if any.
     pub registry: Option<Py<PyAny>>,
 }
@@ -28,24 +30,27 @@ pub struct PyEllipse {
 #[gen_stub_pymethods]
 #[pymethods]
 impl PyEllipse {
-    /// Creates an unattached ellipse; an id is assigned on
-    /// insertion.
+    /// Creates an ellipse with the given id and defining point ids.
     #[new]
-    #[pyo3(signature = (center, radius_x_point, radius_y_point, construction = false))]
+    #[pyo3(signature = (id, center_idx, radius_x_pt_idx, radius_y_pt_idx,
+                        construction = false, helper_line_ids = None))]
     fn new(
-        center: u64,
-        radius_x_point: u64,
-        radius_y_point: u64,
+        id: u64,
+        center_idx: u64,
+        radius_x_pt_idx: u64,
+        radius_y_pt_idx: u64,
         construction: bool,
+        helper_line_ids: Option<Vec<u64>>,
     ) -> PyClassInitializer<Self> {
         PyClassInitializer::from(PyEntityBase).add_subclass(PyEllipse {
             inner: CoreEllipse::new(
-                0,
-                center,
-                radius_x_point,
-                radius_y_point,
+                id,
+                center_idx,
+                radius_x_pt_idx,
+                radius_y_pt_idx,
                 construction,
             ),
+            helper_line_ids: helper_line_ids.unwrap_or_default(),
             registry: None,
         })
     }
@@ -67,6 +72,11 @@ impl PyEllipse {
         self.inner.center
     }
 
+    #[setter]
+    fn set_center_idx(&mut self, value: u64) {
+        self.inner.center = value;
+    }
+
     /// Helper construction line ids.
     #[getter]
     fn helper_line_ids(&self) -> Vec<u64> {
@@ -86,10 +96,20 @@ impl PyEllipse {
         self.inner.radius_x_point
     }
 
+    #[setter]
+    fn set_radius_x_pt_idx(&mut self, value: u64) {
+        self.inner.radius_x_point = value;
+    }
+
     /// Alias for radius_y_point_idx.
     #[getter]
     fn radius_y_pt_idx(&self) -> u64 {
         self.inner.radius_y_point
+    }
+
+    #[setter]
+    fn set_radius_y_pt_idx(&mut self, value: u64) {
+        self.inner.radius_y_point = value;
     }
 
     #[getter]
