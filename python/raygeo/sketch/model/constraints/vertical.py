@@ -5,26 +5,32 @@ from collections.abc import Callable, Sequence
 from gettext import gettext as _
 from typing import TYPE_CHECKING, Any
 
-import cairo
 from raygeo.geo.types import Point
+from raygeo.sketch.constraints.vertical import (
+    VerticalConstraint as _CoreVerticalConstraint,
+)
+from raygeo.sketch.entities import Line
 
-from ..entities import Line
-from ...types import EntityID
-from .base import Constraint, ConstraintStatus
+from .base import Constraint
 
 if TYPE_CHECKING:
-    from ..entities import Entity
-    from ..params import ParameterContext
-    from ..registry import EntityRegistry
-    from ..selection import SketchSelection
-    from ..sketch import Sketch
+    from raygeo.sketch.entities import Entity
+    from raygeo.sketch.model.protocols import (
+        ParameterContext,
+        Sketch,
+        SketchSelection,
+    )
+    from raygeo.sketch.registry import EntityRegistry
+    from raygeo.sketch.types import EntityID
 
 
-class VerticalConstraint(Constraint):
+class VerticalConstraint(_CoreVerticalConstraint, Constraint):
     """Enforces two points have the same X coordinate."""
 
+    def __new__(cls, p1, p2, user_visible=True):
+        return super().__new__(cls, p1, p2, user_visible)
+
     def __init__(self, p1: EntityID, p2: EntityID, user_visible: bool = True):
-        super().__init__(user_visible=user_visible)
         self.p1: EntityID = p1
         self.p2: EntityID = p2
 
@@ -76,14 +82,6 @@ class VerticalConstraint(Constraint):
     def get_edit_subtitle(self) -> str:
         return _("Enter length or expression.")
 
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "type": "VerticalConstraint",
-            "p1": self.p1,
-            "p2": self.p2,
-            "user_visible": self.user_visible,
-        }
-
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> VerticalConstraint:
         return cls(
@@ -91,17 +89,6 @@ class VerticalConstraint(Constraint):
             p2=data["p2"],
             user_visible=data.get("user_visible", True),
         )
-
-    def error(self, reg: EntityRegistry, params: ParameterContext) -> float:
-        return reg.get_point(self.p1).x - reg.get_point(self.p2).x
-
-    def gradient(
-        self, reg: EntityRegistry, params: ParameterContext
-    ) -> dict[EntityID, list[Point]]:
-        return {
-            self.p1: [(1.0, 0.0)],
-            self.p2: [(-1.0, 0.0)],
-        }
 
     def is_hit(
         self,
@@ -126,40 +113,32 @@ class VerticalConstraint(Constraint):
             return math.hypot(sx - cx, sy - cy) < threshold
         return False
 
+    def error(self, reg: EntityRegistry, params: ParameterContext) -> float:
+        return super().error(reg)[0]
+
+    def gradient(
+        self, reg: EntityRegistry, params: ParameterContext
+    ) -> dict[EntityID, list[Point]]:
+        return super().gradient(reg)
+
+    def to_dict(self) -> dict[str, Any]:
+        return super().to_dict()
+
     def draw(
         self,
-        ctx: cairo.Context,
+        ctx: Any,
         registry: EntityRegistry,
         to_screen: Callable[[Point], Point],
         is_selected: bool = False,
         is_hovered: bool = False,
         point_radius: float = 5.0,
     ) -> None:
-        try:
-            p1 = registry.get_point(self.p1)
-            p2 = registry.get_point(self.p2)
-        except IndexError:
-            return
-
-        s1 = to_screen((p1.x, p1.y))
-        s2 = to_screen((p2.x, p2.y))
-
-        t_marker = 0.2
-        mx = s1[0] + (s2[0] - s1[0]) * t_marker
-        my = s1[1] + (s2[1] - s1[1]) * t_marker
-
-        size = 8
-        ctx.save()
-        ctx.set_line_width(2)
-        ctx.move_to(mx + 10, my - size)
-        ctx.line_to(mx + 10, my + size)
-
-        if is_selected:
-            self._draw_selection_underlay(ctx)
-
-        if self.status == ConstraintStatus.CONFLICTING:
-            self._draw_conflict_underlay(ctx)
-
-        self._set_color(ctx, is_hovered)
-        ctx.stroke()
-        ctx.restore()
+        return super().draw(
+            ctx,
+            registry,
+            to_screen,
+            is_selected,
+            is_hovered,
+            point_radius,
+            status=int(self.status),
+        )

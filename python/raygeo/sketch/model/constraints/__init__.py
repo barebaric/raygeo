@@ -1,5 +1,10 @@
 """
 Geometric constraints for the 2D CAD sketcher.
+
+The constraint geometry (error, gradient, rendering, serialization)
+is implemented in Rust and exposed through
+:mod:`raygeo.sketch.constraints`; the classes here subclass the
+compiled types and add the application-facing contract.
 """
 
 from .angle import ANGLE_WEIGHT, AngleConstraint

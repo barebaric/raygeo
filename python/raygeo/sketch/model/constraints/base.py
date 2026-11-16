@@ -1,35 +1,47 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
-from enum import Enum, auto
+from enum import IntEnum
 from gettext import gettext as _
 from locale import format_string
-from typing import (
-    TYPE_CHECKING,
-    Any,
-)
+from typing import TYPE_CHECKING, Any
 
 from raygeo.geo.types import Point
 
 from ..expression import safe_evaluate
 
-from ...types import EntityID
-
 if TYPE_CHECKING:
-    import cairo
+    from raygeo.sketch.entities import Entity
+    from raygeo.sketch.model.protocols import (
+        ParameterContext,
+        Sketch,
+        SketchSelection,
+    )
+    from raygeo.sketch.registry import EntityRegistry
+    from raygeo.sketch.types import EntityID
 
 
-class ConstraintStatus(Enum):
-    """Represents the validation status of a constraint."""
+class ConstraintStatus(IntEnum):
+    """Represents the validation status of a constraint.
 
-    VALID = auto()
-    EXPRESSION_BASED = auto()
-    ERROR = auto()
-    CONFLICTING = auto()
+    The members number from 1, mirroring the reference enum; the
+    compiled constraint base stores the ordinal.
+    """
+
+    VALID = 1
+    EXPRESSION_BASED = 2
+    ERROR = 3
+    CONFLICTING = 4
 
 
 class Constraint:
-    """Base class for all geometric constraints."""
+    """Base class for all geometric constraints.
+
+    The geometry (``error``, ``gradient``, rendering, serialization)
+    lives on the compiled raygeo classes this package subclasses; the
+    base here carries the app-facing contract: titles, expression
+    evaluation, applicability defaults, and reference-lookup helpers.
+    """
 
     # These attributes are expected on dimensional constraints
     value: float = 0.0
@@ -168,20 +180,6 @@ class Constraint:
         """Formats coordinates respecting the user's locale."""
         return format_string("%.1f/%.1f", (x, y), grouping=True)
 
-    def draw(
-        self,
-        ctx: cairo.Context,
-        registry: EntityRegistry,
-        to_screen: Callable[[Point], Point],
-        is_selected: bool = False,
-        is_hovered: bool = False,
-        point_radius: float = 5.0,
-    ) -> None:
-        """
-        Draws the visual representation of the constraint on the canvas.
-        Default implementation does nothing.
-        """
-
     def update_from_context(self, context: dict[str, Any]):
         """
         Re-evaluates the expression (if present) using the provided context
@@ -260,7 +258,7 @@ class Constraint:
         """
         return True
 
-    def mirror(self, axis: MirrorAxis) -> None:
+    def mirror(self, axis: Any) -> None:
         """
         Updates internal state for a mirror transform applied to all
         referenced geometry. The default is a no-op: most constraints are

@@ -5,26 +5,30 @@ from collections.abc import Callable, Sequence
 from gettext import gettext as _
 from typing import TYPE_CHECKING, Any
 
-import cairo
-from gi.repository import PangoCairo
 from raygeo.geo.types import Point
+from raygeo.sketch.constraints.radius import (
+    RadiusConstraint as _CoreRadiusConstraint,
+)
+from raygeo.sketch.entities import Arc, Circle
 
-from rayforge.ui_gtk.shared.text import create_text_layout
-
-from ..entities import Arc, Circle
-from ...types import EntityID
-from .base import Constraint, ConstraintStatus
+from .base import Constraint
 
 if TYPE_CHECKING:
-    from ..entities import Entity
-    from ..params import ParameterContext
-    from ..registry import EntityRegistry
-    from ..selection import SketchSelection
-    from ..sketch import Sketch
+    from raygeo.sketch.entities import Entity
+    from raygeo.sketch.model.protocols import (
+        ParameterContext,
+        Sketch,
+        SketchSelection,
+    )
+    from raygeo.sketch.registry import EntityRegistry
+    from raygeo.sketch.types import EntityID
 
 
-class RadiusConstraint(Constraint):
+class RadiusConstraint(_CoreRadiusConstraint, Constraint):
     """Enforces radius of an Arc or Circle."""
+
+    def __new__(cls, entity_id, value, expression=None, user_visible=True):
+        return super().__new__(cls, entity_id, 0.0, user_visible)
 
     def __init__(
         self,
@@ -33,7 +37,6 @@ class RadiusConstraint(Constraint):
         expression: str | None = None,
         user_visible: bool = True,
     ):
-        super().__init__(user_visible=user_visible)
         self.entity_id: EntityID = entity_id
 
         if expression is not None:
@@ -95,17 +98,6 @@ class RadiusConstraint(Constraint):
     ) -> bool:
         return entity_id is not None and self.entity_id == entity_id
 
-    def to_dict(self) -> dict[str, Any]:
-        data = {
-            "type": "RadiusConstraint",
-            "entity_id": self.entity_id,
-            "value": self.value,
-            "user_visible": self.user_visible,
-        }
-        if self.expression:
-            data["expression"] = self.expression
-        return data
-
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> RadiusConstraint:
         return cls(
@@ -119,50 +111,6 @@ class RadiusConstraint(Constraint):
         self, registry: EntityRegistry, entity_id: EntityID
     ) -> bool:
         return self.entity_id == entity_id
-
-    def error(self, reg: EntityRegistry, params: ParameterContext) -> float:
-        entity = reg.get_entity(self.entity_id)
-        if entity is None:
-            return 0.0
-
-        if not isinstance(entity, (Arc, Circle)):
-            return 0.0
-
-        return entity.radius(reg) - self.value
-
-    def gradient(
-        self, reg: EntityRegistry, params: ParameterContext
-    ) -> dict[EntityID, list[Point]]:
-        entity = reg.get_entity(self.entity_id)
-
-        # Type narrowing for Pylance
-        if not isinstance(entity, (Arc, Circle)):
-            return {}
-
-        center_idx = entity.center_idx
-        c = reg.get_point(center_idx)
-        p, pt_idx = None, -1
-
-        if isinstance(entity, Arc):
-            pt_idx = entity.start_idx
-            p = reg.get_point(pt_idx)
-        else:  # Circle
-            pt_idx = entity.radius_pt_idx
-            p = reg.get_point(pt_idx)
-
-        if c and p:
-            dx, dy = p.x - c.x, p.y - c.y
-            dist = math.hypot(dx, dy)
-
-            ux, uy = 1.0, 0.0  # Default if points are coincident
-            if dist > 1e-9:
-                ux, uy = dx / dist, dy / dist
-
-            return {
-                pt_idx: [(ux, uy)],
-                center_idx: [(-ux, -uy)],
-            }
-        return {}
 
     def get_label_pos(
         self,
@@ -260,69 +208,32 @@ class RadiusConstraint(Constraint):
             return x_min <= sx <= x_max and y_min <= sy <= y_max
         return False
 
+    def error(self, reg: EntityRegistry, params: ParameterContext) -> float:
+        return super().error(reg)[0]
+
+    def gradient(
+        self, reg: EntityRegistry, params: ParameterContext
+    ) -> dict[EntityID, list[Point]]:
+        return super().gradient(reg)
+
+    def to_dict(self) -> dict[str, Any]:
+        return super().to_dict()
+
     def draw(
         self,
-        ctx: cairo.Context,
+        ctx: Any,
         registry: EntityRegistry,
         to_screen: Callable[[Point], Point],
         is_selected: bool = False,
         is_hovered: bool = False,
         point_radius: float = 5.0,
     ) -> None:
-        pos_data = self.get_label_pos(
+        return super().draw(
+            ctx,
             registry,
             to_screen,
-            None,  # Pass None as element, get_label_pos will infer scale
+            is_selected,
+            is_hovered,
+            point_radius,
+            status=int(self.status),
         )
-        if not pos_data:
-            return
-        sx, sy, arc_mid_sx, arc_mid_sy = pos_data
-
-        label = f"R{self._format_value()}"
-        layout = create_text_layout(ctx, label)
-        ext, _ = layout.get_pixel_extents()
-
-        ctx.save()
-        # Set background color based on selection, hover, and status
-        if is_selected:
-            ctx.set_source_rgba(0.2, 0.6, 1.0, 0.4)  # Blue selection
-        elif is_hovered:
-            ctx.set_source_rgba(1.0, 0.95, 0.85, 0.9)  # Light yellow hover
-        elif self.status == ConstraintStatus.CONFLICTING:
-            ctx.set_source_rgba(1.0, 0.6, 0.6, 0.9)  # Red background
-        elif self.status == ConstraintStatus.ERROR:
-            ctx.set_source_rgba(1.0, 0.8, 0.8, 0.9)  # Light red background
-        elif self.status == ConstraintStatus.EXPRESSION_BASED:
-            ctx.set_source_rgba(1.0, 0.9, 0.7, 0.9)  # Light orange background
-        else:  # VALID
-            ctx.set_source_rgba(1, 1, 1, 0.8)  # Default white background
-
-        bg_x = sx - ext.width / 2 - 4
-        bg_y = sy - ext.height / 2 - 4
-        ctx.rectangle(bg_x, bg_y, ext.width + 8, ext.height + 8)
-        ctx.fill()
-        ctx.new_path()
-
-        # Set text color based on status
-        if self.status in (
-            ConstraintStatus.ERROR,
-            ConstraintStatus.CONFLICTING,
-        ):
-            ctx.set_source_rgb(0.8, 0.0, 0.0)  # Red text for error/conflict
-        else:
-            ctx.set_source_rgb(0, 0, 0.5)  # Dark blue otherwise
-
-        ctx.move_to(sx - ext.width / 2 - ext.x, sy - ext.height / 2 - ext.y)
-        PangoCairo.show_layout(ctx, layout)
-
-        ctx.set_line_width(1)
-        ctx.set_dash([4, 4])
-        ctx.move_to(sx, sy)
-        ctx.line_to(arc_mid_sx, arc_mid_sy)
-
-        if self.status == ConstraintStatus.CONFLICTING:
-            self._draw_conflict_underlay(ctx)
-
-        self._set_color(ctx, is_hovered)
-        ctx.stroke()
-        ctx.restore()

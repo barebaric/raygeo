@@ -18,6 +18,7 @@ use crate::sketch::constraints::angle::AngleConstraint as CoreConstraint;
 #[gen_stub_pyclass]
 #[pyclass(
     extends = PyConstraintBase,
+    subclass,
     eq,
     from_py_object,
     module = "raygeo.sketch.constraints.angle",
@@ -26,10 +27,10 @@ use crate::sketch::constraints::angle::AngleConstraint as CoreConstraint;
 #[derive(Clone, PartialEq)]
 pub struct PyAngleConstraint {
     /// The anchor line entity.
-    #[pyo3(get)]
+    #[pyo3(get, set)]
     pub e1_id: u64,
     /// The other line entity.
-    #[pyo3(get)]
+    #[pyo3(get, set)]
     pub e2_id: u64,
     /// Far point of the anchor line.
     #[pyo3(get, set)]
@@ -38,7 +39,7 @@ pub struct PyAngleConstraint {
     #[pyo3(get, set)]
     pub e2_far_idx: Option<u64>,
     /// Angle value in degrees.
-    #[pyo3(get)]
+    #[pyo3(get, set)]
     pub value: f64,
     /// Reference user-visibility flag.
     #[pyo3(get)]
@@ -95,11 +96,6 @@ impl PyAngleConstraint {
         _params: Option<Py<PyAny>>,
     ) -> Vec<f64> {
         self.clone().into_constraint().error(&registry.inner)
-    }
-
-    /// Sets the angle value in degrees.
-    fn set_value(&mut self, value: f64) {
-        self.value = value;
     }
 
     /// Partial derivatives of the error by point id.

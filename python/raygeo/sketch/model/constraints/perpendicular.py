@@ -3,36 +3,33 @@ from __future__ import annotations
 import math
 from collections.abc import Callable, Sequence
 from gettext import gettext as _
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    cast,
-)
+from typing import TYPE_CHECKING, Any
 
-from raygeo.geo.shape.circle import (
-    get_circle_circle_intersections,
-)
+from raygeo.geo.shape.circle import get_circle_circle_intersections
 from raygeo.geo.shape.line import (
     get_line_line_intersection,
     is_point_on_line_segment,
 )
 from raygeo.geo.types import Point
+from raygeo.sketch.constraints.perpendicular import (
+    PerpendicularConstraint as _CorePerpendicularConstraint,
+)
+from raygeo.sketch.entities import Arc, Circle, Line
 
-from ..entities import Arc, Circle, Line
-from ...types import EntityID
-from .base import Constraint, ConstraintStatus
+from .base import Constraint
 
 if TYPE_CHECKING:
-    import cairo
+    from raygeo.sketch.entities import Entity
+    from raygeo.sketch.model.protocols import (
+        ParameterContext,
+        Sketch,
+        SketchSelection,
+    )
+    from raygeo.sketch.registry import EntityRegistry
+    from raygeo.sketch.types import EntityID
 
-    from ..entities import Entity
-    from ..params import ParameterContext
-    from ..registry import EntityRegistry
-    from ..selection import SketchSelection
-    from ..sketch import Sketch
 
-
-class PerpendicularConstraint(Constraint):
+class PerpendicularConstraint(_CorePerpendicularConstraint, Constraint):
     """
     Enforces perpendicularity between two entities.
     - Line/Line: Vectors are at 90 degrees.
@@ -40,10 +37,12 @@ class PerpendicularConstraint(Constraint):
     - Arc/Arc, Arc/Circle, Circle/Circle: Shapes intersect at a right angle.
     """
 
+    def __new__(cls, e1_id, e2_id, user_visible=True):
+        return super().__new__(cls, e1_id, e2_id, user_visible)
+
     def __init__(
         self, e1_id: EntityID, e2_id: EntityID, user_visible: bool = True
     ):
-        super().__init__(user_visible=user_visible)
         self.e1_id: EntityID = e1_id
         self.e2_id: EntityID = e2_id
 
@@ -88,14 +87,6 @@ class PerpendicularConstraint(Constraint):
             )
         return ""
 
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "type": "PerpendicularConstraint",
-            "e1_id": self.e1_id,
-            "e2_id": self.e2_id,
-            "user_visible": self.user_visible,
-        }
-
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> PerpendicularConstraint:
         return cls(
@@ -103,163 +94,6 @@ class PerpendicularConstraint(Constraint):
             e2_id=data["e2_id"],
             user_visible=data.get("user_visible", True),
         )
-
-    def error(self, reg: EntityRegistry, params: ParameterContext) -> float:
-        e1 = reg.get_entity(self.e1_id)
-        e2 = reg.get_entity(self.e2_id)
-
-        if e1 is None or e2 is None:
-            return 0.0
-
-        # Case 1: Line-Line
-        if isinstance(e1, Line) and isinstance(e2, Line):
-            p1 = reg.get_point(e1.p1_idx)
-            p2 = reg.get_point(e1.p2_idx)
-            p3 = reg.get_point(e2.p1_idx)
-            p4 = reg.get_point(e2.p2_idx)
-
-            dx1, dy1 = p2.x - p1.x, p2.y - p1.y
-            dx2, dy2 = p4.x - p3.x, p4.y - p3.y
-            # Dot product
-            return dx1 * dx2 + dy1 * dy2
-
-        # Case 2: Line-Arc/Circle
-        line, shape = None, None
-        if isinstance(e1, Line) and isinstance(e2, (Arc, Circle)):
-            line, shape = e1, e2
-        elif isinstance(e2, Line) and isinstance(e1, (Arc, Circle)):
-            line, shape = e2, e1
-
-        if line and shape:
-            # Constraint: Line must pass through the shape's center
-            # (i.e., line points and center are collinear)
-            lp1 = reg.get_point(line.p1_idx)
-            lp2 = reg.get_point(line.p2_idx)
-            # This cast is safe due to the isinstance checks above
-            shape_with_center = cast(Arc | Circle, shape)
-            center = reg.get_point(shape_with_center.center_idx)
-            # Cross product (lp2-lp1) x (center-lp1)
-            return (lp2.x - lp1.x) * (center.y - lp1.y) - (
-                center.x - lp1.x
-            ) * (lp2.y - lp1.y)
-
-        # Case 3: Arc/Circle - Arc/Circle
-        shape1, shape2 = None, None
-        if isinstance(e1, (Arc, Circle)) and isinstance(e2, (Arc, Circle)):
-            shape1, shape2 = e1, e2
-
-        if shape1 and shape2:
-            # Constraint: The circles intersect at a right angle.
-            # Geometric property: r1^2 + r2^2 = d^2, where d is distance
-            # between centers.
-            c1 = reg.get_point(shape1.center_idx)
-            c2 = reg.get_point(shape2.center_idx)
-
-            r1_sq = shape1.radius(reg) ** 2
-            r2_sq = shape2.radius(reg) ** 2
-
-            dist_centers_sq = (c2.x - c1.x) ** 2 + (c2.y - c1.y) ** 2
-
-            return r1_sq + r2_sq - dist_centers_sq
-
-        return 0.0
-
-    def gradient(
-        self, reg: EntityRegistry, params: ParameterContext
-    ) -> dict[EntityID, list[Point]]:
-        e1 = reg.get_entity(self.e1_id)
-        e2 = reg.get_entity(self.e2_id)
-        grad = {}
-
-        if e1 is None or e2 is None:
-            return {}
-
-        def add_grad(pid, gx, gy):
-            if pid not in grad:
-                grad[pid] = [(0.0, 0.0)]
-            cx, cy = grad[pid][0]
-            grad[pid][0] = (cx + gx, cy + gy)
-
-        if isinstance(e1, Line) and isinstance(e2, Line):
-            p1 = reg.get_point(e1.p1_idx)
-            p2 = reg.get_point(e1.p2_idx)
-            p3 = reg.get_point(e2.p1_idx)
-            p4 = reg.get_point(e2.p2_idx)
-            dx1, dy1 = p2.x - p1.x, p2.y - p1.y
-            dx2, dy2 = p4.x - p3.x, p4.y - p3.y
-            # E = dx1*dx2 + dy1*dy2
-            add_grad(e1.p1_idx, -dx2, -dy2)
-            add_grad(e1.p2_idx, dx2, dy2)
-            add_grad(e2.p1_idx, -dx1, -dy1)
-            add_grad(e2.p2_idx, dx1, dy1)
-
-        elif (isinstance(e1, Line) and isinstance(e2, (Arc, Circle))) or (
-            isinstance(e2, Line) and isinstance(e1, (Arc, Circle))
-        ):
-            line, shape = (e1, e2) if isinstance(e1, Line) else (e2, e1)
-            # Ensure type safety
-            if isinstance(line, Line) and isinstance(shape, (Arc, Circle)):
-                l1 = reg.get_point(line.p1_idx)
-                l2 = reg.get_point(line.p2_idx)
-                c = reg.get_point(shape.center_idx)
-                dx = l2.x - l1.x
-                dy = l2.y - l1.y
-                # E = dx*(c.y - l1.y) - (c.x - l1.x)*dy
-                add_grad(shape.center_idx, -dy, dx)
-                add_grad(line.p1_idx, dy - (c.y - l1.y), -dx + (c.x - l1.x))
-                add_grad(line.p2_idx, c.y - l1.y, -(c.x - l1.x))
-
-        elif isinstance(e1, (Arc, Circle)) and isinstance(e2, (Arc, Circle)):
-            # r1^2 + r2^2 - dist_sq
-            s1, s2 = e1, e2
-            c1 = reg.get_point(s1.center_idx)
-            c2 = reg.get_point(s2.center_idx)
-
-            # Center 1 part:
-            # -d(dist)/dc1 + d(r1)/dc1 (if arc/circle)
-            d_dist_x = 2 * (c2.x - c1.x)
-            d_dist_y = 2 * (c2.y - c1.y)
-
-            # R1 derivs
-            dr1_c_x, dr1_c_y = 0.0, 0.0
-            if isinstance(s1, Arc):
-                p1 = reg.get_point(s1.start_idx)
-                dr1_c_x = -2 * (p1.x - c1.x)
-                dr1_c_y = -2 * (p1.y - c1.y)
-                add_grad(s1.start_idx, 2 * (p1.x - c1.x), 2 * (p1.y - c1.y))
-            elif isinstance(s1, Circle):
-                p1 = reg.get_point(s1.radius_pt_idx)
-                dr1_c_x = -2 * (p1.x - c1.x)
-                dr1_c_y = -2 * (p1.y - c1.y)
-                add_grad(
-                    s1.radius_pt_idx,
-                    2 * (p1.x - c1.x),
-                    2 * (p1.y - c1.y),
-                )
-
-            # R2 derivs
-            dr2_c_x, dr2_c_y = 0.0, 0.0
-            if isinstance(s2, Arc):
-                p2 = reg.get_point(s2.start_idx)
-                dr2_c_x = -2 * (p2.x - c2.x)
-                dr2_c_y = -2 * (p2.y - c2.y)
-                add_grad(s2.start_idx, 2 * (p2.x - c2.x), 2 * (p2.y - c2.y))
-            elif isinstance(s2, Circle):
-                p2 = reg.get_point(s2.radius_pt_idx)
-                dr2_c_x = -2 * (p2.x - c2.x)
-                dr2_c_y = -2 * (p2.y - c2.y)
-                add_grad(
-                    s2.radius_pt_idx,
-                    2 * (p2.x - c2.x),
-                    2 * (p2.y - c2.y),
-                )
-
-            # Dist term for C1: -(-2(c2-c1)) = 2(c2-c1) = d_dist_x
-            add_grad(s1.center_idx, d_dist_x + dr1_c_x, d_dist_y + dr1_c_y)
-            # Dist term for C2: -(2(c2-c1)) = -d_dist_x
-            add_grad(s2.center_idx, -d_dist_x + dr2_c_x, -d_dist_y + dr2_c_y)
-
-        return grad
 
     def get_visuals(
         self,
@@ -473,66 +307,32 @@ class PerpendicularConstraint(Constraint):
             # The marker is a square box at the intersection/anchor.
             return math.hypot(sx - cx, sy - cy) < threshold
 
+    def error(self, reg: EntityRegistry, params: ParameterContext) -> float:
+        return super().error(reg)[0]
+
+    def gradient(
+        self, reg: EntityRegistry, params: ParameterContext
+    ) -> dict[EntityID, list[Point]]:
+        return super().gradient(reg)
+
+    def to_dict(self) -> dict[str, Any]:
+        return super().to_dict()
+
     def draw(
         self,
-        ctx: cairo.Context,
+        ctx: Any,
         registry: EntityRegistry,
         to_screen: Callable[[Point], Point],
         is_selected: bool = False,
         is_hovered: bool = False,
         point_radius: float = 5.0,
     ) -> None:
-        data = self.get_visuals(registry, to_screen)
-        if not data:
-            return
-
-        sx, sy, ang1, ang2 = data
-
-        ctx.save()
-        ctx.set_line_width(1.5)
-
-        if ang1 is not None and ang2 is not None:
-            radius = 16.0
-            diff = ang2 - ang1
-            while diff <= -math.pi:
-                diff += 2 * math.pi
-            while diff > math.pi:
-                diff -= 2 * math.pi
-
-            ctx.new_sub_path()
-            if diff > 0:
-                ctx.arc(sx, sy, radius, ang1, ang2)
-            else:
-                ctx.arc_negative(sx, sy, radius, ang1, ang2)
-
-            if is_selected:
-                self._draw_selection_underlay(ctx)
-
-            if self.status == ConstraintStatus.CONFLICTING:
-                self._draw_conflict_underlay(ctx)
-
-            self._set_color(ctx, is_hovered)
-            ctx.stroke()
-
-            # Dot
-            mid = ang1 + diff / 2
-            dx = sx + math.cos(mid) * radius * 0.6
-            dy = sy + math.sin(mid) * radius * 0.6
-            ctx.new_sub_path()
-            ctx.arc(dx, dy, 2.0, 0, 2 * math.pi)
-            ctx.fill()
-        else:
-            sz = 8.0
-            ctx.new_sub_path()
-            ctx.rectangle(sx - sz, sy - sz, sz * 2, sz * 2)
-
-            if is_selected:
-                self._draw_selection_underlay(ctx)
-
-            if self.status == ConstraintStatus.CONFLICTING:
-                self._draw_conflict_underlay(ctx)
-
-            self._set_color(ctx, is_hovered)
-            ctx.stroke()
-
-        ctx.restore()
+        return super().draw(
+            ctx,
+            registry,
+            to_screen,
+            is_selected,
+            is_hovered,
+            point_radius,
+            status=int(self.status),
+        )

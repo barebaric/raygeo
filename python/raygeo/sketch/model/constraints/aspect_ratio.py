@@ -5,23 +5,30 @@ from collections.abc import Callable, Sequence
 from gettext import gettext as _
 from typing import TYPE_CHECKING, Any
 
-import cairo
 from raygeo.geo.types import Point
+from raygeo.sketch.constraints.aspect_ratio import (
+    AspectRatioConstraint as _CoreAspectRatioConstraint,
+)
+from raygeo.sketch.entities import Line
 
-from ..entities import Line
-from ...types import EntityID
-from .base import Constraint, ConstraintStatus
+from .base import Constraint
 
 if TYPE_CHECKING:
-    from ..entities import Entity
-    from ..params import ParameterContext
-    from ..registry import EntityRegistry
-    from ..selection import SketchSelection
-    from ..sketch import Sketch
+    from raygeo.sketch.entities import Entity
+    from raygeo.sketch.model.protocols import (
+        ParameterContext,
+        Sketch,
+        SketchSelection,
+    )
+    from raygeo.sketch.registry import EntityRegistry
+    from raygeo.sketch.types import EntityID
 
 
-class AspectRatioConstraint(Constraint):
+class AspectRatioConstraint(_CoreAspectRatioConstraint, Constraint):
     """Enforces that distance(p1, p2) / distance(p3, p4) equals ratio."""
+
+    def __new__(cls, p1, p2, p3, p4, ratio, user_visible=True):
+        return super().__new__(cls, p1, p2, p3, p4, ratio, user_visible)
 
     def __init__(
         self,
@@ -32,7 +39,6 @@ class AspectRatioConstraint(Constraint):
         ratio: float,
         user_visible: bool = True,
     ):
-        super().__init__(user_visible=user_visible)
         self.p1: EntityID = p1
         self.p2: EntityID = p2
         self.p3: EntityID = p3
@@ -81,17 +87,6 @@ class AspectRatioConstraint(Constraint):
             )
         return ""
 
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "type": "AspectRatioConstraint",
-            "p1": self.p1,
-            "p2": self.p2,
-            "p3": self.p3,
-            "p4": self.p4,
-            "ratio": self.ratio,
-            "user_visible": self.user_visible,
-        }
-
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> AspectRatioConstraint:
         return cls(
@@ -102,55 +97,6 @@ class AspectRatioConstraint(Constraint):
             ratio=data["ratio"],
             user_visible=data.get("user_visible", True),
         )
-
-    def error(self, reg: EntityRegistry, params: ParameterContext) -> float:
-        pt1 = reg.get_point(self.p1)
-        pt2 = reg.get_point(self.p2)
-        dist1 = math.hypot(pt2.x - pt1.x, pt2.y - pt1.y)
-
-        pt3 = reg.get_point(self.p3)
-        pt4 = reg.get_point(self.p4)
-        dist2 = math.hypot(pt4.x - pt3.x, pt4.y - pt3.y)
-
-        if dist2 < 1e-9:
-            return dist1
-        return dist1 - dist2 * self.ratio
-
-    def gradient(
-        self, reg: EntityRegistry, params: ParameterContext
-    ) -> dict[EntityID, list[Point]]:
-        pt1 = reg.get_point(self.p1)
-        pt2 = reg.get_point(self.p2)
-        pt3 = reg.get_point(self.p3)
-        pt4 = reg.get_point(self.p4)
-
-        dx1 = pt2.x - pt1.x
-        dy1 = pt2.y - pt1.y
-        dist1 = math.hypot(dx1, dy1)
-
-        dx2 = pt4.x - pt3.x
-        dy2 = pt4.y - pt3.y
-        dist2 = math.hypot(dx2, dy2)
-
-        grad = {}
-
-        def add(pid, gx, gy):
-            if pid not in grad:
-                grad[pid] = [(0.0, 0.0)]
-            cx, cy = grad[pid][0]
-            grad[pid][0] = (cx + gx, cy + gy)
-
-        if dist1 > 1e-9:
-            u1x, u1y = dx1 / dist1, dy1 / dist1
-            add(self.p1, -u1x, -u1y)
-            add(self.p2, u1x, u1y)
-
-        if dist2 > 1e-9:
-            u2x, u2y = dx2 / dist2, dy2 / dist2
-            add(self.p3, self.ratio * u2x, self.ratio * u2y)
-            add(self.p4, -self.ratio * u2x, -self.ratio * u2y)
-
-        return grad
 
     def _get_icon_pos(
         self,
@@ -230,60 +176,32 @@ class AspectRatioConstraint(Constraint):
             return math.hypot(sx - cx, sy - cy) < threshold
         return False
 
+    def error(self, reg: EntityRegistry, params: ParameterContext) -> float:
+        return super().error(reg)[0]
+
+    def gradient(
+        self, reg: EntityRegistry, params: ParameterContext
+    ) -> dict[EntityID, list[Point]]:
+        return super().gradient(reg)
+
+    def to_dict(self) -> dict[str, Any]:
+        return super().to_dict()
+
     def draw(
         self,
-        ctx: cairo.Context,
+        ctx: Any,
         registry: EntityRegistry,
         to_screen: Callable[[Point], Point],
         is_selected: bool = False,
         is_hovered: bool = False,
         point_radius: float = 5.0,
     ) -> None:
-        icon_pos = self._get_icon_pos(registry, to_screen)
-        if not icon_pos:
-            return
-
-        cx, cy = icon_pos
-
-        ctx.save()
-
-        icon_size = 16.0
-
-        # Draw a circular underlay for selection, similar to other icons
-        if is_selected:
-            ctx.set_source_rgba(0.2, 0.6, 1.0, 0.4)
-            # Use a slightly larger radius for the glow effect
-            ctx.arc(cx, cy, icon_size / 2.0 + 4.0, 0, 2 * math.pi)
-            ctx.fill()
-
-        if self.status == ConstraintStatus.CONFLICTING:
-            ctx.set_source_rgba(1.0, 0.2, 0.2, 0.5)
-            ctx.arc(cx, cy, icon_size / 2.0 + 4.0, 0, 2 * math.pi)
-            ctx.fill()
-
-        # Translate to the icon's anchor point for easier drawing
-        ctx.translate(cx, cy)
-
-        hs = icon_size / 2.0
-
-        ctx.set_line_width(2.0)
-        ctx.set_line_cap(cairo.LINE_CAP_ROUND)
-        ctx.set_line_join(cairo.LINE_JOIN_ROUND)
-
-        ctx.new_path()
-
-        # Top-right corner bracket (L-shape pointing into the corner)
-        ctx.move_to(hs * 0.4, hs)
-        ctx.line_to(hs, hs)
-        ctx.line_to(hs, hs * 0.4)
-
-        # Bottom-left corner bracket
-        ctx.move_to(-hs * 0.4, -hs)
-        ctx.line_to(-hs, -hs)
-        ctx.line_to(-hs, -hs * 0.4)
-
-        # Set color and draw the icon
-        self._set_color(ctx, is_hovered)
-        ctx.stroke()
-
-        ctx.restore()
+        return super().draw(
+            ctx,
+            registry,
+            to_screen,
+            is_selected,
+            is_hovered,
+            point_radius,
+            status=int(self.status),
+        )

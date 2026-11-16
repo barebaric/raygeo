@@ -14,6 +14,7 @@ use crate::sketch::constraints::tangent::TangentConstraint as CoreConstraint;
 #[gen_stub_pyclass]
 #[pyclass(
     extends = PyConstraintBase,
+    subclass,
     eq,
     from_py_object,
     module = "raygeo.sketch.constraints.tangent",
@@ -22,10 +23,10 @@ use crate::sketch::constraints::tangent::TangentConstraint as CoreConstraint;
 #[derive(Clone, PartialEq)]
 pub struct PyTangentConstraint {
     /// The tangent line.
-    #[pyo3(get)]
+    #[pyo3(get, set)]
     pub line_id: u64,
     /// The tangent circle or arc.
-    #[pyo3(get)]
+    #[pyo3(get, set)]
     pub shape_id: u64,
     /// Reference user-visibility flag.
     #[pyo3(get)]

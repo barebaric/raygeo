@@ -14,6 +14,7 @@ use crate::sketch::constraints::rotational::RotationalConstraint as CoreConstrai
 #[gen_stub_pyclass]
 #[pyclass(
     extends = PyConstraintBase,
+    subclass,
     eq,
     from_py_object,
     module = "raygeo.sketch.constraints.rotational",
@@ -22,13 +23,13 @@ use crate::sketch::constraints::rotational::RotationalConstraint as CoreConstrai
 #[derive(Clone, PartialEq)]
 pub struct PyRotationalConstraint {
     /// Rotation center.
-    #[pyo3(get)]
+    #[pyo3(get, set)]
     pub center: u64,
     /// Source point.
-    #[pyo3(get)]
+    #[pyo3(get, set)]
     pub p1: u64,
     /// Rotated point.
-    #[pyo3(get)]
+    #[pyo3(get, set)]
     pub p2: u64,
     /// Resolved rotation angle in radians.
     #[pyo3(get)]

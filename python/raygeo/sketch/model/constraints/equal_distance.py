@@ -1,5 +1,3 @@
-# constraints/equal_distance.py
-
 from __future__ import annotations
 
 import math
@@ -7,27 +5,30 @@ from collections.abc import Callable, Sequence
 from gettext import gettext as _
 from typing import TYPE_CHECKING, Any
 
-from gi.repository import PangoCairo
 from raygeo.geo.types import Point
+from raygeo.sketch.constraints.equal_distance import (
+    EqualDistanceConstraint as _CoreEqualDistanceConstraint,
+)
+from raygeo.sketch.entities import Arc, Circle, Line
 
-from rayforge.ui_gtk.shared.text import create_text_layout
-
-from ..entities import Arc, Circle, Line
-from ...types import EntityID
-from .base import Constraint, ConstraintStatus
+from .base import Constraint
 
 if TYPE_CHECKING:
-    import cairo
+    from raygeo.sketch.entities import Entity
+    from raygeo.sketch.model.protocols import (
+        ParameterContext,
+        Sketch,
+        SketchSelection,
+    )
+    from raygeo.sketch.registry import EntityRegistry
+    from raygeo.sketch.types import EntityID
 
-    from ..entities import Entity
-    from ..params import ParameterContext
-    from ..registry import EntityRegistry
-    from ..selection import SketchSelection
-    from ..sketch import Sketch
 
-
-class EqualDistanceConstraint(Constraint):
+class EqualDistanceConstraint(_CoreEqualDistanceConstraint, Constraint):
     """Enforces that distance(p1, p2) equals distance(p3, p4)."""
+
+    def __new__(cls, p1, p2, p3, p4, user_visible=True):
+        return super().__new__(cls, p1, p2, p3, p4, user_visible)
 
     def __init__(
         self,
@@ -37,7 +38,6 @@ class EqualDistanceConstraint(Constraint):
         p4: EntityID,
         user_visible: bool = True,
     ):
-        super().__init__(user_visible=user_visible)
         self.p1: EntityID = p1
         self.p2: EntityID = p2
         self.p3: EntityID = p3
@@ -91,16 +91,6 @@ class EqualDistanceConstraint(Constraint):
         target = {p1, p2}
         return target == {self.p1, self.p2} or target == {self.p3, self.p4}
 
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "type": "EqualDistanceConstraint",
-            "p1": self.p1,
-            "p2": self.p2,
-            "p3": self.p3,
-            "p4": self.p4,
-            "user_visible": self.user_visible,
-        }
-
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> EqualDistanceConstraint:
         return cls(
@@ -110,54 +100,6 @@ class EqualDistanceConstraint(Constraint):
             p4=data["p4"],
             user_visible=data.get("user_visible", True),
         )
-
-    def error(self, reg: EntityRegistry, params: ParameterContext) -> float:
-        pt1 = reg.get_point(self.p1)
-        pt2 = reg.get_point(self.p2)
-        dist1 = math.hypot(pt2.x - pt1.x, pt2.y - pt1.y)
-
-        pt3 = reg.get_point(self.p3)
-        pt4 = reg.get_point(self.p4)
-        dist2 = math.hypot(pt4.x - pt3.x, pt4.y - pt3.y)
-
-        return dist1 - dist2
-
-    def gradient(
-        self, reg: EntityRegistry, params: ParameterContext
-    ) -> dict[EntityID, list[Point]]:
-        pt1 = reg.get_point(self.p1)
-        pt2 = reg.get_point(self.p2)
-        pt3 = reg.get_point(self.p3)
-        pt4 = reg.get_point(self.p4)
-
-        dx1 = pt2.x - pt1.x
-        dy1 = pt2.y - pt1.y
-        dist1 = math.hypot(dx1, dy1)
-
-        dx2 = pt4.x - pt3.x
-        dy2 = pt4.y - pt3.y
-        dist2 = math.hypot(dx2, dy2)
-
-        grad: dict[EntityID, list[Point]] = {}
-
-        def add(pid, gx, gy):
-            if pid not in grad:
-                grad[pid] = [(0.0, 0.0)]
-            cx, cy = grad[pid][0]
-            grad[pid][0] = (cx + gx, cy + gy)
-
-        if dist1 > 1e-9:
-            u1x, u1y = dx1 / dist1, dy1 / dist1
-            add(self.p1, -u1x, -u1y)
-            add(self.p2, u1x, u1y)
-
-        if dist2 > 1e-9:
-            u2x, u2y = dx2 / dist2, dy2 / dist2
-            # Subtracting dist2, so flip signs
-            add(self.p3, u2x, u2y)  # -(-u2)
-            add(self.p4, -u2x, -u2y)  # -(u2)
-
-        return grad
 
     def _get_symbol_pos(
         self,
@@ -210,36 +152,32 @@ class EqualDistanceConstraint(Constraint):
             return math.hypot(sx - pos[0], sy - pos[1]) < threshold
         return False
 
+    def error(self, reg: EntityRegistry, params: ParameterContext) -> float:
+        return super().error(reg)[0]
+
+    def gradient(
+        self, reg: EntityRegistry, params: ParameterContext
+    ) -> dict[EntityID, list[Point]]:
+        return super().gradient(reg)
+
+    def to_dict(self) -> dict[str, Any]:
+        return super().to_dict()
+
     def draw(
         self,
-        ctx: cairo.Context,
+        ctx: Any,
         registry: EntityRegistry,
         to_screen: Callable[[Point], Point],
         is_selected: bool = False,
         is_hovered: bool = False,
         point_radius: float = 5.0,
     ) -> None:
-        pos = self._get_symbol_pos(registry, to_screen)
-        if not pos:
-            return
-
-        sx, sy = pos
-        ctx.save()
-
-        if is_selected:
-            ctx.set_source_rgba(0.2, 0.6, 1.0, 0.4)
-            ctx.arc(sx, sy, 10, 0, 2 * math.pi)
-            ctx.fill()
-
-        if self.status == ConstraintStatus.CONFLICTING:
-            ctx.set_source_rgba(1.0, 0.2, 0.2, 0.5)
-            ctx.arc(sx, sy, 12, 0, 2 * math.pi)
-            ctx.fill()
-
-        self._set_color(ctx, is_hovered)
-        layout = create_text_layout(ctx, "=", 16)
-        ext, _ = layout.get_pixel_extents()
-        ctx.move_to(sx - ext.width / 2 - ext.x, sy - ext.height / 2 - ext.y)
-        PangoCairo.show_layout(ctx, layout)
-        ctx.restore()
-        ctx.new_path()
+        return super().draw(
+            ctx,
+            registry,
+            to_screen,
+            is_selected,
+            is_hovered,
+            point_radius,
+            status=int(self.status),
+        )

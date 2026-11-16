@@ -15,6 +15,7 @@ use crate::sketch::constraints::equal_distance::EqualDistanceConstraint as CoreC
 #[gen_stub_pyclass]
 #[pyclass(
     extends = PyConstraintBase,
+    subclass,
     eq,
     from_py_object,
     module = "raygeo.sketch.constraints.equal_distance",
@@ -23,16 +24,16 @@ use crate::sketch::constraints::equal_distance::EqualDistanceConstraint as CoreC
 #[derive(Clone, PartialEq)]
 pub struct PyEqualDistanceConstraint {
     /// First point of the first pair.
-    #[pyo3(get)]
+    #[pyo3(get, set)]
     pub p1: u64,
     /// Second point of the first pair.
-    #[pyo3(get)]
+    #[pyo3(get, set)]
     pub p2: u64,
     /// First point of the second pair.
-    #[pyo3(get)]
+    #[pyo3(get, set)]
     pub p3: u64,
     /// Second point of the second pair.
-    #[pyo3(get)]
+    #[pyo3(get, set)]
     pub p4: u64,
     /// Reference user-visibility flag.
     #[pyo3(get)]

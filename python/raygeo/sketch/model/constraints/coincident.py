@@ -1,5 +1,3 @@
-# constraints/coincident.py
-
 from __future__ import annotations
 
 import math
@@ -8,24 +6,29 @@ from gettext import gettext as _
 from typing import TYPE_CHECKING, Any
 
 from raygeo.geo.types import Point
+from raygeo.sketch.constraints.coincident import (
+    CoincidentConstraint as _CoreCoincidentConstraint,
+)
 
-from ...types import EntityID
-from .base import Constraint, ConstraintStatus
+from .base import Constraint
 
 if TYPE_CHECKING:
-    import cairo
+    from raygeo.sketch.model.protocols import (
+        ParameterContext,
+        Sketch,
+        SketchSelection,
+    )
+    from raygeo.sketch.registry import EntityRegistry
+    from raygeo.sketch.types import EntityID
 
-    from ..params import ParameterContext
-    from ..registry import EntityRegistry
-    from ..selection import SketchSelection
-    from ..sketch import Sketch
 
-
-class CoincidentConstraint(Constraint):
+class CoincidentConstraint(_CoreCoincidentConstraint, Constraint):
     """Enforces two points are at the same location."""
 
+    def __new__(cls, p1, p2, user_visible=True):
+        return super().__new__(cls, p1, p2, user_visible)
+
     def __init__(self, p1: EntityID, p2: EntityID, user_visible: bool = True):
-        super().__init__(user_visible=user_visible)
         self.p1: EntityID = p1
         self.p2: EntityID = p2
 
@@ -55,14 +58,6 @@ class CoincidentConstraint(Constraint):
             return _("At {}").format(self._format_coord(p1.x, p1.y))
         return ""
 
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "type": "CoincidentConstraint",
-            "p1": self.p1,
-            "p2": self.p2,
-            "user_visible": self.user_visible,
-        }
-
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> CoincidentConstraint:
         return cls(
@@ -70,19 +65,6 @@ class CoincidentConstraint(Constraint):
             p2=data["p2"],
             user_visible=data.get("user_visible", True),
         )
-
-    def error(self, reg: EntityRegistry, params: ParameterContext) -> Point:
-        pt1 = reg.get_point(self.p1)
-        pt2 = reg.get_point(self.p2)
-        return (pt1.x - pt2.x, pt1.y - pt2.y)
-
-    def gradient(
-        self, reg: EntityRegistry, params: ParameterContext
-    ) -> dict[EntityID, list[Point]]:
-        return {
-            self.p1: [(1.0, 0.0), (0.0, 1.0)],
-            self.p2: [(-1.0, 0.0), (0.0, -1.0)],
-        }
 
     def is_hit(
         self,
@@ -104,49 +86,37 @@ class CoincidentConstraint(Constraint):
             return math.hypot(sx - s_pt[0], sy - s_pt[1]) < threshold
         return False
 
+    def get_draggable_point(self) -> EntityID:
+        """Returns p1 as the draggable point for coincident constraints."""
+        return self.p1
+
+    def error(self, reg: EntityRegistry, params: ParameterContext) -> Point:
+        err = super().error(reg)
+        return Point(err[0], err[1])
+
+    def gradient(
+        self, reg: EntityRegistry, params: ParameterContext
+    ) -> dict[EntityID, list[Point]]:
+        return super().gradient(reg)
+
+    def to_dict(self) -> dict[str, Any]:
+        return super().to_dict()
+
     def draw(
         self,
-        ctx: cairo.Context,
+        ctx: Any,
         registry: EntityRegistry,
         to_screen: Callable[[Point], Point],
         is_selected: bool = False,
         is_hovered: bool = False,
         point_radius: float = 5.0,
     ) -> None:
-        # Determine which point to draw on. Prefer the non-origin point if
-        # one is the origin, to avoid clutter on the origin.
-        # We don't have access to sketch.origin_id directly here without the
-        # sketch object, but usually point 0 is origin.
-        # Assuming p1 or p2 exists in registry.
-        try:
-            p = registry.get_point(self.p1)
-            p2 = registry.get_point(self.p2)
-        except IndexError:
-            return
-
-        # Heuristic: if p1 is fixed (likely origin), draw on p2.
-        if p.fixed and not p2.fixed:
-            p = p2
-
-        sx, sy = to_screen((p.x, p.y))
-
-        ctx.save()
-        ctx.set_line_width(1.5)
-
-        radius = point_radius + 4
-        ctx.new_sub_path()
-        ctx.arc(sx, sy, radius, 0, 2 * math.pi)
-
-        if is_selected:
-            self._draw_selection_underlay(ctx)
-
-        if self.status == ConstraintStatus.CONFLICTING:
-            self._draw_conflict_underlay(ctx)
-
-        self._set_color(ctx, is_hovered)
-        ctx.stroke()
-        ctx.restore()
-
-    def get_draggable_point(self) -> EntityID:
-        """Returns p1 as the draggable point for coincident constraints."""
-        return self.p1
+        return super().draw(
+            ctx,
+            registry,
+            to_screen,
+            is_selected,
+            is_hovered,
+            point_radius,
+            status=int(self.status),
+        )

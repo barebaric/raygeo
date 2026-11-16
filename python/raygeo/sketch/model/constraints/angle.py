@@ -1,35 +1,28 @@
 from __future__ import annotations
 
-import logging
 import math
 from collections.abc import Callable, Sequence
 from gettext import gettext as _
-from typing import (
-    TYPE_CHECKING,
-    Any,
-)
+from typing import TYPE_CHECKING, Any
 
-from gi.repository import PangoCairo
 from raygeo.geo.shape.arc import normalize_angle
 from raygeo.geo.shape.line import get_line_line_intersection
 from raygeo.geo.types import Point
+from raygeo.sketch.constraints.angle import (
+    AngleConstraint as _CoreAngleConstraint,
+)
 
-from rayforge.ui_gtk.shared.text import create_text_layout
-
-from ..entities import Line
-from ...types import EntityID
-from .base import Constraint, ConstraintStatus
+from .base import Constraint
 
 if TYPE_CHECKING:
-    import cairo
-
-    from ..entities import Entity
-    from ..params import ParameterContext
-    from ..registry import EntityRegistry
-    from ..selection import SketchSelection
-    from ..sketch import Sketch
-
-logger = logging.getLogger(__name__)
+    from raygeo.sketch.entities import Entity, Line
+    from raygeo.sketch.model.protocols import (
+        ParameterContext,
+        Sketch,
+        SketchSelection,
+    )
+    from raygeo.sketch.registry import EntityRegistry
+    from raygeo.sketch.types import EntityID
 
 ANGLE_WEIGHT = 10.0
 ARC_RADIUS = 35.0
@@ -42,7 +35,11 @@ def _get_far_point(ix, iy, p1, p2):
     return p1 if d1 > d2 else p2
 
 
-class AngleConstraint(Constraint):
+ARC_RADIUS = 35.0
+LABEL_RADIUS = ARC_RADIUS - 10.0
+
+
+class AngleConstraint(_CoreAngleConstraint, Constraint):
     """
     Enforces a specific angle between two lines.
 
@@ -51,6 +48,20 @@ class AngleConstraint(Constraint):
     using directions pointing away from the lines' intersection toward
     the stored far points.
     """
+
+    def __new__(
+        cls,
+        e1_id,
+        e2_id,
+        value,
+        expression=None,
+        user_visible=True,
+        e1_far_idx=None,
+        e2_far_idx=None,
+    ):
+        return super().__new__(
+            cls, e1_id, e2_id, 0.0, user_visible, e1_far_idx, e2_far_idx
+        )
 
     def __init__(
         self,
@@ -62,7 +73,6 @@ class AngleConstraint(Constraint):
         e1_far_idx: EntityID | None = None,
         e2_far_idx: EntityID | None = None,
     ):
-        super().__init__(user_visible=user_visible)
         self.e1_id: EntityID = e1_id
         self.e2_id: EntityID = e2_id
         self.e1_far_idx: EntityID | None = e1_far_idx
@@ -143,20 +153,6 @@ class AngleConstraint(Constraint):
     def get_edit_subtitle(self) -> str:
         return _("Enter angle in degrees or expression.")
 
-    def to_dict(self) -> dict[str, Any]:
-        data = {
-            "type": "AngleConstraint",
-            "e1_id": self.e1_id,
-            "e2_id": self.e2_id,
-            "value": self.value,
-            "user_visible": self.user_visible,
-            "e1_far_idx": self.e1_far_idx,
-            "e2_far_idx": self.e2_far_idx,
-        }
-        if self.expression:
-            data["expression"] = self.expression
-        return data
-
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> AngleConstraint:
         return cls(
@@ -205,91 +201,6 @@ class AngleConstraint(Constraint):
             far2 = _get_far_point(ix, iy, p3, p4)
 
         return far1, far2
-
-    def error(self, reg: EntityRegistry, params: ParameterContext) -> float:
-        result = self._get_line_params(reg)
-        if result is None:
-            logger.warning("_get_line_params returned None")
-            return 0.0
-
-        e1, e2, p1, p2, p3, p4 = result
-
-        intersection = get_line_line_intersection(
-            (p1.x, p1.y), (p2.x, p2.y), (p3.x, p3.y), (p4.x, p4.y)
-        )
-
-        if intersection is None:
-            logger.warning("no intersection (parallel lines)")
-            return 0.0
-
-        ix, iy = intersection
-
-        far1, far2 = self._get_far_points(e1, e2, p1, p2, p3, p4, ix, iy)
-
-        dx1 = far1.x - ix
-        dy1 = far1.y - iy
-        dx2 = far2.x - ix
-        dy2 = far2.y - iy
-
-        len1_sq = dx1 * dx1 + dy1 * dy1
-        len2_sq = dx2 * dx2 + dy2 * dy2
-
-        if len1_sq < 1e-12 or len2_sq < 1e-12:
-            logger.debug(
-                f"error: zero length, len1_sq={len1_sq}, len2_sq={len2_sq}"
-            )
-            return 0.0
-
-        anchor_dir = math.atan2(dy1, dx1)
-        other_dir = math.atan2(dy2, dx2)
-
-        current = normalize_angle(anchor_dir - other_dir)
-
-        target = math.radians(self.value)
-
-        diff = current - target
-        while diff > math.pi:
-            diff -= 2 * math.pi
-        while diff <= -math.pi:
-            diff += 2 * math.pi
-
-        return diff * ANGLE_WEIGHT
-
-    GRAD_FD_EPS = 1e-6
-
-    def gradient(
-        self, reg: EntityRegistry, params: ParameterContext
-    ) -> dict[EntityID, list[Point]]:
-        result = self._get_line_params(reg)
-        if result is None:
-            return {}
-
-        e1, e2, *_ = result
-
-        grads: dict[EntityID, list[Point]] = {}
-        eps = self.GRAD_FD_EPS
-        for pid in (e1.p1_idx, e1.p2_idx, e2.p1_idx, e2.p2_idx):
-            p = reg.get_point(pid)
-
-            orig_x = p.x
-            p.x = orig_x + eps
-            err_x_plus = self.error(reg, params)
-            p.x = orig_x - eps
-            err_x_minus = self.error(reg, params)
-            p.x = orig_x
-            gx = (err_x_plus - err_x_minus) / (2.0 * eps)
-
-            orig_y = p.y
-            p.y = orig_y + eps
-            err_y_plus = self.error(reg, params)
-            p.y = orig_y - eps
-            err_y_minus = self.error(reg, params)
-            p.y = orig_y
-            gy = (err_y_plus - err_y_minus) / (2.0 * eps)
-
-            grads[pid] = [(gx, gy)]
-
-        return grads
 
     def get_visuals(
         self,
@@ -374,78 +285,32 @@ class AngleConstraint(Constraint):
 
         return click_from_anchor <= ccw_diff
 
+    def error(self, reg: EntityRegistry, params: ParameterContext) -> float:
+        return super().error(reg)[0]
+
+    def gradient(
+        self, reg: EntityRegistry, params: ParameterContext
+    ) -> dict[EntityID, list[Point]]:
+        return super().gradient(reg)
+
+    def to_dict(self) -> dict[str, Any]:
+        return super().to_dict()
+
     def draw(
         self,
-        ctx: cairo.Context,
+        ctx: Any,
         registry: EntityRegistry,
         to_screen: Callable[[Point], Point],
         is_selected: bool = False,
         is_hovered: bool = False,
         point_radius: float = 5.0,
     ) -> None:
-        visuals = self.get_visuals(registry, to_screen)
-        if visuals is None:
-            return
-
-        sx, sy, anchor_ang, other_ang = visuals
-
-        ctx.save()
-        ctx.set_line_width(1.5)
-
-        ctx.new_sub_path()
-        ctx.arc(sx, sy, ARC_RADIUS, anchor_ang, other_ang)
-
-        if is_selected:
-            self._draw_selection_underlay(ctx)
-
-        if self.status == ConstraintStatus.CONFLICTING:
-            self._draw_conflict_underlay(ctx)
-
-        self._set_color(ctx, is_hovered)
-        ctx.stroke()
-
-        label = self._format_value() + "°"
-        layout = create_text_layout(ctx, label)
-        ext, _ = layout.get_pixel_extents()
-
-        ccw_diff = normalize_angle(other_ang - anchor_ang)
-
-        mid = anchor_ang + ccw_diff / 2
-        label_x = sx + math.cos(mid) * LABEL_RADIUS
-        label_y = sy + math.sin(mid) * LABEL_RADIUS
-
-        if is_selected:
-            ctx.set_source_rgba(0.2, 0.6, 1.0, 0.4)
-        elif is_hovered:
-            ctx.set_source_rgba(1.0, 0.95, 0.85, 0.9)
-        elif self.status == ConstraintStatus.CONFLICTING:
-            ctx.set_source_rgba(1.0, 0.6, 0.6, 0.9)
-        elif self.status == ConstraintStatus.ERROR:
-            ctx.set_source_rgba(1.0, 0.8, 0.8, 0.9)
-        elif self.status == ConstraintStatus.EXPRESSION_BASED:
-            ctx.set_source_rgba(1.0, 0.9, 0.7, 0.9)
-        else:
-            ctx.set_source_rgba(1, 1, 1, 0.8)
-
-        bg_x = label_x - ext.width / 2 - 4
-        bg_y = label_y - ext.height / 2 - 4
-        ctx.rectangle(bg_x, bg_y, ext.width + 8, ext.height + 8)
-        ctx.fill()
-        ctx.new_path()
-
-        if self.status in (
-            ConstraintStatus.ERROR,
-            ConstraintStatus.CONFLICTING,
-        ):
-            ctx.set_source_rgb(0.8, 0.0, 0.0)
-        else:
-            ctx.set_source_rgb(0, 0, 0.5)
-
-        ctx.move_to(
-            label_x - ext.width / 2 - ext.x,
-            label_y - ext.height / 2 - ext.y,
+        return super().draw(
+            ctx,
+            registry,
+            to_screen,
+            is_selected,
+            is_hovered,
+            point_radius,
+            status=int(self.status),
         )
-        PangoCairo.show_layout(ctx, layout)
-        ctx.new_path()
-
-        ctx.restore()

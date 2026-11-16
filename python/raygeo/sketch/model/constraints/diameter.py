@@ -1,32 +1,34 @@
 from __future__ import annotations
 
-import math
 from collections.abc import Callable, Sequence
 from gettext import gettext as _
 from typing import TYPE_CHECKING, Any
 
-from gi.repository import PangoCairo
 from raygeo.geo.types import Point
+from raygeo.sketch.constraints.diameter import (
+    DiameterConstraint as _CoreDiameterConstraint,
+)
+from raygeo.sketch.entities import Circle
 
-from rayforge.ui_gtk.shared.text import create_text_layout
-
-from ..entities import Circle
-from ...types import EntityID
-from .base import Constraint, ConstraintStatus
+from .base import Constraint
 from .radius import RadiusConstraint
 
 if TYPE_CHECKING:
-    import cairo
+    from raygeo.sketch.entities import Entity
+    from raygeo.sketch.model.protocols import (
+        ParameterContext,
+        Sketch,
+        SketchSelection,
+    )
+    from raygeo.sketch.registry import EntityRegistry
+    from raygeo.sketch.types import EntityID
 
-    from ..entities import Entity
-    from ..params import ParameterContext
-    from ..registry import EntityRegistry
-    from ..selection import SketchSelection
-    from ..sketch import Sketch
 
-
-class DiameterConstraint(Constraint):
+class DiameterConstraint(_CoreDiameterConstraint, Constraint):
     """Enforces the diameter of a Circle."""
+
+    def __new__(cls, circle_id, value, expression=None, user_visible=True):
+        return super().__new__(cls, circle_id, 0.0, user_visible)
 
     def __init__(
         self,
@@ -35,7 +37,6 @@ class DiameterConstraint(Constraint):
         expression: str | None = None,
         user_visible: bool = True,
     ):
-        super().__init__(user_visible=user_visible)
         self.circle_id: EntityID = circle_id
 
         if expression is not None:
@@ -96,17 +97,6 @@ class DiameterConstraint(Constraint):
     ) -> bool:
         return entity_id is not None and self.circle_id == entity_id
 
-    def to_dict(self) -> dict[str, Any]:
-        data = {
-            "type": "DiameterConstraint",
-            "circle_id": self.circle_id,
-            "value": self.value,
-            "user_visible": self.user_visible,
-        }
-        if self.expression:
-            data["expression"] = self.expression
-        return data
-
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> DiameterConstraint:
         return cls(
@@ -120,35 +110,6 @@ class DiameterConstraint(Constraint):
         self, registry: EntityRegistry, entity_id: EntityID
     ) -> bool:
         return self.circle_id == entity_id
-
-    def error(self, reg: EntityRegistry, params: ParameterContext) -> float:
-        circle_entity = reg.get_entity(self.circle_id)
-
-        if not isinstance(circle_entity, Circle):
-            return 0.0
-
-        return 2 * circle_entity.radius(reg) - self.value
-
-    def gradient(
-        self, reg: EntityRegistry, params: ParameterContext
-    ) -> dict[EntityID, list[Point]]:
-        entity = reg.get_entity(self.circle_id)
-        if isinstance(entity, Circle):
-            c = reg.get_point(entity.center_idx)
-            p = reg.get_point(entity.radius_pt_idx)
-            dx, dy = p.x - c.x, p.y - c.y
-            dist = math.hypot(dx, dy)
-
-            ux, uy = 1.0, 0.0  # Default if points are coincident
-            if dist > 1e-9:
-                ux, uy = dx / dist, dy / dist
-
-            # Error = 2*r - d. d(2r)/dp = 2 * u
-            return {
-                entity.radius_pt_idx: [(2 * ux, 2 * uy)],
-                entity.center_idx: [(-2 * ux, -2 * uy)],
-            }
-        return {}
 
     def get_label_pos(
         self,
@@ -190,94 +151,32 @@ class DiameterConstraint(Constraint):
             return x_min <= sx <= x_max and y_min <= sy <= y_max
         return False
 
+    def error(self, reg: EntityRegistry, params: ParameterContext) -> float:
+        return super().error(reg)[0]
+
+    def gradient(
+        self, reg: EntityRegistry, params: ParameterContext
+    ) -> dict[EntityID, list[Point]]:
+        return super().gradient(reg)
+
+    def to_dict(self) -> dict[str, Any]:
+        return super().to_dict()
+
     def draw(
         self,
-        ctx: cairo.Context,
+        ctx: Any,
         registry: EntityRegistry,
         to_screen: Callable[[Point], Point],
         is_selected: bool = False,
         is_hovered: bool = False,
         point_radius: float = 5.0,
     ) -> None:
-        p0 = to_screen((0, 0))
-        p1 = to_screen((1, 0))
-        scale = math.hypot(p1[0] - p0[0], p1[1] - p0[1])
-        if scale < 1e-9:
-            scale = 1.0
-
-        # Logic from RadiusConstraint.get_label_pos adapted here
-        entity = registry.get_entity(self.circle_id)
-        if not isinstance(entity, Circle):
-            return
-
-        center = registry.get_point(entity.center_idx)
-        radius_pt = registry.get_point(entity.radius_pt_idx)
-        if not (center and radius_pt):
-            return
-
-        radius = math.hypot(radius_pt.x - center.x, radius_pt.y - center.y)
-        mid_angle = math.atan2(radius_pt.y - center.y, radius_pt.x - center.x)
-
-        if radius == 0.0:
-            return
-
-        label_dist_screen = 20.0  # Pixels
-        label_dist_model = label_dist_screen / scale
-        total_dist_model = radius + label_dist_model
-
-        label_mx = center.x + total_dist_model * math.cos(mid_angle)
-        label_my = center.y + total_dist_model * math.sin(mid_angle)
-        sx, sy = to_screen((label_mx, label_my))
-
-        arc_mid_mx = center.x + radius * math.cos(mid_angle)
-        arc_mid_my = center.y + radius * math.sin(mid_angle)
-        arc_mid_sx, arc_mid_sy = to_screen((arc_mid_mx, arc_mid_my))
-
-        label = f"Ø{self._format_value()}"
-        layout = create_text_layout(ctx, label)
-        ext, _ = layout.get_pixel_extents()
-
-        ctx.save()
-        # Set background color based on selection, hover, and status
-        if is_selected:
-            ctx.set_source_rgba(0.2, 0.6, 1.0, 0.4)  # Blue selection
-        elif is_hovered:
-            ctx.set_source_rgba(1.0, 0.95, 0.85, 0.9)  # Light yellow hover
-        elif self.status == ConstraintStatus.CONFLICTING:
-            ctx.set_source_rgba(1.0, 0.6, 0.6, 0.9)  # Red background
-        elif self.status == ConstraintStatus.ERROR:
-            ctx.set_source_rgba(1.0, 0.8, 0.8, 0.9)  # Light red background
-        elif self.status == ConstraintStatus.EXPRESSION_BASED:
-            ctx.set_source_rgba(1.0, 0.9, 0.7, 0.9)  # Light orange background
-        else:  # VALID
-            ctx.set_source_rgba(1, 1, 1, 0.8)  # Default white background
-
-        bg_x = sx - ext.width / 2 - 4
-        bg_y = sy - ext.height / 2 - 4
-        ctx.rectangle(bg_x, bg_y, ext.width + 8, ext.height + 8)
-        ctx.fill()
-        ctx.new_path()
-
-        # Set text color based on status
-        if self.status in (
-            ConstraintStatus.ERROR,
-            ConstraintStatus.CONFLICTING,
-        ):
-            ctx.set_source_rgb(0.8, 0.0, 0.0)  # Red text for error/conflict
-        else:
-            ctx.set_source_rgb(0, 0, 0.5)  # Dark blue otherwise
-
-        ctx.move_to(sx - ext.width / 2 - ext.x, sy - ext.height / 2 - ext.y)
-        PangoCairo.show_layout(ctx, layout)
-
-        ctx.set_line_width(1)
-        ctx.set_dash([4, 4])
-        ctx.move_to(sx, sy)
-        ctx.line_to(arc_mid_sx, arc_mid_sy)
-
-        if self.status == ConstraintStatus.CONFLICTING:
-            self._draw_conflict_underlay(ctx)
-
-        self._set_color(ctx, is_hovered)
-        ctx.stroke()
-        ctx.restore()
+        return super().draw(
+            ctx,
+            registry,
+            to_screen,
+            is_selected,
+            is_hovered,
+            point_radius,
+            status=int(self.status),
+        )

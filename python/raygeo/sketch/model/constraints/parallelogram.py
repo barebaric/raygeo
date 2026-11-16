@@ -1,22 +1,33 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from gettext import gettext as _
 from typing import TYPE_CHECKING, Any
 
 from raygeo.geo.types import Point
+from raygeo.sketch.constraints.parallelogram import (
+    ParallelogramConstraint as _CoreParallelogramConstraint,
+)
 
-from ...types import EntityID
 from .base import Constraint
 
 if TYPE_CHECKING:
-    from ..params import ParameterContext
-    from ..registry import EntityRegistry
-    from ..selection import SketchSelection
-    from ..sketch import Sketch
+    from raygeo.sketch.model.protocols import (
+        ParameterContext,
+        Sketch,
+        SketchSelection,
+    )
+    from raygeo.sketch.registry import EntityRegistry
+    from raygeo.sketch.types import EntityID
 
 
-class ParallelogramConstraint(Constraint):
+class ParallelogramConstraint(_CoreParallelogramConstraint, Constraint):
     """Enforces four points form a parallelogram."""
+
+    def __new__(cls, p_origin, p_width, p_height, p4, user_visible=False):
+        return super().__new__(
+            cls, p_origin, p_width, p_height, p4, user_visible
+        )
 
     def __init__(
         self,
@@ -26,7 +37,6 @@ class ParallelogramConstraint(Constraint):
         p4: EntityID,
         user_visible: bool = False,
     ):
-        super().__init__(user_visible=user_visible)
         self.p_origin: EntityID = p_origin
         self.p_width: EntityID = p_width
         self.p_height: EntityID = p_height
@@ -59,16 +69,6 @@ class ParallelogramConstraint(Constraint):
             )
         return ""
 
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "type": "ParallelogramConstraint",
-            "p_origin": self.p_origin,
-            "p_width": self.p_width,
-            "p_height": self.p_height,
-            "p4": self.p4,
-            "user_visible": self.user_visible,
-        }
-
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> ParallelogramConstraint:
         return cls(
@@ -80,29 +80,32 @@ class ParallelogramConstraint(Constraint):
         )
 
     def error(self, reg: EntityRegistry, params: ParameterContext) -> Point:
-        """Returns the difference between vectors (p_width-p_origin) and
-        (p4-p_height).
-        """
-        p_origin = reg.get_point(self.p_origin)
-        p_width = reg.get_point(self.p_width)
-        p_height = reg.get_point(self.p_height)
-        p4 = reg.get_point(self.p4)
-
-        v1_x = p_width.x - p_origin.x
-        v1_y = p_width.y - p_origin.y
-
-        v2_x = p4.x - p_height.x
-        v2_y = p4.y - p_height.y
-
-        return (v1_x - v2_x, v1_y - v2_y)
+        err = super().error(reg)
+        return Point(err[0], err[1])
 
     def gradient(
         self, reg: EntityRegistry, params: ParameterContext
     ) -> dict[EntityID, list[Point]]:
-        """Returns the gradient of the error with respect to each point."""
-        return {
-            self.p_origin: [(-1.0, 0.0), (0.0, -1.0)],
-            self.p_width: [(1.0, 0.0), (0.0, 1.0)],
-            self.p_height: [(1.0, 0.0), (0.0, 1.0)],
-            self.p4: [(-1.0, 0.0), (0.0, -1.0)],
-        }
+        return super().gradient(reg)
+
+    def to_dict(self) -> dict[str, Any]:
+        return super().to_dict()
+
+    def draw(
+        self,
+        ctx: Any,
+        registry: EntityRegistry,
+        to_screen: Callable[[Point], Point],
+        is_selected: bool = False,
+        is_hovered: bool = False,
+        point_radius: float = 5.0,
+    ) -> None:
+        return super().draw(
+            ctx,
+            registry,
+            to_screen,
+            is_selected,
+            is_hovered,
+            point_radius,
+            status=int(self.status),
+        )

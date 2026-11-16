@@ -14,6 +14,7 @@ use crate::sketch::constraints::perpendicular::PerpendicularConstraint as CoreCo
 #[gen_stub_pyclass]
 #[pyclass(
     extends = PyConstraintBase,
+    subclass,
     eq,
     from_py_object,
     module = "raygeo.sketch.constraints.perpendicular",
@@ -22,10 +23,10 @@ use crate::sketch::constraints::perpendicular::PerpendicularConstraint as CoreCo
 #[derive(Clone, PartialEq)]
 pub struct PyPerpendicularConstraint {
     /// First operand entity.
-    #[pyo3(get)]
+    #[pyo3(get, set)]
     pub e1_id: u64,
     /// Second operand entity.
-    #[pyo3(get)]
+    #[pyo3(get, set)]
     pub e2_id: u64,
     /// Reference user-visibility flag.
     #[pyo3(get)]

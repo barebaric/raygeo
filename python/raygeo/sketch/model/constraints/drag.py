@@ -1,26 +1,37 @@
-# constraints/drag.py
-
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
 
 from raygeo.geo.types import Point
+from raygeo.sketch.constraints.drag import (
+    DragConstraint as _CoreDragConstraint,
+)
 
-from ...types import EntityID
 from .base import Constraint
 
 if TYPE_CHECKING:
-    from ..params import ParameterContext
-    from ..registry import EntityRegistry
-    from ..selection import SketchSelection
-    from ..sketch import Sketch
+    from raygeo.sketch.model.protocols import (
+        ParameterContext,
+        Sketch,
+        SketchSelection,
+    )
+    from raygeo.sketch.registry import EntityRegistry
+    from raygeo.sketch.types import EntityID
 
 
-class DragConstraint(Constraint):
+class DragConstraint(_CoreDragConstraint, Constraint):
     """
     A transient constraint used only during interaction.
     It pulls a point toward a target (mouse) coordinate.
     """
+
+    def __new__(
+        cls, point_id, target_x, target_y, weight=0.1, user_visible=True
+    ):
+        return super().__new__(
+            cls, point_id, target_x, target_y, weight, user_visible
+        )
 
     def __init__(
         self,
@@ -34,7 +45,6 @@ class DragConstraint(Constraint):
         self.target_x = target_x
         self.target_y = target_y
         self.weight = weight
-        super().__init__(user_visible=user_visible)
 
     @classmethod
     def can_apply_to(
@@ -45,14 +55,32 @@ class DragConstraint(Constraint):
     def error(
         self, reg: EntityRegistry, params: ParameterContext
     ) -> tuple[float, float]:
-        p = reg.get_point(self.point_id)
-        err_x = (p.x - self.target_x) * self.weight
-        err_y = (p.y - self.target_y) * self.weight
-        return err_x, err_y
+        err = super().error(reg)
+        return (err[0], err[1])
 
     def gradient(
         self, reg: EntityRegistry, params: ParameterContext
     ) -> dict[EntityID, list[Point]]:
-        return {
-            self.point_id: [(self.weight, 0.0), (0.0, self.weight)],
-        }
+        return super().gradient(reg)
+
+    def to_dict(self) -> dict[str, Any]:
+        return super().to_dict()
+
+    def draw(
+        self,
+        ctx: Any,
+        registry: EntityRegistry,
+        to_screen: Callable[[Point], Point],
+        is_selected: bool = False,
+        is_hovered: bool = False,
+        point_radius: float = 5.0,
+    ) -> None:
+        return super().draw(
+            ctx,
+            registry,
+            to_screen,
+            is_selected,
+            is_hovered,
+            point_radius,
+            status=int(self.status),
+        )

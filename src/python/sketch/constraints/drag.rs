@@ -15,6 +15,7 @@ use crate::sketch::constraints::drag::DragConstraint as CoreConstraint;
 #[gen_stub_pyclass]
 #[pyclass(
     extends = PyConstraintBase,
+    subclass,
     eq,
     from_py_object,
     module = "raygeo.sketch.constraints.drag",
@@ -23,17 +24,20 @@ use crate::sketch::constraints::drag::DragConstraint as CoreConstraint;
 #[derive(Clone, PartialEq)]
 pub struct PyDragConstraint {
     /// The dragged point.
-    #[pyo3(get)]
-    pub point: u64,
+    #[pyo3(get, set)]
+    pub point_id: u64,
     /// Target X coordinate.
-    #[pyo3(get)]
+    #[pyo3(get, set)]
     pub target_x: f64,
     /// Target Y coordinate.
-    #[pyo3(get)]
+    #[pyo3(get, set)]
     pub target_y: f64,
     /// Pull strength.
-    #[pyo3(get)]
+    #[pyo3(get, set)]
     pub weight: f64,
+    /// Reference user-visibility flag.
+    #[pyo3(get, set)]
+    pub user_visible: bool,
     /// Reference validation status ordinal.
     #[pyo3(get, set)]
     pub status: u8,
@@ -42,21 +46,24 @@ pub struct PyDragConstraint {
 #[gen_stub_pymethods]
 #[pymethods]
 impl PyDragConstraint {
-    /// Creates the constraint from its resolved points and values.
+    /// Creates the drag constraint for a point and target position.
     #[new]
-    #[pyo3(signature = (point, target_x, target_y, weight = 1.0))]
+    #[pyo3(signature = (point_id, target_x, target_y, weight = 0.1,
+                        user_visible = true))]
     fn new(
-        point: u64,
+        point_id: u64,
         target_x: f64,
         target_y: f64,
         weight: f64,
+        user_visible: bool,
     ) -> PyClassInitializer<Self> {
         PyClassInitializer::from(PyConstraintBase).add_subclass(
             PyDragConstraint {
-                point,
+                point_id,
                 target_x,
                 target_y,
                 weight,
+                user_visible,
                 status: 1,
             },
         )
@@ -93,11 +100,11 @@ impl PyDragConstraint {
     }
 
     /// Returns the constraint error at the registry's point positions.
-    #[pyo3(signature = (registry, _ctx = None))]
+    #[pyo3(signature = (registry, _params = None))]
     fn error(
         &self,
         registry: &PyEntityRegistry,
-        _ctx: Option<Py<PyAny>>,
+        _params: Option<Py<PyAny>>,
     ) -> Vec<f64> {
         self.clone().into_constraint().error(&registry.inner)
     }
@@ -157,7 +164,7 @@ impl PyDragConstraint {
 impl PyDragConstraint {
     pub(crate) fn into_constraint(self) -> CoreConstraint {
         CoreConstraint::new(
-            self.point,
+            self.point_id,
             self.target_x,
             self.target_y,
             self.weight,

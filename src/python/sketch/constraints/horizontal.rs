@@ -15,6 +15,7 @@ use crate::sketch::constraints::horizontal::HorizontalConstraint as CoreConstrai
 #[gen_stub_pyclass]
 #[pyclass(
     extends = PyConstraintBase,
+    subclass,
     eq,
     from_py_object,
     module = "raygeo.sketch.constraints.horizontal",
@@ -23,10 +24,10 @@ use crate::sketch::constraints::horizontal::HorizontalConstraint as CoreConstrai
 #[derive(Clone, PartialEq)]
 pub struct PyHorizontalConstraint {
     /// First point.
-    #[pyo3(get)]
+    #[pyo3(get, set)]
     pub p1: u64,
     /// Second point.
-    #[pyo3(get)]
+    #[pyo3(get, set)]
     pub p2: u64,
     /// Reference user-visibility flag.
     #[pyo3(get)]

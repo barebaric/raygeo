@@ -15,6 +15,7 @@ use crate::sketch::constraints::distance::DistanceConstraint as CoreConstraint;
 #[gen_stub_pyclass]
 #[pyclass(
     extends = PyConstraintBase,
+    subclass,
     eq,
     from_py_object,
     module = "raygeo.sketch.constraints.distance",
@@ -23,10 +24,10 @@ use crate::sketch::constraints::distance::DistanceConstraint as CoreConstraint;
 #[derive(Clone, PartialEq)]
 pub struct PyDistanceConstraint {
     /// First point.
-    #[pyo3(get)]
+    #[pyo3(get, set)]
     pub p1: u64,
     /// Second point.
-    #[pyo3(get)]
+    #[pyo3(get, set)]
     pub p2: u64,
     /// Resolved distance value.
     #[pyo3(get)]
@@ -99,10 +100,6 @@ impl PyDistanceConstraint {
         self.referenced_points(registry).into_iter().collect()
     }
 
-    /// Sets the resolved dimensional value.
-    fn set_value(&mut self, value: f64) {
-        self.value = value;
-    }
 
     /// Serializes to the reference constraint dictionary shape.
     fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {

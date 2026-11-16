@@ -1,22 +1,31 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from gettext import gettext as _
 from typing import TYPE_CHECKING, Any
 
 from raygeo.geo.types import Point
+from raygeo.sketch.constraints.collinear import (
+    CollinearConstraint as _CoreCollinearConstraint,
+)
 
-from ...types import EntityID
 from .base import Constraint
 
 if TYPE_CHECKING:
-    from ..params import ParameterContext
-    from ..registry import EntityRegistry
-    from ..selection import SketchSelection
-    from ..sketch import Sketch
+    from raygeo.sketch.model.protocols import (
+        ParameterContext,
+        Sketch,
+        SketchSelection,
+    )
+    from raygeo.sketch.registry import EntityRegistry
+    from raygeo.sketch.types import EntityID
 
 
-class CollinearConstraint(Constraint):
+class CollinearConstraint(_CoreCollinearConstraint, Constraint):
     """Enforces that three points (p1, p2, p3) lie on the same line."""
+
+    def __new__(cls, p1, p2, p3, user_visible=True):
+        return super().__new__(cls, p1, p2, p3, user_visible)
 
     def __init__(
         self,
@@ -25,7 +34,6 @@ class CollinearConstraint(Constraint):
         p3: EntityID,
         user_visible: bool = True,
     ):
-        super().__init__(user_visible=user_visible)
         self.p1: EntityID = p1
         self.p2: EntityID = p2
         self.p3: EntityID = p3
@@ -58,15 +66,6 @@ class CollinearConstraint(Constraint):
             )
         return ""
 
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "type": "CollinearConstraint",
-            "p1": self.p1,
-            "p2": self.p2,
-            "p3": self.p3,
-            "user_visible": self.user_visible,
-        }
-
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> CollinearConstraint:
         return cls(
@@ -77,31 +76,31 @@ class CollinearConstraint(Constraint):
         )
 
     def error(self, reg: EntityRegistry, params: ParameterContext) -> float:
-        pt1 = reg.get_point(self.p1)
-        pt2 = reg.get_point(self.p2)
-        pt3 = reg.get_point(self.p3)
-        # Cross product of (p2 - p1) and (p3 - p1)
-        return (pt2.x - pt1.x) * (pt3.y - pt1.y) - (pt2.y - pt1.y) * (
-            pt3.x - pt1.x
-        )
+        return super().error(reg)[0]
 
     def gradient(
         self, reg: EntityRegistry, params: ParameterContext
     ) -> dict[EntityID, list[Point]]:
-        p1 = reg.get_point(self.p1)
-        p2 = reg.get_point(self.p2)
-        p3 = reg.get_point(self.p3)
+        return super().gradient(reg)
 
-        # E = (p2x - p1x) * (p3y - p1y) - (p2y - p1y) * (p3x - p1x)
-        # dE/dp1x = -(p3y - p1y) + (p2y - p1y) = p2y - p3y
-        # dE/dp1y = -(p2x - p1x) + (p3x - p1x) = p3x - p2x
-        # dE/dp2x = (p3y - p1y)
-        # dE/dp2y = -(p3x - p1x)
-        # dE/dp3x = -(p2y - p1y)
-        # dE/dp3y = (p2x - p1x)
+    def to_dict(self) -> dict[str, Any]:
+        return super().to_dict()
 
-        return {
-            self.p1: [(p2.y - p3.y, p3.x - p2.x)],
-            self.p2: [(p3.y - p1.y, -(p3.x - p1.x))],
-            self.p3: [(-(p2.y - p1.y), p2.x - p1.x)],
-        }
+    def draw(
+        self,
+        ctx: Any,
+        registry: EntityRegistry,
+        to_screen: Callable[[Point], Point],
+        is_selected: bool = False,
+        is_hovered: bool = False,
+        point_radius: float = 5.0,
+    ) -> None:
+        return super().draw(
+            ctx,
+            registry,
+            to_screen,
+            is_selected,
+            is_hovered,
+            point_radius,
+            status=int(self.status),
+        )

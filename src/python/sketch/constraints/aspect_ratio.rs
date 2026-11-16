@@ -15,6 +15,7 @@ use crate::sketch::constraints::aspect_ratio::AspectRatioConstraint as CoreConst
 #[gen_stub_pyclass]
 #[pyclass(
     extends = PyConstraintBase,
+    subclass,
     eq,
     from_py_object,
     module = "raygeo.sketch.constraints.aspect_ratio",
@@ -23,16 +24,16 @@ use crate::sketch::constraints::aspect_ratio::AspectRatioConstraint as CoreConst
 #[derive(Clone, PartialEq)]
 pub struct PyAspectRatioConstraint {
     /// First point of the reference segment.
-    #[pyo3(get)]
+    #[pyo3(get, set)]
     pub p1: u64,
     /// Second point of the reference segment.
-    #[pyo3(get)]
+    #[pyo3(get, set)]
     pub p2: u64,
     /// First point of the scaled segment.
-    #[pyo3(get)]
+    #[pyo3(get, set)]
     pub p3: u64,
     /// Second point of the scaled segment.
-    #[pyo3(get)]
+    #[pyo3(get, set)]
     pub p4: u64,
     /// Resolved ratio value.
     #[pyo3(get)]

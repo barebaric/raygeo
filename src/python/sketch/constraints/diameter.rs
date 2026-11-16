@@ -15,6 +15,7 @@ use crate::sketch::constraints::diameter::DiameterConstraint as CoreConstraint;
 #[gen_stub_pyclass]
 #[pyclass(
     extends = PyConstraintBase,
+    subclass,
     eq,
     from_py_object,
     module = "raygeo.sketch.constraints.diameter",
@@ -23,7 +24,7 @@ use crate::sketch::constraints::diameter::DiameterConstraint as CoreConstraint;
 #[derive(Clone, PartialEq)]
 pub struct PyDiameterConstraint {
     /// The constrained circle.
-    #[pyo3(get)]
+    #[pyo3(get, set)]
     pub circle_id: u64,
     /// Resolved diameter value.
     #[pyo3(get)]
@@ -94,10 +95,6 @@ impl PyDiameterConstraint {
         self.referenced_points(registry).into_iter().collect()
     }
 
-    /// Sets the resolved dimensional value.
-    fn set_value(&mut self, value: f64) {
-        self.value = value;
-    }
 
     /// Serializes to the reference constraint dictionary shape.
     fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {

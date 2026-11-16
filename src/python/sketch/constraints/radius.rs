@@ -18,16 +18,17 @@ use crate::sketch::constraints::radius::RadiusConstraint as CoreConstraint;
     eq,
     from_py_object,
     extends = PyConstraintBase,
+    subclass,
     module = "raygeo.sketch.constraints.radius",
     name = "RadiusConstraint"
 )]
 #[derive(Clone, PartialEq)]
 pub struct PyRadiusConstraint {
     /// The constrained entity (circle or arc).
-    #[pyo3(get)]
+    #[pyo3(get, set)]
     pub entity_id: u64,
     /// Target radius value.
-    #[pyo3(get)]
+    #[pyo3(get, set)]
     pub value: f64,
     /// Reference user-visibility flag.
     #[pyo3(get)]
@@ -90,10 +91,6 @@ impl PyRadiusConstraint {
         self.referenced_points(registry).into_iter().collect()
     }
 
-    /// Sets the target radius value.
-    fn set_value(&mut self, value: f64) {
-        self.value = value;
-    }
 
     /// Serializes to the reference constraint dictionary shape.
     fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {

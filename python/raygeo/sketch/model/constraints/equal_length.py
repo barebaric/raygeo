@@ -3,32 +3,28 @@ from __future__ import annotations
 import math
 from collections.abc import Callable, Sequence
 from gettext import gettext as _
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    cast,
-)
+from typing import TYPE_CHECKING, Any
 
-from gi.repository import PangoCairo
 from raygeo.geo.types import Point
+from raygeo.sketch.constraints.equal_length import (
+    EqualLengthConstraint as _CoreEqualLengthConstraint,
+)
+from raygeo.sketch.entities import Arc, Circle, Ellipse, Line
 
-from rayforge.ui_gtk.shared.text import create_text_layout
-
-from ..entities import Arc, Circle, Ellipse, Line
-from ...types import EntityID
-from .base import Constraint, ConstraintStatus
+from .base import Constraint
 
 if TYPE_CHECKING:
-    import cairo
+    from raygeo.sketch.entities import Entity
+    from raygeo.sketch.model.protocols import (
+        ParameterContext,
+        Sketch,
+        SketchSelection,
+    )
+    from raygeo.sketch.registry import EntityRegistry
+    from raygeo.sketch.types import EntityID
 
-    from ..entities import Entity
-    from ..params import ParameterContext
-    from ..registry import EntityRegistry
-    from ..selection import SketchSelection
-    from ..sketch import Sketch
 
-
-class EqualLengthConstraint(Constraint):
+class EqualLengthConstraint(_CoreEqualLengthConstraint, Constraint):
     """
     Enforces that all entities in a set have the same characteristic length.
     - Line: Length
@@ -36,8 +32,10 @@ class EqualLengthConstraint(Constraint):
     - Ellipse: Both radii (X and Y)
     """
 
+    def __new__(cls, entity_ids, user_visible=True):
+        return super().__new__(cls, entity_ids, user_visible)
+
     def __init__(self, entity_ids: list[EntityID], user_visible: bool = True):
-        super().__init__(user_visible=user_visible)
         self.entity_ids = entity_ids
 
     @classmethod
@@ -84,13 +82,6 @@ class EqualLengthConstraint(Constraint):
             return entity_id in self.entity_ids
         return False
 
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "type": "EqualLengthConstraint",
-            "entity_ids": self.entity_ids,
-            "user_visible": self.user_visible,
-        }
-
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> EqualLengthConstraint:
         return cls(
@@ -112,102 +103,6 @@ class EqualLengthConstraint(Constraint):
         if not (pa and pb):
             return 0.0
         return math.hypot(pb.x - pa.x, pb.y - pa.y)
-
-    def error(
-        self, reg: EntityRegistry, params: ParameterContext
-    ) -> list[float]:
-        if len(self.entity_ids) < 2:
-            return []
-
-        raw_entities = [reg.get_entity(eid) for eid in self.entity_ids]
-        entities = [e for e in raw_entities if e is not None]
-        if len(entities) < 2 or len(entities) < len(raw_entities):
-            return []
-
-        errors = []
-        base = entities[0]
-        base_pairs = base.characteristic_length_pairs()
-        base_lens = [self._pair_dist(pa, pb, reg) for pa, pb in base_pairs]
-
-        for i in range(1, len(entities)):
-            ent = entities[i]
-            ent_pairs = ent.characteristic_length_pairs()
-            ent_lens = [self._pair_dist(pa, pb, reg) for pa, pb in ent_pairs]
-
-            n = max(len(base_pairs), len(ent_pairs))
-            for j in range(n):
-                bl = base_lens[j] if j < len(base_lens) else base_lens[0]
-                el = ent_lens[j] if j < len(ent_lens) else ent_lens[0]
-                errors.append(el - bl)
-        return errors
-
-    def gradient(
-        self, reg: EntityRegistry, params: ParameterContext
-    ) -> dict[EntityID, list[Point]]:
-        if len(self.entity_ids) < 2:
-            return {}
-
-        entities = [
-            cast(Line | Arc | Circle | Ellipse, reg.get_entity(eid))
-            for eid in self.entity_ids
-        ]
-        if any(e is None for e in entities):
-            return {}
-
-        base_pairs = entities[0].characteristic_length_pairs()
-        num_residuals = 0
-        for i in range(1, len(entities)):
-            ent_pairs = entities[i].characteristic_length_pairs()
-            num_residuals += max(len(base_pairs), len(ent_pairs))
-
-        grad = {}
-
-        def add_grad(pid, r_idx, gx, gy):
-            if pid not in grad:
-                grad[pid] = [(0.0, 0.0)] * num_residuals
-            curr = list(grad[pid])
-            ox, oy = curr[r_idx]
-            curr[r_idx] = (ox + gx, oy + gy)
-            grad[pid] = curr
-
-        row = 0
-        for i in range(1, len(entities)):
-            ent = entities[i]
-            ent_pairs = ent.characteristic_length_pairs()
-            n = max(len(base_pairs), len(ent_pairs))
-
-            for j in range(n):
-                bp = base_pairs[j] if j < len(base_pairs) else base_pairs[0]
-                ep = ent_pairs[j] if j < len(ent_pairs) else ent_pairs[0]
-
-                b_pta = reg.get_point(bp[0])
-                b_ptb = reg.get_point(bp[1])
-                b_dx = b_ptb.x - b_pta.x
-                b_dy = b_ptb.y - b_pta.y
-                b_len = math.hypot(b_dx, b_dy)
-                if b_len > 1e-9:
-                    b_ux, b_uy = b_dx / b_len, b_dy / b_len
-                else:
-                    b_ux, b_uy = 0.0, 0.0
-
-                e_pta = reg.get_point(ep[0])
-                e_ptb = reg.get_point(ep[1])
-                e_dx = e_ptb.x - e_pta.x
-                e_dy = e_ptb.y - e_pta.y
-                e_len = math.hypot(e_dx, e_dy)
-                if e_len > 1e-9:
-                    e_ux, e_uy = e_dx / e_len, e_dy / e_len
-                else:
-                    e_ux, e_uy = 0.0, 0.0
-
-                add_grad(bp[0], row, b_ux, b_uy)
-                add_grad(bp[1], row, -b_ux, -b_uy)
-                add_grad(ep[0], row, -e_ux, -e_uy)
-                add_grad(ep[1], row, e_ux, e_uy)
-
-                row += 1
-
-        return grad
 
     def _get_symbol_pos(
         self,
@@ -266,43 +161,34 @@ class EqualLengthConstraint(Constraint):
                     return True
         return False
 
+    def error(
+        self, reg: EntityRegistry, params: ParameterContext
+    ) -> list[float]:
+        return super().error(reg)
+
+    def gradient(
+        self, reg: EntityRegistry, params: ParameterContext
+    ) -> dict[EntityID, list[Point]]:
+        return super().gradient(reg)
+
+    def to_dict(self) -> dict[str, Any]:
+        return super().to_dict()
+
     def draw(
         self,
-        ctx: cairo.Context,
+        ctx: Any,
         registry: EntityRegistry,
         to_screen: Callable[[Point], Point],
         is_selected: bool = False,
         is_hovered: bool = False,
         point_radius: float = 5.0,
     ) -> None:
-        for entity_id in self.entity_ids:
-            entity = registry.get_entity(entity_id)
-            if not entity:
-                continue
-
-            pos = self._get_symbol_pos(entity, registry, to_screen)
-            if not pos:
-                continue
-
-            sx, sy = pos
-            ctx.save()
-
-            if is_selected:
-                ctx.set_source_rgba(0.2, 0.6, 1.0, 0.4)
-                ctx.arc(sx, sy, 10, 0, 2 * math.pi)
-                ctx.fill()
-
-            if self.status == ConstraintStatus.CONFLICTING:
-                ctx.set_source_rgba(1.0, 0.2, 0.2, 0.5)
-                ctx.arc(sx, sy, 12, 0, 2 * math.pi)
-                ctx.fill()
-
-            self._set_color(ctx, is_hovered)
-            layout = create_text_layout(ctx, "=", 16)
-            ext, _ = layout.get_pixel_extents()
-            ctx.move_to(
-                sx - ext.width / 2 - ext.x, sy - ext.height / 2 - ext.y
-            )
-            PangoCairo.show_layout(ctx, layout)
-            ctx.restore()
-            ctx.new_path()
+        return super().draw(
+            ctx,
+            registry,
+            to_screen,
+            is_selected,
+            is_hovered,
+            point_radius,
+            status=int(self.status),
+        )

@@ -14,6 +14,7 @@ use crate::sketch::constraints::symmetry::SymmetryConstraint as CoreConstraint;
 #[gen_stub_pyclass]
 #[pyclass(
     extends = PyConstraintBase,
+    subclass,
     eq,
     from_py_object,
     module = "raygeo.sketch.constraints.symmetry",
@@ -22,10 +23,10 @@ use crate::sketch::constraints::symmetry::SymmetryConstraint as CoreConstraint;
 #[derive(Clone, PartialEq)]
 pub struct PySymmetryConstraint {
     /// First point.
-    #[pyo3(get)]
+    #[pyo3(get, set)]
     pub p1: u64,
     /// Second point.
-    #[pyo3(get)]
+    #[pyo3(get, set)]
     pub p2: u64,
     /// Symmetry center point, for point symmetry.
     #[pyo3(get, set)]

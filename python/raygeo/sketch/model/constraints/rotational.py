@@ -1,19 +1,26 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Callable
+from gettext import gettext as _
 from typing import TYPE_CHECKING, Any
 
 from raygeo.geo.types import Point
+from raygeo.sketch.constraints.rotational import (
+    RotationalConstraint as _CoreRotationalConstraint,
+)
 
-from ...types import EntityID
 from .base import Constraint
 
 if TYPE_CHECKING:
-    from ..params import ParameterContext
-    from ..registry import EntityRegistry
+    from raygeo.sketch.model.protocols import (
+        ParameterContext,
+    )
+    from raygeo.sketch.registry import EntityRegistry
+    from raygeo.sketch.types import EntityID
 
 
-class RotationalConstraint(Constraint):
+class RotationalConstraint(_CoreRotationalConstraint, Constraint):
     """
     Links a target point (p2) to a source point (p1) through a rotation
     of `value` radians around a center point.
@@ -24,6 +31,11 @@ class RotationalConstraint(Constraint):
     constraints, so the remaining instances are never redistributed.
     """
 
+    def __new__(
+        cls, center, p1, p2, value, expression=None, user_visible=False
+    ):
+        return super().__new__(cls, center, p1, p2, 0.0, user_visible)
+
     def __init__(
         self,
         center: EntityID,
@@ -33,7 +45,6 @@ class RotationalConstraint(Constraint):
         expression: str | None = None,
         user_visible: bool = False,
     ):
-        super().__init__(user_visible=user_visible)
         self.center: EntityID = center
         self.p1: EntityID = p1
         self.p2: EntityID = p2
@@ -62,19 +73,6 @@ class RotationalConstraint(Constraint):
         angle_deg = math.degrees(self.value)
         return f"{self.get_type_name()} {angle_deg:.1f}°"
 
-    def to_dict(self) -> dict[str, Any]:
-        data = {
-            "type": "RotationalConstraint",
-            "center": self.center,
-            "p1": self.p1,
-            "p2": self.p2,
-            "value": self.value,
-            "user_visible": self.user_visible,
-        }
-        if self.expression:
-            data["expression"] = self.expression
-        return data
-
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> RotationalConstraint:
         return cls(
@@ -89,30 +87,31 @@ class RotationalConstraint(Constraint):
     def error(
         self, reg: EntityRegistry, params: ParameterContext
     ) -> list[float]:
-        c = reg.get_point(self.center)
-        s = reg.get_point(self.p1)
-        t = reg.get_point(self.p2)
-
-        ca = math.cos(self.value)
-        sa = math.sin(self.value)
-        dx = s.x - c.x
-        dy = s.y - c.y
-
-        # Target position: rotate (s - c) by angle around c.
-        ex = t.x - (c.x + ca * dx - sa * dy)
-        ey = t.y - (c.y + sa * dx + ca * dy)
-        return [ex, ey]
+        return super().error(reg)
 
     def gradient(
         self, reg: EntityRegistry, params: ParameterContext
     ) -> dict[EntityID, list[Point]]:
-        ca = math.cos(self.value)
-        sa = math.sin(self.value)
+        return super().gradient(reg)
 
-        # Row 0 (x residual): t.x - c.x - ca*(s.x - c.x) + sa*(s.y - c.y)
-        # Row 1 (y residual): t.y - c.y - sa*(s.x - c.x) - ca*(s.y - c.y)
-        return {
-            self.p2: [(1.0, 0.0), (0.0, 1.0)],
-            self.p1: [(-ca, sa), (-sa, -ca)],
-            self.center: [(-1.0 + ca, -sa), (sa, -1.0 + ca)],
-        }
+    def to_dict(self) -> dict[str, Any]:
+        return super().to_dict()
+
+    def draw(
+        self,
+        ctx: Any,
+        registry: EntityRegistry,
+        to_screen: Callable[[Point], Point],
+        is_selected: bool = False,
+        is_hovered: bool = False,
+        point_radius: float = 5.0,
+    ) -> None:
+        return super().draw(
+            ctx,
+            registry,
+            to_screen,
+            is_selected,
+            is_hovered,
+            point_radius,
+            status=int(self.status),
+        )

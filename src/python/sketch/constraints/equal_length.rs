@@ -18,6 +18,7 @@ use crate::sketch::constraints::equal_length::EqualLengthConstraint as CoreConst
 #[gen_stub_pyclass]
 #[pyclass(
     extends = PyConstraintBase,
+    subclass,
     eq,
     from_py_object,
     module = "raygeo.sketch.constraints.equal_length",
