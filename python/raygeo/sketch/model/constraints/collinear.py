@@ -74,6 +74,12 @@ class CollinearConstraint(_CoreCollinearConstraint, Constraint):
             user_visible=data.get("user_visible", True),
         )
 
+    def get_referenced_point_ids(self) -> set[EntityID]:
+        return Constraint.get_referenced_point_ids(self)
+
+    def get_referenced_entity_ids(self) -> set[EntityID]:
+        return Constraint.get_referenced_entity_ids(self)
+
     def error(self, reg: EntityRegistry, params: ParameterContext) -> float:
         return super().error(reg)[0]
 

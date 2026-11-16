@@ -80,7 +80,7 @@ class ParallelogramConstraint(_CoreParallelogramConstraint, Constraint):
 
     def error(self, reg: EntityRegistry, params: ParameterContext) -> Point:
         err = super().error(reg)
-        return Point(err[0], err[1])
+        return (err[0], err[1])
 
     def gradient(
         self, reg: EntityRegistry, params: ParameterContext

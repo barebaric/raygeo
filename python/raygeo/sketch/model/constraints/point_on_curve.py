@@ -8,19 +8,23 @@ from typing import TYPE_CHECKING, Any
 import cairo
 
 from raygeo.geo.types import Point
+from raygeo.sketch.constraints.point_on_curve import (
+    PointOnCurveConstraint as _CorePointOnCurveConstraint,
+)
 from raygeo.sketch.entities import Bezier
 from raygeo.sketch.entities import TextBox as TextBoxEntity
+from raygeo.sketch.types import EntityID
 
-from ..types import EntityID
 from .base import Constraint, ConstraintStatus
 
 if TYPE_CHECKING:
     from raygeo.sketch.entities import Entity
-
-    from ..params import ParameterContext
-    from ..registry import EntityRegistry
-    from ..selection import SketchSelection
-    from ..sketch import Sketch
+    from raygeo.sketch.model.protocols import (
+        ParameterContext,
+        Sketch,
+        SketchSelection,
+    )
+    from raygeo.sketch.registry import EntityRegistry
 
 CurveCoeffs = tuple[
     tuple[float, float, float, float],
@@ -182,6 +186,12 @@ class PointOnCurveConstraint(_CorePointOnCurveConstraint, Constraint):
     def _get_bezier(self, reg: EntityRegistry) -> Bezier | None:
         bez = reg.get_entity(self.shape_id)
         return bez if isinstance(bez, Bezier) else None
+
+    def get_referenced_point_ids(self) -> set[EntityID]:
+        return Constraint.get_referenced_point_ids(self)
+
+    def get_referenced_entity_ids(self) -> set[EntityID]:
+        return Constraint.get_referenced_entity_ids(self)
 
     def error(self, reg: EntityRegistry, params: ParameterContext) -> float:
         return super().error(reg)[0]

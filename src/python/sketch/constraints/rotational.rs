@@ -31,8 +31,8 @@ pub struct PyRotationalConstraint {
     /// Rotated point.
     #[pyo3(get, set)]
     pub p2: u64,
-    /// Resolved rotation angle in radians.
-    #[pyo3(get)]
+    /// Rotation angle in radians (the reference ``value`` attribute).
+    #[pyo3(get, set)]
     pub angle_rad: f64,
     /// Reference user-visibility flag.
     #[pyo3(get)]
@@ -159,6 +159,17 @@ impl PyRotationalConstraint {
     /// Sets the reference user-visibility flag.
     fn set_user_visible(&mut self, value: bool) {
         self.user_visible = value;
+    }
+
+    /// The rotation angle in radians (reference ``value`` attribute).
+    #[getter]
+    fn value(&self) -> f64 {
+        self.angle_rad
+    }
+
+    #[setter]
+    fn set_value(&mut self, value: f64) {
+        self.angle_rad = value;
     }
 
     /// The stored expression string, if any (evaluated caller-side).

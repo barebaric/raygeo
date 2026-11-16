@@ -36,7 +36,7 @@ pub struct PyAspectRatioConstraint {
     #[pyo3(get, set)]
     pub p4: u64,
     /// Resolved ratio value.
-    #[pyo3(get)]
+    #[pyo3(get, set)]
     pub ratio: f64,
     /// Reference user-visibility flag.
     #[pyo3(get)]
@@ -107,11 +107,6 @@ impl PyAspectRatioConstraint {
         registry: PointCtx<'_>,
     ) -> std::collections::HashSet<u64> {
         self.referenced_points(registry).into_iter().collect()
-    }
-
-    /// Sets the resolved ratio value.
-    fn set_ratio(&mut self, ratio: f64) {
-        self.ratio = ratio;
     }
 
     /// Serializes to the reference constraint dictionary shape.

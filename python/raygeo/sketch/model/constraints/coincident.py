@@ -135,9 +135,15 @@ class CoincidentConstraint(_CoreCoincidentConstraint, Constraint):
         """Returns p1 as the draggable point for coincident constraints."""
         return self.p1
 
+    def get_referenced_point_ids(self) -> set[EntityID]:
+        return Constraint.get_referenced_point_ids(self)
+
+    def get_referenced_entity_ids(self) -> set[EntityID]:
+        return Constraint.get_referenced_entity_ids(self)
+
     def error(self, reg: EntityRegistry, params: ParameterContext) -> Point:
         err = super().error(reg)
-        return Point(err[0], err[1])
+        return (err[0], err[1])
 
     def gradient(
         self, reg: EntityRegistry, params: ParameterContext

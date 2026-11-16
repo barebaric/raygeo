@@ -13,7 +13,7 @@ from raygeo.sketch.constraints.symmetry import (
 )
 from raygeo.sketch.entities import Line
 
-from ..types import EntityID
+from raygeo.sketch.types import EntityID
 from .base import Constraint, ConstraintStatus
 
 
@@ -53,10 +53,12 @@ def draw_symmetry_arrows(
 if TYPE_CHECKING:
     from raygeo.sketch.entities import Entity
 
-    from ..params import ParameterContext
-    from ..registry import EntityRegistry
-    from ..selection import SketchSelection
-    from ..sketch import Sketch
+    from raygeo.sketch.model.protocols import (
+        ParameterContext,
+        SketchSelection,
+        Sketch,
+    )
+    from raygeo.sketch.registry import EntityRegistry
 
 
 class SymmetryConstraint(_CoreSymmetryConstraint, Constraint):
@@ -136,6 +138,12 @@ class SymmetryConstraint(_CoreSymmetryConstraint, Constraint):
             axis=data.get("axis"),
             user_visible=data.get("user_visible", True),
         )
+
+    def get_referenced_point_ids(self) -> set[EntityID]:
+        return Constraint.get_referenced_point_ids(self)
+
+    def get_referenced_entity_ids(self) -> set[EntityID]:
+        return Constraint.get_referenced_entity_ids(self)
 
     def error(
         self, reg: EntityRegistry, params: ParameterContext

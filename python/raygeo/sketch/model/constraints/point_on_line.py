@@ -168,6 +168,12 @@ class PointOnLineConstraint(_CorePointOnLineConstraint, Constraint):
         """Returns the point that lies on the line/shape."""
         return self.point_id
 
+    def get_referenced_point_ids(self) -> set[EntityID]:
+        return Constraint.get_referenced_point_ids(self)
+
+    def get_referenced_entity_ids(self) -> set[EntityID]:
+        return Constraint.get_referenced_entity_ids(self)
+
     def error(self, reg: EntityRegistry, params: ParameterContext) -> float:
         return super().error(reg)[0]
 

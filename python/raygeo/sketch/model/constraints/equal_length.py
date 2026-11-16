@@ -206,6 +206,12 @@ class EqualLengthConstraint(_CoreEqualLengthConstraint, Constraint):
             ctx.restore()
             ctx.new_path()
 
+    def get_referenced_point_ids(self) -> set[EntityID]:
+        return Constraint.get_referenced_point_ids(self)
+
+    def get_referenced_entity_ids(self) -> set[EntityID]:
+        return Constraint.get_referenced_entity_ids(self)
+
     def error(
         self, reg: EntityRegistry, params: ParameterContext
     ) -> list[float]:
