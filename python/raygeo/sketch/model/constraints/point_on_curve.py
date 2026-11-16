@@ -14,6 +14,97 @@ from raygeo.sketch.entities import Bezier
 from .base import Constraint
 
 if TYPE_CHECKING:
+    from raygeo.sketch.model.protocols import (
+        ParameterContext,
+        Sketch,
+        SketchSelection,
+    )
+    from raygeo.sketch.registry import EntityRegistry
+    from raygeo.sketch.types import EntityID
+
+_CURVE_SAMPLES = 24
+_NEWTON_ITERATIONS = 12
+_MIN_DISTANCE = 1e-9
+
+
+def _basis(t: float) -> tuple[float, float, float, float]:
+    """Cubic Bernstein basis evaluated at t."""
+    mt = 1.0 - t
+    return (mt * mt * mt, 3.0 * mt * mt * t, 3.0 * mt * t * t, t * t * t)
+
+
+def _basis_d1(t: float) -> tuple[float, float, float, float]:
+    """First derivative of the cubic Bernstein basis at t."""
+    mt = 1.0 - t
+    return (
+        -3.0 * mt * mt,
+        3.0 * mt * (1.0 - 3.0 * t),
+        3.0 * t * (2.0 - 3.0 * t),
+        3.0 * t * t,
+    )
+
+
+def _basis_d2(t: float) -> tuple[float, float, float, float]:
+    """Second derivative of the cubic Bernstein basis at t."""
+    return (6.0 * (1.0 - t), 18.0 * t - 12.0, 6.0 - 18.0 * t, 6.0 * t)
+
+
+def _eval_curve(
+    xs: tuple[float, ...], ys: tuple[float, ...], basis: tuple[float, ...]
+) -> tuple[float, float]:
+    bx = sum(b * x for b, x in zip(basis, xs))
+    by = sum(b * y for b, y in zip(basis, ys))
+    return bx, by
+
+
+def closest_point_on_bezier(
+    xs: tuple[float, float, float, float],
+    ys: tuple[float, float, float, float],
+    px: float,
+    py: float,
+) -> tuple[float, float, float]:
+    """
+    Finds the point on a cubic Bezier curve closest to (px, py).
+
+    The stationarity condition (B(t) - P) . B'(t) = 0 is solved by
+    sampling the curve coarsely and refining the best sample with
+    Newton iterations.
+
+    Returns:
+        Tuple (t, bx, by): the curve parameter and the coordinates of
+        the closest curve point.
+    """
+    best_t = 0.0
+    best_dist_sq = float("inf")
+    for i in range(_CURVE_SAMPLES + 1):
+        t = i / _CURVE_SAMPLES
+        bx, by = _eval_curve(xs, ys, _basis(t))
+        dist_sq = (bx - px) ** 2 + (by - py) ** 2
+        if dist_sq < best_dist_sq:
+            best_dist_sq = dist_sq
+            best_t = t
+
+    t = best_t
+    for _newton in range(_NEWTON_ITERATIONS):
+        d1 = _eval_curve(xs, ys, _basis_d1(t))
+        d2 = _eval_curve(xs, ys, _basis_d2(t))
+        bx, by = _eval_curve(xs, ys, _basis(t))
+        fx = bx - px
+        fy = by - py
+        f = fx * d1[0] + fy * d1[1]
+        fp = d1[0] * d1[0] + d1[1] * d1[1] + fx * d2[0] + fy * d2[1]
+        if abs(fp) < 1e-12:
+            break
+        step = f / fp
+        t = min(1.0, max(0.0, t - step))
+        if abs(step) < 1e-12:
+            break
+
+    bx, by = _eval_curve(xs, ys, _basis(t))
+    return t, bx, by
+
+
+if TYPE_CHECKING:
     from raygeo.sketch.entities import Entity
     from raygeo.sketch.model.protocols import (
         ParameterContext,

@@ -11,6 +11,8 @@ from raygeo.geo.types import Point
 from ..expression import safe_evaluate
 
 if TYPE_CHECKING:
+    import cairo
+
     from raygeo.sketch.entities import Entity
     from raygeo.sketch.model.protocols import (
         ParameterContext,
@@ -150,6 +152,42 @@ class Constraint:
     ) -> bool:
         """Checks if the constraint's visual representation is hit."""
         return False
+
+    def _set_color(self, ctx: "cairo.Context", is_hovered: bool) -> None:
+        """
+        Sets the standard drawing color for constraints based on hover and
+        status.
+        """
+        if is_hovered:
+            ctx.set_source_rgb(1.0, 0.8, 0.0)  # Yellow for hover
+        elif self.status == ConstraintStatus.CONFLICTING:
+            ctx.set_source_rgb(1.0, 0.2, 0.2)  # Red for conflicting
+        elif self.status == ConstraintStatus.ERROR:
+            ctx.set_source_rgb(1.0, 0.2, 0.2)  # Red for error
+        elif self.status == ConstraintStatus.EXPRESSION_BASED:
+            ctx.set_source_rgb(1.0, 0.6, 0.0)  # Orange for expression
+        else:  # VALID
+            ctx.set_source_rgb(0.0, 0.6, 0.0)  # Green for valid
+
+    def _draw_selection_underlay(
+        self, ctx: "cairo.Context", width_scale: float = 3.0
+    ) -> None:
+        """Draws a semi-transparent blue underlay for the current path."""
+        ctx.save()
+        ctx.set_source_rgba(0.2, 0.6, 1.0, 0.4)
+        ctx.set_line_width(ctx.get_line_width() * width_scale)
+        ctx.stroke_preserve()
+        ctx.restore()
+
+    def _draw_conflict_underlay(
+        self, ctx: "cairo.Context", width_scale: float = 3.5
+    ) -> None:
+        """Draws a semi-transparent red underlay for conflicting items."""
+        ctx.save()
+        ctx.set_source_rgba(1.0, 0.2, 0.2, 0.5)
+        ctx.set_line_width(ctx.get_line_width() * width_scale)
+        ctx.stroke_preserve()
+        ctx.restore()
 
     def _format_value(self) -> str:
         """Helper to format the value string for constraints."""

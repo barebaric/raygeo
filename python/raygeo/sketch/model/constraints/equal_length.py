@@ -5,16 +5,19 @@ from collections.abc import Callable, Sequence
 from gettext import gettext as _
 from typing import TYPE_CHECKING, Any
 
+import cairo
+from gi.repository import PangoCairo
+
 from raygeo.geo.types import Point
 from raygeo.sketch.constraints.equal_length import (
     EqualLengthConstraint as _CoreEqualLengthConstraint,
 )
-from raygeo.sketch.entities import Arc, Circle, Ellipse, Line
+from raygeo.sketch.model.text import create_text_layout
 
-from .base import Constraint
+from .base import Constraint, ConstraintStatus
 
 if TYPE_CHECKING:
-    from raygeo.sketch.entities import Entity
+    from raygeo.sketch.entities import Arc, Circle, Ellipse, Entity, Line
     from raygeo.sketch.model.protocols import (
         ParameterContext,
         Sketch,
@@ -161,6 +164,47 @@ class EqualLengthConstraint(_CoreEqualLengthConstraint, Constraint):
                     return True
         return False
 
+    def draw(
+        self,
+        ctx: cairo.Context,
+        registry: EntityRegistry,
+        to_screen: Callable[[Point], Point],
+        is_selected: bool = False,
+        is_hovered: bool = False,
+        point_radius: float = 5.0,
+    ) -> None:
+        for entity_id in self.entity_ids:
+            entity = registry.get_entity(entity_id)
+            if not entity:
+                continue
+
+            pos = self._get_symbol_pos(entity, registry, to_screen)
+            if not pos:
+                continue
+
+            sx, sy = pos
+            ctx.save()
+
+            if is_selected:
+                ctx.set_source_rgba(0.2, 0.6, 1.0, 0.4)
+                ctx.arc(sx, sy, 10, 0, 2 * math.pi)
+                ctx.fill()
+
+            if self.status == ConstraintStatus.CONFLICTING:
+                ctx.set_source_rgba(1.0, 0.2, 0.2, 0.5)
+                ctx.arc(sx, sy, 12, 0, 2 * math.pi)
+                ctx.fill()
+
+            self._set_color(ctx, is_hovered)
+            layout = create_text_layout(ctx, "=", 16)
+            ext, _ = layout.get_pixel_extents()
+            ctx.move_to(
+                sx - ext.width / 2 - ext.x, sy - ext.height / 2 - ext.y
+            )
+            PangoCairo.show_layout(ctx, layout)
+            ctx.restore()
+            ctx.new_path()
+
     def error(
         self, reg: EntityRegistry, params: ParameterContext
     ) -> list[float]:
@@ -173,22 +217,3 @@ class EqualLengthConstraint(_CoreEqualLengthConstraint, Constraint):
 
     def to_dict(self) -> dict[str, Any]:
         return super().to_dict()
-
-    def draw(
-        self,
-        ctx: Any,
-        registry: EntityRegistry,
-        to_screen: Callable[[Point], Point],
-        is_selected: bool = False,
-        is_hovered: bool = False,
-        point_radius: float = 5.0,
-    ) -> None:
-        return super().draw(
-            ctx,
-            registry,
-            to_screen,
-            is_selected,
-            is_hovered,
-            point_radius,
-            status=int(self.status),
-        )

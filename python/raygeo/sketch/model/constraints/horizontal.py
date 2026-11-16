@@ -5,13 +5,15 @@ from collections.abc import Callable, Sequence
 from gettext import gettext as _
 from typing import TYPE_CHECKING, Any
 
+import cairo
+
 from raygeo.geo.types import Point
 from raygeo.sketch.constraints.horizontal import (
     HorizontalConstraint as _CoreHorizontalConstraint,
 )
 from raygeo.sketch.entities import Line
 
-from .base import Constraint
+from .base import Constraint, ConstraintStatus
 
 if TYPE_CHECKING:
     from raygeo.sketch.entities import Entity
@@ -113,6 +115,44 @@ class HorizontalConstraint(_CoreHorizontalConstraint, Constraint):
             return math.hypot(sx - cx, sy - cy) < threshold
         return False
 
+    def draw(
+        self,
+        ctx: cairo.Context,
+        registry: EntityRegistry,
+        to_screen: Callable[[Point], Point],
+        is_selected: bool = False,
+        is_hovered: bool = False,
+        point_radius: float = 5.0,
+    ) -> None:
+        try:
+            p1 = registry.get_point(self.p1)
+            p2 = registry.get_point(self.p2)
+        except IndexError:
+            return
+
+        s1 = to_screen((p1.x, p1.y))
+        s2 = to_screen((p2.x, p2.y))
+
+        t_marker = 0.2
+        mx = s1[0] + (s2[0] - s1[0]) * t_marker
+        my = s1[1] + (s2[1] - s1[1]) * t_marker
+
+        size = 8
+        ctx.save()
+        ctx.set_line_width(2)
+        ctx.move_to(mx - size, my - 10)
+        ctx.line_to(mx + size, my - 10)
+
+        if is_selected:
+            self._draw_selection_underlay(ctx)
+
+        if self.status == ConstraintStatus.CONFLICTING:
+            self._draw_conflict_underlay(ctx)
+
+        self._set_color(ctx, is_hovered)
+        ctx.stroke()
+        ctx.restore()
+
     def error(self, reg: EntityRegistry, params: ParameterContext) -> float:
         return super().error(reg)[0]
 
@@ -123,22 +163,3 @@ class HorizontalConstraint(_CoreHorizontalConstraint, Constraint):
 
     def to_dict(self) -> dict[str, Any]:
         return super().to_dict()
-
-    def draw(
-        self,
-        ctx: Any,
-        registry: EntityRegistry,
-        to_screen: Callable[[Point], Point],
-        is_selected: bool = False,
-        is_hovered: bool = False,
-        point_radius: float = 5.0,
-    ) -> None:
-        return super().draw(
-            ctx,
-            registry,
-            to_screen,
-            is_selected,
-            is_hovered,
-            point_radius,
-            status=int(self.status),
-        )

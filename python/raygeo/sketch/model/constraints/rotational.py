@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import math
-from collections.abc import Callable
 from gettext import gettext as _
 from typing import TYPE_CHECKING, Any
 
@@ -96,22 +95,3 @@ class RotationalConstraint(_CoreRotationalConstraint, Constraint):
 
     def to_dict(self) -> dict[str, Any]:
         return super().to_dict()
-
-    def draw(
-        self,
-        ctx: Any,
-        registry: EntityRegistry,
-        to_screen: Callable[[Point], Point],
-        is_selected: bool = False,
-        is_hovered: bool = False,
-        point_radius: float = 5.0,
-    ) -> None:
-        return super().draw(
-            ctx,
-            registry,
-            to_screen,
-            is_selected,
-            is_hovered,
-            point_radius,
-            status=int(self.status),
-        )

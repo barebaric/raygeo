@@ -5,12 +5,14 @@ from collections.abc import Callable
 from gettext import gettext as _
 from typing import TYPE_CHECKING, Any
 
+import cairo
+
 from raygeo.geo.types import Point
 from raygeo.sketch.constraints.coincident import (
     CoincidentConstraint as _CoreCoincidentConstraint,
 )
 
-from .base import Constraint
+from .base import Constraint, ConstraintStatus
 
 if TYPE_CHECKING:
     from raygeo.sketch.model.protocols import (
@@ -86,6 +88,49 @@ class CoincidentConstraint(_CoreCoincidentConstraint, Constraint):
             return math.hypot(sx - s_pt[0], sy - s_pt[1]) < threshold
         return False
 
+    def draw(
+        self,
+        ctx: cairo.Context,
+        registry: EntityRegistry,
+        to_screen: Callable[[Point], Point],
+        is_selected: bool = False,
+        is_hovered: bool = False,
+        point_radius: float = 5.0,
+    ) -> None:
+        # Determine which point to draw on. Prefer the non-origin point if
+        # one is the origin, to avoid clutter on the origin.
+        # We don't have access to sketch.origin_id directly here without the
+        # sketch object, but usually point 0 is origin.
+        # Assuming p1 or p2 exists in registry.
+        try:
+            p = registry.get_point(self.p1)
+            p2 = registry.get_point(self.p2)
+        except IndexError:
+            return
+
+        # Heuristic: if p1 is fixed (likely origin), draw on p2.
+        if p.fixed and not p2.fixed:
+            p = p2
+
+        sx, sy = to_screen((p.x, p.y))
+
+        ctx.save()
+        ctx.set_line_width(1.5)
+
+        radius = point_radius + 4
+        ctx.new_sub_path()
+        ctx.arc(sx, sy, radius, 0, 2 * math.pi)
+
+        if is_selected:
+            self._draw_selection_underlay(ctx)
+
+        if self.status == ConstraintStatus.CONFLICTING:
+            self._draw_conflict_underlay(ctx)
+
+        self._set_color(ctx, is_hovered)
+        ctx.stroke()
+        ctx.restore()
+
     def get_draggable_point(self) -> EntityID:
         """Returns p1 as the draggable point for coincident constraints."""
         return self.p1
@@ -101,22 +146,3 @@ class CoincidentConstraint(_CoreCoincidentConstraint, Constraint):
 
     def to_dict(self) -> dict[str, Any]:
         return super().to_dict()
-
-    def draw(
-        self,
-        ctx: Any,
-        registry: EntityRegistry,
-        to_screen: Callable[[Point], Point],
-        is_selected: bool = False,
-        is_hovered: bool = False,
-        point_radius: float = 5.0,
-    ) -> None:
-        return super().draw(
-            ctx,
-            registry,
-            to_screen,
-            is_selected,
-            is_hovered,
-            point_radius,
-            status=int(self.status),
-        )

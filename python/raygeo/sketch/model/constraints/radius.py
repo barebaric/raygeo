@@ -5,16 +5,19 @@ from collections.abc import Callable, Sequence
 from gettext import gettext as _
 from typing import TYPE_CHECKING, Any
 
+import cairo
+from gi.repository import PangoCairo
+
 from raygeo.geo.types import Point
 from raygeo.sketch.constraints.radius import (
     RadiusConstraint as _CoreRadiusConstraint,
 )
-from raygeo.sketch.entities import Arc, Circle
+from raygeo.sketch.model.text import create_text_layout
 
-from .base import Constraint
+from .base import Constraint, ConstraintStatus
 
 if TYPE_CHECKING:
-    from raygeo.sketch.entities import Entity
+    from raygeo.sketch.entities import Arc, Circle, Entity
     from raygeo.sketch.model.protocols import (
         ParameterContext,
         Sketch,
@@ -208,6 +211,73 @@ class RadiusConstraint(_CoreRadiusConstraint, Constraint):
             return x_min <= sx <= x_max and y_min <= sy <= y_max
         return False
 
+    def draw(
+        self,
+        ctx: cairo.Context,
+        registry: EntityRegistry,
+        to_screen: Callable[[Point], Point],
+        is_selected: bool = False,
+        is_hovered: bool = False,
+        point_radius: float = 5.0,
+    ) -> None:
+        pos_data = self.get_label_pos(
+            registry,
+            to_screen,
+            None,  # Pass None as element, get_label_pos will infer scale
+        )
+        if not pos_data:
+            return
+        sx, sy, arc_mid_sx, arc_mid_sy = pos_data
+
+        label = f"R{self._format_value()}"
+        layout = create_text_layout(ctx, label)
+        ext, _ = layout.get_pixel_extents()
+
+        ctx.save()
+        # Set background color based on selection, hover, and status
+        if is_selected:
+            ctx.set_source_rgba(0.2, 0.6, 1.0, 0.4)  # Blue selection
+        elif is_hovered:
+            ctx.set_source_rgba(1.0, 0.95, 0.85, 0.9)  # Light yellow hover
+        elif self.status == ConstraintStatus.CONFLICTING:
+            ctx.set_source_rgba(1.0, 0.6, 0.6, 0.9)  # Red background
+        elif self.status == ConstraintStatus.ERROR:
+            ctx.set_source_rgba(1.0, 0.8, 0.8, 0.9)  # Light red background
+        elif self.status == ConstraintStatus.EXPRESSION_BASED:
+            ctx.set_source_rgba(1.0, 0.9, 0.7, 0.9)  # Light orange background
+        else:  # VALID
+            ctx.set_source_rgba(1, 1, 1, 0.8)  # Default white background
+
+        bg_x = sx - ext.width / 2 - 4
+        bg_y = sy - ext.height / 2 - 4
+        ctx.rectangle(bg_x, bg_y, ext.width + 8, ext.height + 8)
+        ctx.fill()
+        ctx.new_path()
+
+        # Set text color based on status
+        if self.status in (
+            ConstraintStatus.ERROR,
+            ConstraintStatus.CONFLICTING,
+        ):
+            ctx.set_source_rgb(0.8, 0.0, 0.0)  # Red text for error/conflict
+        else:
+            ctx.set_source_rgb(0, 0, 0.5)  # Dark blue otherwise
+
+        ctx.move_to(sx - ext.width / 2 - ext.x, sy - ext.height / 2 - ext.y)
+        PangoCairo.show_layout(ctx, layout)
+
+        ctx.set_line_width(1)
+        ctx.set_dash([4, 4])
+        ctx.move_to(sx, sy)
+        ctx.line_to(arc_mid_sx, arc_mid_sy)
+
+        if self.status == ConstraintStatus.CONFLICTING:
+            self._draw_conflict_underlay(ctx)
+
+        self._set_color(ctx, is_hovered)
+        ctx.stroke()
+        ctx.restore()
+
     def error(self, reg: EntityRegistry, params: ParameterContext) -> float:
         return super().error(reg)[0]
 
@@ -218,22 +288,3 @@ class RadiusConstraint(_CoreRadiusConstraint, Constraint):
 
     def to_dict(self) -> dict[str, Any]:
         return super().to_dict()
-
-    def draw(
-        self,
-        ctx: Any,
-        registry: EntityRegistry,
-        to_screen: Callable[[Point], Point],
-        is_selected: bool = False,
-        is_hovered: bool = False,
-        point_radius: float = 5.0,
-    ) -> None:
-        return super().draw(
-            ctx,
-            registry,
-            to_screen,
-            is_selected,
-            is_hovered,
-            point_radius,
-            status=int(self.status),
-        )
