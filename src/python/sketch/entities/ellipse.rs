@@ -57,7 +57,8 @@ impl PyEllipse {
             .iter()
             .map(|&id| id as u64)
             .collect();
-        let helper_line_ids: Vec<i64> = inner.helper_line_ids.iter().map(|&id| id as i64).collect();
+        let helper_line_ids: Vec<i64> =
+            inner.helper_line_ids.iter().map(|&id| id as i64).collect();
         PyClassInitializer::from(PyEntityBase).add_subclass(PyEllipse {
             inner,
             helper_line_ids,
@@ -197,10 +198,7 @@ impl PyEllipse {
 
     #[setter]
     #[pyo3(name = "fill_color")]
-    fn set_fill_color_attr(
-        &mut self,
-        value: Option<(f64, f64, f64, f64)>,
-    ) {
+    fn set_fill_color_attr(&mut self, value: Option<(f64, f64, f64, f64)>) {
         self.inner.base_mut().fill_color =
             value.map(|(r, g, b, a)| [r, g, b, a]);
     }
@@ -483,26 +481,30 @@ impl PyEllipse {
         registry: PointCtx<'_>,
         constraints: &Bound<'_, PyAny>,
     ) -> PyResult<()> {
-        let constrained = self.inner.compute_constrained(&registry, &|eid: u64| {
-            Python::attach(|py| {
-                let registry = registry.0.clone();
-                let mut constrained = false;
-                if let Ok(iter) = constraints.try_iter() {
-                    for constraint in iter.flatten() {
-                        if let Ok(flag) = constraint
-                            .call_method1("constrains_radius", (&registry, eid))
-                            .and_then(|v| v.extract::<bool>())
-                        {
-                            if flag {
-                                constrained = true;
-                                break;
+        let constrained =
+            self.inner.compute_constrained(&registry, &|eid: u64| {
+                Python::attach(|_py| {
+                    let registry = registry.0.clone();
+                    let mut constrained = false;
+                    if let Ok(iter) = constraints.try_iter() {
+                        for constraint in iter.flatten() {
+                            if let Ok(flag) = constraint
+                                .call_method1(
+                                    "constrains_radius",
+                                    (&registry, eid),
+                                )
+                                .and_then(|v| v.extract::<bool>())
+                            {
+                                if flag {
+                                    constrained = true;
+                                    break;
+                                }
                             }
                         }
                     }
-                }
-                constrained
-            })
-        });
+                    constrained
+                })
+            });
         self.inner.base_mut().constrained = constrained;
         Ok(())
     }
@@ -550,29 +552,29 @@ impl PyEllipse {
         &self,
         registry: PointCtx<'_>,
     ) -> Option<crate::python::geo::geometry::Geometry> {
-        self.inner
-            .create_fill_geometry(&registry)
-            .map(|geometry| crate::python::geo::geometry::Geometry {
-                inner: geometry,
-            })
+        self.inner.create_fill_geometry(&registry).map(|geometry| {
+            crate::python::geo::geometry::Geometry { inner: geometry }
+        })
     }
 
     /// Builds an entity from its reference dictionary shape.
     #[staticmethod]
-    fn from_dict(py: Python<'_>, data: &Bound<'_, PyDict>) -> PyResult<Py<PyEllipse>> {
+    fn from_dict(
+        py: Python<'_>,
+        data: &Bound<'_, PyDict>,
+    ) -> PyResult<Py<PyEllipse>> {
         let value = value_from_dict(data)?;
-        let inner = CoreEllipse::from_json(&value).ok_or_else(|| {
-            PyValueError::new_err("invalid ellipse dict")
-        })?;
-        let helper_line_ids: Vec<i64> = inner.helper_line_ids.iter().map(|&id| id as i64).collect();
+        let inner = CoreEllipse::from_json(&value)
+            .ok_or_else(|| PyValueError::new_err("invalid ellipse dict"))?;
+        let helper_line_ids: Vec<i64> =
+            inner.helper_line_ids.iter().map(|&id| id as i64).collect();
         Py::new(
             py,
-            PyClassInitializer::from(PyEntityBase).add_subclass(
-                PyEllipse {
-                    inner,
-                    helper_line_ids,
-                    registry: None,
-                }),
+            PyClassInitializer::from(PyEntityBase).add_subclass(PyEllipse {
+                inner,
+                helper_line_ids,
+                registry: None,
+            }),
         )
     }
 }

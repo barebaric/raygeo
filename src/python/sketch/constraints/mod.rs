@@ -190,10 +190,8 @@ impl DrawContextContract for PyDrawContext<'_> {
             }
         }
         let entity = self.call("get_entity", id)?;
-        let name: String = entity
-            .getattr("type")
-            .ok()
-            .and_then(|v| v.extract().ok())?;
+        let name: String =
+            entity.getattr("type").ok().and_then(|v| v.extract().ok())?;
         Some(std::borrow::Cow::Owned(name))
     }
 

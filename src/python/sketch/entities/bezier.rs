@@ -183,10 +183,7 @@ impl PyBezier {
 
     #[setter]
     #[pyo3(name = "fill_color")]
-    fn set_fill_color_attr(
-        &mut self,
-        value: Option<(f64, f64, f64, f64)>,
-    ) {
+    fn set_fill_color_attr(&mut self, value: Option<(f64, f64, f64, f64)>) {
         self.inner.base_mut().fill_color =
             value.map(|(r, g, b, a)| [r, g, b, a]);
     }
@@ -460,26 +457,30 @@ impl PyBezier {
         registry: PointCtx<'_>,
         constraints: &Bound<'_, PyAny>,
     ) -> PyResult<()> {
-        let constrained = self.inner.compute_constrained(&registry, &|eid: u64| {
-            Python::attach(|py| {
-                let registry = registry.0.clone();
-                let mut constrained = false;
-                if let Ok(iter) = constraints.try_iter() {
-                    for constraint in iter.flatten() {
-                        if let Ok(flag) = constraint
-                            .call_method1("constrains_radius", (&registry, eid))
-                            .and_then(|v| v.extract::<bool>())
-                        {
-                            if flag {
-                                constrained = true;
-                                break;
+        let constrained =
+            self.inner.compute_constrained(&registry, &|eid: u64| {
+                Python::attach(|_py| {
+                    let registry = registry.0.clone();
+                    let mut constrained = false;
+                    if let Ok(iter) = constraints.try_iter() {
+                        for constraint in iter.flatten() {
+                            if let Ok(flag) = constraint
+                                .call_method1(
+                                    "constrains_radius",
+                                    (&registry, eid),
+                                )
+                                .and_then(|v| v.extract::<bool>())
+                            {
+                                if flag {
+                                    constrained = true;
+                                    break;
+                                }
                             }
                         }
                     }
-                }
-                constrained
-            })
-        });
+                    constrained
+                })
+            });
         self.inner.base_mut().constrained = constrained;
         Ok(())
     }
@@ -527,26 +528,25 @@ impl PyBezier {
         &self,
         registry: PointCtx<'_>,
     ) -> Option<crate::python::geo::geometry::Geometry> {
-        self.inner
-            .create_fill_geometry(&registry)
-            .map(|geometry| crate::python::geo::geometry::Geometry {
-                inner: geometry,
-            })
+        self.inner.create_fill_geometry(&registry).map(|geometry| {
+            crate::python::geo::geometry::Geometry { inner: geometry }
+        })
     }
 
     /// Builds an entity from its reference dictionary shape.
     #[staticmethod]
-    fn from_dict(py: Python<'_>, data: &Bound<'_, PyDict>) -> PyResult<Py<PyBezier>> {
+    fn from_dict(
+        py: Python<'_>,
+        data: &Bound<'_, PyDict>,
+    ) -> PyResult<Py<PyBezier>> {
         let value = value_from_dict(data)?;
-        let inner = CoreBezier::from_json(&value).ok_or_else(|| {
-            PyValueError::new_err("invalid bezier dict")
-        })?;
+        let inner = CoreBezier::from_json(&value)
+            .ok_or_else(|| PyValueError::new_err("invalid bezier dict"))?;
         Py::new(
             py,
-            PyClassInitializer::from(PyEntityBase).add_subclass(
-                PyBezier {
-                    inner,
-                    registry: None,
+            PyClassInitializer::from(PyEntityBase).add_subclass(PyBezier {
+                inner,
+                registry: None,
             }),
         )
     }
@@ -584,7 +584,6 @@ impl PyBezier {
         self.get_control_points_impl(&registry)
     }
 
-
     /// Absolute control point coordinates, falling back to the
     /// owning endpoint per absent control point.
     /// Absolute control point coordinates, falling back to the
@@ -595,9 +594,7 @@ impl PyBezier {
     ) -> (f64, f64, f64, f64) {
         self.get_control_points_or_endpoints_impl(&registry)
     }
-
 }
-
 
 impl PyBezier {
     fn get_control_points_impl(

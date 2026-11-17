@@ -172,10 +172,13 @@ impl PySketchPoint {
                 x,
                 y,
                 fixed,
-                waypoint_type: crate::sketch::entities::point::WaypointType::parse(
-                    &waypoint_type,
-                )
-                .unwrap_or(crate::sketch::entities::point::WaypointType::Sharp),
+                waypoint_type:
+                    crate::sketch::entities::point::WaypointType::parse(
+                        &waypoint_type,
+                    )
+                    .unwrap_or(
+                        crate::sketch::entities::point::WaypointType::Sharp,
+                    ),
                 constrained: false,
             },
             registry: None,
@@ -393,7 +396,6 @@ impl PySketchPoint {
             _ => Ok((connected[0].clone(), connected[1].clone())),
         }
     }
-
 }
 
 /// Registers the point class with the given module.

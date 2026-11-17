@@ -1,5 +1,7 @@
 //! Bindings for the diameter constraint.
 
+use std::collections::HashMap;
+
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
@@ -73,10 +75,12 @@ impl PyDiameterConstraint {
     }
 
     /// Partial derivatives of the error by point id.
+    #[pyo3(signature = (registry, _params = None))]
     fn gradient(
         &self,
         mut registry: PointCtx<'_>,
-    ) -> std::collections::HashMap<u64, Vec<(f64, f64)>> {
+        _params: Option<Py<PyAny>>,
+    ) -> HashMap<u64, Vec<(f64, f64)>> {
         super::constraint_gradient(
             &self.clone().into_constraint(),
             &mut registry,
@@ -164,23 +168,26 @@ impl PyDiameterConstraint {
     }
 
     /// Whether the constraint's rendered symbol is hit at (mx, my).
-    #[pyo3(signature = (mx, my, threshold, registry, to_screen = None))]
+    #[pyo3(signature = (sx, sy, registry, to_screen, element,
+                        threshold))]
     fn is_hit(
         &self,
-        mx: f64,
-        my: f64,
-        threshold: f64,
+        sx: f64,
+        sy: f64,
         registry: PointCtx<'_>,
-        to_screen: Option<ScreenMap<'_>>,
+        to_screen: ScreenMap<'_>,
+        element: Option<&Bound<'_, PyAny>>,
+        threshold: f64,
     ) -> bool {
+        let _ = element;
         let constraint = self.clone().into_constraint();
         super::constraint_is_hit(
             &constraint,
-            mx,
-            my,
+            sx,
+            sy,
             threshold,
             &registry,
-            to_screen.as_ref(),
+            Some(&to_screen),
         )
     }
 }
