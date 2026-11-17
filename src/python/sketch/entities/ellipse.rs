@@ -25,7 +25,7 @@ use crate::sketch::entities::Entity;
 pub struct PyEllipse {
     pub inner: CoreEllipse,
     /// Construction helper line entity ids.
-    pub helper_line_ids: Vec<u64>,
+    pub helper_line_ids: Vec<i64>,
     /// Live back-reference to the owning registry, if any.
     pub registry: Option<Py<PyAny>>,
 }
@@ -43,7 +43,7 @@ impl PyEllipse {
         radius_x_pt_idx: i64,
         radius_y_pt_idx: i64,
         construction: bool,
-        helper_line_ids: Option<Vec<u64>>,
+        helper_line_ids: Option<Vec<i64>>,
     ) -> PyClassInitializer<Self> {
         let mut inner = CoreEllipse::new(
             id as u64,
@@ -52,8 +52,12 @@ impl PyEllipse {
             radius_y_pt_idx as u64,
             construction,
         );
-        inner.helper_line_ids = helper_line_ids.unwrap_or_default();
-        let helper_line_ids = inner.helper_line_ids.clone();
+        inner.helper_line_ids = helper_line_ids
+            .unwrap_or_default()
+            .iter()
+            .map(|&id| id as u64)
+            .collect();
+        let helper_line_ids: Vec<i64> = inner.helper_line_ids.iter().map(|&id| id as i64).collect();
         PyClassInitializer::from(PyEntityBase).add_subclass(PyEllipse {
             inner,
             helper_line_ids,
@@ -560,7 +564,7 @@ impl PyEllipse {
         let inner = CoreEllipse::from_json(&value).ok_or_else(|| {
             PyValueError::new_err("invalid ellipse dict")
         })?;
-        let helper_line_ids = inner.helper_line_ids.clone();
+        let helper_line_ids: Vec<i64> = inner.helper_line_ids.iter().map(|&id| id as i64).collect();
         Py::new(
             py,
             PyClassInitializer::from(PyEntityBase).add_subclass(

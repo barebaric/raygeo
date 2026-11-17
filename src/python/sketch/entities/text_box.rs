@@ -142,8 +142,9 @@ impl PyTextBox {
     }
 
     #[setter]
-    fn set_construction_line_ids(&mut self, value: Vec<u64>) {
-        self.inner.construction_line_ids = value;
+    fn set_construction_line_ids(&mut self, value: Vec<i64>) {
+        self.inner.construction_line_ids =
+            value.iter().map(|&id| id as u64).collect();
     }
 
     #[getter]
