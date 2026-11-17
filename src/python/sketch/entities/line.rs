@@ -34,13 +34,13 @@ impl PyLine {
     #[new]
     #[pyo3(signature = (id, p1_idx, p2_idx, construction = false))]
     fn new(
-        id: u64,
+        id: i64,
         p1_idx: u64,
         p2_idx: u64,
         construction: bool,
     ) -> PyClassInitializer<Self> {
         PyClassInitializer::from(PyEntityBase).add_subclass(PyLine {
-            inner: CoreLine::new(id, p1_idx, p2_idx, construction),
+            inner: CoreLine::new(id as u64, p1_idx, p2_idx, construction),
             registry: None,
         })
     }

@@ -67,7 +67,7 @@ impl PyTextBox {
                         construction = false))]
     #[allow(clippy::too_many_arguments)]
     fn new(
-        id: u64,
+        id: i64,
         origin_id: u64,
         width_id: u64,
         height_id: u64,
@@ -76,7 +76,7 @@ impl PyTextBox {
         construction: bool,
     ) -> PyClassInitializer<Self> {
         let mut inner =
-            CoreTextBox::new(id, origin_id, width_id, height_id, content, construction);
+            CoreTextBox::new(id as u64, origin_id, width_id, height_id, content, construction);
         if let Some(config) = font_config {
             if let Ok(size) = config.getattr("size").and_then(|v| v.extract::<f64>()) {
                 let family: String = config

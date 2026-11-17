@@ -35,13 +35,13 @@ impl PyCircle {
     #[new]
     #[pyo3(signature = (id, center_idx, radius_pt_idx, construction = false))]
     fn new(
-        id: u64,
+        id: i64,
         center_idx: u64,
         radius_pt_idx: u64,
         construction: bool,
     ) -> PyClassInitializer<Self> {
         PyClassInitializer::from(PyEntityBase).add_subclass(PyCircle {
-            inner: CoreCircle::new(id, center_idx, radius_pt_idx, construction),
+            inner: CoreCircle::new(id as u64, center_idx, radius_pt_idx, construction),
             registry: None,
         })
     }

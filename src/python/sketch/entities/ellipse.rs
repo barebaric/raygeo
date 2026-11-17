@@ -38,7 +38,7 @@ impl PyEllipse {
     #[pyo3(signature = (id, center_idx, radius_x_pt_idx, radius_y_pt_idx,
                         construction = false, helper_line_ids = None))]
     fn new(
-        id: u64,
+        id: i64,
         center_idx: u64,
         radius_x_pt_idx: u64,
         radius_y_pt_idx: u64,
@@ -46,7 +46,7 @@ impl PyEllipse {
         helper_line_ids: Option<Vec<u64>>,
     ) -> PyClassInitializer<Self> {
         let mut inner = CoreEllipse::new(
-            id,
+            id as u64,
             center_idx,
             radius_x_pt_idx,
             radius_y_pt_idx,

@@ -36,7 +36,7 @@ impl PyBezier {
     #[pyo3(signature = (id, start_idx, end_idx, construction = false,
                         cp1 = None, cp2 = None))]
     fn new(
-        id: u64,
+        id: i64,
         start_idx: u64,
         end_idx: u64,
         construction: bool,
@@ -45,7 +45,7 @@ impl PyBezier {
     ) -> PyClassInitializer<Self> {
         PyClassInitializer::from(PyEntityBase).add_subclass(PyBezier {
             inner: CoreBezier::new(
-                id,
+                id as u64,
                 start_idx,
                 end_idx,
                 construction,

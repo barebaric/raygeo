@@ -36,7 +36,7 @@ impl PyPolygon {
     #[pyo3(signature = (id, center_idx, handle_idx, vertices, closed = false,
                         construction = false, rings = None))]
     fn new(
-        id: u64,
+        id: i64,
         center_idx: u64,
         handle_idx: u64,
         vertices: Vec<(f64, f64)>,
@@ -46,7 +46,7 @@ impl PyPolygon {
     ) -> PyClassInitializer<Self> {
         PyClassInitializer::from(PyEntityBase).add_subclass(PyPolygon {
             inner: CorePolygon::new(
-                id,
+                id as u64,
                 center_idx,
                 handle_idx,
                 vertices,
@@ -361,7 +361,7 @@ impl PyPolygon {
     #[allow(clippy::too_many_arguments)]
     fn build(
         py: Python<'_>,
-        id: u64,
+        id: i64,
         center: u64,
         handle: u64,
         center_pos: (f64, f64),

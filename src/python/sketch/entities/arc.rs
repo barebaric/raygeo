@@ -36,7 +36,7 @@ impl PyArc {
                         clockwise = false, construction = false))]
     #[allow(clippy::too_many_arguments)]
     fn new(
-        id: u64,
+        id: i64,
         start_idx: u64,
         end_idx: u64,
         center_idx: u64,
@@ -45,7 +45,7 @@ impl PyArc {
     ) -> PyClassInitializer<Self> {
         PyClassInitializer::from(PyEntityBase).add_subclass(PyArc {
             inner: CoreArc::new(
-                id,
+                id as u64,
                 start_idx,
                 end_idx,
                 center_idx,
