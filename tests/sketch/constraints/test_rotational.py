@@ -92,7 +92,7 @@ def test_gradient_matches_finite_difference(setup_env):
 
 
 def test_serialization_round_trip(setup_env):
-    reg = setup_env
+    _ = setup_env
     c = RotationalConstraint(1, 2, 3, math.radians(45), user_visible=False)
     restored = _ModelRotationalConstraint.from_dict(c.to_dict())
     assert restored.to_dict() == c.to_dict()
