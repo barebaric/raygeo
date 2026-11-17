@@ -100,6 +100,11 @@ impl PyPolygon {
         self.inner.rings.clone()
     }
 
+    #[setter]
+    fn set_rings(&mut self, value: Vec<Vec<(f64, f64)>>) {
+        self.inner.rings = value;
+    }
+
     /// Whether the entity is construction geometry.
     #[getter]
     fn construction(&self) -> bool {
