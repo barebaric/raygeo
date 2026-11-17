@@ -374,9 +374,9 @@ checksum = "37bfe73dc8ec21f54d181e5a60554327ec3f1c600c455a75ccbfc65d2106a6c4"
 
 [[package]]
 name = "glam"
-version = "0.34.2"
+version = "0.34.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "54af5066834d6c2d404eb26ea036a15b15d9ff80db510b9a73ff95ab07f30831"
+checksum = "627003914c6057c9c8f0832ee4f870b5a4f599d0cfa83f4072675114860cd0ff"
 dependencies = [
  "serde_core",
 ]
@@ -1039,7 +1039,7 @@ dependencies = [
  "flate2",
  "fontdb",
  "getrandom 0.4.3",
- "glam 0.34.2",
+ "glam 0.34.3",
  "libc",
  "nalgebra",
  "nalgebra-sparse",
