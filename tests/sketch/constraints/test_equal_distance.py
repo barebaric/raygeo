@@ -7,6 +7,7 @@ import pytest
 from raygeo.sketch import PointDef, Solver
 from raygeo.sketch.constraints.equal_distance import EqualDistanceConstraint
 from raygeo.sketch.registry import EntityRegistry
+from raygeo.sketch.model.constraints.equal_distance import EqualDistanceConstraint
 
 
 @pytest.fixture
@@ -20,7 +21,7 @@ def _solver(reg, constraint, pids):
         position = reg.get_point(pid)
         assert position is not None
         points.append(PointDef(pid, position[0], position[1], False))
-    return Solver(points, [constraint], [])
+    return Solver(points, reg, [constraint], [])
 
 
 def _assert_gradient_matches_fd(reg, constraint, pids, tol=1e-5, eps=1e-6):
@@ -87,16 +88,16 @@ def test_equal_distance_targets_segment(setup_env):
     c = EqualDistanceConstraint(p1, p2, p3, p4)
 
     # Matches pair 1 (order independent)
-    assert c.targets_segment(p1, p2, None, reg) is True
-    assert c.targets_segment(p2, p1, None, reg) is True
+    assert c.targets_segment(p1, p2, None) is True
+    assert c.targets_segment(p2, p1, None) is True
 
     # Matches pair 2 (order independent)
-    assert c.targets_segment(p3, p4, None, reg) is True
-    assert c.targets_segment(p4, p3, None, reg) is True
+    assert c.targets_segment(p3, p4, None) is True
+    assert c.targets_segment(p4, p3, None) is True
 
     # No match
-    assert c.targets_segment(p1, p3, None, reg) is False
-    assert c.targets_segment(p1, p5, None, reg) is False
+    assert c.targets_segment(p1, p3, None) is False
+    assert c.targets_segment(p1, p5, None) is False
 
 
 def test_equal_distance_constraint_gradient(setup_env):

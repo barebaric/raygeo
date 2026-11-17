@@ -5,7 +5,10 @@ from gettext import gettext as _
 from typing import TYPE_CHECKING, Any
 
 import cairo
-from gi.repository import PangoCairo
+try:
+    from gi.repository import PangoCairo
+except ImportError:
+    PangoCairo = None
 
 from raygeo.geo.shape.line import get_line_segment_closest_point
 from raygeo.geo.types import Point

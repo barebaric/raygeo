@@ -20,7 +20,7 @@ def _solver(reg, constraint, pids):
         position = reg.get_point(pid)
         assert position is not None
         points.append(PointDef(pid, position[0], position[1], False))
-    return Solver(points, [constraint], [])
+    return Solver(points, reg, [constraint], [])
 
 
 def _assert_gradient_matches_fd(reg, constraint, pids, tol=1e-5, eps=1e-6):
@@ -150,12 +150,12 @@ def test_equal_length_targets_segment(setup_env):
     c = EqualLengthConstraint([[p1, p2, p3, p4]])
 
     # Should match entities in the pairs
-    assert c.targets_segment(0, 0, l1, reg) is True
-    assert c.targets_segment(0, 0, l2, reg) is True
+    assert c.targets_segment(0, 0, l1) is True
+    assert c.targets_segment(0, 0, l2) is True
 
     # Should not match entities not in the pairs or None
-    assert c.targets_segment(0, 0, l3, reg) is False
-    assert c.targets_segment(0, 0, None, reg) is False
+    assert c.targets_segment(0, 0, l3) is False
+    assert c.targets_segment(0, 0, None) is False
 
 
 def test_equal_length_constraint_gradient(setup_env):
@@ -199,11 +199,11 @@ def test_equal_length_is_hit(setup_env):
     l2_symbol_x, l2_symbol_y = 15, 100
 
     # Hit line 1
-    assert c.is_hit(l1_symbol_x, l1_symbol_y, threshold, reg) is True
+    assert c.is_hit(l1_symbol_x, l1_symbol_y, reg, lambda pos: pos, None, threshold) is True
     # Hit line 2
-    assert c.is_hit(l2_symbol_x, l2_symbol_y, threshold, reg) is True
+    assert c.is_hit(l2_symbol_x, l2_symbol_y, reg, lambda pos: pos, None, threshold) is True
     # Miss both
-    assert c.is_hit(0, 0, threshold, reg) is False
+    assert c.is_hit(0, 0, reg, lambda pos: pos, None, threshold) is False
 
 
 # deferred: can_apply_to — command/UI layer

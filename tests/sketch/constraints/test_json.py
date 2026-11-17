@@ -2,6 +2,7 @@
 parsed through EntityRegistry.add_constraint_json."""
 
 from raygeo.sketch.registry import EntityRegistry
+from raygeo.sketch.model.constraints.json import JsonConstraint
 
 
 def _registry_with_square():

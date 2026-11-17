@@ -99,13 +99,10 @@ impl PyParallelogramConstraint {
     }
 
     /// Returns the constraint error at the registry's point positions.
-    #[pyo3(signature = (registry, _ctx = None))]
-    fn error(
-        &self,
-        registry: PointCtx<'_>,
-        _ctx: Option<Py<PyAny>>,
-    ) -> Vec<f64> {
-        self.clone().into_constraint().error(&registry)
+    #[pyo3(signature = (reg, params = None))]
+    fn error(&self, reg: PointCtx<'_>, params: Option<Py<PyAny>>) -> Vec<f64> {
+        let _ = params;
+        self.clone().into_constraint().error(&reg)
     }
 
     /// Serializes to the reference constraint dictionary shape.

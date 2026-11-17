@@ -8,6 +8,7 @@ import pytest
 from raygeo.sketch import PointDef, Solver
 from raygeo.sketch.constraints.rotational import RotationalConstraint
 from raygeo.sketch.registry import EntityRegistry
+from raygeo.sketch.model.constraints.rotational import RotationalConstraint
 
 
 @pytest.fixture
@@ -21,7 +22,7 @@ def _solver(reg, constraint, pids):
         position = reg.get_point(pid)
         assert position is not None
         points.append(PointDef(pid, position[0], position[1], False))
-    return Solver(points, [constraint], [])
+    return Solver(points, reg, [constraint], [])
 
 
 def test_error_zero_when_satisfied(setup_env):

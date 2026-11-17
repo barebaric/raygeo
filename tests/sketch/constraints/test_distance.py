@@ -7,6 +7,7 @@ import pytest
 from raygeo.sketch import PointDef, Solver
 from raygeo.sketch.constraints.distance import DistanceConstraint
 from raygeo.sketch.registry import EntityRegistry
+from raygeo.sketch.model.constraints.distance import DistanceConstraint
 
 
 @pytest.fixture
@@ -20,7 +21,7 @@ def _solver(reg, constraint, pids):
         position = reg.get_point(pid)
         assert position is not None
         points.append(PointDef(pid, position[0], position[1], False))
-    return Solver(points, [constraint], [])
+    return Solver(points, reg, [constraint], [])
 
 
 def _assert_gradient_matches_fd(reg, constraint, pids, tol=1e-5, eps=1e-6):
@@ -92,16 +93,16 @@ def test_distance_targets_segment(setup_env):
     c = DistanceConstraint(p1, p2, 10.0)
 
     # Should match exact pair (order independent)
-    assert c.targets_segment(p1, p2, None, reg) is True
-    assert c.targets_segment(p2, p1, None, reg) is True
+    assert c.targets_segment(p1, p2, None) is True
+    assert c.targets_segment(p2, p1, None) is True
 
     # Should not match subset or disjoint
-    assert c.targets_segment(p1, p3, None, reg) is False
-    assert c.targets_segment(p3, p2, None, reg) is False
+    assert c.targets_segment(p1, p3, None) is False
+    assert c.targets_segment(p3, p2, None) is False
 
     # Entity ID is ignored by DistanceConstraint logic (it only
     # tracks points)
-    assert c.targets_segment(p1, p2, 999, reg) is True
+    assert c.targets_segment(p1, p2, 999) is True
 
 
 def test_distance_constraint_with_expression(setup_env):
@@ -188,16 +189,16 @@ def test_distance_is_hit(setup_env):
     threshold = 15.0
 
     # Hit on the line segment (at midpoint)
-    assert c.is_hit(50, 0, threshold, reg) is True
+    assert c.is_hit(50, 0, reg, lambda pos: pos, None, threshold) is True
 
     # Hit on the line segment (not at midpoint)
-    assert c.is_hit(70, 0, threshold, reg) is True
+    assert c.is_hit(70, 0, reg, lambda pos: pos, None, threshold) is True
 
     # Hit near the line segment (within threshold)
-    assert c.is_hit(50, 10, threshold, reg) is True
+    assert c.is_hit(50, 10, reg, lambda pos: pos, None, threshold) is True
 
     # Miss - far from the line segment (beyond threshold)
-    assert c.is_hit(50, 20, threshold, reg) is False
+    assert c.is_hit(50, 20, reg, lambda pos: pos, None, threshold) is False
 
 
 # deferred: can_apply_to — command/UI layer

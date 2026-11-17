@@ -12,6 +12,7 @@ from raygeo.sketch.constraints.perpendicular import (
     PerpendicularTarget,
 )
 from raygeo.sketch.registry import EntityRegistry
+from raygeo.sketch.model.constraints.perpendicular import PerpendicularConstraint
 
 
 @pytest.fixture
@@ -25,7 +26,7 @@ def _solver(reg, constraint, pids):
         position = reg.get_point(pid)
         assert position is not None
         points.append(PointDef(pid, position[0], position[1], False))
-    return Solver(points, [constraint], [])
+    return Solver(points, reg, [constraint], [])
 
 
 def _assert_gradient_matches_fd(reg, constraint, pids, tol=1e-5, eps=1e-6):
@@ -269,8 +270,8 @@ def test_perpendicular_is_hit(setup_env):
     # mid-angle is ~PI/4. Dot pos ~ (50+9.6*cos(PI/4), 50+9.6*sin(PI/4))
     hit_x = 50 + 9.6 * math.cos(math.pi / 4)
     hit_y = 50 + 9.6 * math.sin(math.pi / 4)
-    assert c_ll.is_hit(hit_x, hit_y, threshold, reg) is True
-    assert c_ll.is_hit(0, 0, threshold, reg) is False
+    assert c_ll.is_hit(hit_x, hit_y, reg, lambda pos: pos, None, threshold) is True
+    assert c_ll.is_hit(0, 0, reg, lambda pos: pos, None, threshold) is False
 
     # --- Test Line-Circle case ---
     c1p = reg.add_point(150, 50)
@@ -283,8 +284,8 @@ def test_perpendicular_is_hit(setup_env):
     # Visuals are a box at the intersection of line and circle.
     # No intersection, so it defaults to the center of the circle
     # (150, 50).
-    assert c_lc.is_hit(150, 50, threshold, reg) is True
-    assert c_lc.is_hit(0, 0, threshold, reg) is False
+    assert c_lc.is_hit(150, 50, reg, lambda pos: pos, None, threshold) is True
+    assert c_lc.is_hit(0, 0, reg, lambda pos: pos, None, threshold) is False
 
 
 # deferred: can_apply_to — command/UI layer

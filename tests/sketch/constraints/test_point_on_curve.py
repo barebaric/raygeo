@@ -28,7 +28,7 @@ def _solver(reg, constraint, pids):
         position = reg.get_point(pid)
         assert position is not None
         points.append(PointDef(pid, position[0], position[1], False))
-    return Solver(points, [constraint], [])
+    return Solver(points, reg, [constraint], [])
 
 
 def _assert_gradient_matches_fd(reg, constraint, pids, tol=1e-4, eps=1e-6):
@@ -217,8 +217,8 @@ def test_point_on_curve_is_hit(setup_env):
 
     threshold = 15.0
 
-    assert c.is_hit(10, 20, threshold, reg) is True
-    assert c.is_hit(30, 20, threshold, reg) is False
+    assert c.is_hit(10, 20, reg, lambda pos: pos, None, threshold) is True
+    assert c.is_hit(30, 20, reg, lambda pos: pos, None, threshold) is False
 
 
 def test_point_on_curve_sketch_end_to_end(setup_env):

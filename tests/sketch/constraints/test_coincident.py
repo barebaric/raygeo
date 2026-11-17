@@ -8,6 +8,7 @@ import pytest
 from raygeo.sketch import PointDef, Solver
 from raygeo.sketch.constraints.coincident import CoincidentConstraint
 from raygeo.sketch.registry import EntityRegistry
+from raygeo.sketch.model.constraints.coincident import CoincidentConstraint
 
 
 @pytest.fixture
@@ -21,7 +22,7 @@ def _solver(reg, constraint, pids):
         position = reg.get_point(pid)
         assert position is not None
         points.append(PointDef(pid, position[0], position[1], False))
-    return Solver(points, [constraint], [])
+    return Solver(points, reg, [constraint], [])
 
 
 def _assert_gradient_matches_fd(reg, constraint, pids, tol=1e-5, eps=1e-6):
@@ -114,9 +115,9 @@ def test_coincident_is_hit(setup_env):
     threshold = 15.0
 
     # Hit the point
-    assert c.is_hit(10, 20, threshold, reg) is True
+    assert c.is_hit(10, 20, reg, lambda pos: pos, None, threshold) is True
     # Miss the point
-    assert c.is_hit(30, 20, threshold, reg) is False
+    assert c.is_hit(30, 20, reg, lambda pos: pos, None, threshold) is False
 
 
 # deferred: can_apply_to — command/UI layer

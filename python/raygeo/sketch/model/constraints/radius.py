@@ -6,7 +6,10 @@ from gettext import gettext as _
 from typing import TYPE_CHECKING, Any
 
 import cairo
-from gi.repository import PangoCairo
+try:
+    from gi.repository import PangoCairo
+except ImportError:
+    PangoCairo = None
 
 from raygeo.geo.types import Point
 from raygeo.sketch.constraints.radius import (

@@ -7,6 +7,7 @@ import pytest
 from raygeo.sketch import PointDef, Solver
 from raygeo.sketch.constraints.radius import RadiusConstraint
 from raygeo.sketch.registry import EntityRegistry
+from raygeo.sketch.model.constraints.radius import RadiusConstraint
 
 
 @pytest.fixture
@@ -20,7 +21,7 @@ def _solver(reg, constraint, pids):
         position = reg.get_point(pid)
         assert position is not None
         points.append(PointDef(pid, position[0], position[1], False))
-    return Solver(points, [constraint], [])
+    return Solver(points, reg, [constraint], [])
 
 
 def _assert_gradient_matches_fd(reg, constraint, pids, tol=1e-5, eps=1e-6):
@@ -125,11 +126,11 @@ def test_radius_targets_segment(setup_env):
     c = RadiusConstraint(center, start, 10.0)
 
     # Should match based on entity ID
-    assert c.targets_segment(0, 0, arc_id, reg) is True
+    assert c.targets_segment(0, 0, arc_id) is True
 
     # Should not match others
-    assert c.targets_segment(0, 0, other_id, reg) is False
-    assert c.targets_segment(0, 0, None, reg) is False
+    assert c.targets_segment(0, 0, other_id) is False
+    assert c.targets_segment(0, 0, None) is False
 
 
 # deferred: test_radius_constraint_invalid_entity — the binding
@@ -211,9 +212,9 @@ def test_radius_is_hit(setup_env):
     label_pos_x, label_pos_y = 120, 0
 
     # Hit
-    assert c.is_hit(label_pos_x, label_pos_y, threshold, reg) is True
+    assert c.is_hit(label_pos_x, label_pos_y, reg, lambda pos: pos, None, threshold) is True
     # Miss
-    assert c.is_hit(0, 0, threshold, reg) is False
+    assert c.is_hit(0, 0, reg, lambda pos: pos, None, threshold) is False
 
 
 # deferred: can_apply_to — command/UI layer

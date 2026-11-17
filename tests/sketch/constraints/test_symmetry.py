@@ -24,7 +24,7 @@ def _solver(reg, constraint, pids):
         position = reg.get_point(pid)
         assert position is not None
         points.append(PointDef(pid, position[0], position[1], False))
-    return Solver(points, [constraint], [])
+    return Solver(points, reg, [constraint], [])
 
 
 def _assert_gradient_matches_fd(reg, constraint, pids, tol=1e-5, eps=1e-6):
@@ -171,11 +171,11 @@ def test_symmetry_is_hit(setup_env):
     # Midpoint is (0,0). Angle is 0. Offset is 12.
     # Symbol points are at (-12, 0) and (12, 0)
     # Hit left symbol
-    assert c.is_hit(-12, 0, threshold, reg) is True
+    assert c.is_hit(-12, 0, reg, lambda pos: pos, None, threshold) is True
     # Hit right symbol
-    assert c.is_hit(12, 0, threshold, reg) is True
+    assert c.is_hit(12, 0, reg, lambda pos: pos, None, threshold) is True
     # Miss
-    assert c.is_hit(50, 50, threshold, reg) is False
+    assert c.is_hit(50, 50, reg, lambda pos: pos, None, threshold) is False
 
 
 # deferred: can_apply_to — command/UI layer

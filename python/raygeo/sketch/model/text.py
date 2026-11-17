@@ -1,5 +1,10 @@
 import cairo
-from gi.repository import Pango, PangoCairo
+
+try:
+    from gi.repository import Pango, PangoCairo
+except ImportError:
+    Pango = None
+    PangoCairo = None
 
 
 def create_text_layout(
@@ -8,10 +13,18 @@ def create_text_layout(
     font_size: float = 12,
     *,
     family: str = "Sans",
-    weight: Pango.Weight = Pango.Weight.NORMAL,
-    style: Pango.Style = Pango.Style.NORMAL,
+    weight: "Pango.Weight | None" = None,
+    style: "Pango.Style | None" = None,
     absolute_size: bool = True,
-) -> Pango.Layout:
+) -> "Pango.Layout":
+    if Pango is None or PangoCairo is None:
+        raise RuntimeError(
+            'create_text_layout requires PyGObject (gi)'
+        )
+    if weight is None:
+        weight = Pango.Weight.NORMAL
+    if style is None:
+        style = Pango.Style.NORMAL
     layout = PangoCairo.create_layout(ctx)
     font = Pango.FontDescription()
     font.set_family(family)
@@ -34,10 +47,10 @@ def draw_centered_text(
     font_size: float = 12,
     *,
     family: str = "Sans",
-    weight: Pango.Weight = Pango.Weight.NORMAL,
-    style: Pango.Style = Pango.Style.NORMAL,
+    weight: "Pango.Weight | None" = None,
+    style: "Pango.Style | None" = None,
     absolute_size: bool = True,
-) -> Pango.Layout:
+) -> "Pango.Layout":
     layout = create_text_layout(
         ctx,
         text,

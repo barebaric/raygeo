@@ -8,6 +8,7 @@ import pytest
 from raygeo.sketch import PointDef, Solver
 from raygeo.sketch.constraints.collinear import CollinearConstraint
 from raygeo.sketch.registry import EntityRegistry
+from raygeo.sketch.model.constraints.collinear import CollinearConstraint
 
 
 @pytest.fixture
@@ -26,7 +27,7 @@ def _solver(reg, constraint, pids):
         position = reg.get_point(pid)
         assert position is not None
         points.append(PointDef(pid, position[0], position[1], False))
-    return Solver(points, [constraint], [])
+    return Solver(points, reg, [constraint], [])
 
 
 def test_collinear_constraint_serialization():

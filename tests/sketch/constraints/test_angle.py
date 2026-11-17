@@ -339,7 +339,7 @@ def test_angle_is_hit(setup_env):
 
     hit_x = 50 + ARC_RADIUS * math.cos(math.pi)
     hit_y = 50 + ARC_RADIUS * math.sin(math.pi)
-    assert c.is_hit(hit_x, hit_y, threshold, reg) is True
+    assert c.is_hit(hit_x, hit_y, reg, lambda pos: pos, None, threshold) is True
 
 
 # deferred: get_type_name / can_apply_to — command/UI layer
