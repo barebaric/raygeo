@@ -10,7 +10,7 @@ use super::radius::dict_type;
 use super::{surface, PyConstraintBase};
 
 use crate::python::sketch::context::PointCtx;
-use crate::python::sketch::protocols::{Canvas, DrawContext, ScreenMap};
+use crate::python::sketch::protocols::{Canvas, ScreenMap};
 use crate::sketch::constraint::{PointContext, SketchConstraint};
 use crate::sketch::constraints::parallelogram::ParallelogramConstraint as CoreConstraint;
 
@@ -60,7 +60,7 @@ impl PyParallelogramConstraint {
         p4: i64,
         user_visible: bool,
     ) -> PyClassInitializer<Self> {
-        PyClassInitializer::from(PyConstraintBase).add_subclass(
+        PyClassInitializer::from(PyConstraintBase::default()).add_subclass(
             PyParallelogramConstraint {
                 p_origin,
                 p_width,
@@ -148,7 +148,7 @@ impl PyParallelogramConstraint {
     fn draw<'py>(
         &self,
         ctx: Canvas<'py>,
-        registry: DrawContext<'py>,
+        registry: &Bound<'py, PyAny>,
         to_screen: ScreenMap<'py>,
         is_selected: bool,
         is_hovered: bool,
@@ -157,7 +157,7 @@ impl PyParallelogramConstraint {
         super::constraint_draw(
             &self.clone().into_constraint(),
             &ctx,
-            &registry,
+            registry,
             &to_screen,
             is_selected,
             is_hovered,

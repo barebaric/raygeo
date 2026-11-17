@@ -5,6 +5,25 @@ import builtins
 import collections.abc
 from raygeo.sketch import protocols
 import typing
+from raygeo.sketch.constraints.angle import AngleConstraint
+from raygeo.sketch.constraints.aspect_ratio import AspectRatioConstraint
+from raygeo.sketch.constraints.coincident import CoincidentConstraint
+from raygeo.sketch.constraints.collinear import CollinearConstraint
+from raygeo.sketch.constraints.diameter import DiameterConstraint
+from raygeo.sketch.constraints.distance import DistanceConstraint
+from raygeo.sketch.constraints.drag import DragConstraint
+from raygeo.sketch.constraints.equal_distance import EqualDistanceConstraint
+from raygeo.sketch.constraints.equal_length import EqualLengthConstraint
+from raygeo.sketch.constraints.horizontal import HorizontalConstraint
+from raygeo.sketch.constraints.parallelogram import ParallelogramConstraint
+from raygeo.sketch.constraints.perpendicular import PerpendicularConstraint
+from raygeo.sketch.constraints.point_on_curve import PointOnCurveConstraint
+from raygeo.sketch.constraints.point_on_line import PointOnLineConstraint
+from raygeo.sketch.constraints.radius import RadiusConstraint
+from raygeo.sketch.constraints.rotational import RotationalConstraint
+from raygeo.sketch.constraints.symmetry import SymmetryConstraint
+from raygeo.sketch.constraints.tangent import TangentConstraint
+from raygeo.sketch.constraints.vertical import VerticalConstraint
 from . import angle
 from . import aspect_ratio
 from . import coincident
@@ -24,52 +43,13 @@ from . import rotational
 from . import symmetry
 from . import tangent
 from . import vertical
-ANGLE_WEIGHT = builtins.float
-
-from .angle import AngleConstraint
-
-from .aspect_ratio import AspectRatioConstraint
-
-from .coincident import CoincidentConstraint
-
-from .collinear import CollinearConstraint
-
-from .diameter import DiameterConstraint
-
-from .distance import DistanceConstraint
-
-from .drag import DragConstraint
-
-from .equal_distance import EqualDistanceConstraint
-
-from .equal_length import EqualLengthConstraint
-
-from .horizontal import HorizontalConstraint
-
-from .parallelogram import ParallelogramConstraint
-
-from .perpendicular import PerpendicularConstraint
-
-from .point_on_curve import PointOnCurveConstraint
-
-from .point_on_line import PointOnLineConstraint
-
-from .radius import RadiusConstraint
-
-from .rotational import RotationalConstraint
-
-from .symmetry import SymmetryConstraint
-
-from .tangent import TangentConstraint
-
-from .vertical import VerticalConstraint
-
 __all__ = [
     "ANGLE_WEIGHT",
     "AngleConstraint",
     "AspectRatioConstraint",
     "CoincidentConstraint",
     "CollinearConstraint",
+    "Constraint",
     "DiameterConstraint",
     "DistanceConstraint",
     "DragConstraint",
@@ -85,7 +65,6 @@ __all__ = [
     "SymmetryConstraint",
     "TangentConstraint",
     "VerticalConstraint",
-    "Constraint",
     "angle",
     "aspect_ratio",
     "coincident",
@@ -107,6 +86,7 @@ __all__ = [
     "vertical",
 ]
 
+ANGLE_WEIGHT: builtins.float = 10.0
 class Constraint:
     r"""
     The common base class of every constraint binding, carrying the
@@ -114,6 +94,53 @@ class Constraint:
     on the subclasses; polymorphism is carried by the Rust-side
     `SketchConstraint` trait.
     """
+    @property
+    def value(self) -> builtins.float:
+        r"""
+        The resolved dimension value (dimensional constraints).
+        """
+    @value.setter
+    def value(self, value: builtins.float) -> None:
+        r"""
+        The resolved dimension value (dimensional constraints).
+        """
+    @property
+    def expression(self) -> typing.Optional[builtins.str]:
+        r"""
+        The stored expression string (dimensional constraints).
+        """
+    @expression.setter
+    def expression(self, value: typing.Optional[builtins.str]) -> None:
+        r"""
+        The stored expression string (dimensional constraints).
+        """
+    @property
+    def status(self) -> builtins.int:
+        r"""
+        The reference validation status ordinal.
+        """
+    @status.setter
+    def status(self, value: builtins.int) -> None:
+        r"""
+        The reference validation status ordinal.
+        """
+    @property
+    def user_visible(self) -> builtins.bool:
+        r"""
+        Reference user-visibility flag.
+        """
+    @user_visible.setter
+    def user_visible(self, value: builtins.bool) -> None:
+        r"""
+        Reference user-visibility flag.
+        """
+    @property
+    def __dict__(self) -> dict:
+        r"""
+        The reference attribute view of the constraint: the
+        `vars()` walk of the reference implementation sees exactly
+        these attributes.
+        """
     @classmethod
     def can_apply_to(cls, _selection: typing.Any, _sketch: typing.Optional[typing.Any] = None) -> builtins.bool:
         r"""
@@ -139,7 +166,7 @@ class Constraint:
         r"""
         A human-readable title for this constraint.
         """
-    def get_subtitle(self, _registry: protocols.Registry) -> builtins.str:
+    def get_subtitle(self, registry: protocols.Registry) -> builtins.str:
         r"""
         A human-readable subtitle describing the constrained
         entities.
@@ -148,20 +175,20 @@ class Constraint:
         r"""
         The user-facing hint for the constraint edit dialog.
         """
-    def targets_segment(self, _p1: builtins.int, _p2: builtins.int, _entity_id: typing.Optional[builtins.int] = None) -> builtins.bool:
+    def targets_segment(self, p1: builtins.int, p2: builtins.int, entity_id: typing.Optional[builtins.int] = None) -> builtins.bool:
         r"""
         Whether this constraint restricts the length/distance of the
         segment (p1, p2) or of the given entity.
         """
-    def error(self, _reg: protocols.Registry, _params: typing.Optional[typing.Any] = None) -> builtins.float:
+    def error(self, reg: protocols.Registry, params: typing.Optional[typing.Any] = None) -> builtins.float:
         r"""
         The error of the constraint at the registry's positions.
         """
-    def gradient(self, _reg: protocols.Registry, _params: typing.Optional[typing.Any] = None) -> builtins.dict[builtins.int, builtins.list[tuple[builtins.float, builtins.float]]]:
+    def gradient(self, reg: protocols.Registry, params: typing.Optional[typing.Any] = None) -> builtins.dict[builtins.int, builtins.list[tuple[builtins.float, builtins.float]]]:
         r"""
         The partial derivatives of the error by point id.
         """
-    def constrains_radius(self, _registry: protocols.Registry, _entity_id: builtins.int) -> builtins.bool:
+    def constrains_radius(self, registry: protocols.Registry, entity_id: builtins.int) -> builtins.bool:
         r"""
         Whether the constraint explicitly defines the radius/length
         of the given entity.
@@ -170,11 +197,11 @@ class Constraint:
         r"""
         Serializes the constraint to a dictionary.
         """
-    def is_hit(self, _sx: builtins.float, _sy: builtins.float, _registry: protocols.Registry, _to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], _element: typing.Optional[typing.Any], _threshold: builtins.float) -> builtins.bool:
+    def is_hit(self, sx: builtins.float, sy: builtins.float, registry: protocols.Registry, to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], element: typing.Optional[typing.Any], threshold: builtins.float) -> builtins.bool:
         r"""
         Whether the constraint's visual representation is hit.
         """
-    def draw(self, _ctx: protocols.Canvas, _registry: protocols.DrawContext, _to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], _is_selected: builtins.bool = False, _is_hovered: builtins.bool = False, _point_radius: builtins.float = 5.0) -> None:
+    def draw(self, ctx: protocols.Canvas, registry: typing.Any, to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], is_selected: builtins.bool = False, is_hovered: builtins.bool = False, point_radius: builtins.float = 5.0) -> None:
         r"""
         Draws the constraint's visual representation.
         """

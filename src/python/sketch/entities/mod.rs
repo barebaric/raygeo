@@ -18,6 +18,28 @@ use std::collections::{HashMap, HashSet};
 
 use crate::sketch::entities::Entity;
 
+/// Formats a geometry signature as the reference tuple shape: the
+/// sorted `(key, value)` pairs of the JSON object.
+pub(crate) fn signature_to_py<'py>(
+    py: Python<'py>,
+    value: &serde_json::Value,
+) -> PyResult<Bound<'py, pyo3::types::PyTuple>> {
+    use pyo3::types::PyTuple;
+
+    let serde_json::Value::Object(map) = value else {
+        return Ok(PyTuple::empty(py));
+    };
+    let mut pairs: Vec<(&String, &serde_json::Value)> = map.iter().collect();
+    pairs.sort_by(|a, b| a.0.cmp(b.0));
+    let mut items = Vec::with_capacity(pairs.len());
+    for (key, item) in pairs {
+        let key = pyo3::types::PyString::new(py, key);
+        let value = crate::python::sketch::constraints::value_to_py(py, item)?;
+        items.push((key, value));
+    }
+    PyTuple::new(py, items)
+}
+
 /// Builds the Python object for an entity from its concrete type.
 pub(crate) fn entity_to_py<'py>(
     py: Python<'py>,
@@ -166,6 +188,567 @@ pub(crate) fn extract_entity(
 #[derive(Default)]
 pub struct PyEntityBase;
 
+/// Runs `$body` with the mutable core entity behind the compiled
+/// binding, dispatching over the leaf classes.  Evaluates to
+/// `Err(PyAttributeError)` when `slf` is not an entity binding.
+macro_rules! with_entity_mut {
+    ($slf:expr, |$entity:ident| $body:expr; $($py_ty:ty),+ $(,)?) => {{
+        let slf = $slf.as_any();
+        $(
+            if let Ok(mut binding) = slf.extract::<PyRefMut<'_, $py_ty>>() {
+                let $entity: &mut dyn $crate::sketch::entities::Entity =
+                    &mut binding.inner;
+                let result = $body;
+                return Ok(result);
+            }
+        )+
+        Err(PyAttributeError::new_err(
+            "expected a raygeo.sketch.entities entity object",
+        ))
+    }};
+}
+
+use pyo3::exceptions::{PyAttributeError, PyNotImplementedError, PyValueError};
+use pyo3::types::{PyAny, PyDict};
+use pyo3_stub_gen::derive::gen_stub_pymethods;
+
+#[gen_stub_pymethods]
+#[pymethods]
+impl PyEntityBase {
+    /// The unique entity id.
+    #[getter]
+    fn id(slf: &Bound<'_, Self>) -> PyResult<i64> {
+        Ok(extract_entity(slf.as_any())?.base().id as i64)
+    }
+
+    #[setter]
+    fn set_id(slf: &Bound<'_, Self>, value: i64) -> PyResult<()> {
+        with_entity_mut!(slf, |entity| {
+            entity.base_mut().id = value as u64;
+        }; crate::python::sketch::entities::line::PyLine, crate::python::sketch::entities::arc::PyArc, crate::python::sketch::entities::circle::PyCircle, crate::python::sketch::entities::ellipse::PyEllipse, crate::python::sketch::entities::bezier::PyBezier, crate::python::sketch::entities::polygon::PyPolygon, crate::python::sketch::entities::text_box::PyTextBox)
+    }
+
+    /// The entity kind label (`"line"`, `"arc"`, ...).
+    #[getter]
+    #[pyo3(name = "type")]
+    fn type_(slf: &Bound<'_, Self>) -> PyResult<String> {
+        Ok(extract_entity(slf.as_any())?.type_name().to_string())
+    }
+
+    /// Whether the entity is construction geometry.
+    #[getter]
+    fn construction(slf: &Bound<'_, Self>) -> PyResult<bool> {
+        Ok(extract_entity(slf.as_any())?.base().construction)
+    }
+
+    #[setter]
+    fn set_construction(slf: &Bound<'_, Self>, value: bool) -> PyResult<()> {
+        with_entity_mut!(slf, |entity| {
+            entity.base_mut().construction = value;
+        }; crate::python::sketch::entities::line::PyLine, crate::python::sketch::entities::arc::PyArc, crate::python::sketch::entities::circle::PyCircle, crate::python::sketch::entities::ellipse::PyEllipse, crate::python::sketch::entities::bezier::PyBezier, crate::python::sketch::entities::polygon::PyPolygon, crate::python::sketch::entities::text_box::PyTextBox)
+    }
+
+    /// Whether the entity is hidden from output generation.
+    #[getter]
+    fn invisible(slf: &Bound<'_, Self>) -> PyResult<bool> {
+        Ok(extract_entity(slf.as_any())?.base().invisible)
+    }
+
+    #[setter]
+    fn set_invisible(slf: &Bound<'_, Self>, value: bool) -> PyResult<()> {
+        with_entity_mut!(slf, |entity| {
+            entity.base_mut().invisible = value;
+        }; crate::python::sketch::entities::line::PyLine, crate::python::sketch::entities::arc::PyArc, crate::python::sketch::entities::circle::PyCircle, crate::python::sketch::entities::ellipse::PyEllipse, crate::python::sketch::entities::bezier::PyBezier, crate::python::sketch::entities::polygon::PyPolygon, crate::python::sketch::entities::text_box::PyTextBox)
+    }
+
+    /// Whether the entity is part of an array.
+    #[getter]
+    fn array_copy(slf: &Bound<'_, Self>) -> PyResult<bool> {
+        Ok(extract_entity(slf.as_any())?.base().array_copy)
+    }
+
+    #[setter]
+    fn set_array_copy(slf: &Bound<'_, Self>, value: bool) -> PyResult<()> {
+        with_entity_mut!(slf, |entity| {
+            entity.base_mut().array_copy = value;
+        }; crate::python::sketch::entities::line::PyLine, crate::python::sketch::entities::arc::PyArc, crate::python::sketch::entities::circle::PyCircle, crate::python::sketch::entities::ellipse::PyEllipse, crate::python::sketch::entities::bezier::PyBezier, crate::python::sketch::entities::polygon::PyPolygon, crate::python::sketch::entities::text_box::PyTextBox)
+    }
+
+    /// Whether the entity's geometry is fully determined by the
+    /// solver.
+    #[getter]
+    fn constrained(slf: &Bound<'_, Self>) -> PyResult<bool> {
+        Ok(extract_entity(slf.as_any())?.base().constrained)
+    }
+
+    #[setter]
+    fn set_constrained(slf: &Bound<'_, Self>, value: bool) -> PyResult<()> {
+        with_entity_mut!(slf, |entity| {
+            entity.base_mut().constrained = value;
+        }; crate::python::sketch::entities::line::PyLine, crate::python::sketch::entities::arc::PyArc, crate::python::sketch::entities::circle::PyCircle, crate::python::sketch::entities::ellipse::PyEllipse, crate::python::sketch::entities::bezier::PyBezier, crate::python::sketch::entities::polygon::PyPolygon, crate::python::sketch::entities::text_box::PyTextBox)
+    }
+
+    /// The fill color, when one is set.
+    #[getter]
+    fn fill_color(
+        slf: &Bound<'_, Self>,
+    ) -> PyResult<Option<(f64, f64, f64, f64)>> {
+        Ok(extract_entity(slf.as_any())?
+            .base()
+            .fill_color
+            .map(|color| (color[0], color[1], color[2], color[3])))
+    }
+
+    #[setter]
+    #[pyo3(name = "fill_color")]
+    fn set_fill_color_attr(
+        slf: &Bound<'_, Self>,
+        value: Option<(f64, f64, f64, f64)>,
+    ) -> PyResult<()> {
+        with_entity_mut!(slf, |entity| {
+            entity.base_mut().fill_color =
+                value.map(|color| [color.0, color.1, color.2, color.3]);
+        }; crate::python::sketch::entities::line::PyLine, crate::python::sketch::entities::arc::PyArc, crate::python::sketch::entities::circle::PyCircle, crate::python::sketch::entities::ellipse::PyEllipse, crate::python::sketch::entities::bezier::PyBezier, crate::python::sketch::entities::polygon::PyPolygon, crate::python::sketch::entities::text_box::PyTextBox)
+    }
+
+    /// The ids of all control points used by this entity.
+    fn get_point_ids(slf: &Bound<'_, Self>) -> PyResult<Vec<u64>> {
+        Ok(extract_entity(slf.as_any())?.get_point_ids())
+    }
+
+    /// The ids of the entity's endpoints.
+    fn get_endpoint_ids(slf: &Bound<'_, Self>) -> PyResult<Vec<u64>> {
+        Ok(extract_entity(slf.as_any())?.get_endpoint_ids())
+    }
+
+    /// The ids of the entity's junction points.
+    fn get_junction_point_ids(slf: &Bound<'_, Self>) -> PyResult<Vec<u64>> {
+        Ok(extract_entity(slf.as_any())?.get_junction_point_ids())
+    }
+
+    /// The ids of the entity's helper points.
+    fn get_helper_ids(slf: &Bound<'_, Self>) -> PyResult<Vec<u64>> {
+        Ok(extract_entity(slf.as_any())?.get_helper_ids())
+    }
+
+    /// The ids of points that may stay unconstrained.
+    fn get_ignorable_unconstrained_points(
+        slf: &Bound<'_, Self>,
+    ) -> PyResult<Vec<u64>> {
+        Ok(extract_entity(slf.as_any())?.get_ignorable_unconstrained_points())
+    }
+
+    /// The ids of points rigidly connected to the given point.
+    fn get_rigidly_connected_points(
+        slf: &Bound<'_, Self>,
+        point_id: u64,
+    ) -> PyResult<Vec<u64>> {
+        Ok(
+            extract_entity(slf.as_any())?
+                .get_rigidly_connected_points(point_id),
+        )
+    }
+
+    /// The ids of the entity's drag anchor points.
+    fn get_drag_anchor_points(
+        slf: &Bound<'_, Self>,
+        point_id: u64,
+    ) -> PyResult<Vec<u64>> {
+        Ok(extract_entity(slf.as_any())?.get_drag_anchor_points(point_id))
+    }
+
+    /// The ids of all frame points, including text box frames.
+    fn get_all_frame_point_ids(
+        slf: &Bound<'_, Self>,
+        registry: crate::python::sketch::context::PointCtx<'_>,
+    ) -> PyResult<Vec<u64>> {
+        Ok(extract_entity(slf.as_any())?.get_all_frame_point_ids(&registry))
+    }
+
+    /// Clears the entity's helper point references.
+    fn clear_helper_references(slf: &Bound<'_, Self>) -> PyResult<()> {
+        with_entity_mut!(slf, |entity| {
+            entity.clear_helper_references();
+        }; crate::python::sketch::entities::line::PyLine, crate::python::sketch::entities::arc::PyArc, crate::python::sketch::entities::circle::PyCircle, crate::python::sketch::entities::ellipse::PyEllipse, crate::python::sketch::entities::bezier::PyBezier, crate::python::sketch::entities::polygon::PyPolygon, crate::python::sketch::entities::text_box::PyTextBox)
+    }
+
+    /// Whether the entity supports fills.
+    fn supports_fill(slf: &Bound<'_, Self>) -> PyResult<bool> {
+        Ok(extract_entity(slf.as_any())?.supports_fill())
+    }
+
+    /// Whether the entity supports point-on-curve constraints.
+    fn supports_point_on_curve(slf: &Bound<'_, Self>) -> PyResult<bool> {
+        Ok(extract_entity(slf.as_any())?.supports_point_on_curve())
+    }
+
+    /// Whether the entity has a radius.
+    fn is_radius_entity(slf: &Bound<'_, Self>) -> PyResult<bool> {
+        Ok(extract_entity(slf.as_any())?.is_radius_entity())
+    }
+
+    /// Whether the entity alone forms a closed loop.
+    fn is_closed_loop(slf: &Bound<'_, Self>) -> PyResult<bool> {
+        Ok(extract_entity(slf.as_any())?.is_closed_loop())
+    }
+
+    /// Whether the entity is an edge entity.
+    fn is_edge_entity(slf: &Bound<'_, Self>) -> PyResult<bool> {
+        Ok(extract_entity(slf.as_any())?.is_edge_entity())
+    }
+
+    /// The entity's characteristic length.
+    fn characteristic_length(
+        slf: &Bound<'_, Self>,
+        registry: crate::python::sketch::context::PointCtx<'_>,
+    ) -> PyResult<f64> {
+        Ok(extract_entity(slf.as_any())?.characteristic_length(&registry))
+    }
+
+    /// The entity's characteristic-length point pairs.
+    fn characteristic_length_pairs(
+        slf: &Bound<'_, Self>,
+    ) -> PyResult<Vec<[u64; 2]>> {
+        Ok(extract_entity(slf.as_any())?.characteristic_length_pairs())
+    }
+
+    /// The signed area the entity encloses on its own; raises
+    /// `NotImplementedError` when unsupported.
+    fn enclosed_signed_area(
+        slf: &Bound<'_, Self>,
+        registry: crate::python::sketch::context::PointCtx<'_>,
+    ) -> PyResult<f64> {
+        extract_entity(slf.as_any())?
+            .enclosed_signed_area(&registry)
+            .ok_or_else(|| {
+                PyNotImplementedError::new_err(
+                    "signed area not defined for this entity",
+                )
+            })
+    }
+
+    /// Serializes the entity to the reference dictionary shape.
+    fn to_dict<'py>(
+        slf: &Bound<'_, Self>,
+        py: Python<'py>,
+    ) -> PyResult<Bound<'py, PyDict>> {
+        let entity = extract_entity(slf.as_any())?;
+        crate::python::sketch::constraints::dict_from_value(
+            py,
+            &entity.to_json(),
+        )
+    }
+
+    /// Solver-relevant discrete state for undo/redo snapshots.
+    fn get_state<'py>(
+        slf: &Bound<'_, Self>,
+        py: Python<'py>,
+    ) -> PyResult<Option<Bound<'py, PyDict>>> {
+        match extract_entity(slf.as_any())?.get_state() {
+            Some(value) => {
+                crate::python::sketch::constraints::dict_from_value(py, &value)
+                    .map(Some)
+            }
+            None => Ok(None),
+        }
+    }
+
+    /// Restores solver-relevant discrete state from a snapshot.
+    fn set_state(
+        slf: &Bound<'_, Self>,
+        state: &Bound<'_, PyDict>,
+    ) -> PyResult<()> {
+        let value = crate::python::sketch::registry::value_from_dict(state)?;
+        with_entity_mut!(slf, |entity| {
+            entity.set_state(&value);
+        }; crate::python::sketch::entities::line::PyLine, crate::python::sketch::entities::arc::PyArc, crate::python::sketch::entities::circle::PyCircle, crate::python::sketch::entities::ellipse::PyEllipse, crate::python::sketch::entities::bezier::PyBezier, crate::python::sketch::entities::polygon::PyPolygon, crate::python::sketch::entities::text_box::PyTextBox)
+    }
+
+    /// Updates the constrained flag from defining-point status and
+    /// constraints that dimension this entity's radius or length.
+    fn update_constrained_status(
+        slf: &Bound<'_, Self>,
+        registry: crate::python::sketch::context::PointCtx<'_>,
+        constraints: &Bound<'_, PyAny>,
+    ) -> PyResult<()> {
+        with_entity_mut!(slf, |entity| {
+            let constrained = entity.compute_constrained(&registry, &|eid: u64| {
+                Python::attach(|_py| {
+                    let registry = registry.0.clone();
+                    let mut constrained = false;
+                    if let Ok(iter) = constraints.try_iter() {
+                        for constraint in iter.flatten() {
+                            if let Ok(flag) = constraint
+                                .call_method1(
+                                    "constrains_radius",
+                                    (&registry, eid),
+                                )
+                                .and_then(|v| v.extract::<bool>())
+                            {
+                                if flag {
+                                    constrained = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    constrained
+                })
+            });
+            entity.base_mut().constrained = constrained;
+        }; crate::python::sketch::entities::line::PyLine, crate::python::sketch::entities::arc::PyArc, crate::python::sketch::entities::circle::PyCircle, crate::python::sketch::entities::ellipse::PyEllipse, crate::python::sketch::entities::bezier::PyBezier, crate::python::sketch::entities::polygon::PyPolygon, crate::python::sketch::entities::text_box::PyTextBox)
+    }
+
+    /// The geometry signature used for change detection.
+    fn geometry_signature<'py>(
+        slf: &Bound<'_, Self>,
+        py: Python<'py>,
+        registry: crate::python::sketch::context::PointCtx<'_>,
+    ) -> PyResult<Bound<'py, pyo3::types::PyTuple>> {
+        let entity = extract_entity(slf.as_any())?;
+        signature_to_py(py, &entity.geometry_signature(&registry))
+    }
+
+    /// Returns the entity's toolpath geometry in model coordinates.
+    fn to_geometry(
+        slf: &Bound<'_, Self>,
+        registry: crate::python::sketch::context::PointCtx<'_>,
+    ) -> PyResult<crate::python::geo::geometry::Geometry> {
+        let entity = extract_entity(slf.as_any())?;
+        Ok(crate::python::geo::geometry::Geometry {
+            inner: entity.to_geometry(&registry),
+        })
+    }
+
+    /// Returns the entity's outline as polygon vertices.
+    #[pyo3(signature = (registry, forward = true))]
+    fn to_polygon_vertices(
+        slf: &Bound<'_, Self>,
+        registry: crate::python::sketch::context::PointCtx<'_>,
+        forward: bool,
+    ) -> PyResult<Vec<(f64, f64)>> {
+        Ok(extract_entity(slf.as_any())?
+            .to_polygon_vertices(&registry, forward))
+    }
+
+    /// Returns the entity's centerline as polyline vertices.
+    #[pyo3(signature = (registry, tolerance = 0.1))]
+    fn to_polyline(
+        slf: &Bound<'_, Self>,
+        registry: crate::python::sketch::context::PointCtx<'_>,
+        tolerance: f64,
+    ) -> PyResult<Vec<(f64, f64)>> {
+        Ok(extract_entity(slf.as_any())?.to_polyline(&registry, tolerance))
+    }
+
+    /// Samples the entity into one or more polylines.
+    #[pyo3(signature = (registry, tolerance = 0.1))]
+    fn to_polylines(
+        slf: &Bound<'_, Self>,
+        registry: crate::python::sketch::context::PointCtx<'_>,
+        tolerance: f64,
+    ) -> PyResult<Vec<Vec<(f64, f64)>>> {
+        Ok(extract_entity(slf.as_any())?.to_polylines(&registry, tolerance))
+    }
+
+    /// Appends the entity's outline to the geometry.
+    #[pyo3(signature = (geo, registry, forward = true))]
+    fn append_to_geometry(
+        slf: &Bound<'_, Self>,
+        geo: &mut crate::python::geo::geometry::Geometry,
+        registry: crate::python::sketch::context::PointCtx<'_>,
+        forward: bool,
+    ) -> PyResult<()> {
+        let entity = extract_entity(slf.as_any())?;
+        entity.append_to_geometry(&mut geo.inner, &registry, forward);
+        Ok(())
+    }
+
+    /// The fill geometry of the entity, if it supports fills.
+    fn create_fill_geometry(
+        slf: &Bound<'_, Self>,
+        registry: crate::python::sketch::context::PointCtx<'_>,
+    ) -> PyResult<Option<crate::python::geo::geometry::Geometry>> {
+        let entity = extract_entity(slf.as_any())?;
+        Ok(entity.create_fill_geometry(&registry).map(|geometry| {
+            crate::python::geo::geometry::Geometry { inner: geometry }
+        }))
+    }
+
+    /// Whether the entity is hit at model coordinates (mx, my).
+    #[pyo3(signature = (mx, my, threshold, registry))]
+    fn hit_test(
+        slf: &Bound<'_, Self>,
+        mx: f64,
+        my: f64,
+        threshold: f64,
+        registry: crate::python::sketch::context::PointCtx<'_>,
+    ) -> PyResult<bool> {
+        Ok(
+            extract_entity(slf.as_any())?
+                .hit_test(mx, my, threshold, &registry),
+        )
+    }
+
+    /// Whether the model-space point lies inside the entity.
+    fn contains_point(
+        slf: &Bound<'_, Self>,
+        registry: crate::python::sketch::context::PointCtx<'_>,
+        x: f64,
+        y: f64,
+    ) -> PyResult<bool> {
+        Ok(extract_entity(slf.as_any())?.contains_point(&registry, x, y))
+    }
+
+    /// Whether the entity is fully contained by the given rect.
+    fn is_contained_by(
+        slf: &Bound<'_, Self>,
+        rect: (f64, f64, f64, f64),
+        registry: crate::python::sketch::context::PointCtx<'_>,
+    ) -> PyResult<bool> {
+        let rect = crate::geo::types::Rect {
+            min: crate::geo::types::Point::new(rect.0, rect.1),
+            max: crate::geo::types::Point::new(rect.2, rect.3),
+        };
+        Ok(extract_entity(slf.as_any())?.is_contained_by(rect, &registry))
+    }
+
+    /// Whether the entity intersects the given rect.
+    fn intersects_rect(
+        slf: &Bound<'_, Self>,
+        rect: (f64, f64, f64, f64),
+        registry: crate::python::sketch::context::PointCtx<'_>,
+    ) -> PyResult<bool> {
+        let rect = crate::geo::types::Rect {
+            min: crate::geo::types::Point::new(rect.0, rect.1),
+            max: crate::geo::types::Point::new(rect.2, rect.3),
+        };
+        Ok(extract_entity(slf.as_any())?.intersects_rect(rect, &registry))
+    }
+
+    /// Signed distance from the model-space point, if defined.
+    fn signed_distance_to(
+        slf: &Bound<'_, Self>,
+        px: f64,
+        py: f64,
+        registry: crate::python::sketch::context::PointCtx<'_>,
+    ) -> PyResult<Option<f64>> {
+        Ok(extract_entity(slf.as_any())?.signed_distance_to(px, py, &registry))
+    }
+
+    /// Tangent direction at the point nearest the model-space
+    /// point; raises `NotImplementedError` when the entity has no
+    /// tangent.
+    fn tangent_at(
+        slf: &Bound<'_, Self>,
+        registry: crate::python::sketch::context::PointCtx<'_>,
+        point_id: u64,
+    ) -> PyResult<(f64, f64)> {
+        extract_entity(slf.as_any())?
+            .tangent_at(&registry, point_id)
+            .ok_or_else(|| {
+                PyNotImplementedError::new_err(
+                    "tangent not defined for this entity",
+                )
+            })
+    }
+
+    /// Sets the fill color; returns whether the entity supports
+    /// fills.
+    fn set_fill_color(
+        slf: &Bound<'_, Self>,
+        color: Option<[f64; 4]>,
+    ) -> PyResult<bool> {
+        with_entity_mut!(slf, |entity| {
+            entity.set_fill_color(color)
+        }; crate::python::sketch::entities::line::PyLine, crate::python::sketch::entities::arc::PyArc, crate::python::sketch::entities::circle::PyCircle, crate::python::sketch::entities::ellipse::PyEllipse, crate::python::sketch::entities::bezier::PyBezier, crate::python::sketch::entities::polygon::PyPolygon, crate::python::sketch::entities::text_box::PyTextBox)
+    }
+
+    /// Mirrors the entity across the reference axis object.
+    fn mirror(slf: &Bound<'_, Self>, axis: &Bound<'_, PyAny>) -> PyResult<()> {
+        let direction: String = axis.getattr("direction")?.extract()?;
+        let position: f64 = axis.getattr("position")?.extract()?;
+        let axis_direction = match direction.as_str() {
+            "vertical" => crate::sketch::entities::MirrorDirection::Vertical,
+            "horizontal" => {
+                crate::sketch::entities::MirrorDirection::Horizontal
+            }
+            other => {
+                return Err(PyValueError::new_err(format!(
+                    "unknown mirror direction: {other}"
+                )))
+            }
+        };
+        with_entity_mut!(slf, |entity| {
+            entity.mirror(crate::sketch::entities::MirrorAxis {
+                direction: axis_direction,
+                position,
+            });
+        }; crate::python::sketch::entities::line::PyLine, crate::python::sketch::entities::arc::PyArc, crate::python::sketch::entities::circle::PyCircle, crate::python::sketch::entities::ellipse::PyEllipse, crate::python::sketch::entities::bezier::PyBezier, crate::python::sketch::entities::polygon::PyPolygon, crate::python::sketch::entities::text_box::PyTextBox)
+    }
+
+    /// Transforms entity-internal offset state for a placement; the
+    /// reference default is a no-op.
+    fn transform_offsets(&self, _placement: &Bound<'_, PyAny>) {}
+
+    /// Re-derives copy state from a template; the reference default
+    /// is a no-op.
+    fn rewrite_offsets_from(
+        &self,
+        _template: &Bound<'_, PyAny>,
+        _placement: &Bound<'_, PyAny>,
+    ) {
+    }
+
+    /// The offsettable item this entity forms on its own; the
+    /// reference default is None.
+    fn as_offset_item<'py>(
+        &self,
+        _py: Python<'py>,
+        _sketch: &Bound<'_, PyAny>,
+    ) -> Option<Bound<'py, PyAny>> {
+        None
+    }
+
+    /// Returns a pure description of the offset changes; the
+    /// reference default is None (no analytic offset).
+    fn plan_offset<'py>(
+        &self,
+        _py: Python<'py>,
+        _registry: crate::python::sketch::context::PointCtx<'_>,
+        _offset: f64,
+        _allocate_id: &Bound<'_, PyAny>,
+    ) -> Option<Bound<'py, PyAny>> {
+        None
+    }
+
+    /// Coarse polylines of the entity's offset for live preview;
+    /// the reference default is no preview.
+    fn preview_polylines(
+        &self,
+        _registry: crate::python::sketch::context::PointCtx<'_>,
+        _offset: f64,
+    ) -> Vec<Vec<(f64, f64)>> {
+        Vec::new()
+    }
+
+    /// Deep-copies the entity through its reference dictionary
+    /// shape, rebuilding via the concrete class's `from_dict`.
+    fn __deepcopy__<'py>(
+        slf: &Bound<'py, Self>,
+        memo: &Bound<'py, PyDict>,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let _ = memo;
+        let dict = slf.call_method0("to_dict")?;
+        let from_dict = slf.get_type().getattr("from_dict")?;
+        from_dict.call1((dict,))
+    }
+
+    fn __copy__<'py>(slf: &Bound<'py, Self>) -> PyResult<Bound<'py, PyAny>> {
+        Self::__deepcopy__(slf, &PyDict::new(slf.py()))
+    }
+}
+
 /// The base of all entity classes, for typed registry returns.
 pub struct AnyEntity<'py>(pub Bound<'py, PyAny>);
 
@@ -211,6 +794,39 @@ impl PyStubType for AnyEntity<'_> {
 /// A sketch point view: coordinates and solver flags.
 #[allow(dead_code)]
 pub struct AnyPoint<'py>(pub Bound<'py, PyAny>);
+
+pyo3_stub_gen::reexport_module_members!(
+    "raygeo.sketch.entities" from "raygeo.sketch.entities.point";
+    "SketchPoint"
+);
+pyo3_stub_gen::reexport_module_members!(
+    "raygeo.sketch.entities" from "raygeo.sketch.entities.line";
+    "Line"
+);
+pyo3_stub_gen::reexport_module_members!(
+    "raygeo.sketch.entities" from "raygeo.sketch.entities.arc";
+    "Arc"
+);
+pyo3_stub_gen::reexport_module_members!(
+    "raygeo.sketch.entities" from "raygeo.sketch.entities.circle";
+    "Circle"
+);
+pyo3_stub_gen::reexport_module_members!(
+    "raygeo.sketch.entities" from "raygeo.sketch.entities.ellipse";
+    "Ellipse"
+);
+pyo3_stub_gen::reexport_module_members!(
+    "raygeo.sketch.entities" from "raygeo.sketch.entities.bezier";
+    "Bezier"
+);
+pyo3_stub_gen::reexport_module_members!(
+    "raygeo.sketch.entities" from "raygeo.sketch.entities.polygon";
+    "Polygon"
+);
+pyo3_stub_gen::reexport_module_members!(
+    "raygeo.sketch.entities" from "raygeo.sketch.entities.text_box";
+    "TextBox"
+);
 
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = m.py();

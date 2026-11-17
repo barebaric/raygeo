@@ -11,7 +11,7 @@ use pyo3_stub_gen::derive::{
 use super::radius::dict_type;
 use super::{surface, PyConstraintBase};
 use crate::python::sketch::context::PointCtx;
-use crate::python::sketch::protocols::{Canvas, DrawContext, ScreenMap};
+use crate::python::sketch::protocols::{Canvas, ScreenMap};
 use crate::sketch::constraint::{PointContext, SketchConstraint};
 use crate::sketch::constraints::point_on_curve::PointOnCurveConstraint as CoreConstraint;
 
@@ -52,7 +52,7 @@ impl PyPointOnCurveConstraint {
         shape_id: i64,
         user_visible: bool,
     ) -> PyClassInitializer<Self> {
-        PyClassInitializer::from(PyConstraintBase).add_subclass(
+        PyClassInitializer::from(PyConstraintBase::default()).add_subclass(
             PyPointOnCurveConstraint {
                 point_id,
                 shape_id,
@@ -127,7 +127,7 @@ impl PyPointOnCurveConstraint {
     fn draw<'py>(
         &self,
         ctx: Canvas<'py>,
-        registry: DrawContext<'py>,
+        registry: &Bound<'py, PyAny>,
         to_screen: ScreenMap<'py>,
         is_selected: bool,
         is_hovered: bool,
@@ -136,7 +136,7 @@ impl PyPointOnCurveConstraint {
         super::constraint_draw(
             &self.clone().into_constraint(),
             &ctx,
-            &registry,
+            registry,
             &to_screen,
             is_selected,
             is_hovered,
@@ -262,7 +262,7 @@ impl PyPointOnCurveConstraint {
 /// Finds the point on a cubic Bezier curve closest to `(px, py)`,
 /// returning `(t, bx, by)`: the curve parameter and the coordinates
 /// of the closest curve point (the reference module-level helper).
-#[gen_stub_pyfunction]
+#[gen_stub_pyfunction(module = "raygeo.sketch.constraints.point_on_curve")]
 #[pyfunction]
 fn closest_point_on_bezier(
     xs: (f64, f64, f64, f64),

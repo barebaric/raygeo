@@ -8,7 +8,7 @@ use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use super::PyConstraintBase;
 use crate::python::sketch::context::PointCtx;
-use crate::python::sketch::protocols::{Canvas, DrawContext, ScreenMap};
+use crate::python::sketch::protocols::{Canvas, ScreenMap};
 use crate::sketch::constraint::SketchConstraint;
 use crate::sketch::constraints::drag::DragConstraint as CoreConstraint;
 
@@ -58,7 +58,7 @@ impl PyDragConstraint {
         weight: f64,
         user_visible: bool,
     ) -> PyClassInitializer<Self> {
-        PyClassInitializer::from(PyConstraintBase).add_subclass(
+        PyClassInitializer::from(PyConstraintBase::default()).add_subclass(
             PyDragConstraint {
                 point_id,
                 target_x,
@@ -115,7 +115,7 @@ impl PyDragConstraint {
     fn draw<'py>(
         &self,
         ctx: Canvas<'py>,
-        registry: DrawContext<'py>,
+        registry: &Bound<'py, PyAny>,
         to_screen: ScreenMap<'py>,
         is_selected: bool,
         is_hovered: bool,
@@ -124,7 +124,7 @@ impl PyDragConstraint {
         super::constraint_draw(
             &self.clone().into_constraint(),
             &ctx,
-            &registry,
+            registry,
             &to_screen,
             is_selected,
             is_hovered,
@@ -167,7 +167,7 @@ impl PyDragConstraint {
         let _ = memo;
         let clone = Py::new(
             py,
-            PyClassInitializer::from(PyConstraintBase)
+            PyClassInitializer::from(PyConstraintBase::default())
                 .add_subclass(self.clone()),
         )?;
         Ok(clone.into_bound(py).into_any())

@@ -8,6 +8,7 @@ from raygeo.sketch import protocols
 import typing
 __all__ = [
     "SymmetryConstraint",
+    "draw_symmetry_arrows",
 ]
 
 class SymmetryConstraint(constraints.Constraint):
@@ -101,7 +102,7 @@ class SymmetryConstraint(constraints.Constraint):
         r"""
         Rebuilds the constraint from its reference dictionary shape.
         """
-    def draw(self, ctx: protocols.Canvas, registry: protocols.DrawContext, to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], is_selected: builtins.bool = False, is_hovered: builtins.bool = False, point_radius: builtins.float = 5.0) -> None:
+    def draw(self, ctx: protocols.Canvas, registry: typing.Any, to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], is_selected: builtins.bool = False, is_hovered: builtins.bool = False, point_radius: builtins.float = 5.0) -> None:
         r"""
         Draws the constraint's symbol onto the cairo context.
         """
@@ -137,4 +138,10 @@ class SymmetryConstraint(constraints.Constraint):
         r"""
         Whether the constraint's rendered symbol is hit at (mx, my).
         """
+
+def draw_symmetry_arrows(ctx: protocols.Canvas, s1: tuple[builtins.float, builtins.float], s2: tuple[builtins.float, builtins.float]) -> None:
+    r"""
+    Draws the two symmetry arrow heads along the segment between
+    two screen-space points (the reference module-level helper).
+    """
 

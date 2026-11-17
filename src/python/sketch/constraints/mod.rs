@@ -30,9 +30,7 @@ use serde_json::Value;
 use std::collections::{HashMap, HashSet};
 
 use crate::python::sketch::context::PointCtx;
-use crate::python::sketch::protocols::{
-    Canvas, DrawContext as RegistryContext, ScreenMap,
-};
+use crate::python::sketch::protocols::{Canvas, ScreenMap};
 use crate::sketch::constraint::SketchConstraint;
 use crate::sketch::draw::{
     CairoLike, ConstraintStatus, DrawContext as DrawContextContract, DrawPoint,
@@ -45,6 +43,97 @@ type LeafRegister = fn(&Bound<'_, PyModule>) -> PyResult<()>;
 /// Solver weight of the angle constraints, mirroring the reference
 /// `angle.py` constant.
 pub(crate) const ANGLE_WEIGHT: f64 = 10.0;
+
+// The reference package exposes every constraint class and the
+// solver constants at package level; declare the same surface for
+// the generated stubs.
+pyo3_stub_gen::module_variable!(
+    "raygeo.sketch.constraints",
+    "ANGLE_WEIGHT",
+    f64,
+    10.0
+);
+
+pyo3_stub_gen::reexport_module_members!(
+    "raygeo.sketch.constraints" from "raygeo.sketch.constraints.angle";
+    "AngleConstraint"
+);
+pyo3_stub_gen::reexport_module_members!(
+    "raygeo.sketch.constraints" from "raygeo.sketch.constraints.aspect_ratio";
+    "AspectRatioConstraint"
+);
+pyo3_stub_gen::reexport_module_members!(
+    "raygeo.sketch.constraints" from "raygeo.sketch.constraints.coincident";
+    "CoincidentConstraint"
+);
+pyo3_stub_gen::reexport_module_members!(
+    "raygeo.sketch.constraints" from "raygeo.sketch.constraints.collinear";
+    "CollinearConstraint"
+);
+pyo3_stub_gen::reexport_module_members!(
+    "raygeo.sketch.constraints" from "raygeo.sketch.constraints.diameter";
+    "DiameterConstraint"
+);
+pyo3_stub_gen::reexport_module_members!(
+    "raygeo.sketch.constraints" from "raygeo.sketch.constraints.distance";
+    "DistanceConstraint"
+);
+pyo3_stub_gen::reexport_module_members!(
+    "raygeo.sketch.constraints" from "raygeo.sketch.constraints.drag";
+    "DragConstraint"
+);
+pyo3_stub_gen::reexport_module_members!(
+    "raygeo.sketch.constraints"
+    from "raygeo.sketch.constraints.equal_distance";
+    "EqualDistanceConstraint"
+);
+pyo3_stub_gen::reexport_module_members!(
+    "raygeo.sketch.constraints" from "raygeo.sketch.constraints.equal_length";
+    "EqualLengthConstraint"
+);
+pyo3_stub_gen::reexport_module_members!(
+    "raygeo.sketch.constraints" from "raygeo.sketch.constraints.horizontal";
+    "HorizontalConstraint"
+);
+pyo3_stub_gen::reexport_module_members!(
+    "raygeo.sketch.constraints"
+    from "raygeo.sketch.constraints.parallelogram";
+    "ParallelogramConstraint"
+);
+pyo3_stub_gen::reexport_module_members!(
+    "raygeo.sketch.constraints"
+    from "raygeo.sketch.constraints.perpendicular";
+    "PerpendicularConstraint"
+);
+pyo3_stub_gen::reexport_module_members!(
+    "raygeo.sketch.constraints"
+    from "raygeo.sketch.constraints.point_on_curve";
+    "PointOnCurveConstraint"
+);
+pyo3_stub_gen::reexport_module_members!(
+    "raygeo.sketch.constraints" from "raygeo.sketch.constraints.point_on_line";
+    "PointOnLineConstraint"
+);
+pyo3_stub_gen::reexport_module_members!(
+    "raygeo.sketch.constraints" from "raygeo.sketch.constraints.radius";
+    "RadiusConstraint"
+);
+pyo3_stub_gen::reexport_module_members!(
+    "raygeo.sketch.constraints" from "raygeo.sketch.constraints.rotational";
+    "RotationalConstraint"
+);
+pyo3_stub_gen::reexport_module_members!(
+    "raygeo.sketch.constraints" from "raygeo.sketch.constraints.symmetry";
+    "SymmetryConstraint"
+);
+pyo3_stub_gen::reexport_module_members!(
+    "raygeo.sketch.constraints" from "raygeo.sketch.constraints.tangent";
+    "TangentConstraint"
+);
+pyo3_stub_gen::reexport_module_members!(
+    "raygeo.sketch.constraints" from "raygeo.sketch.constraints.vertical";
+    "VerticalConstraint"
+);
 
 pub(crate) const MODULE_DOC: &str = "\
 Sketch constraint classes.
@@ -464,7 +553,7 @@ pub(crate) fn draw_with_cairo(
 pub(crate) fn constraint_draw(
     constraint: &dyn SketchConstraint,
     ctx: &Canvas<'_>,
-    registry: &RegistryContext<'_>,
+    registry: &Bound<'_, PyAny>,
     to_screen: &ScreenMap<'_>,
     is_selected: bool,
     is_hovered: bool,
@@ -489,7 +578,7 @@ pub(crate) fn constraint_draw(
         error: std::cell::RefCell::new(None),
     };
     let context = PyDrawContext {
-        registry: registry.0.clone(),
+        registry: registry.clone(),
         error: std::cell::RefCell::new(None),
     };
     constraint.draw(&context, &to_screen, &canvas, &style);
@@ -566,9 +655,25 @@ pub(crate) fn constraint_gradient(
 /// on the subclasses; polymorphism is carried by the Rust-side
 /// `SketchConstraint` trait.
 #[gen_stub_pyclass]
-#[pyclass(subclass, module = "raygeo.sketch.constraints", name = "Constraint")]
-#[derive(Default)]
-pub struct PyConstraintBase;
+#[pyclass(
+    get_all,
+    set_all,
+    skip_from_py_object,
+    subclass,
+    module = "raygeo.sketch.constraints",
+    name = "Constraint"
+)]
+#[derive(Default, Clone)]
+pub struct PyConstraintBase {
+    /// The resolved dimension value (dimensional constraints).
+    pub value: f64,
+    /// The stored expression string (dimensional constraints).
+    pub expression: Option<String>,
+    /// The reference validation status ordinal.
+    pub status: u8,
+    /// Reference user-visibility flag.
+    pub user_visible: bool,
+}
 
 #[gen_stub_pymethods]
 #[pymethods]
@@ -614,7 +719,8 @@ impl PyConstraintBase {
 
     /// A human-readable subtitle describing the constrained
     /// entities.
-    fn get_subtitle(&self, _py: Python<'_>, _registry: PointCtx<'_>) -> String {
+    fn get_subtitle(&self, py: Python<'_>, registry: PointCtx<'_>) -> String {
+        let _ = (py, registry);
         String::new()
     }
 
@@ -625,29 +731,32 @@ impl PyConstraintBase {
 
     /// Whether this constraint restricts the length/distance of the
     /// segment (p1, p2) or of the given entity.
-    #[pyo3(signature = (_p1, _p2, _entity_id = None))]
+    #[pyo3(signature = (p1, p2, entity_id = None))]
     fn targets_segment(
         &self,
-        _p1: i64,
-        _p2: i64,
-        _entity_id: Option<i64>,
+        p1: i64,
+        p2: i64,
+        entity_id: Option<i64>,
     ) -> bool {
+        let _ = (p1, p2, entity_id);
         false
     }
 
     /// The error of the constraint at the registry's positions.
-    #[pyo3(signature = (_reg, _params = None))]
-    fn error(&self, _reg: PointCtx<'_>, _params: Option<Py<PyAny>>) -> f64 {
+    #[pyo3(signature = (reg, params = None))]
+    fn error(&self, reg: PointCtx<'_>, params: Option<Py<PyAny>>) -> f64 {
+        let _ = (reg, params);
         0.0
     }
 
     /// The partial derivatives of the error by point id.
-    #[pyo3(signature = (_reg, _params = None))]
+    #[pyo3(signature = (reg, params = None))]
     fn gradient(
         &self,
-        _reg: PointCtx<'_>,
-        _params: Option<Py<PyAny>>,
+        reg: PointCtx<'_>,
+        params: Option<Py<PyAny>>,
     ) -> HashMap<u64, Vec<(f64, f64)>> {
+        let _ = (reg, params);
         HashMap::new()
     }
 
@@ -655,9 +764,10 @@ impl PyConstraintBase {
     /// of the given entity.
     fn constrains_radius(
         &self,
-        _registry: PointCtx<'_>,
-        _entity_id: i64,
+        registry: PointCtx<'_>,
+        entity_id: i64,
     ) -> bool {
+        let _ = (registry, entity_id);
         false
     }
 
@@ -667,33 +777,42 @@ impl PyConstraintBase {
     }
 
     /// Whether the constraint's visual representation is hit.
-    #[pyo3(signature = (_sx, _sy, _registry, _to_screen, _element,
-                        _threshold))]
+    #[pyo3(signature = (sx, sy, registry, to_screen, element,
+                        threshold))]
     fn is_hit(
         &self,
-        _sx: f64,
-        _sy: f64,
-        _registry: PointCtx<'_>,
-        _to_screen: ScreenMap<'_>,
-        _element: Option<&Bound<'_, PyAny>>,
-        _threshold: f64,
+        sx: f64,
+        sy: f64,
+        registry: PointCtx<'_>,
+        to_screen: ScreenMap<'_>,
+        element: Option<&Bound<'_, PyAny>>,
+        threshold: f64,
     ) -> bool {
+        let _ = (sx, sy, registry, to_screen, element, threshold);
         false
     }
 
     /// Draws the constraint's visual representation.
-    #[pyo3(signature = (_ctx, _registry, _to_screen, _is_selected = false,
-                        _is_hovered = false, _point_radius = 5.0))]
+    #[pyo3(signature = (ctx, registry, to_screen, is_selected = false,
+                        is_hovered = false, point_radius = 5.0))]
     #[allow(clippy::too_many_arguments)]
     fn draw<'py>(
         &self,
-        _ctx: Canvas<'py>,
-        _registry: RegistryContext<'py>,
-        _to_screen: ScreenMap<'py>,
-        _is_selected: bool,
-        _is_hovered: bool,
-        _point_radius: f64,
+        ctx: Canvas<'py>,
+        registry: &Bound<'py, PyAny>,
+        to_screen: ScreenMap<'py>,
+        is_selected: bool,
+        is_hovered: bool,
+        point_radius: f64,
     ) {
+        let _ = (
+            ctx,
+            registry,
+            to_screen,
+            is_selected,
+            is_hovered,
+            point_radius,
+        );
     }
 
     /// Re-evaluates the expression (if present) using the provided

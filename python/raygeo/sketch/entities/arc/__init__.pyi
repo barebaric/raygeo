@@ -111,7 +111,7 @@ class Arc(entities.Entity):
         r"""
         Serializes the entity to the reference dictionary shape.
         """
-    def geometry_signature(self, registry: protocols.Registry) -> dict:
+    def geometry_signature(self, registry: protocols.Registry) -> tuple:
         r"""
         Returns the geometry signature used for change detection.
         """
@@ -139,7 +139,7 @@ class Arc(entities.Entity):
         r"""
         Signed distance from the model-space point, if defined.
         """
-    def tangent_at(self, registry: protocols.Registry, point_id: builtins.int) -> typing.Optional[tuple[builtins.float, builtins.float]]:
+    def tangent_at(self, registry: protocols.Registry, point_id: builtins.int) -> tuple[builtins.float, builtins.float]:
         r"""
         Tangent direction at the point nearest the model-space point.
         """
@@ -224,7 +224,7 @@ class Arc(entities.Entity):
         r"""
         The defining-point pairs of the characteristic length.
         """
-    def enclosed_signed_area(self, registry: protocols.Registry) -> typing.Optional[builtins.float]:
+    def enclosed_signed_area(self, registry: protocols.Registry) -> builtins.float:
         r"""
         The signed area enclosed by the entity, if defined.
         """

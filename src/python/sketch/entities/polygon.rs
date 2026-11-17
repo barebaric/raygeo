@@ -12,6 +12,7 @@ use super::PyEntityBase;
 use crate::python::geo::geometry::Geometry as PyGeometry;
 use crate::python::sketch::constraints::dict_from_value;
 use crate::python::sketch::context::PointCtx;
+use crate::python::sketch::entities::signature_to_py;
 use crate::sketch::entities::mirror::{MirrorAxis, MirrorDirection};
 use crate::sketch::entities::polygon::PolygonEntity as CorePolygon;
 use crate::sketch::entities::Entity;
@@ -215,8 +216,8 @@ impl PyPolygon {
         &self,
         py: Python<'py>,
         registry: PointCtx<'_>,
-    ) -> PyResult<Bound<'py, PyDict>> {
-        dict_from_value(py, &self.inner.geometry_signature(&registry))
+    ) -> PyResult<Bound<'py, pyo3::types::PyTuple>> {
+        signature_to_py(py, &self.inner.geometry_signature(&registry))
     }
 
     /// Returns the entity's toolpath geometry in model coordinates.

@@ -11,7 +11,7 @@ use pyo3_stub_gen::derive::{
 use super::radius::dict_type;
 use super::{surface, PyConstraintBase};
 use crate::python::sketch::context::PointCtx;
-use crate::python::sketch::protocols::{Canvas, DrawContext, ScreenMap};
+use crate::python::sketch::protocols::{Canvas, ScreenMap};
 use crate::sketch::constraint::{PointContext, SketchConstraint};
 use crate::sketch::constraints::symmetry::SymmetryConstraint as CoreConstraint;
 
@@ -61,7 +61,7 @@ impl PySymmetryConstraint {
         axis: Option<i64>,
         user_visible: bool,
     ) -> PyClassInitializer<Self> {
-        PyClassInitializer::from(PyConstraintBase).add_subclass(
+        PyClassInitializer::from(PyConstraintBase::default()).add_subclass(
             PySymmetryConstraint {
                 p1,
                 p2,
@@ -155,7 +155,7 @@ impl PySymmetryConstraint {
     fn draw<'py>(
         &self,
         ctx: Canvas<'py>,
-        registry: DrawContext<'py>,
+        registry: &Bound<'py, PyAny>,
         to_screen: ScreenMap<'py>,
         is_selected: bool,
         is_hovered: bool,
@@ -164,7 +164,7 @@ impl PySymmetryConstraint {
         super::constraint_draw(
             &self.clone().into_constraint(),
             &ctx,
-            &registry,
+            registry,
             &to_screen,
             is_selected,
             is_hovered,
@@ -282,7 +282,7 @@ impl PySymmetryConstraint {
 
 /// Draws the two symmetry arrow heads along the segment between
 /// two screen-space points (the reference module-level helper).
-#[gen_stub_pyfunction]
+#[gen_stub_pyfunction(module = "raygeo.sketch.constraints.symmetry")]
 #[pyfunction]
 fn draw_symmetry_arrows(
     ctx: Canvas<'_>,

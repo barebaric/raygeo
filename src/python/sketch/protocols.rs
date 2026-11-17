@@ -71,7 +71,6 @@ macro_rules! duck_typed {
 duck_typed!(Canvas, protocol_type("Canvas"));
 
 // The document the symbol layout reads through.
-duck_typed!(DrawContext, protocol_type("DrawContext"));
 
 // Maps model coordinates to screen coordinates.
 duck_typed!(ScreenMap, screen_map_type());

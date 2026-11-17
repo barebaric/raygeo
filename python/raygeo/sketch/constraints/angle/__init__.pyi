@@ -7,9 +7,15 @@ from raygeo.sketch import constraints
 from raygeo.sketch import protocols
 import typing
 __all__ = [
+    "ANGLE_WEIGHT",
+    "ARC_RADIUS",
     "AngleConstraint",
+    "LABEL_RADIUS",
 ]
 
+ANGLE_WEIGHT: builtins.float = 10.0
+ARC_RADIUS: builtins.float = 35.0
+LABEL_RADIUS: builtins.float = 25.0
 class AngleConstraint(constraints.Constraint):
     r"""
     Enforces a clockwise angle in degrees between two lines.  The
@@ -129,7 +135,7 @@ class AngleConstraint(constraints.Constraint):
         r"""
         Rebuilds the constraint from its reference dictionary shape.
         """
-    def draw(self, ctx: protocols.Canvas, registry: protocols.DrawContext, to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], is_selected: builtins.bool = False, is_hovered: builtins.bool = False, point_radius: builtins.float = 5.0) -> None:
+    def draw(self, ctx: protocols.Canvas, registry: typing.Any, to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], is_selected: builtins.bool = False, is_hovered: builtins.bool = False, point_radius: builtins.float = 5.0) -> None:
         r"""
         Draws the constraint's symbol onto the cairo context.
         """

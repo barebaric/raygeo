@@ -8,6 +8,7 @@ from raygeo.sketch import protocols
 import typing
 __all__ = [
     "PointOnCurveConstraint",
+    "closest_point_on_bezier",
 ]
 
 class PointOnCurveConstraint(constraints.Constraint):
@@ -81,7 +82,7 @@ class PointOnCurveConstraint(constraints.Constraint):
         r"""
         Rebuilds the constraint from its reference dictionary shape.
         """
-    def draw(self, ctx: protocols.Canvas, registry: protocols.DrawContext, to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], is_selected: builtins.bool = False, is_hovered: builtins.bool = False, point_radius: builtins.float = 5.0) -> None:
+    def draw(self, ctx: protocols.Canvas, registry: typing.Any, to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], is_selected: builtins.bool = False, is_hovered: builtins.bool = False, point_radius: builtins.float = 5.0) -> None:
         r"""
         Draws the constraint's symbol onto the cairo context.
         """
@@ -121,4 +122,11 @@ class PointOnCurveConstraint(constraints.Constraint):
         r"""
         Whether the constraint's rendered symbol is hit at (mx, my).
         """
+
+def closest_point_on_bezier(xs: tuple[builtins.float, builtins.float, builtins.float, builtins.float], ys: tuple[builtins.float, builtins.float, builtins.float, builtins.float], px: builtins.float, py: builtins.float) -> tuple[builtins.float, builtins.float, builtins.float]:
+    r"""
+    Finds the point on a cubic Bezier curve closest to `(px, py)`,
+    returning `(t, bx, by)`: the curve parameter and the coordinates
+    of the closest curve point (the reference module-level helper).
+    """
 

@@ -113,7 +113,7 @@ class Polygon(entities.Entity):
         r"""
         Serializes the entity to the reference dictionary shape.
         """
-    def geometry_signature(self, registry: protocols.Registry) -> dict:
+    def geometry_signature(self, registry: protocols.Registry) -> tuple:
         r"""
         Returns the geometry signature used for change detection.
         """

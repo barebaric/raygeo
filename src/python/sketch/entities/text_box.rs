@@ -1,7 +1,7 @@
 //! Bindings for the text box entity.
 
 use crate::python::sketch::registry::value_from_dict;
-use pyo3::exceptions::PyValueError;
+use pyo3::exceptions::{PyNotImplementedError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
@@ -14,6 +14,7 @@ use crate::python::geo::geometry::Geometry as PyGeometry;
 use crate::python::geo::shape::text::PyFontConfig;
 use crate::python::sketch::constraints::dict_from_value;
 use crate::python::sketch::context::PointCtx;
+use crate::python::sketch::entities::signature_to_py;
 use crate::python::sketch::registry::PyEntityRegistry;
 use crate::sketch::entities::mirror::{MirrorAxis, MirrorDirection};
 use crate::sketch::entities::text_box::TextBoxEntity as CoreTextBox;
@@ -333,8 +334,8 @@ impl PyTextBox {
         &self,
         py: Python<'py>,
         registry: PointCtx<'_>,
-    ) -> PyResult<Bound<'py, PyDict>> {
-        dict_from_value(py, &self.inner.geometry_signature(&registry))
+    ) -> PyResult<Bound<'py, pyo3::types::PyTuple>> {
+        signature_to_py(py, &self.inner.geometry_signature(&registry))
     }
 
     /// Returns the entity's toolpath geometry in model coordinates.
@@ -395,8 +396,12 @@ impl PyTextBox {
         &self,
         registry: PointCtx<'_>,
         point_id: u64,
-    ) -> Option<(f64, f64)> {
-        self.inner.tangent_at(&registry, point_id)
+    ) -> PyResult<(f64, f64)> {
+        self.inner.tangent_at(&registry, point_id).ok_or_else(|| {
+            PyNotImplementedError::new_err(
+                "tangent not defined for this entity",
+            )
+        })
     }
 
     /// Mirrors the entity across the axis.
@@ -540,8 +545,12 @@ impl PyTextBox {
     }
 
     /// The signed area enclosed by the entity, if defined.
-    fn enclosed_signed_area(&self, registry: PointCtx<'_>) -> Option<f64> {
-        self.inner.enclosed_signed_area(&registry)
+    fn enclosed_signed_area(&self, registry: PointCtx<'_>) -> PyResult<f64> {
+        self.inner.enclosed_signed_area(&registry).ok_or_else(|| {
+            PyNotImplementedError::new_err(
+                "signed area not defined for this entity",
+            )
+        })
     }
 
     /// Point ids that move rigidly with the given point.

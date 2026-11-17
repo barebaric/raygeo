@@ -9,7 +9,7 @@ use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 use super::radius::dict_type;
 use super::{surface, PyConstraintBase};
 use crate::python::sketch::context::PointCtx;
-use crate::python::sketch::protocols::{Canvas, DrawContext, ScreenMap};
+use crate::python::sketch::protocols::{Canvas, ScreenMap};
 use crate::sketch::constraint::{PointContext, SketchConstraint};
 use crate::sketch::constraints::vertical::VerticalConstraint as CoreConstraint;
 
@@ -46,7 +46,7 @@ impl PyVerticalConstraint {
     #[new]
     #[pyo3(signature = (p1, p2, user_visible = true))]
     fn new(p1: i64, p2: i64, user_visible: bool) -> PyClassInitializer<Self> {
-        PyClassInitializer::from(PyConstraintBase).add_subclass(
+        PyClassInitializer::from(PyConstraintBase::default()).add_subclass(
             PyVerticalConstraint {
                 p1,
                 p2,
@@ -121,7 +121,7 @@ impl PyVerticalConstraint {
     fn draw<'py>(
         &self,
         ctx: Canvas<'py>,
-        registry: DrawContext<'py>,
+        registry: &Bound<'py, PyAny>,
         to_screen: ScreenMap<'py>,
         is_selected: bool,
         is_hovered: bool,
@@ -130,7 +130,7 @@ impl PyVerticalConstraint {
         super::constraint_draw(
             &self.clone().into_constraint(),
             &ctx,
-            &registry,
+            registry,
             &to_screen,
             is_selected,
             is_hovered,

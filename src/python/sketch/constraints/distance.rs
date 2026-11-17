@@ -9,7 +9,7 @@ use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 use super::radius::{dict_expression, dict_type, split_value};
 use super::{surface, PyConstraintBase};
 use crate::python::sketch::context::PointCtx;
-use crate::python::sketch::protocols::{Canvas, DrawContext, ScreenMap};
+use crate::python::sketch::protocols::{Canvas, ScreenMap};
 use crate::sketch::constraint::{PointContext, SketchConstraint};
 use crate::sketch::constraints::distance::DistanceConstraint as CoreConstraint;
 
@@ -60,16 +60,18 @@ impl PyDistanceConstraint {
         user_visible: bool,
     ) -> PyResult<PyClassInitializer<Self>> {
         let (value, expression) = split_value(value, expression)?;
-        Ok(PyClassInitializer::from(PyConstraintBase).add_subclass(
-            PyDistanceConstraint {
-                p1,
-                p2,
-                value,
-                user_visible,
-                status: 1,
-                expression,
-            },
-        ))
+        Ok(
+            PyClassInitializer::from(PyConstraintBase::default()).add_subclass(
+                PyDistanceConstraint {
+                    p1,
+                    p2,
+                    value,
+                    user_visible,
+                    status: 1,
+                    expression,
+                },
+            ),
+        )
     }
 
     /// Returns the constraint error at the registry's point
@@ -144,7 +146,7 @@ impl PyDistanceConstraint {
     fn draw<'py>(
         &self,
         ctx: Canvas<'py>,
-        registry: DrawContext<'py>,
+        registry: &Bound<'py, PyAny>,
         to_screen: ScreenMap<'py>,
         is_selected: bool,
         is_hovered: bool,
@@ -153,7 +155,7 @@ impl PyDistanceConstraint {
         super::constraint_draw(
             &self.clone().into_constraint(),
             &ctx,
-            &registry,
+            registry,
             &to_screen,
             is_selected,
             is_hovered,
