@@ -79,7 +79,7 @@ class DragConstraint(constraints.Constraint):
         r"""
         Creates the drag constraint for a point and target position.
         """
-    def gradient(self, registry: protocols.Registry) -> builtins.dict[builtins.int, builtins.list[tuple[builtins.float, builtins.float]]]:
+    def gradient(self, registry: protocols.Registry, _params: typing.Optional[typing.Any] = None) -> builtins.dict[builtins.int, builtins.list[tuple[builtins.float, builtins.float]]]:
         r"""
         Partial derivatives of the error by point id.
         """
@@ -107,7 +107,7 @@ class DragConstraint(constraints.Constraint):
         r"""
         Draws the constraint's symbol onto the cairo context.
         """
-    def is_hit(self, mx: builtins.float, my: builtins.float, threshold: builtins.float, registry: protocols.Registry, to_screen: typing.Optional[collections.abc.Callable[[tuple[float, float]], tuple[float, float]]] = None) -> builtins.bool:
+    def is_hit(self, sx: builtins.float, sy: builtins.float, registry: protocols.Registry, to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], element: typing.Optional[typing.Any], threshold: builtins.float) -> builtins.bool:
         r"""
         Whether the constraint's rendered symbol is hit at (mx, my).
         """

@@ -102,7 +102,7 @@ class AngleConstraint(constraints.Constraint):
         Returns the constraint error at the registry's point
         positions.
         """
-    def gradient(self, registry: protocols.Registry) -> builtins.dict[builtins.int, builtins.list[tuple[builtins.float, builtins.float]]]:
+    def gradient(self, registry: protocols.Registry, _params: typing.Optional[typing.Any] = None) -> builtins.dict[builtins.int, builtins.list[tuple[builtins.float, builtins.float]]]:
         r"""
         Partial derivatives of the error by point id.
         """
@@ -132,11 +132,11 @@ class AngleConstraint(constraints.Constraint):
         geometry.  An expression-based angle encodes user intent that
         does not auto-flip under reflection.
         """
-    def is_hit(self, mx: builtins.float, my: builtins.float, threshold: builtins.float, registry: protocols.Registry, to_screen: typing.Optional[collections.abc.Callable[[tuple[float, float]], tuple[float, float]]] = None) -> builtins.bool:
+    def is_hit(self, sx: builtins.float, sy: builtins.float, registry: protocols.Registry, to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], element: typing.Optional[typing.Any], threshold: builtins.float) -> builtins.bool:
         r"""
         Whether the constraint's rendered symbol is hit at (mx, my).
         """
-    def mirror(self) -> None:
+    def mirror(self, _axis: typing.Any) -> None:
         r"""
         Mirrors the angle value (negates it).
         """

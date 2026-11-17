@@ -28,16 +28,22 @@ class TextBox(entities.Entity):
         r"""
         Origin point id.
         """
+    @origin_id.setter
+    def origin_id(self, value: builtins.int) -> None: ...
     @property
     def width_id(self) -> builtins.int:
         r"""
         Width point id.
         """
+    @width_id.setter
+    def width_id(self, value: builtins.int) -> None: ...
     @property
     def height_id(self) -> builtins.int:
         r"""
         Height point id.
         """
+    @height_id.setter
+    def height_id(self, value: builtins.int) -> None: ...
     @property
     def construction_line_ids(self) -> builtins.list[builtins.int]: ...
     @construction_line_ids.setter

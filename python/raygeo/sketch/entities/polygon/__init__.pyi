@@ -28,11 +28,15 @@ class Polygon(entities.Entity):
         r"""
         Center point id.
         """
+    @center_idx.setter
+    def center_idx(self, value: builtins.int) -> None: ...
     @property
     def handle_idx(self) -> builtins.int:
         r"""
         Handle point id.
         """
+    @handle_idx.setter
+    def handle_idx(self, value: builtins.int) -> None: ...
     @property
     def closed(self) -> builtins.bool:
         r"""
