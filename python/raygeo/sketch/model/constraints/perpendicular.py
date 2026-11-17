@@ -40,7 +40,9 @@ class PerpendicularConstraint(_CorePerpendicularConstraint, Constraint):
     """
 
     def __new__(cls, e1_id, e2_id, user_visible=True):
-        return super().__new__(cls, e1_id, e2_id, user_visible)
+        obj = super().__new__(cls, e1_id, e2_id, user_visible)
+        obj.seed_reference_attrs()
+        return obj
 
     def __init__(
         self, e1_id: EntityID, e2_id: EntityID, user_visible: bool = True

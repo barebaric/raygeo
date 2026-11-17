@@ -32,7 +32,9 @@ class DistanceConstraint(_CoreDistanceConstraint, Constraint):
     """Enforces distance between two points."""
 
     def __new__(cls, p1, p2, value, expression=None, user_visible=True):
-        return super().__new__(cls, p1, p2, 0.0, user_visible)
+        obj = super().__new__(cls, p1, p2, 0.0, user_visible)
+        obj.seed_reference_attrs()
+        return obj
 
     def __init__(
         self,

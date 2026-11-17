@@ -34,7 +34,9 @@ class TangentConstraint(_CoreTangentConstraint, Constraint):
     """
 
     def __new__(cls, line_id, shape_id, user_visible=True):
-        return super().__new__(cls, line_id, shape_id, user_visible)
+        obj = super().__new__(cls, line_id, shape_id, user_visible)
+        obj.seed_reference_attrs()
+        return obj
 
     def __init__(
         self, line_id: EntityID, shape_id: EntityID, user_visible: bool = True

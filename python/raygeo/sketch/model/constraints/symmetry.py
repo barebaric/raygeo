@@ -12,8 +12,8 @@ from raygeo.sketch.constraints.symmetry import (
     SymmetryConstraint as _CoreSymmetryConstraint,
 )
 from raygeo.sketch.entities import Line
-
 from raygeo.sketch.types import EntityID
+
 from .base import Constraint, ConstraintStatus
 
 
@@ -52,18 +52,19 @@ def draw_symmetry_arrows(
 
 if TYPE_CHECKING:
     from raygeo.sketch.entities import Entity
-
     from raygeo.sketch.model.protocols import (
         ParameterContext,
-        SketchSelection,
         Sketch,
+        SketchSelection,
     )
     from raygeo.sketch.registry import EntityRegistry
 
 
 class SymmetryConstraint(_CoreSymmetryConstraint, Constraint):
     def __new__(cls, p1, p2, center=None, axis=None, user_visible=True):
-        return super().__new__(cls, p1, p2, center, axis, user_visible)
+        obj = super().__new__(cls, p1, p2, center, axis, user_visible)
+        obj.seed_reference_attrs()
+        return obj
 
     """
     Enforces symmetry between two points (p1, p2) with respect to:

@@ -32,7 +32,9 @@ class EqualDistanceConstraint(_CoreEqualDistanceConstraint, Constraint):
     """Enforces that distance(p1, p2) equals distance(p3, p4)."""
 
     def __new__(cls, p1, p2, p3, p4, user_visible=True):
-        return super().__new__(cls, p1, p2, p3, p4, user_visible)
+        obj = super().__new__(cls, p1, p2, p3, p4, user_visible)
+        obj.seed_reference_attrs()
+        return obj
 
     def __init__(
         self,

@@ -28,7 +28,9 @@ class CoincidentConstraint(_CoreCoincidentConstraint, Constraint):
     """Enforces two points are at the same location."""
 
     def __new__(cls, p1, p2, user_visible=True):
-        return super().__new__(cls, p1, p2, user_visible)
+        obj = super().__new__(cls, p1, p2, user_visible)
+        obj.seed_reference_attrs()
+        return obj
 
     def __init__(self, p1: EntityID, p2: EntityID, user_visible: bool = True):
         self.p1: EntityID = p1

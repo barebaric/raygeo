@@ -124,7 +124,9 @@ def _get_curve_coeffs(bez: Bezier, reg: EntityRegistry) -> CurveCoeffs:
 
 class PointOnCurveConstraint(_CorePointOnCurveConstraint, Constraint):
     def __new__(cls, point_id, shape_id, user_visible=True):
-        return super().__new__(cls, point_id, shape_id, user_visible)
+        obj = super().__new__(cls, point_id, shape_id, user_visible)
+        obj.seed_reference_attrs()
+        return obj
 
     """Enforces a point lies on a Bezier curve."""
 

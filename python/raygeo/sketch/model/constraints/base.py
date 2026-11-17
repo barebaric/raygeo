@@ -54,6 +54,33 @@ class Constraint:
     def __init__(self, user_visible: bool = True):
         self.user_visible = user_visible
 
+    def seed_reference_attrs(self) -> None:
+        """Populates the instance ``__dict__`` with the reference
+        attribute names (point/entity id fields), so generic
+        ``vars()``-based remapping in the application sees them even
+        though the state lives on the compiled base."""
+        names = (
+            "p1",
+            "p2",
+            "p3",
+            "p4",
+            "center",
+            "point_id",
+            "e1_id",
+            "e2_id",
+            "line_id",
+            "shape_id",
+            "entity_id",
+            "circle_id",
+            "axis",
+        )
+        for name in names:
+            if hasattr(self, name):
+                self.__dict__[name] = getattr(self, name)
+        ids = getattr(self, "entity_ids", None)
+        if ids is not None:
+            self.__dict__["entity_ids"] = list(ids)
+
     def is_world_anchored(self) -> bool:
         """Returns True if this constraint pins geometry to global axes.
 

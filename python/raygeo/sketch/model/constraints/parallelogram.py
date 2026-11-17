@@ -24,9 +24,11 @@ class ParallelogramConstraint(_CoreParallelogramConstraint, Constraint):
     """Enforces four points form a parallelogram."""
 
     def __new__(cls, p_origin, p_width, p_height, p4, user_visible=False):
-        return super().__new__(
+        obj = super().__new__(
             cls, p_origin, p_width, p_height, p4, user_visible
         )
+        obj.seed_reference_attrs()
+        return obj
 
     def __init__(
         self,

@@ -28,9 +28,11 @@ class DragConstraint(_CoreDragConstraint, Constraint):
     def __new__(
         cls, point_id, target_x, target_y, weight=0.1, user_visible=True
     ):
-        return super().__new__(
+        obj = super().__new__(
             cls, point_id, target_x, target_y, weight, user_visible
         )
+        obj.seed_reference_attrs()
+        return obj
 
     def __init__(
         self,

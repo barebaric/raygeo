@@ -37,7 +37,9 @@ class EqualLengthConstraint(_CoreEqualLengthConstraint, Constraint):
     """
 
     def __new__(cls, entity_ids, user_visible=True):
-        return super().__new__(cls, entity_ids, user_visible)
+        obj = super().__new__(cls, entity_ids, user_visible)
+        obj.seed_reference_attrs()
+        return obj
 
     def __init__(self, entity_ids: list[EntityID], user_visible: bool = True):
         self.entity_ids = entity_ids

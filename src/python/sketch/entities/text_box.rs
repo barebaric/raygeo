@@ -137,8 +137,12 @@ impl PyTextBox {
     }
 
     #[getter]
-    fn construction_line_ids(&self) -> Vec<u64> {
-        self.inner.construction_line_ids.clone()
+    fn construction_line_ids(&self) -> Vec<i64> {
+        self.inner
+            .construction_line_ids
+            .iter()
+            .map(|&id| id as i64)
+            .collect()
     }
 
     #[setter]

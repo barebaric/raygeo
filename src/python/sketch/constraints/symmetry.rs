@@ -30,10 +30,10 @@ pub struct PySymmetryConstraint {
     pub p2: i64,
     /// Symmetry center point, for point symmetry.
     #[pyo3(get, set)]
-    pub center: Option<u64>,
+    pub center: Option<i64>,
     /// Symmetry axis line entity, for line symmetry.
     #[pyo3(get, set)]
-    pub axis: Option<u64>,
+    pub axis: Option<i64>,
     /// Reference user-visibility flag.
     #[pyo3(get)]
     pub user_visible: bool,
@@ -52,8 +52,8 @@ impl PySymmetryConstraint {
     fn new(
         p1: i64,
         p2: i64,
-        center: Option<u64>,
-        axis: Option<u64>,
+        center: Option<i64>,
+        axis: Option<i64>,
         user_visible: bool,
     ) -> PyClassInitializer<Self> {
         PyClassInitializer::from(PyConstraintBase).add_subclass(
@@ -165,8 +165,8 @@ impl PySymmetryConstraint {
         CoreConstraint {
             p1: self.p1 as u64,
             p2: self.p2 as u64,
-            center: self.center,
-            axis: self.axis,
+            center: self.center.map(|v| v as u64),
+            axis: self.axis.map(|v| v as u64),
             user_visible: self.user_visible,
         }
     }

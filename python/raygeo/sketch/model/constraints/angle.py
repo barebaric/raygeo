@@ -64,9 +64,11 @@ class AngleConstraint(_CoreAngleConstraint, Constraint):
         e1_far_idx=None,
         e2_far_idx=None,
     ):
-        return super().__new__(
+        obj = super().__new__(
             cls, e1_id, e2_id, 0.0, user_visible, e1_far_idx, e2_far_idx
         )
+        obj.seed_reference_attrs()
+        return obj
 
     def __init__(
         self,

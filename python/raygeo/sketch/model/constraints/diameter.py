@@ -33,7 +33,9 @@ class DiameterConstraint(_CoreDiameterConstraint, Constraint):
     """Enforces the diameter of a Circle."""
 
     def __new__(cls, circle_id, value, expression=None, user_visible=True):
-        return super().__new__(cls, circle_id, 0.0, user_visible)
+        obj = super().__new__(cls, circle_id, 0.0, user_visible)
+        obj.seed_reference_attrs()
+        return obj
 
     def __init__(
         self,

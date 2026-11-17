@@ -33,7 +33,9 @@ class RotationalConstraint(_CoreRotationalConstraint, Constraint):
     def __new__(
         cls, center, p1, p2, value, expression=None, user_visible=False
     ):
-        return super().__new__(cls, center, p1, p2, 0.0, user_visible)
+        obj = super().__new__(cls, center, p1, p2, 0.0, user_visible)
+        obj.seed_reference_attrs()
+        return obj
 
     def __init__(
         self,
