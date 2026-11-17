@@ -117,7 +117,7 @@ def test_collinear_solver_integration(sketch_with_points):
         position = reg.get_point(pid)
         assert position is not None
         points.append(PointDef(pid, position[0], position[1], fixed))
-    solver = Solver(points, [constraint], [])
+    solver = Solver(points, reg, [constraint], [])
     assert solver.solve(1e-10, False)
 
     # The exact final position depends on the solver's path; we
