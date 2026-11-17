@@ -11,7 +11,10 @@ joins) stay on the Rust-side canvas contract.
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
-from typing import Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
+
+if TYPE_CHECKING:
+    from raygeo.sketch.entities import Entity, SketchPoint
 
 ScreenMap = Callable[[tuple[float, float]], tuple[float, float]]
 
@@ -128,6 +131,6 @@ class Registry(Protocol):
     operands against the caller's live document.
     """
 
-    def get_point(self, idx): ...
+    def get_point(self, idx: int) -> SketchPoint: ...
 
-    def get_entity(self, idx): ...
+    def get_entity(self, idx: int) -> Entity | None: ...
