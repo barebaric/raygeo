@@ -6,8 +6,10 @@ import pytest
 
 from raygeo.sketch import PointDef, Solver
 from raygeo.sketch.constraints.distance import DistanceConstraint
+from raygeo.sketch.model.constraints.distance import (
+    DistanceConstraint as _ModelDistanceConstraint,
+)
 from raygeo.sketch.registry import EntityRegistry
-from raygeo.sketch.model.constraints.distance import DistanceConstraint as _ModelDistanceConstraint
 
 
 @pytest.fixture
@@ -143,6 +145,8 @@ def test_distance_constraint_serialization_round_trip(setup_env):
 
     # Serialize to dict and rebuild through the model layer
     restored = _ModelDistanceConstraint.from_dict(original.to_dict())
+
+
 def test_distance_constraint_serialization_round_trip_with_expression(
     setup_env,
 ):
@@ -161,6 +165,8 @@ def test_distance_constraint_serialization_round_trip_with_expression(
     # Deserialize from dict through the model layer,
     # re-attaching the stored expression
     restored = _ModelDistanceConstraint.from_dict(serialized)
+
+
 def test_distance_is_hit(setup_env):
     reg = setup_env
     p1 = reg.add_point(0, 0)

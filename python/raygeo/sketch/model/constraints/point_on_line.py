@@ -90,9 +90,7 @@ class PointOnLineConstraint(_CorePointOnLineConstraint, Constraint):
             user_visible=data.get("user_visible", True),
         )
 
-    def constrains_radius(
-        self, registry: Any, entity_id: EntityID
-    ) -> bool:
+    def constrains_radius(self, registry: Any, entity_id: EntityID) -> bool:
         """
         If this constraint forces a point onto the target entity (circle/arc),
         and that point is itself constrained, then the radius of the entity

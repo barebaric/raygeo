@@ -6,6 +6,7 @@ from gettext import gettext as _
 from typing import TYPE_CHECKING, Any
 
 import cairo
+
 try:
     from gi.repository import PangoCairo
 except ImportError:

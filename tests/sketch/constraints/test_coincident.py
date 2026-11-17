@@ -7,8 +7,10 @@ import pytest
 
 from raygeo.sketch import PointDef, Solver
 from raygeo.sketch.constraints.coincident import CoincidentConstraint
+from raygeo.sketch.model.constraints.coincident import (
+    CoincidentConstraint as _ModelCoincidentConstraint,
+)
 from raygeo.sketch.registry import EntityRegistry
-from raygeo.sketch.model.constraints.coincident import CoincidentConstraint as _ModelCoincidentConstraint
 
 
 @pytest.fixture
@@ -93,6 +95,8 @@ def test_coincident_constraint_serialization_round_trip(setup_env):
 
     # Serialize to dict and rebuild through the model layer
     restored = _ModelCoincidentConstraint.from_dict(original.to_dict())
+
+
 def test_coincident_is_hit(setup_env):
     reg = setup_env
     p1 = reg.add_point(10, 20)

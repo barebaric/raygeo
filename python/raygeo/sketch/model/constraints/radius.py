@@ -6,6 +6,7 @@ from gettext import gettext as _
 from typing import TYPE_CHECKING, Any
 
 import cairo
+
 try:
     from gi.repository import PangoCairo
 except ImportError:
@@ -115,9 +116,7 @@ class RadiusConstraint(_CoreRadiusConstraint, Constraint):
             user_visible=data.get("user_visible", True),
         )
 
-    def constrains_radius(
-        self, registry: Any, entity_id: EntityID
-    ) -> bool:
+    def constrains_radius(self, registry: Any, entity_id: EntityID) -> bool:
         return self.entity_id == entity_id
 
     def get_label_pos(

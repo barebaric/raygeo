@@ -74,9 +74,7 @@ def test_diameter_constrains_radius_method(setup_env):
 def test_diameter_targets_segment(setup_env):
     reg = setup_env
     circle_id = _circle(reg)
-    other_circle = reg.add_circle(
-        reg.add_point(20, 0), reg.add_point(25, 0)
-    )
+    other_circle = reg.add_circle(reg.add_point(20, 0), reg.add_point(25, 0))
 
     c = DiameterConstraint(circle_id, 20.0)
 

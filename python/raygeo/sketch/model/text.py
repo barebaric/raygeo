@@ -18,9 +18,7 @@ def create_text_layout(
     absolute_size: bool = True,
 ) -> "Pango.Layout":
     if Pango is None or PangoCairo is None:
-        raise RuntimeError(
-            'create_text_layout requires PyGObject (gi)'
-        )
+        raise RuntimeError("create_text_layout requires PyGObject (gi)")
     if weight is None:
         weight = Pango.Weight.NORMAL
     if style is None:

@@ -58,9 +58,7 @@ class DragConstraint(_CoreDragConstraint, Constraint):
     def get_referenced_entity_ids(self) -> set[EntityID]:
         return Constraint.get_referenced_entity_ids(self)
 
-    def error(
-        self, reg: Any, params: ParameterContext
-    ) -> tuple[float, float]:
+    def error(self, reg: Any, params: ParameterContext) -> tuple[float, float]:
         err = super().error(reg)
         return (err[0], err[1])
 

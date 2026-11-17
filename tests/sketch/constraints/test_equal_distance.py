@@ -6,8 +6,10 @@ import pytest
 
 from raygeo.sketch import PointDef, Solver
 from raygeo.sketch.constraints.equal_distance import EqualDistanceConstraint
+from raygeo.sketch.model.constraints.equal_distance import (
+    EqualDistanceConstraint as _ModelEqualDistanceConstraint,
+)
 from raygeo.sketch.registry import EntityRegistry
-from raygeo.sketch.model.constraints.equal_distance import EqualDistanceConstraint as _ModelEqualDistanceConstraint
 
 
 @pytest.fixture
@@ -127,6 +129,8 @@ def test_equal_distance_constraint_serialization_round_trip(setup_env):
 
     # Serialize to dict and rebuild through the model layer
     restored = _ModelEqualDistanceConstraint.from_dict(original.to_dict())
+
+
 def test_equal_distance_draw(setup_env):
     reg = setup_env
     p1 = reg.add_point(0, 0)

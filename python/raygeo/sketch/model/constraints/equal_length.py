@@ -6,6 +6,7 @@ from gettext import gettext as _
 from typing import TYPE_CHECKING, Any
 
 import cairo
+
 try:
     from gi.repository import PangoCairo
 except ImportError:
@@ -97,9 +98,7 @@ class EqualLengthConstraint(_CoreEqualLengthConstraint, Constraint):
             user_visible=data.get("user_visible", True),
         )
 
-    def constrains_radius(
-        self, registry: Any, entity_id: EntityID
-    ) -> bool:
+    def constrains_radius(self, registry: Any, entity_id: EntityID) -> bool:
         return entity_id in self.entity_ids
 
     def get_referenced_entity_ids(self) -> set[EntityID]:
@@ -213,9 +212,7 @@ class EqualLengthConstraint(_CoreEqualLengthConstraint, Constraint):
     def get_referenced_point_ids(self) -> set[EntityID]:
         return Constraint.get_referenced_point_ids(self)
 
-    def error(
-        self, reg: Any, params: ParameterContext
-    ) -> list[float]:
+    def error(self, reg: Any, params: ParameterContext) -> list[float]:
         return super().error(reg)
 
     def gradient(

@@ -7,8 +7,10 @@ import pytest
 
 from raygeo.sketch import PointDef, Solver
 from raygeo.sketch.constraints.vertical import VerticalConstraint
+from raygeo.sketch.model.constraints.vertical import (
+    VerticalConstraint as _ModelVerticalConstraint,
+)
 from raygeo.sketch.registry import EntityRegistry
-from raygeo.sketch.model.constraints.vertical import VerticalConstraint as _ModelVerticalConstraint
 
 
 @pytest.fixture
@@ -93,6 +95,8 @@ def test_vertical_constraint_serialization_round_trip(setup_env):
 
     # Serialize to dict and rebuild through the model layer
     restored = _ModelVerticalConstraint.from_dict(original.to_dict())
+
+
 def test_vertical_is_hit(setup_env):
     reg = setup_env
     p1 = reg.add_point(50, 0)
@@ -106,7 +110,10 @@ def test_vertical_is_hit(setup_env):
     symbol_x, symbol_y = 60, 20
 
     # Hit
-    assert c.is_hit(symbol_x, symbol_y, reg, lambda pos: pos, None, threshold) is True
+    assert (
+        c.is_hit(symbol_x, symbol_y, reg, lambda pos: pos, None, threshold)
+        is True
+    )
     # Miss
     assert c.is_hit(0, 0, reg, lambda pos: pos, None, threshold) is False
 

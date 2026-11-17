@@ -7,8 +7,10 @@ import pytest
 
 from raygeo.sketch import PointDef, Solver
 from raygeo.sketch.constraints.aspect_ratio import AspectRatioConstraint
+from raygeo.sketch.model.constraints.aspect_ratio import (
+    AspectRatioConstraint as _ModelAspectRatioConstraint,
+)
 from raygeo.sketch.registry import EntityRegistry
-from raygeo.sketch.model.constraints.aspect_ratio import AspectRatioConstraint as _ModelAspectRatioConstraint
 
 
 @pytest.fixture
@@ -195,6 +197,8 @@ def test_aspect_ratio_constraint_serialization_round_trip(setup_env):
     original = AspectRatioConstraint(p1, p2, p3, p4, 2.5)
 
     restored = _ModelAspectRatioConstraint.from_dict(original.to_dict())
+
+
 def test_aspect_ratio_constraint_serialization_dict_format(setup_env):
     reg = setup_env
     p1 = reg.add_point(0, 0)

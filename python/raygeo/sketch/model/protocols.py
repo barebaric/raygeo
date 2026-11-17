@@ -28,9 +28,7 @@ class SketchSelection(Protocol):
     point_ids: list[EntityID]
     entity_ids: list[EntityID]
 
-    def resolve_entities(
-        self, registry: Any
-    ) -> Sequence[Entity] | None: ...
+    def resolve_entities(self, registry: Any) -> Sequence[Entity] | None: ...
 
 
 @runtime_checkable

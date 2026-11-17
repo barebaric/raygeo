@@ -145,9 +145,7 @@ class SymmetryConstraint(_CoreSymmetryConstraint, Constraint):
     def get_referenced_entity_ids(self) -> set[EntityID]:
         return Constraint.get_referenced_entity_ids(self)
 
-    def error(
-        self, reg: Any, params: ParameterContext
-    ) -> list[float]:
+    def error(self, reg: Any, params: ParameterContext) -> list[float]:
         return super().error(reg)
 
     def gradient(

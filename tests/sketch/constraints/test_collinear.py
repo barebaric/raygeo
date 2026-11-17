@@ -7,8 +7,10 @@ import pytest
 
 from raygeo.sketch import PointDef, Solver
 from raygeo.sketch.constraints.collinear import CollinearConstraint
+from raygeo.sketch.model.constraints.collinear import (
+    CollinearConstraint as _ModelCollinearConstraint,
+)
 from raygeo.sketch.registry import EntityRegistry
-from raygeo.sketch.model.constraints.collinear import CollinearConstraint as _ModelCollinearConstraint
 
 
 @pytest.fixture
@@ -42,6 +44,8 @@ def test_collinear_constraint_serialization():
         "user_visible": True,
     }
     restored = _ModelCollinearConstraint.from_dict(data)
+
+
 def test_collinear_constraint_user_visible():
     """Test that user_visible can be set."""
     c = CollinearConstraint(1, 2, 3, user_visible=False)

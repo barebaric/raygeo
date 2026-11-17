@@ -182,9 +182,7 @@ class Constraint:
         """
         return {}
 
-    def constrains_radius(
-        self, registry: Any, entity_id: EntityID
-    ) -> bool:
+    def constrains_radius(self, registry: Any, entity_id: EntityID) -> bool:
         """
         Returns True if this constraint explicitly defines or links the
         radius/length of the specified entity.

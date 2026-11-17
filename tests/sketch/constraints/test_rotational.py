@@ -7,8 +7,10 @@ import pytest
 
 from raygeo.sketch import PointDef, Solver
 from raygeo.sketch.constraints.rotational import RotationalConstraint
+from raygeo.sketch.model.constraints.rotational import (
+    RotationalConstraint as _ModelRotationalConstraint,
+)
 from raygeo.sketch.registry import EntityRegistry
-from raygeo.sketch.model.constraints.rotational import RotationalConstraint as _ModelRotationalConstraint
 
 
 @pytest.fixture
@@ -95,6 +97,8 @@ def test_serialization_round_trip(setup_env):
     restored = _ModelRotationalConstraint.from_dict(c.to_dict())
     assert restored.user_visible is False
     assert restored.value == c.value
+
+
 # deferred: expression value update — expressions are resolved
 # caller-side in the binding; there is no update_from_context.
 # deferred: depends_on_points — reference reporting is not bound on
