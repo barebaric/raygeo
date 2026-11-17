@@ -81,6 +81,24 @@ class Entity:
     def __copy__(self) -> Entity: ...
 
 
+    def preview_polylines(self, registry: protocols.Registry, offset: builtins.float) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]: ...
+    def set_fill_color(self, color: typing.Optional[tuple[float, float, float, float]]) -> None: ...
+from raygeo.sketch.entities.arc import Arc as Arc
+from raygeo.sketch.entities.bezier import Bezier as Bezier
+from raygeo.sketch.entities.circle import Circle as Circle
+from raygeo.sketch.entities.ellipse import Ellipse as Ellipse
+from raygeo.sketch.entities.line import Line as Line
+from raygeo.sketch.entities.point import SketchPoint as SketchPoint
+from raygeo.sketch.entities.polygon import Polygon as Polygon
+from raygeo.sketch.entities.text_box import TextBox as TextBox
+from raygeo.sketch.entities.arc import Arc as Arc
+from raygeo.sketch.entities.bezier import Bezier as Bezier
+from raygeo.sketch.entities.circle import Circle as Circle
+from raygeo.sketch.entities.ellipse import Ellipse as Ellipse
+from raygeo.sketch.entities.line import Line as Line
+from raygeo.sketch.entities.point import SketchPoint as SketchPoint
+from raygeo.sketch.entities.polygon import Polygon as Polygon
+from raygeo.sketch.entities.text_box import TextBox as TextBox
 from raygeo.sketch.entities.arc import Arc as Arc
 from raygeo.sketch.entities.bezier import Bezier as Bezier
 from raygeo.sketch.entities.circle import Circle as Circle

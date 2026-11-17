@@ -36,6 +36,8 @@ ENTITY_MEMBERS = """
     def rewrite_offsets_from(self, template: typing.Any, placement: typing.Any) -> None: ...
     def as_offset_item(self, sketch: typing.Any) -> typing.Any: ...
     def plan_offset(self, registry: protocols.Registry, offset: builtins.float, allocate_id: typing.Any) -> typing.Any: ...
+    def preview_polylines(self, registry: protocols.Registry, offset: builtins.float) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]: ...
+    def set_fill_color(self, color: typing.Optional[tuple[float, float, float, float]]) -> None: ...
     def geometry_signature(self, registry: protocols.Registry) -> tuple: ...
     def to_dict(self) -> dict: ...
     @staticmethod
@@ -225,6 +227,29 @@ def merge(path, class_name, members):
     return True
 
 
+def ensure_members(path: Path, class_name: str, members: list) -> None:
+    """Appends any missing member lines into the class body."""
+    text = path.read_text()
+    lines = text.splitlines(keepends=True)
+    out = []
+    in_class = False
+    inserted = False
+    for line in lines:
+        if line.strip() == "class " + class_name + ":":
+            in_class = True
+            out.append(line)
+            continue
+        if in_class and not inserted and not (
+            line.startswith("    ") or line.strip() == ""
+        ):
+            out.extend(m for m in members if m not in out)
+            inserted = True
+        out.append(line)
+    if inserted:
+        path.write_text("".join(out))
+        print("ensure:", path.name, class_name)
+
+
 def main():
     for path in sorted((STUBS / "constraints").glob("*/__init__.pyi")):
         rewrite_self_returns(path)
@@ -232,7 +257,17 @@ def main():
                         CONSTRAINT_STRIP_METHODS)
     for path in sorted((STUBS / "entities").glob("*/__init__.pyi")):
         rewrite_self_returns(path)
+        if path.parent.name == "point":
+            continue
         strip_inherited(path, ENTITY_STRIP_PROPS, ENTITY_STRIP_METHODS)
+    ensure_members(
+        STUBS / "entities" / "__init__.pyi",
+        "Entity",
+        [
+            "    def preview_polylines(self, registry: protocols.Registry, offset: builtins.float) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]: ...\n",
+            "    def set_fill_color(self, color: typing.Optional[tuple[float, float, float, float]]) -> None: ...\n",
+        ],
+    )
     merge(STUBS / "entities" / "__init__.pyi", "Entity", ENTITY_MEMBERS)
     merge(STUBS / "constraints" / "__init__.pyi", "Constraint",
           CONSTRAINT_MEMBERS)
