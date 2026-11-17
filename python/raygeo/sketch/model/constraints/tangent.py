@@ -23,7 +23,6 @@ if TYPE_CHECKING:
         Sketch,
         SketchSelection,
     )
-    from raygeo.sketch.registry import EntityRegistry
     from raygeo.sketch.types import EntityID
 
 
@@ -78,7 +77,7 @@ class TangentConstraint(_CoreTangentConstraint, Constraint):
         """Returns a human-readable title for this constraint."""
         return self.get_type_name()
 
-    def get_subtitle(self, registry: EntityRegistry) -> str:
+    def get_subtitle(self, registry: Any) -> str:
         """Returns subtitle describing constrained entities."""
         line = registry.get_entity(self.line_id)
         shape = registry.get_entity(self.shape_id)
@@ -103,7 +102,7 @@ class TangentConstraint(_CoreTangentConstraint, Constraint):
         self,
         sx: float,
         sy: float,
-        reg: EntityRegistry,
+        reg: Any,
         to_screen: Callable[[Point], Point],
         element: Any,
         threshold: float,
@@ -148,7 +147,7 @@ class TangentConstraint(_CoreTangentConstraint, Constraint):
     def draw(
         self,
         ctx: cairo.Context,
-        registry: EntityRegistry,
+        registry: Any,
         to_screen: Callable[[Point], Point],
         is_selected: bool = False,
         is_hovered: bool = False,
@@ -218,11 +217,11 @@ class TangentConstraint(_CoreTangentConstraint, Constraint):
     def get_referenced_entity_ids(self) -> set[EntityID]:
         return Constraint.get_referenced_entity_ids(self)
 
-    def error(self, reg: EntityRegistry, params: ParameterContext) -> float:
+    def error(self, reg: Any, params: ParameterContext) -> float:
         return super().error(reg)[0]
 
     def gradient(
-        self, reg: EntityRegistry, params: ParameterContext
+        self, reg: Any, params: ParameterContext
     ) -> dict[EntityID, list[Point]]:
         return super().gradient(reg)
 

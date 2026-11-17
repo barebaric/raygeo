@@ -15,7 +15,6 @@ if TYPE_CHECKING:
         Sketch,
         SketchSelection,
     )
-    from raygeo.sketch.registry import EntityRegistry
     from raygeo.sketch.types import EntityID
 
 
@@ -60,13 +59,13 @@ class DragConstraint(_CoreDragConstraint, Constraint):
         return Constraint.get_referenced_entity_ids(self)
 
     def error(
-        self, reg: EntityRegistry, params: ParameterContext
+        self, reg: Any, params: ParameterContext
     ) -> tuple[float, float]:
         err = super().error(reg)
         return (err[0], err[1])
 
     def gradient(
-        self, reg: EntityRegistry, params: ParameterContext
+        self, reg: Any, params: ParameterContext
     ) -> dict[EntityID, list[Point]]:
         return super().gradient(reg)
 

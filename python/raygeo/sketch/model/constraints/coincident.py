@@ -20,7 +20,6 @@ if TYPE_CHECKING:
         Sketch,
         SketchSelection,
     )
-    from raygeo.sketch.registry import EntityRegistry
     from raygeo.sketch.types import EntityID
 
 
@@ -55,7 +54,7 @@ class CoincidentConstraint(_CoreCoincidentConstraint, Constraint):
         """Returns a human-readable title for this constraint."""
         return self.get_type_name()
 
-    def get_subtitle(self, registry: EntityRegistry) -> str:
+    def get_subtitle(self, registry: Any) -> str:
         """Returns a human-readable subtitle describing constrained points."""
         p1 = registry.get_point(self.p1)
         if p1:
@@ -74,7 +73,7 @@ class CoincidentConstraint(_CoreCoincidentConstraint, Constraint):
         self,
         sx: float,
         sy: float,
-        reg: EntityRegistry,
+        reg: Any,
         to_screen: Callable[[Point], Point],
         element: Any,
         threshold: float,
@@ -93,7 +92,7 @@ class CoincidentConstraint(_CoreCoincidentConstraint, Constraint):
     def draw(
         self,
         ctx: cairo.Context,
-        registry: EntityRegistry,
+        registry: Any,
         to_screen: Callable[[Point], Point],
         is_selected: bool = False,
         is_hovered: bool = False,
@@ -143,12 +142,12 @@ class CoincidentConstraint(_CoreCoincidentConstraint, Constraint):
     def get_referenced_entity_ids(self) -> set[EntityID]:
         return Constraint.get_referenced_entity_ids(self)
 
-    def error(self, reg: EntityRegistry, params: ParameterContext) -> Point:
+    def error(self, reg: Any, params: ParameterContext) -> Point:
         err = super().error(reg)
         return (err[0], err[1])
 
     def gradient(
-        self, reg: EntityRegistry, params: ParameterContext
+        self, reg: Any, params: ParameterContext
     ) -> dict[EntityID, list[Point]]:
         return super().gradient(reg)
 

@@ -22,7 +22,6 @@ if TYPE_CHECKING:
         Sketch,
         SketchSelection,
     )
-    from raygeo.sketch.registry import EntityRegistry
     from raygeo.sketch.types import EntityID
 
 
@@ -80,7 +79,7 @@ class AspectRatioConstraint(_CoreAspectRatioConstraint, Constraint):
         """Returns a human-readable title for this constraint."""
         return f"{self.get_type_name()} {self.ratio:.2f}"
 
-    def get_subtitle(self, registry: EntityRegistry) -> str:
+    def get_subtitle(self, registry: Any) -> str:
         """Returns subtitle describing constrained segments."""
         p1 = registry.get_point(self.p1)
         p2 = registry.get_point(self.p2)
@@ -104,7 +103,7 @@ class AspectRatioConstraint(_CoreAspectRatioConstraint, Constraint):
 
     def _get_icon_pos(
         self,
-        reg: EntityRegistry,
+        reg: Any,
         to_screen: Callable[[Point], Point],
     ) -> Point | None:
         """Calculates the screen position of the constraint icon."""
@@ -169,7 +168,7 @@ class AspectRatioConstraint(_CoreAspectRatioConstraint, Constraint):
         self,
         sx: float,
         sy: float,
-        reg: EntityRegistry,
+        reg: Any,
         to_screen: Callable[[Point], Point],
         element: Any,
         threshold: float,
@@ -183,7 +182,7 @@ class AspectRatioConstraint(_CoreAspectRatioConstraint, Constraint):
     def draw(
         self,
         ctx: cairo.Context,
-        registry: EntityRegistry,
+        registry: Any,
         to_screen: Callable[[Point], Point],
         is_selected: bool = False,
         is_hovered: bool = False,
@@ -244,11 +243,11 @@ class AspectRatioConstraint(_CoreAspectRatioConstraint, Constraint):
     def get_referenced_entity_ids(self) -> set[EntityID]:
         return Constraint.get_referenced_entity_ids(self)
 
-    def error(self, reg: EntityRegistry, params: ParameterContext) -> float:
+    def error(self, reg: Any, params: ParameterContext) -> float:
         return super().error(reg)[0]
 
     def gradient(
-        self, reg: EntityRegistry, params: ParameterContext
+        self, reg: Any, params: ParameterContext
     ) -> dict[EntityID, list[Point]]:
         return super().gradient(reg)
 

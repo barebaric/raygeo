@@ -14,7 +14,6 @@ class HorizontalConstraint(constraints.Constraint):
     r"""
     Enforces two points have the same Y coordinate.
     """
-    @property
     def p1(self) -> builtins.int:
         r"""
         First point.
@@ -24,7 +23,6 @@ class HorizontalConstraint(constraints.Constraint):
         r"""
         First point.
         """
-    @property
     def p2(self) -> builtins.int:
         r"""
         Second point.
@@ -34,12 +32,10 @@ class HorizontalConstraint(constraints.Constraint):
         r"""
         Second point.
         """
-    @property
     def user_visible(self) -> builtins.bool:
         r"""
         Reference user-visibility flag.
         """
-    @property
     def status(self) -> builtins.int:
         r"""
         Reference validation status ordinal.
@@ -50,45 +46,12 @@ class HorizontalConstraint(constraints.Constraint):
         Reference validation status ordinal.
         """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __new__(cls, p1: builtins.int, p2: builtins.int, user_visible: builtins.bool = True) -> HorizontalConstraint:
+    def __new__(cls, p1: builtins.int, p2: builtins.int, user_visible: builtins.bool = True) -> typing.Self:
         r"""
         Creates the constraint from its resolved points and values.
-        """
-    def error(self, registry: protocols.Registry, _ctx: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
-        r"""
-        Returns the constraint error at the registry's point
-        positions.
-        """
-    def gradient(self, reg: protocols.Registry, params: typing.Optional[typing.Any] = None) -> builtins.dict[builtins.int, builtins.list[tuple[builtins.float, builtins.float]]]:
-        r"""
-        Partial derivatives of the error by point id.
         """
     def referenced_points(self, registry: protocols.Registry) -> builtins.list[builtins.int]:
         r"""
         Point ids the constraint references.
-        """
-    def get_referenced_point_ids(self, registry: protocols.Registry) -> builtins.set[builtins.int]:
-        r"""
-        Alias for referenced_points (reference naming).
-        """
-    def to_dict(self) -> dict:
-        r"""
-        Serializes to the reference constraint dictionary shape.
-        """
-    def draw(self, ctx: protocols.Canvas, registry: protocols.DrawContext, to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], is_selected: builtins.bool = False, is_hovered: builtins.bool = False, point_radius: builtins.float = 5.0) -> None:
-        r"""
-        Draws the constraint's symbol onto the cairo context.
-        """
-    def set_user_visible(self, value: builtins.bool) -> None:
-        r"""
-        Sets the reference user-visibility flag.
-        """
-    def is_world_anchored(self) -> builtins.bool:
-        r"""
-        Whether this constraint pins geometry to global axes.
-        """
-    def is_hit(self, sx: builtins.float, sy: builtins.float, registry: protocols.Registry, to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], element: typing.Optional[typing.Any], threshold: builtins.float) -> builtins.bool:
-        r"""
-        Whether the constraint's rendered symbol is hit at (mx, my).
         """
 

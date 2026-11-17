@@ -14,7 +14,6 @@ class EqualDistanceConstraint(constraints.Constraint):
     r"""
     Enforces dist(p1, p2) == dist(p3, p4).
     """
-    @property
     def p1(self) -> builtins.int:
         r"""
         First point of the first pair.
@@ -24,7 +23,6 @@ class EqualDistanceConstraint(constraints.Constraint):
         r"""
         First point of the first pair.
         """
-    @property
     def p2(self) -> builtins.int:
         r"""
         Second point of the first pair.
@@ -34,7 +32,6 @@ class EqualDistanceConstraint(constraints.Constraint):
         r"""
         Second point of the first pair.
         """
-    @property
     def p3(self) -> builtins.int:
         r"""
         First point of the second pair.
@@ -44,7 +41,6 @@ class EqualDistanceConstraint(constraints.Constraint):
         r"""
         First point of the second pair.
         """
-    @property
     def p4(self) -> builtins.int:
         r"""
         Second point of the second pair.
@@ -54,12 +50,10 @@ class EqualDistanceConstraint(constraints.Constraint):
         r"""
         Second point of the second pair.
         """
-    @property
     def user_visible(self) -> builtins.bool:
         r"""
         Reference user-visibility flag.
         """
-    @property
     def status(self) -> builtins.int:
         r"""
         Reference validation status ordinal.
@@ -70,46 +64,12 @@ class EqualDistanceConstraint(constraints.Constraint):
         Reference validation status ordinal.
         """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __new__(cls, p1: builtins.int, p2: builtins.int, p3: builtins.int, p4: builtins.int, user_visible: builtins.bool = True) -> EqualDistanceConstraint:
+    def __new__(cls, p1: builtins.int, p2: builtins.int, p3: builtins.int, p4: builtins.int, user_visible: builtins.bool = True) -> typing.Self:
         r"""
         Creates the constraint from its resolved points and values.
-        """
-    def error(self, registry: protocols.Registry, _ctx: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
-        r"""
-        Returns the constraint error at the registry's point
-        positions.
-        """
-    def gradient(self, reg: protocols.Registry, params: typing.Optional[typing.Any] = None) -> builtins.dict[builtins.int, builtins.list[tuple[builtins.float, builtins.float]]]:
-        r"""
-        Partial derivatives of the error by point id.
         """
     def referenced_points(self, registry: protocols.Registry) -> builtins.list[builtins.int]:
         r"""
         Point ids the constraint references.
-        """
-    def get_referenced_point_ids(self, registry: protocols.Registry) -> builtins.set[builtins.int]:
-        r"""
-        Alias for referenced_points (reference naming).
-        """
-    def to_dict(self) -> dict:
-        r"""
-        Serializes to the reference constraint dictionary shape.
-        """
-    def draw(self, ctx: protocols.Canvas, registry: protocols.DrawContext, to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], is_selected: builtins.bool = False, is_hovered: builtins.bool = False, point_radius: builtins.float = 5.0) -> None:
-        r"""
-        Draws the constraint's symbol onto the cairo context.
-        """
-    def is_hit(self, sx: builtins.float, sy: builtins.float, registry: protocols.Registry, to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], element: typing.Optional[typing.Any], threshold: builtins.float) -> builtins.bool:
-        r"""
-        Whether the constraint's rendered symbol is hit at (mx, my).
-        """
-    def set_user_visible(self, value: builtins.bool) -> None:
-        r"""
-        Sets the reference user-visibility flag.
-        """
-    def targets_segment(self, p1: builtins.int, p2: builtins.int, entity_id: typing.Optional[builtins.int], registry: protocols.Registry) -> builtins.bool:
-        r"""
-        Whether this constraint defines the length/distance of the
-        segment (p1, p2), for either pair (order independent).
         """
 

@@ -16,7 +16,6 @@ if TYPE_CHECKING:
         Sketch,
         SketchSelection,
     )
-    from raygeo.sketch.registry import EntityRegistry
     from raygeo.sketch.types import EntityID
 
 
@@ -54,7 +53,7 @@ class CollinearConstraint(_CoreCollinearConstraint, Constraint):
         """Returns a human-readable title for this constraint."""
         return self.get_type_name()
 
-    def get_subtitle(self, registry: EntityRegistry) -> str:
+    def get_subtitle(self, registry: Any) -> str:
         """Returns a human-readable subtitle describing constrained points."""
         p1 = registry.get_point(self.p1)
         p2 = registry.get_point(self.p2)
@@ -82,11 +81,11 @@ class CollinearConstraint(_CoreCollinearConstraint, Constraint):
     def get_referenced_entity_ids(self) -> set[EntityID]:
         return Constraint.get_referenced_entity_ids(self)
 
-    def error(self, reg: EntityRegistry, params: ParameterContext) -> float:
+    def error(self, reg: Any, params: ParameterContext) -> float:
         return super().error(reg)[0]
 
     def gradient(
-        self, reg: EntityRegistry, params: ParameterContext
+        self, reg: Any, params: ParameterContext
     ) -> dict[EntityID, list[Point]]:
         return super().gradient(reg)
 

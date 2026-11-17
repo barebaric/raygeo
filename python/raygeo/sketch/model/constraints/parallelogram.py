@@ -16,7 +16,6 @@ if TYPE_CHECKING:
         Sketch,
         SketchSelection,
     )
-    from raygeo.sketch.registry import EntityRegistry
     from raygeo.sketch.types import EntityID
 
 
@@ -61,7 +60,7 @@ class ParallelogramConstraint(_CoreParallelogramConstraint, Constraint):
         """Returns a human-readable title for this constraint."""
         return self.get_type_name()
 
-    def get_subtitle(self, registry: EntityRegistry) -> str:
+    def get_subtitle(self, registry: Any) -> str:
         """Returns a human-readable subtitle describing constrained points."""
         p_origin = registry.get_point(self.p_origin)
         if p_origin:
@@ -80,12 +79,12 @@ class ParallelogramConstraint(_CoreParallelogramConstraint, Constraint):
             user_visible=data.get("user_visible", False),
         )
 
-    def error(self, reg: EntityRegistry, params: ParameterContext) -> Point:
+    def error(self, reg: Any, params: ParameterContext) -> Point:
         err = super().error(reg)
         return (err[0], err[1])
 
     def gradient(
-        self, reg: EntityRegistry, params: ParameterContext
+        self, reg: Any, params: ParameterContext
     ) -> dict[EntityID, list[Point]]:
         return super().gradient(reg)
 

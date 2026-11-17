@@ -26,7 +26,6 @@ if TYPE_CHECKING:
         Sketch,
         SketchSelection,
     )
-    from raygeo.sketch.registry import EntityRegistry
     from raygeo.sketch.types import EntityID
 
 ANGLE_WEIGHT = 10.0
@@ -149,7 +148,7 @@ class AngleConstraint(_CoreAngleConstraint, Constraint):
         """Returns a human-readable title for this constraint."""
         return f"{self.get_type_name()} {self._format_value()}°"
 
-    def get_subtitle(self, registry: EntityRegistry) -> str:
+    def get_subtitle(self, registry: Any) -> str:
         """Returns subtitle describing constrained entities."""
         e1 = registry.get_entity(self.e1_id)
         e2 = registry.get_entity(self.e2_id)
@@ -173,7 +172,7 @@ class AngleConstraint(_CoreAngleConstraint, Constraint):
         )
 
     def _get_line_params(
-        self, reg: EntityRegistry
+        self, reg: Any
     ) -> tuple[Line, Line, Any, Any, Any, Any] | None:
         e1 = reg.get_entity(self.e1_id)
         e2 = reg.get_entity(self.e2_id)
@@ -211,7 +210,7 @@ class AngleConstraint(_CoreAngleConstraint, Constraint):
 
     def get_visuals(
         self,
-        reg: EntityRegistry,
+        reg: Any,
         to_screen: Callable[[Point], Point],
     ):
         result = self._get_line_params(reg)
@@ -246,7 +245,7 @@ class AngleConstraint(_CoreAngleConstraint, Constraint):
 
     def get_label_pos(
         self,
-        reg: EntityRegistry,
+        reg: Any,
         to_screen: Callable[[Point], Point],
         element: Any,
     ):
@@ -269,7 +268,7 @@ class AngleConstraint(_CoreAngleConstraint, Constraint):
         self,
         sx: float,
         sy: float,
-        reg: EntityRegistry,
+        reg: Any,
         to_screen: Callable[[Point], Point],
         element: Any,
         threshold: float,
@@ -295,7 +294,7 @@ class AngleConstraint(_CoreAngleConstraint, Constraint):
     def draw(
         self,
         ctx: cairo.Context,
-        registry: EntityRegistry,
+        registry: Any,
         to_screen: Callable[[Point], Point],
         is_selected: bool = False,
         is_hovered: bool = False,
@@ -368,11 +367,11 @@ class AngleConstraint(_CoreAngleConstraint, Constraint):
 
         ctx.restore()
 
-    def error(self, reg: EntityRegistry, params: ParameterContext) -> float:
+    def error(self, reg: Any, params: ParameterContext) -> float:
         return super().error(reg)[0]
 
     def gradient(
-        self, reg: EntityRegistry, params: ParameterContext
+        self, reg: Any, params: ParameterContext
     ) -> dict[EntityID, list[Point]]:
         return super().gradient(reg)
 

@@ -15,7 +15,6 @@ if TYPE_CHECKING:
     from raygeo.sketch.model.protocols import (
         ParameterContext,
     )
-    from raygeo.sketch.registry import EntityRegistry
     from raygeo.sketch.types import EntityID
 
 
@@ -92,12 +91,12 @@ class RotationalConstraint(_CoreRotationalConstraint, Constraint):
         return Constraint.get_referenced_entity_ids(self)
 
     def error(
-        self, reg: EntityRegistry, params: ParameterContext
+        self, reg: Any, params: ParameterContext
     ) -> list[float]:
         return super().error(reg)
 
     def gradient(
-        self, reg: EntityRegistry, params: ParameterContext
+        self, reg: Any, params: ParameterContext
     ) -> dict[EntityID, list[Point]]:
         return super().gradient(reg)
 

@@ -24,7 +24,6 @@ if TYPE_CHECKING:
         Sketch,
         SketchSelection,
     )
-    from raygeo.sketch.registry import EntityRegistry
     from raygeo.sketch.types import EntityID
 
 
@@ -90,7 +89,7 @@ class DistanceConstraint(_CoreDistanceConstraint, Constraint):
         """Returns a human-readable title for this constraint."""
         return f"{self.get_type_name()} {self._format_value()}"
 
-    def get_subtitle(self, registry: EntityRegistry) -> str:
+    def get_subtitle(self, registry: Any) -> str:
         """Returns a subtitle describing the constrained points."""
         p1 = registry.get_point(self.p1)
         p2 = registry.get_point(self.p2)
@@ -121,7 +120,7 @@ class DistanceConstraint(_CoreDistanceConstraint, Constraint):
 
     def get_label_pos(
         self,
-        reg: EntityRegistry,
+        reg: Any,
         to_screen: Callable[[Point], Point],
         element: Any,
     ):
@@ -142,7 +141,7 @@ class DistanceConstraint(_CoreDistanceConstraint, Constraint):
         self,
         sx: float,
         sy: float,
-        reg: EntityRegistry,
+        reg: Any,
         to_screen: Callable[[Point], Point],
         element: Any,
         threshold: float,
@@ -193,7 +192,7 @@ class DistanceConstraint(_CoreDistanceConstraint, Constraint):
     def draw(
         self,
         ctx: cairo.Context,
-        registry: EntityRegistry,
+        registry: Any,
         to_screen: Callable[[Point], Point],
         is_selected: bool = False,
         is_hovered: bool = False,
@@ -282,11 +281,11 @@ class DistanceConstraint(_CoreDistanceConstraint, Constraint):
     def get_referenced_entity_ids(self) -> set[EntityID]:
         return Constraint.get_referenced_entity_ids(self)
 
-    def error(self, reg: EntityRegistry, params: ParameterContext) -> float:
+    def error(self, reg: Any, params: ParameterContext) -> float:
         return super().error(reg)[0]
 
     def gradient(
-        self, reg: EntityRegistry, params: ParameterContext
+        self, reg: Any, params: ParameterContext
     ) -> dict[EntityID, list[Point]]:
         return super().gradient(reg)
 

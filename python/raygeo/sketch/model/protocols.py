@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING, Any, Protocol, Sequence, runtime_checkable
 
 if TYPE_CHECKING:
     from raygeo.sketch.entities import Entity
-    from raygeo.sketch.registry import EntityRegistry
     from raygeo.sketch.types import EntityID
 
 
@@ -30,7 +29,7 @@ class SketchSelection(Protocol):
     entity_ids: list[EntityID]
 
     def resolve_entities(
-        self, registry: EntityRegistry | None
+        self, registry: Any
     ) -> Sequence[Entity] | None: ...
 
 

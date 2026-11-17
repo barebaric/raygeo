@@ -23,7 +23,6 @@ if TYPE_CHECKING:
         Sketch,
         SketchSelection,
     )
-    from raygeo.sketch.registry import EntityRegistry
     from raygeo.sketch.types import EntityID
 
 
@@ -76,7 +75,7 @@ class PointOnLineConstraint(_CorePointOnLineConstraint, Constraint):
         """Returns a human-readable title for this constraint."""
         return self.get_type_name()
 
-    def get_subtitle(self, registry: EntityRegistry) -> str:
+    def get_subtitle(self, registry: Any) -> str:
         """Returns subtitle describing constrained entities."""
         pt = registry.get_point(self.point_id)
         if pt:
@@ -92,7 +91,7 @@ class PointOnLineConstraint(_CorePointOnLineConstraint, Constraint):
         )
 
     def constrains_radius(
-        self, registry: EntityRegistry, entity_id: EntityID
+        self, registry: Any, entity_id: EntityID
     ) -> bool:
         """
         If this constraint forces a point onto the target entity (circle/arc),
@@ -112,7 +111,7 @@ class PointOnLineConstraint(_CorePointOnLineConstraint, Constraint):
         self,
         sx: float,
         sy: float,
-        reg: EntityRegistry,
+        reg: Any,
         to_screen: Callable[[Point], Point],
         element: Any,
         threshold: float,
@@ -126,7 +125,7 @@ class PointOnLineConstraint(_CorePointOnLineConstraint, Constraint):
     def draw(
         self,
         ctx: cairo.Context,
-        registry: EntityRegistry,
+        registry: Any,
         to_screen: Callable[[Point], Point],
         is_selected: bool = False,
         is_hovered: bool = False,
@@ -176,11 +175,11 @@ class PointOnLineConstraint(_CorePointOnLineConstraint, Constraint):
     def get_referenced_entity_ids(self) -> set[EntityID]:
         return Constraint.get_referenced_entity_ids(self)
 
-    def error(self, reg: EntityRegistry, params: ParameterContext) -> float:
+    def error(self, reg: Any, params: ParameterContext) -> float:
         return super().error(reg)[0]
 
     def gradient(
-        self, reg: EntityRegistry, params: ParameterContext
+        self, reg: Any, params: ParameterContext
     ) -> dict[EntityID, list[Point]]:
         return super().gradient(reg)
 

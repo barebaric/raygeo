@@ -19,7 +19,6 @@ if TYPE_CHECKING:
         Sketch,
         SketchSelection,
     )
-    from raygeo.sketch.registry import EntityRegistry
     from raygeo.sketch.types import EntityID
 
 
@@ -154,13 +153,13 @@ class Constraint:
         return False
 
     def error(
-        self, reg: EntityRegistry, params: ParameterContext
+        self, reg: Any, params: ParameterContext
     ) -> float | tuple[float, ...] | list[float]:
         """Calculates the error of the constraint."""
         return 0.0
 
     def gradient(
-        self, reg: EntityRegistry, params: ParameterContext
+        self, reg: Any, params: ParameterContext
     ) -> dict[EntityID, list[Point]]:
         """
         Calculates the partial derivatives (Jacobian entries) of the error.
@@ -171,7 +170,7 @@ class Constraint:
         return {}
 
     def constrains_radius(
-        self, registry: EntityRegistry, entity_id: EntityID
+        self, registry: Any, entity_id: EntityID
     ) -> bool:
         """
         Returns True if this constraint explicitly defines or links the
@@ -189,7 +188,7 @@ class Constraint:
         self,
         sx: float,
         sy: float,
-        reg: EntityRegistry,
+        reg: Any,
         to_screen: Callable[[Point], Point],
         element: Any,
         threshold: float,
@@ -244,7 +243,7 @@ class Constraint:
         """
         return self.get_type_name()
 
-    def get_subtitle(self, registry: EntityRegistry) -> str:
+    def get_subtitle(self, registry: Any) -> str:
         """
         Returns a human-readable subtitle describing the constrained entities.
         Subclasses should override to provide meaningful descriptions.

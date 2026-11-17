@@ -1,17 +1,3 @@
-"""Merges the reference contract surface into the generated stubs.
-
-pyo3's stub generator can only describe what the Rust bindings
-declare; the reference Python contract lives on the model layer
-(`raygeo.sketch.model`) and on the application's subclasses of the
-compiled bases.  For type checking, the nominal base classes must
-therefore carry that surface -- every concrete entity and constraint
-provides it at runtime, so declaring it on the base is truthful for
-every object the model hands out.
-
-Run after `cargo run --bin stub_gen` (wired into `make stubs`).
-Idempotent: the reference members replace the class body's `...`
-placeholder on every run.
-"""
 
 import re
 from pathlib import Path
@@ -111,6 +97,109 @@ CONSTRAINT_MEMBERS = """
     def __copy__(self) -> Constraint: ...
 """
 
+CONSTRAINT_STRIP_PROPS = (
+    "value", "expression", "status", "user_visible",
+    "p1", "p2", "p3", "p4", "p_origin", "p_width", "p_height",
+    "entity_id", "circle_id", "line_id", "shape_id", "e1_id", "e2_id",
+    "point_id", "center", "axis", "entity_ids",
+)
+CONSTRAINT_STRIP_METHODS = (
+    "error", "gradient", "is_hit", "draw", "to_dict",
+    "targets_segment", "constrains_radius", "get_referenced_point_ids",
+    "get_referenced_entity_ids", "depends_on_points",
+    "depends_on_entities", "update_from_context", "mirror",
+    "is_world_anchored", "is_mirror_compatible", "get_draggable_point",
+    "get_title", "get_subtitle", "get_edit_subtitle", "get_type_key",
+    "get_type_name", "can_apply_to", "applies_to_entities",
+    "seed_reference_attrs", "set_value", "set_expression",
+    "set_user_visible", "__deepcopy__", "__copy__",
+)
+ENTITY_STRIP_PROPS = (
+    "id", "type", "construction", "invisible", "array_copy",
+    "constrained", "fill_color",
+)
+ENTITY_STRIP_METHODS = (
+    "get_point_ids", "get_endpoint_ids", "get_junction_point_ids",
+    "get_helper_ids", "clear_helper_references", "restore_base_flags",
+    "supports_fill", "supports_point_on_curve", "is_radius_entity",
+    "is_closed_loop", "is_edge_entity", "characteristic_length",
+    "characteristic_length_pairs", "enclosed_signed_area",
+    "update_constrained_status", "mirror", "transform_offsets",
+    "rewrite_offsets_from", "as_offset_item", "geometry_signature",
+    "to_dict", "get_state", "set_state", "to_geometry", "to_polyline",
+    "to_polylines", "to_polygon_vertices", "append_to_geometry",
+    "create_fill_geometry", "hit_test", "contains_point",
+    "is_contained_by", "intersects_rect", "signed_distance_to",
+    "tangent_at", "__deepcopy__", "__copy__", "get_drag_anchor_points",
+    "get_rigidly_connected_points", "get_all_frame_point_ids",
+    "get_ignorable_unconstrained_points", "plan_offset",
+)
+
+
+def rewrite_self_returns(path):
+    text = path.read_text()
+    pattern = re.compile(
+        r"(    def (?:__new__|from_dict)\(cls, [^\n]*\)) -> [A-Z][A-Za-z0-9_]*:"
+    )
+    new_text, n = pattern.subn(r"\1 -> typing.Self:", text)
+    if n:
+        path.write_text(new_text)
+        print("Self returns:", path.parent.name, n)
+
+
+def member_end(lines, i):
+    """Returns the index of the first line after the member starting
+    at `i` that is not part of its definition."""
+    j = i + 1
+    while j < len(lines):
+        stripped = lines[j].rstrip("\n")
+        if stripped.strip() == "":
+            return j
+        if stripped.startswith("    @") or stripped.startswith("    def "):
+            return j
+        if not stripped.startswith("    "):
+            return j
+        j += 1
+    return len(lines)
+
+
+def strip_inherited(path, props, methods):
+    text = path.read_text()
+    lines = text.splitlines(keepends=True)
+    out = []
+    i = 0
+    removed = 0
+    while i < len(lines):
+        line = lines[i]
+        stripped = line.strip()
+        replaced = False
+        if stripped.startswith("def ") or stripped.startswith("@property"):
+            name = None
+            if stripped.startswith("def "):
+                for name in methods:
+                    if stripped.startswith("def " + name + "("):
+                        break
+                else:
+                    name = None
+            else:
+                if i + 1 < len(lines):
+                    for name in props:
+                        if ("def " + name + "(") in lines[i + 1]:
+                            break
+                    else:
+                        name = None
+            if name is not None:
+                j = member_end(lines, i)
+                removed += 1
+                i = j
+                replaced = True
+        if not replaced:
+            out.append(line)
+            i += 1
+    if removed:
+        path.write_text("".join(out))
+        print("strip:", path.parent.name, removed)
+
 
 def merge(path, class_name, members):
     text = path.read_text()
@@ -130,12 +219,20 @@ def merge(path, class_name, members):
             continue
         out.append(line)
     if not done:
-        raise SystemExit("MISS: " + path.name + " " + class_name)
+        return False
     path.write_text("".join(out))
-    print("overlay:", path.name, class_name)
+    print("overlay:", path.parent.name, class_name)
+    return True
 
 
 def main():
+    for path in sorted((STUBS / "constraints").glob("*/__init__.pyi")):
+        rewrite_self_returns(path)
+        strip_inherited(path, CONSTRAINT_STRIP_PROPS,
+                        CONSTRAINT_STRIP_METHODS)
+    for path in sorted((STUBS / "entities").glob("*/__init__.pyi")):
+        rewrite_self_returns(path)
+        strip_inherited(path, ENTITY_STRIP_PROPS, ENTITY_STRIP_METHODS)
     merge(STUBS / "entities" / "__init__.pyi", "Entity", ENTITY_MEMBERS)
     merge(STUBS / "constraints" / "__init__.pyi", "Constraint",
           CONSTRAINT_MEMBERS)

@@ -24,7 +24,6 @@ if TYPE_CHECKING:
         Sketch,
         SketchSelection,
     )
-    from raygeo.sketch.registry import EntityRegistry
 
 CurveCoeffs = tuple[
     tuple[float, float, float, float],
@@ -113,7 +112,7 @@ def closest_point_on_bezier(
     return t, bx, by
 
 
-def _get_curve_coeffs(bez: Bezier, reg: EntityRegistry) -> CurveCoeffs:
+def _get_curve_coeffs(bez: Bezier, reg: Any) -> CurveCoeffs:
     start = reg.get_point(bez.start_idx)
     end = reg.get_point(bez.end_idx)
     cp1x, cp1y, cp2x, cp2y = bez.get_control_points_or_endpoints(reg)
@@ -167,7 +166,7 @@ class PointOnCurveConstraint(_CorePointOnCurveConstraint, Constraint):
         """Returns a human-readable title for this constraint."""
         return self.get_type_name()
 
-    def get_subtitle(self, registry: EntityRegistry) -> str:
+    def get_subtitle(self, registry: Any) -> str:
         """Returns subtitle describing constrained entities."""
         pt = registry.get_point(self.point_id)
         if pt:
@@ -185,7 +184,7 @@ class PointOnCurveConstraint(_CorePointOnCurveConstraint, Constraint):
             user_visible=data.get("user_visible", True),
         )
 
-    def _get_bezier(self, reg: EntityRegistry) -> Bezier | None:
+    def _get_bezier(self, reg: Any) -> Bezier | None:
         bez = reg.get_entity(self.shape_id)
         return bez if isinstance(bez, Bezier) else None
 
@@ -195,11 +194,11 @@ class PointOnCurveConstraint(_CorePointOnCurveConstraint, Constraint):
     def get_referenced_entity_ids(self) -> set[EntityID]:
         return Constraint.get_referenced_entity_ids(self)
 
-    def error(self, reg: EntityRegistry, params: ParameterContext) -> float:
+    def error(self, reg: Any, params: ParameterContext) -> float:
         return super().error(reg)[0]
 
     def gradient(
-        self, reg: EntityRegistry, params: ParameterContext
+        self, reg: Any, params: ParameterContext
     ) -> dict[EntityID, list[Point]]:
         return super().gradient(reg)
 
@@ -207,7 +206,7 @@ class PointOnCurveConstraint(_CorePointOnCurveConstraint, Constraint):
         self,
         sx: float,
         sy: float,
-        reg: EntityRegistry,
+        reg: Any,
         to_screen: Callable[[Point], Point],
         element: Any,
         threshold: float,
@@ -221,7 +220,7 @@ class PointOnCurveConstraint(_CorePointOnCurveConstraint, Constraint):
     def draw(
         self,
         ctx: cairo.Context,
-        registry: EntityRegistry,
+        registry: Any,
         to_screen: Callable[[Point], Point],
         is_selected: bool = False,
         is_hovered: bool = False,

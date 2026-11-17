@@ -17,7 +17,6 @@ class AngleConstraint(constraints.Constraint):
     selected by `e1_far_idx`/`e2_far_idx` (endpoint ids; `None` picks
     the endpoint farther from the intersection).
     """
-    @property
     def e1_id(self) -> builtins.int:
         r"""
         The anchor line entity.
@@ -27,7 +26,6 @@ class AngleConstraint(constraints.Constraint):
         r"""
         The anchor line entity.
         """
-    @property
     def e2_id(self) -> builtins.int:
         r"""
         The other line entity.
@@ -57,7 +55,6 @@ class AngleConstraint(constraints.Constraint):
         r"""
         Far point of the other line.
         """
-    @property
     def value(self) -> builtins.float:
         r"""
         Angle value in degrees.
@@ -67,12 +64,10 @@ class AngleConstraint(constraints.Constraint):
         r"""
         Angle value in degrees.
         """
-    @property
     def user_visible(self) -> builtins.bool:
         r"""
         Reference user-visibility flag.
         """
-    @property
     def status(self) -> builtins.int:
         r"""
         Reference validation status ordinal.
@@ -82,7 +77,6 @@ class AngleConstraint(constraints.Constraint):
         r"""
         Reference validation status ordinal.
         """
-    @property
     def expression(self) -> typing.Optional[builtins.str]:
         r"""
         The stored expression string, if any (evaluated caller-side).
@@ -93,51 +87,12 @@ class AngleConstraint(constraints.Constraint):
         Sets the expression string (evaluated caller-side).
         """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __new__(cls, e1_id: builtins.int, e2_id: builtins.int, value: builtins.float, user_visible: builtins.bool = True, e1_far_idx: typing.Optional[builtins.int] = None, e2_far_idx: typing.Optional[builtins.int] = None) -> AngleConstraint:
+    def __new__(cls, e1_id: builtins.int, e2_id: builtins.int, value: builtins.float, user_visible: builtins.bool = True, e1_far_idx: typing.Optional[builtins.int] = None, e2_far_idx: typing.Optional[builtins.int] = None) -> typing.Self:
         r"""
         Creates the angle constraint between two lines.
-        """
-    def error(self, reg: protocols.Registry, params: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
-        r"""
-        Returns the constraint error at the registry's point
-        positions.
-        """
-    def gradient(self, reg: protocols.Registry, params: typing.Optional[typing.Any] = None) -> builtins.dict[builtins.int, builtins.list[tuple[builtins.float, builtins.float]]]:
-        r"""
-        Partial derivatives of the error by point id.
         """
     def referenced_points(self, registry: protocols.Registry) -> builtins.list[builtins.int]:
         r"""
         Point ids the constraint references.
-        """
-    def get_referenced_point_ids(self, registry: protocols.Registry) -> builtins.set[builtins.int]:
-        r"""
-        Alias for referenced_points (reference naming).
-        """
-    def to_dict(self) -> dict:
-        r"""
-        Serializes to the reference constraint dictionary shape.
-        """
-    def draw(self, ctx: protocols.Canvas, registry: protocols.DrawContext, to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], is_selected: builtins.bool = False, is_hovered: builtins.bool = False, point_radius: builtins.float = 5.0) -> None:
-        r"""
-        Draws the constraint's symbol onto the cairo context.
-        """
-    def set_user_visible(self, value: builtins.bool) -> None:
-        r"""
-        Sets the reference user-visibility flag.
-        """
-    def is_mirror_compatible(self) -> builtins.bool:
-        r"""
-        Whether the constraint survives mirroring of all referenced
-        geometry.  An expression-based angle encodes user intent that
-        does not auto-flip under reflection.
-        """
-    def is_hit(self, sx: builtins.float, sy: builtins.float, registry: protocols.Registry, to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], element: typing.Optional[typing.Any], threshold: builtins.float) -> builtins.bool:
-        r"""
-        Whether the constraint's rendered symbol is hit at (mx, my).
-        """
-    def mirror(self, _axis: typing.Any) -> None:
-        r"""
-        Mirrors the angle value (negates it).
         """
 
