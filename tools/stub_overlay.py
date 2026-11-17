@@ -237,6 +237,38 @@ def main():
     merge(STUBS / "constraints" / "__init__.pyi", "Constraint",
           CONSTRAINT_MEMBERS)
 
+    # Re-export the per-module classes from the package __init__ stubs
+    # (the compiled module sets these attributes at runtime).
+    entity_reexports = (
+        "from raygeo.sketch.entities.arc import Arc as Arc\n"
+        "from raygeo.sketch.entities.bezier import Bezier as Bezier\n"
+        "from raygeo.sketch.entities.circle import Circle as Circle\n"
+        "from raygeo.sketch.entities.ellipse import Ellipse as Ellipse\n"
+        "from raygeo.sketch.entities.line import Line as Line\n"
+        "from raygeo.sketch.entities.point import SketchPoint as SketchPoint\n"
+        "from raygeo.sketch.entities.polygon import Polygon as Polygon\n"
+        "from raygeo.sketch.entities.text_box import TextBox as TextBox\n"
+    )
+    p = STUBS / "entities" / "__init__.pyi"
+    p.write_text(p.read_text() + entity_reexports)
+
+    constraint_names = (
+        "angle", "aspect_ratio", "coincident", "collinear", "diameter",
+        "distance", "drag", "equal_distance", "equal_length", "horizontal",
+        "parallelogram", "perpendicular", "point_on_curve", "point_on_line",
+        "radius", "rotational", "symmetry", "tangent", "vertical",
+    )
+    lines = []
+    for name in constraint_names:
+        cls = "".join(part.capitalize() for part in name.split("_"))
+        cls += "Constraint"
+        lines.append(
+            "from raygeo.sketch.constraints." + name + " import "
+            + cls + " as " + cls + "\n"
+        )
+    p = STUBS / "constraints" / "__init__.pyi"
+    p.write_text(p.read_text() + "".join(lines))
+
 
 if __name__ == "__main__":
     main()
