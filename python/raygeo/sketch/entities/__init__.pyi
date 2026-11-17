@@ -28,16 +28,6 @@ class Entity:
     members live on the subclasses; polymorphism is carried by the
     Rust-side `Entity` trait.
     """
-    ...
-
-
-# -- reference-contract overlay (tools/stub_overlay.py) --
-class Entity:
-    r"""
-    The common base contract of every entity, mirroring the
-    reference ``Entity`` base class.  Every concrete binding
-    implements this surface at runtime.
-    """
     id: types.EntityID
     type: builtins.str
     construction: builtins.bool
@@ -45,7 +35,6 @@ class Entity:
     array_copy: builtins.bool
     constrained: builtins.bool
     fill_color: typing.Optional[tuple[float, float, float, float]]
-
     def get_point_ids(self) -> builtins.list[types.EntityID]: ...
     def get_endpoint_ids(self) -> builtins.list[types.EntityID]: ...
     def get_junction_point_ids(self) -> builtins.list[types.EntityID]: ...
@@ -90,4 +79,5 @@ class Entity:
     def tangent_at(self, registry: protocols.Registry, point_id: types.EntityID) -> typing.Optional[tuple[builtins.float, builtins.float]]: ...
     def __deepcopy__(self, memo: dict) -> Entity: ...
     def __copy__(self) -> Entity: ...
-# -- end reference-contract overlay --
+
+

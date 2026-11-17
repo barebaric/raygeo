@@ -50,22 +50,10 @@ class Constraint:
     per-class members live on the subclasses; polymorphism is carried
     by the Rust-side `SketchConstraint` trait.
     """
-    ...
-
-
-# -- reference-contract overlay (tools/stub_overlay.py) --
-class Constraint:
-    r"""
-    The common base contract of every constraint, mirroring the
-    reference ``Constraint`` base class.  Every concrete binding
-    implements this surface at runtime; the model layer subclasses
-    refine the signatures.
-    """
     value: builtins.float
     expression: typing.Optional[builtins.str]
     status: typing.Any
     user_visible: builtins.bool
-
     def is_world_anchored(self) -> builtins.bool: ...
     @classmethod
     def can_apply_to(cls, selection: typing.Any, sketch: typing.Any = None) -> builtins.bool: ...
@@ -98,4 +86,5 @@ class Constraint:
     def seed_reference_attrs(self) -> None: ...
     def __deepcopy__(self, memo: dict) -> Constraint: ...
     def __copy__(self) -> Constraint: ...
-# -- end reference-contract overlay --
+
+

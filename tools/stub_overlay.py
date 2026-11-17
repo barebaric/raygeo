@@ -4,43 +4,21 @@ pyo3's stub generator can only describe what the Rust bindings
 declare; the reference Python contract lives on the model layer
 (`raygeo.sketch.model`) and on the application's subclasses of the
 compiled bases.  For type checking, the nominal base classes must
-therefore carry that surface — every concrete entity and constraint
+therefore carry that surface -- every concrete entity and constraint
 provides it at runtime, so declaring it on the base is truthful for
 every object the model hands out.
 
 Run after `cargo run --bin stub_gen` (wired into `make stubs`).
-Idempotent: the merged blocks are delimited and re-generated in
-place.
+Idempotent: the reference members replace the class body's `...`
+placeholder on every run.
 """
 
+import re
 from pathlib import Path
 
 STUBS = Path(__file__).parent.parent / "python" / "raygeo" / "sketch"
 
-BEGIN = "# -- reference-contract overlay (tools/stub_overlay.py) --\n"
-END = "# -- end reference-contract overlay --\n"
-
-
-def merge(path: Path, block: str) -> None:
-    text = path.read_text()
-    start = text.find(BEGIN)
-    if start >= 0:
-        end = text.index(END, start) + len(END)
-        text = text[:start] + text[end:]
-    if not text.endswith("\n"):
-        text += "\n"
-    text += "\n" + BEGIN + block + END
-    path.write_text(text)
-    print("overlay:", path.relative_to(STUBS.parent.parent.parent))
-
-
-ENTITY_SURFACE = '''\
-class Entity:
-    r"""
-    The common base contract of every entity, mirroring the
-    reference ``Entity`` base class.  Every concrete binding
-    implements this surface at runtime.
-    """
+ENTITY_MEMBERS = '''\
     id: types.EntityID
     type: builtins.str
     construction: builtins.bool
@@ -48,7 +26,6 @@ class Entity:
     array_copy: builtins.bool
     constrained: builtins.bool
     fill_color: typing.Optional[tuple[float, float, float, float]]
-
     def get_point_ids(self) -> builtins.list[types.EntityID]: ...
     def get_endpoint_ids(self) -> builtins.list[types.EntityID]: ...
     def get_junction_point_ids(self) -> builtins.list[types.EntityID]: ...
@@ -95,19 +72,11 @@ class Entity:
     def __copy__(self) -> Entity: ...
 '''
 
-CONSTRAINT_SURFACE = '''\
-class Constraint:
-    r"""
-    The common base contract of every constraint, mirroring the
-    reference ``Constraint`` base class.  Every concrete binding
-    implements this surface at runtime; the model layer subclasses
-    refine the signatures.
-    """
+CONSTRAINT_MEMBERS = '''\
     value: builtins.float
     expression: typing.Optional[builtins.str]
     status: typing.Any
     user_visible: builtins.bool
-
     def is_world_anchored(self) -> builtins.bool: ...
     @classmethod
     def can_apply_to(cls, selection: typing.Any, sketch: typing.Any = None) -> builtins.bool: ...
@@ -143,9 +112,42 @@ class Constraint:
 '''
 
 
+def merge(path: Path, class_name: str, members: str) -> None:
+    """Replaces the `...` body of `class <class_name>` with the
+    reference members (idempotent: the members block is rewritten
+    in place on every run)."""
+    text = path.read_text()
+    pattern = re.compile(
+        r"(class " + class_name + r":\n"
+        r"(?:    r?\"\"\"(?:.|\n)*?\"\"\"\n)?)"
+        r"((?:    .*\n|\n)*?)"
+        r"(?=class |\Z)"
+    )
+    m = pattern.search(text)
+    if not m:
+        print("MISS:", path.name, class_name)
+        return
+    header = m.group(1)
+    body = m.group(2)
+    # Strip a previous overlay (anything up to the next top-level
+    # construct is being replaced wholesale).
+    replaced = header + members
+    text = text[: m.start()] + replaced + "\n\n" + text[m.end():]
+    path.write_text(text)
+    print("overlay:", path.name, class_name)
+
+
 def main() -> None:
-    merge(STUBS / "entities" / "__init__.pyi", ENTITY_SURFACE)
-    merge(STUBS / "constraints" / "__init__.pyi", CONSTRAINT_SURFACE)
+    merge(
+        STUBS / "entities" / "__init__.pyi",
+        "Entity",
+        ENTITY_MEMBERS,
+    )
+    merge(
+        STUBS / "constraints" / "__init__.pyi",
+        "Constraint",
+        CONSTRAINT_MEMBERS,
+    )
 
 
 if __name__ == "__main__":
