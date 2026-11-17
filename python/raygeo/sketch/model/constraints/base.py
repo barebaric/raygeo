@@ -97,6 +97,19 @@ class Constraint:
     def __copy__(self):
         return self.__deepcopy__({})
 
+    def draw(
+        self,
+        ctx: Any,
+        registry: Any,
+        to_screen: Any,
+        is_selected: bool = False,
+        is_hovered: bool = False,
+        point_radius: float = 5.0,
+    ) -> None:
+        """Draws the visual representation of the constraint on the
+        canvas. Concrete classes implement this with the compiled
+        renderer; the base default draws nothing."""
+
     def is_world_anchored(self) -> bool:
         """Returns True if this constraint pins geometry to global axes.
 

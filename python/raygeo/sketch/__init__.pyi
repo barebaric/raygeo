@@ -118,8 +118,3 @@ class Solver:
         """
 
 from . import protocols
-from . import protocols
-from . import protocols
-from . import protocols
-from . import protocols
-from . import protocols

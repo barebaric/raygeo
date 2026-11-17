@@ -50,6 +50,7 @@ class Constraint:
     per-class members live on the subclasses; polymorphism is carried
     by the Rust-side `SketchConstraint` trait.
     """
+
     value: builtins.float
     expression: typing.Optional[builtins.str]
     status: typing.Any
@@ -64,8 +65,8 @@ class Constraint:
     @staticmethod
     def get_type_name() -> builtins.str: ...
     def targets_segment(self, p1: types.EntityID, p2: types.EntityID, entity_id: typing.Optional[types.EntityID]) -> builtins.bool: ...
-    def error(self, reg: protocols.Registry, params: typing.Any) -> typing.Any: ...
-    def gradient(self, reg: protocols.Registry, params: typing.Any) -> dict[types.EntityID, builtins.list[typing.Any]]: ...
+    def error(self, reg: protocols.Registry, params: typing.Any = None) -> typing.Any: ...
+    def gradient(self, reg: protocols.Registry, params: typing.Any = None) -> dict[types.EntityID, builtins.list[typing.Any]]: ...
     def constrains_radius(self, registry: protocols.Registry, entity_id: types.EntityID) -> builtins.bool: ...
     def to_dict(self) -> dict: ...
     @classmethod
@@ -87,45 +88,6 @@ class Constraint:
     def __deepcopy__(self, memo: dict) -> Constraint: ...
     def __copy__(self) -> Constraint: ...
 
-
-from raygeo.sketch.constraints.angle import AngleConstraint as AngleConstraint
-from raygeo.sketch.constraints.aspect_ratio import AspectRatioConstraint as AspectRatioConstraint
-from raygeo.sketch.constraints.coincident import CoincidentConstraint as CoincidentConstraint
-from raygeo.sketch.constraints.collinear import CollinearConstraint as CollinearConstraint
-from raygeo.sketch.constraints.diameter import DiameterConstraint as DiameterConstraint
-from raygeo.sketch.constraints.distance import DistanceConstraint as DistanceConstraint
-from raygeo.sketch.constraints.drag import DragConstraint as DragConstraint
-from raygeo.sketch.constraints.equal_distance import EqualDistanceConstraint as EqualDistanceConstraint
-from raygeo.sketch.constraints.equal_length import EqualLengthConstraint as EqualLengthConstraint
-from raygeo.sketch.constraints.horizontal import HorizontalConstraint as HorizontalConstraint
-from raygeo.sketch.constraints.parallelogram import ParallelogramConstraint as ParallelogramConstraint
-from raygeo.sketch.constraints.perpendicular import PerpendicularConstraint as PerpendicularConstraint
-from raygeo.sketch.constraints.point_on_curve import PointOnCurveConstraint as PointOnCurveConstraint
-from raygeo.sketch.constraints.point_on_line import PointOnLineConstraint as PointOnLineConstraint
-from raygeo.sketch.constraints.radius import RadiusConstraint as RadiusConstraint
-from raygeo.sketch.constraints.rotational import RotationalConstraint as RotationalConstraint
-from raygeo.sketch.constraints.symmetry import SymmetryConstraint as SymmetryConstraint
-from raygeo.sketch.constraints.tangent import TangentConstraint as TangentConstraint
-from raygeo.sketch.constraints.vertical import VerticalConstraint as VerticalConstraint
-from raygeo.sketch.constraints.angle import AngleConstraint as AngleConstraint
-from raygeo.sketch.constraints.aspect_ratio import AspectRatioConstraint as AspectRatioConstraint
-from raygeo.sketch.constraints.coincident import CoincidentConstraint as CoincidentConstraint
-from raygeo.sketch.constraints.collinear import CollinearConstraint as CollinearConstraint
-from raygeo.sketch.constraints.diameter import DiameterConstraint as DiameterConstraint
-from raygeo.sketch.constraints.distance import DistanceConstraint as DistanceConstraint
-from raygeo.sketch.constraints.drag import DragConstraint as DragConstraint
-from raygeo.sketch.constraints.equal_distance import EqualDistanceConstraint as EqualDistanceConstraint
-from raygeo.sketch.constraints.equal_length import EqualLengthConstraint as EqualLengthConstraint
-from raygeo.sketch.constraints.horizontal import HorizontalConstraint as HorizontalConstraint
-from raygeo.sketch.constraints.parallelogram import ParallelogramConstraint as ParallelogramConstraint
-from raygeo.sketch.constraints.perpendicular import PerpendicularConstraint as PerpendicularConstraint
-from raygeo.sketch.constraints.point_on_curve import PointOnCurveConstraint as PointOnCurveConstraint
-from raygeo.sketch.constraints.point_on_line import PointOnLineConstraint as PointOnLineConstraint
-from raygeo.sketch.constraints.radius import RadiusConstraint as RadiusConstraint
-from raygeo.sketch.constraints.rotational import RotationalConstraint as RotationalConstraint
-from raygeo.sketch.constraints.symmetry import SymmetryConstraint as SymmetryConstraint
-from raygeo.sketch.constraints.tangent import TangentConstraint as TangentConstraint
-from raygeo.sketch.constraints.vertical import VerticalConstraint as VerticalConstraint
 from raygeo.sketch.constraints.angle import AngleConstraint as AngleConstraint
 from raygeo.sketch.constraints.aspect_ratio import AspectRatioConstraint as AspectRatioConstraint
 from raygeo.sketch.constraints.coincident import CoincidentConstraint as CoincidentConstraint

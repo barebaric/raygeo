@@ -28,6 +28,7 @@ class Entity:
     members live on the subclasses; polymorphism is carried by the
     Rust-side `Entity` trait.
     """
+
     id: types.EntityID
     type: builtins.str
     construction: builtins.bool
@@ -59,6 +60,8 @@ class Entity:
     def rewrite_offsets_from(self, template: typing.Any, placement: typing.Any) -> None: ...
     def as_offset_item(self, sketch: typing.Any) -> typing.Any: ...
     def plan_offset(self, registry: protocols.Registry, offset: builtins.float, allocate_id: typing.Any) -> typing.Any: ...
+    def preview_polylines(self, registry: protocols.Registry, offset: builtins.float) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]: ...
+    def set_fill_color(self, color: typing.Optional[tuple[float, float, float, float]]) -> None: ...
     def geometry_signature(self, registry: protocols.Registry) -> tuple: ...
     def to_dict(self) -> dict: ...
     @staticmethod
@@ -80,25 +83,6 @@ class Entity:
     def __deepcopy__(self, memo: dict) -> Entity: ...
     def __copy__(self) -> Entity: ...
 
-
-    def preview_polylines(self, registry: protocols.Registry, offset: builtins.float) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]: ...
-    def set_fill_color(self, color: typing.Optional[tuple[float, float, float, float]]) -> None: ...
-from raygeo.sketch.entities.arc import Arc as Arc
-from raygeo.sketch.entities.bezier import Bezier as Bezier
-from raygeo.sketch.entities.circle import Circle as Circle
-from raygeo.sketch.entities.ellipse import Ellipse as Ellipse
-from raygeo.sketch.entities.line import Line as Line
-from raygeo.sketch.entities.point import SketchPoint as SketchPoint
-from raygeo.sketch.entities.polygon import Polygon as Polygon
-from raygeo.sketch.entities.text_box import TextBox as TextBox
-from raygeo.sketch.entities.arc import Arc as Arc
-from raygeo.sketch.entities.bezier import Bezier as Bezier
-from raygeo.sketch.entities.circle import Circle as Circle
-from raygeo.sketch.entities.ellipse import Ellipse as Ellipse
-from raygeo.sketch.entities.line import Line as Line
-from raygeo.sketch.entities.point import SketchPoint as SketchPoint
-from raygeo.sketch.entities.polygon import Polygon as Polygon
-from raygeo.sketch.entities.text_box import TextBox as TextBox
 from raygeo.sketch.entities.arc import Arc as Arc
 from raygeo.sketch.entities.bezier import Bezier as Bezier
 from raygeo.sketch.entities.circle import Circle as Circle

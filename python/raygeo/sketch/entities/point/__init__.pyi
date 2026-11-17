@@ -17,6 +17,7 @@ class SketchPoint:
     are written back to the registry. It also behaves like an ``(x, y)``
     pair for indexing and iteration.
     """
+    @property
     def id(self) -> types.EntityID:
         r"""
         Unique point id, stable across solves.
@@ -51,6 +52,7 @@ class SketchPoint:
         """
     @fixed.setter
     def fixed(self, value: builtins.bool) -> None: ...
+    @property
     def constrained(self) -> builtins.bool:
         r"""
         Whether the point is fully constrained, as computed by the
@@ -65,6 +67,10 @@ class SketchPoint:
     def pos(self) -> tuple[builtins.float, builtins.float]:
         r"""
         The point position as a ``(x, y)`` tuple.
+        """
+    def to_dict(self) -> dict:
+        r"""
+        Serializes to the reference point dictionary shape.
         """
     @staticmethod
     def from_dict(dict: dict) -> SketchPoint:
