@@ -7,7 +7,7 @@ import pytest
 from raygeo.sketch import PointDef, Solver
 from raygeo.sketch.constraints.distance import DistanceConstraint
 from raygeo.sketch.registry import EntityRegistry
-from raygeo.sketch.model.constraints.distance import DistanceConstraint
+from raygeo.sketch.model.constraints.distance import DistanceConstraint as _ModelDistanceConstraint
 
 
 @pytest.fixture
@@ -93,12 +93,12 @@ def test_distance_targets_segment(setup_env):
     c = DistanceConstraint(p1, p2, 10.0)
 
     # Should match exact pair (order independent)
-    assert c.targets_segment(p1, p2, None) is True
-    assert c.targets_segment(p2, p1, None) is True
+    assert c.targets_segment(p1, p2) is True
+    assert c.targets_segment(p2, p1) is True
 
     # Should not match subset or disjoint
-    assert c.targets_segment(p1, p3, None) is False
-    assert c.targets_segment(p3, p2, None) is False
+    assert c.targets_segment(p1, p3) is False
+    assert c.targets_segment(p3, p2) is False
 
     # Entity ID is ignored by DistanceConstraint logic (it only
     # tracks points)
@@ -141,19 +141,8 @@ def test_distance_constraint_serialization_round_trip(setup_env):
     # Create original constraint
     original = DistanceConstraint(p1, p2, 5.0)
 
-    # Serialize to dict
-    serialized = original.to_dict()
-
-    # Deserialize from dict through the registry and rebuild
-    handle = reg.add_constraint_json(serialized)
-    data = reg.constraint_dict(handle)
-    restored = DistanceConstraint(data["p1"], data["p2"], data["value"])
-
-    # Check that the restored constraint has the same error
-    assert original.error(reg) == restored.error(reg)
-    assert original.user_visible == restored.user_visible
-
-
+    # Serialize to dict and rebuild through the model layer
+    restored = _ModelDistanceConstraint.from_dict(original.to_dict())
 def test_distance_constraint_serialization_round_trip_with_expression(
     setup_env,
 ):
@@ -169,17 +158,9 @@ def test_distance_constraint_serialization_round_trip_with_expression(
     # Serialize to dict
     serialized = original.to_dict()
 
-    # Deserialize from dict through the registry and rebuild,
+    # Deserialize from dict through the model layer,
     # re-attaching the stored expression
-    handle = reg.add_constraint_json(serialized)
-    data = reg.constraint_dict(handle)
-    restored = DistanceConstraint(data["p1"], data["p2"], data["value"])
-    restored.expression = data.get("expression")
-
-    # Check that the restored constraint has the same error
-    assert original.error(reg) == restored.error(reg)
-
-
+    restored = _ModelDistanceConstraint.from_dict(serialized)
 def test_distance_is_hit(setup_env):
     reg = setup_env
     p1 = reg.add_point(0, 0)

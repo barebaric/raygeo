@@ -149,15 +149,14 @@ impl PyDistanceConstraint {
     /// Whether this constraint defines the length/distance of the
     /// segment (p1, p2).  The entity id is ignored: distance
     /// constraints track points only.
-    #[pyo3(signature = (p1, p2, entity_id, registry))]
+    #[pyo3(signature = (p1, p2, entity_id = None))]
     fn targets_segment(
         &self,
         p1: i64,
         p2: i64,
         entity_id: Option<i64>,
-        registry: PointCtx<'_>,
     ) -> bool {
-        let _ = (entity_id, registry);
+        let _ = entity_id;
         (p1 == self.p1 && p2 == self.p2) || (p1 == self.p2 && p2 == self.p1)
     }
 

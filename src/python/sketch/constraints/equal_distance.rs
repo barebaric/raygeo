@@ -162,15 +162,14 @@ impl PyEqualDistanceConstraint {
 
     /// Whether this constraint defines the length/distance of the
     /// segment (p1, p2), for either pair (order independent).
-    #[pyo3(signature = (p1, p2, entity_id, registry))]
+    #[pyo3(signature = (p1, p2, entity_id = None))]
     fn targets_segment(
         &self,
         p1: i64,
         p2: i64,
         entity_id: Option<i64>,
-        registry: PointCtx<'_>,
     ) -> bool {
-        let _ = (entity_id, registry);
+        let _ = entity_id;
         let matches =
             |a: i64, b: i64| (p1 == a && p2 == b) || (p1 == b && p2 == a);
         matches(self.p1, self.p2) || matches(self.p3, self.p4)

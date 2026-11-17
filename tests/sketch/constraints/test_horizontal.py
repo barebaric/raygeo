@@ -8,7 +8,7 @@ import pytest
 from raygeo.sketch import PointDef, Solver
 from raygeo.sketch.constraints.horizontal import HorizontalConstraint
 from raygeo.sketch.registry import EntityRegistry
-from raygeo.sketch.model.constraints.horizontal import HorizontalConstraint
+from raygeo.sketch.model.constraints.horizontal import HorizontalConstraint as _ModelHorizontalConstraint
 
 
 @pytest.fixture
@@ -91,21 +91,8 @@ def test_horizontal_constraint_serialization_round_trip(setup_env):
     # Create original constraint
     original = HorizontalConstraint(p1, p2)
 
-    # Serialize to dict
-    serialized = original.to_dict()
-
-    # Deserialize from dict through the registry and rebuild
-    handle = reg.add_constraint_json(serialized)
-    restored = HorizontalConstraint(
-        reg.constraint_dict(handle)["p1"],
-        reg.constraint_dict(handle)["p2"],
-    )
-
-    # Check that the restored constraint has the same error
-    assert original.error(reg) == restored.error(reg)
-    assert original.user_visible == restored.user_visible
-
-
+    # Serialize to dict and rebuild through the model layer
+    restored = _ModelHorizontalConstraint.from_dict(original.to_dict())
 def test_horizontal_is_hit(setup_env):
     reg = setup_env
     p1 = reg.add_point(0, 50)

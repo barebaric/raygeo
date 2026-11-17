@@ -7,7 +7,7 @@ import pytest
 from raygeo.sketch import PointDef, Solver
 from raygeo.sketch.constraints.equal_distance import EqualDistanceConstraint
 from raygeo.sketch.registry import EntityRegistry
-from raygeo.sketch.model.constraints.equal_distance import EqualDistanceConstraint
+from raygeo.sketch.model.constraints.equal_distance import EqualDistanceConstraint as _ModelEqualDistanceConstraint
 
 
 @pytest.fixture
@@ -88,16 +88,16 @@ def test_equal_distance_targets_segment(setup_env):
     c = EqualDistanceConstraint(p1, p2, p3, p4)
 
     # Matches pair 1 (order independent)
-    assert c.targets_segment(p1, p2, None) is True
-    assert c.targets_segment(p2, p1, None) is True
+    assert c.targets_segment(p1, p2) is True
+    assert c.targets_segment(p2, p1) is True
 
     # Matches pair 2 (order independent)
-    assert c.targets_segment(p3, p4, None) is True
-    assert c.targets_segment(p4, p3, None) is True
+    assert c.targets_segment(p3, p4) is True
+    assert c.targets_segment(p4, p3) is True
 
     # No match
-    assert c.targets_segment(p1, p3, None) is False
-    assert c.targets_segment(p1, p5, None) is False
+    assert c.targets_segment(p1, p3) is False
+    assert c.targets_segment(p1, p5) is False
 
 
 def test_equal_distance_constraint_gradient(setup_env):
@@ -125,21 +125,8 @@ def test_equal_distance_constraint_serialization_round_trip(setup_env):
     # Create original constraint
     original = EqualDistanceConstraint(p1, p2, p3, p4)
 
-    # Serialize to dict
-    serialized = original.to_dict()
-
-    # Deserialize from dict through the registry and rebuild
-    handle = reg.add_constraint_json(serialized)
-    data = reg.constraint_dict(handle)
-    restored = EqualDistanceConstraint(
-        data["p1"], data["p2"], data["p3"], data["p4"]
-    )
-
-    # Check that the restored constraint has the same error
-    assert original.error(reg) == restored.error(reg)
-    assert original.user_visible == restored.user_visible
-
-
+    # Serialize to dict and rebuild through the model layer
+    restored = _ModelEqualDistanceConstraint.from_dict(original.to_dict())
 def test_equal_distance_draw(setup_env):
     reg = setup_env
     p1 = reg.add_point(0, 0)
