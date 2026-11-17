@@ -18,7 +18,7 @@ from pathlib import Path
 
 STUBS = Path(__file__).parent.parent / "python" / "raygeo" / "sketch"
 
-ENTITY_MEMBERS = '''\
+ENTITY_MEMBERS = """
     id: types.EntityID
     type: builtins.str
     construction: builtins.bool
@@ -70,9 +70,9 @@ ENTITY_MEMBERS = '''\
     def tangent_at(self, registry: protocols.Registry, point_id: types.EntityID) -> typing.Optional[tuple[builtins.float, builtins.float]]: ...
     def __deepcopy__(self, memo: dict) -> Entity: ...
     def __copy__(self) -> Entity: ...
-'''
+"""
 
-CONSTRAINT_MEMBERS = '''\
+CONSTRAINT_MEMBERS = """
     value: builtins.float
     expression: typing.Optional[builtins.str]
     status: typing.Any
@@ -87,8 +87,8 @@ CONSTRAINT_MEMBERS = '''\
     @staticmethod
     def get_type_name() -> builtins.str: ...
     def targets_segment(self, p1: types.EntityID, p2: types.EntityID, entity_id: typing.Optional[types.EntityID]) -> builtins.bool: ...
-    def error(self, reg: protocols.Registry, params: typing.Any) -> typing.Any: ...
-    def gradient(self, reg: protocols.Registry, params: typing.Any) -> dict[types.EntityID, builtins.list[typing.Any]]: ...
+    def error(self, reg: protocols.Registry, params: typing.Any = None) -> typing.Any: ...
+    def gradient(self, reg: protocols.Registry, params: typing.Any = None) -> dict[types.EntityID, builtins.list[typing.Any]]: ...
     def constrains_radius(self, registry: protocols.Registry, entity_id: types.EntityID) -> builtins.bool: ...
     def to_dict(self) -> dict: ...
     @classmethod
@@ -109,46 +109,38 @@ CONSTRAINT_MEMBERS = '''\
     def seed_reference_attrs(self) -> None: ...
     def __deepcopy__(self, memo: dict) -> Constraint: ...
     def __copy__(self) -> Constraint: ...
-'''
+"""
 
 
-def merge(path: Path, class_name: str, members: str) -> None:
-    """Replaces the `...` body of `class <class_name>` with the
-    reference members (idempotent: the members block is rewritten
-    in place on every run)."""
+def merge(path, class_name, members):
     text = path.read_text()
-    pattern = re.compile(
-        r"(class " + class_name + r":\n"
-        r"(?:    r?\"\"\"(?:.|\n)*?\"\"\"\n)?)"
-        r"((?:    .*\n|\n)*?)"
-        r"(?=class |\Z)"
-    )
-    m = pattern.search(text)
-    if not m:
-        print("MISS:", path.name, class_name)
-        return
-    header = m.group(1)
-    body = m.group(2)
-    # Strip a previous overlay (anything up to the next top-level
-    # construct is being replaced wholesale).
-    replaced = header + members
-    text = text[: m.start()] + replaced + "\n\n" + text[m.end():]
-    path.write_text(text)
+    lines = text.splitlines(keepends=True)
+    out = []
+    in_target = False
+    done = False
+    for line in lines:
+        if not done and line.strip() == "class " + class_name + ":":
+            in_target = True
+            out.append(line)
+            continue
+        if in_target and line == "    ...\n":
+            out.append(members)
+            in_target = False
+            done = True
+            continue
+        out.append(line)
+    if not done:
+        raise SystemExit("MISS: " + path.name + " " + class_name)
+    path.write_text("".join(out))
     print("overlay:", path.name, class_name)
 
 
-def main() -> None:
-    merge(
-        STUBS / "entities" / "__init__.pyi",
-        "Entity",
-        ENTITY_MEMBERS,
-    )
-    merge(
-        STUBS / "constraints" / "__init__.pyi",
-        "Constraint",
-        CONSTRAINT_MEMBERS,
-    )
+def main():
+    merge(STUBS / "entities" / "__init__.pyi", "Entity", ENTITY_MEMBERS)
+    merge(STUBS / "constraints" / "__init__.pyi", "Constraint",
+          CONSTRAINT_MEMBERS)
 
 
 if __name__ == "__main__":
     main()
+
