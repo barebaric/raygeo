@@ -25,16 +25,16 @@ use crate::sketch::constraints::equal_distance::EqualDistanceConstraint as CoreC
 pub struct PyEqualDistanceConstraint {
     /// First point of the first pair.
     #[pyo3(get, set)]
-    pub p1: u64,
+    pub p1: i64,
     /// Second point of the first pair.
     #[pyo3(get, set)]
-    pub p2: u64,
+    pub p2: i64,
     /// First point of the second pair.
     #[pyo3(get, set)]
-    pub p3: u64,
+    pub p3: i64,
     /// Second point of the second pair.
     #[pyo3(get, set)]
-    pub p4: u64,
+    pub p4: i64,
     /// Reference user-visibility flag.
     #[pyo3(get)]
     pub user_visible: bool,
@@ -50,10 +50,10 @@ impl PyEqualDistanceConstraint {
     #[new]
     #[pyo3(signature = (p1, p2, p3, p4, user_visible = true))]
     fn new(
-        p1: u64,
-        p2: u64,
-        p3: u64,
-        p4: u64,
+        p1: i64,
+        p2: i64,
+        p3: i64,
+        p4: i64,
         user_visible: bool,
     ) -> PyClassInitializer<Self> {
         PyClassInitializer::from(PyConstraintBase).add_subclass(
@@ -164,14 +164,14 @@ impl PyEqualDistanceConstraint {
     #[pyo3(signature = (p1, p2, entity_id, registry))]
     fn targets_segment(
         &self,
-        p1: u64,
-        p2: u64,
-        entity_id: Option<u64>,
+        p1: i64,
+        p2: i64,
+        entity_id: Option<i64>,
         registry: PointCtx<'_>,
     ) -> bool {
         let _ = (entity_id, registry);
         let matches =
-            |a: u64, b: u64| (p1 == a && p2 == b) || (p1 == b && p2 == a);
+            |a: i64, b: i64| (p1 == a && p2 == b) || (p1 == b && p2 == a);
         matches(self.p1, self.p2) || matches(self.p3, self.p4)
     }
 }
@@ -180,7 +180,12 @@ impl PyEqualDistanceConstraint {
     pub(crate) fn into_constraint(self) -> CoreConstraint {
         CoreConstraint {
             user_visible: self.user_visible,
-            ..CoreConstraint::new(self.p1, self.p2, self.p3, self.p4)
+            ..CoreConstraint::new(
+                self.p1 as u64,
+                self.p2 as u64,
+                self.p3 as u64,
+                self.p4 as u64,
+            )
         }
     }
 }

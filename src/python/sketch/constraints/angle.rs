@@ -28,10 +28,10 @@ use crate::sketch::constraints::angle::AngleConstraint as CoreConstraint;
 pub struct PyAngleConstraint {
     /// The anchor line entity.
     #[pyo3(get, set)]
-    pub e1_id: u64,
+    pub e1_id: i64,
     /// The other line entity.
     #[pyo3(get, set)]
-    pub e2_id: u64,
+    pub e2_id: i64,
     /// Far point of the anchor line.
     #[pyo3(get, set)]
     pub e1_far_idx: Option<u64>,
@@ -66,8 +66,8 @@ impl PyAngleConstraint {
         e2_far_idx = None,
     ))]
     fn new(
-        e1_id: u64,
-        e2_id: u64,
+        e1_id: i64,
+        e2_id: i64,
         value: f64,
         user_visible: bool,
         e1_far_idx: Option<u64>,
@@ -205,8 +205,8 @@ impl PyAngleConstraint {
 impl PyAngleConstraint {
     pub(crate) fn into_constraint(self) -> CoreConstraint {
         CoreConstraint {
-            e1_id: self.e1_id,
-            e2_id: self.e2_id,
+            e1_id: self.e1_id as u64,
+            e2_id: self.e2_id as u64,
             e1_far_idx: self.e1_far_idx,
             e2_far_idx: self.e2_far_idx,
             value_deg: self.value,

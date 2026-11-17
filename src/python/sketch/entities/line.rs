@@ -12,7 +12,6 @@ use super::PyEntityBase;
 use crate::python::geo::geometry::Geometry as PyGeometry;
 use crate::python::sketch::constraints::dict_from_value;
 use crate::python::sketch::context::PointCtx;
-use crate::sketch::constraint::PointContext;
 use crate::sketch::entities::line::Line as CoreLine;
 use crate::sketch::entities::mirror::{MirrorAxis, MirrorDirection};
 use crate::sketch::entities::Entity;

@@ -79,10 +79,10 @@ impl PySketchPoint {
     /// Creates a point view with the given id and coordinates.
     #[new]
     #[pyo3(signature = (id, x, y, fixed = false))]
-    fn new(id: u64, x: f64, y: f64, fixed: bool) -> Self {
+    fn new(id: i64, x: f64, y: f64, fixed: bool) -> Self {
         PySketchPoint {
             inner: crate::sketch::entities::point::SketchPoint {
-                id,
+                id: id as u64,
                 x,
                 y,
                 fixed,
@@ -168,7 +168,7 @@ impl PySketchPoint {
             .unwrap_or_else(|| "sharp".to_string());
         Ok(PySketchPoint {
             inner: crate::sketch::entities::point::SketchPoint {
-                id,
+                id: id as u64,
                 x,
                 y,
                 fixed,

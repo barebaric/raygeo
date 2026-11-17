@@ -27,10 +27,10 @@ use crate::sketch::constraints::point_on_line::PointOnLineConstraint as CoreCons
 pub struct PyPointOnLineConstraint {
     /// The constrained point.
     #[pyo3(get, set)]
-    pub point_id: u64,
+    pub point_id: i64,
     /// The target shape (line or radius-bearing entity).
     #[pyo3(get, set)]
-    pub shape_id: u64,
+    pub shape_id: i64,
     /// Reference user-visibility flag.
     #[pyo3(get)]
     pub user_visible: bool,
@@ -46,8 +46,8 @@ impl PyPointOnLineConstraint {
     #[new]
     #[pyo3(signature = (point_id, shape_id, user_visible = true))]
     fn new(
-        point_id: u64,
-        shape_id: u64,
+        point_id: i64,
+        shape_id: i64,
         user_visible: bool,
     ) -> PyClassInitializer<Self> {
         PyClassInitializer::from(PyConstraintBase).add_subclass(
@@ -133,13 +133,13 @@ impl PyPointOnLineConstraint {
     fn constrains_radius(
         &self,
         registry: PointCtx<'_>,
-        entity_id: u64,
+        entity_id: i64,
     ) -> bool {
-        if self.shape_id != entity_id {
+        if self.shape_id != entity_id as i64 {
             return false;
         }
         registry
-            .get_point(self.point_id)
+            .get_point(self.point_id as u64)
             .is_some_and(|point| point.constrained)
     }
 
@@ -168,8 +168,8 @@ impl PyPointOnLineConstraint {
 impl PyPointOnLineConstraint {
     pub(crate) fn into_constraint(self) -> CoreConstraint {
         CoreConstraint {
-            point_id: self.point_id,
-            shape_id: self.shape_id,
+            point_id: self.point_id as u64,
+            shape_id: self.shape_id as u64,
             user_visible: self.user_visible,
         }
     }

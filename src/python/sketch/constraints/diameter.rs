@@ -25,7 +25,7 @@ use crate::sketch::constraints::diameter::DiameterConstraint as CoreConstraint;
 pub struct PyDiameterConstraint {
     /// The constrained circle.
     #[pyo3(get, set)]
-    pub circle_id: u64,
+    pub circle_id: i64,
     /// Resolved diameter value.
     #[pyo3(get, set)]
     pub value: f64,
@@ -46,7 +46,7 @@ impl PyDiameterConstraint {
     #[new]
     #[pyo3(signature = (circle_id, value, user_visible = true))]
     fn new(
-        circle_id: u64,
+        circle_id: i64,
         value: f64,
         user_visible: bool,
     ) -> PyClassInitializer<Self> {
@@ -146,9 +146,9 @@ impl PyDiameterConstraint {
     /// Whether this constraint restricts the given entity.
     fn targets_segment(
         &self,
-        _p1: u64,
-        _p2: u64,
-        entity_id: Option<u64>,
+        _p1: i64,
+        _p2: i64,
+        entity_id: Option<i64>,
     ) -> bool {
         entity_id.is_some_and(|eid| eid == self.circle_id)
     }
@@ -158,7 +158,7 @@ impl PyDiameterConstraint {
     fn constrains_radius(
         &self,
         _registry: PointCtx<'_>,
-        entity_id: u64,
+        entity_id: i64,
     ) -> bool {
         self.circle_id == entity_id
     }
@@ -188,7 +188,7 @@ impl PyDiameterConstraint {
 impl PyDiameterConstraint {
     pub(crate) fn into_constraint(self) -> CoreConstraint {
         CoreConstraint {
-            circle_id: self.circle_id,
+            circle_id: self.circle_id as u64,
             value: self.value,
             user_visible: self.user_visible,
             expression: self.expression,

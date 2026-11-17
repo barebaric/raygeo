@@ -25,7 +25,7 @@ use crate::sketch::constraints::drag::DragConstraint as CoreConstraint;
 pub struct PyDragConstraint {
     /// The dragged point.
     #[pyo3(get, set)]
-    pub point_id: u64,
+    pub point_id: i64,
     /// Target X coordinate.
     #[pyo3(get, set)]
     pub target_x: f64,
@@ -51,7 +51,7 @@ impl PyDragConstraint {
     #[pyo3(signature = (point_id, target_x, target_y, weight = 0.1,
                         user_visible = true))]
     fn new(
-        point_id: u64,
+        point_id: i64,
         target_x: f64,
         target_y: f64,
         weight: f64,
@@ -165,7 +165,7 @@ impl PyDragConstraint {
 impl PyDragConstraint {
     pub(crate) fn into_constraint(self) -> CoreConstraint {
         CoreConstraint::new(
-            self.point_id,
+            self.point_id as u64,
             self.target_x,
             self.target_y,
             self.weight,

@@ -25,16 +25,16 @@ use crate::sketch::constraints::aspect_ratio::AspectRatioConstraint as CoreConst
 pub struct PyAspectRatioConstraint {
     /// First point of the reference segment.
     #[pyo3(get, set)]
-    pub p1: u64,
+    pub p1: i64,
     /// Second point of the reference segment.
     #[pyo3(get, set)]
-    pub p2: u64,
+    pub p2: i64,
     /// First point of the scaled segment.
     #[pyo3(get, set)]
-    pub p3: u64,
+    pub p3: i64,
     /// Second point of the scaled segment.
     #[pyo3(get, set)]
-    pub p4: u64,
+    pub p4: i64,
     /// Resolved ratio value.
     #[pyo3(get, set)]
     pub ratio: f64,
@@ -54,10 +54,10 @@ impl PyAspectRatioConstraint {
     #[new]
     #[pyo3(signature = (p1, p2, p3, p4, ratio, user_visible = true))]
     fn new(
-        p1: u64,
-        p2: u64,
-        p3: u64,
-        p4: u64,
+        p1: i64,
+        p2: i64,
+        p3: i64,
+        p4: i64,
         ratio: f64,
         user_visible: bool,
     ) -> PyClassInitializer<Self> {
@@ -171,7 +171,11 @@ impl PyAspectRatioConstraint {
         CoreConstraint {
             user_visible: self.user_visible,
             ..CoreConstraint::new(
-                self.p1, self.p2, self.p3, self.p4, self.ratio,
+                self.p1 as u64,
+                self.p2 as u64,
+                self.p3 as u64,
+                self.p4 as u64,
+                self.ratio,
             )
         }
     }

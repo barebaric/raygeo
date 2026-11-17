@@ -12,7 +12,6 @@ use super::PyEntityBase;
 use crate::python::geo::geometry::Geometry as PyGeometry;
 use crate::python::sketch::constraints::dict_from_value;
 use crate::python::sketch::context::PointCtx;
-use crate::sketch::constraint::PointContext;
 use crate::sketch::entities::mirror::{MirrorAxis, MirrorDirection};
 use crate::sketch::entities::polygon::PolygonEntity as CorePolygon;
 use crate::sketch::entities::Entity;
@@ -341,10 +340,7 @@ impl PyPolygon {
     }
     /// Builds a polygon from its reference dictionary form.
     #[staticmethod]
-    fn from_dict(
-        py: Python<'_>,
-        data: &Bound<'_, PyDict>,
-    ) -> PyResult<Py<PyPolygon>> {
+    fn from_dict(py: Python<'_>, data: &Bound<'_, PyDict>) -> PyResult<Py<PyPolygon>> {
         let value = crate::python::sketch::registry::value_from_dict(data)?;
         let inner = CorePolygon::from_json(&value).ok_or_else(|| {
             pyo3::exceptions::PyValueError::new_err("invalid polygon dict")

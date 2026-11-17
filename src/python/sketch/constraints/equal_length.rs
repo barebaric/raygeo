@@ -28,7 +28,7 @@ use crate::sketch::constraints::equal_length::EqualLengthConstraint as CoreConst
 pub struct PyEqualLengthConstraint {
     /// The constrained entities.
     #[pyo3(get, set)]
-    pub entity_ids: Vec<u64>,
+    pub entity_ids: Vec<i64>,
     /// Reference user-visibility flag.
     #[pyo3(get)]
     pub user_visible: bool,
@@ -44,7 +44,7 @@ impl PyEqualLengthConstraint {
     #[new]
     #[pyo3(signature = (entity_ids, user_visible = true))]
     fn new(
-        entity_ids: Vec<u64>,
+        entity_ids: Vec<i64>,
         user_visible: bool,
     ) -> PyClassInitializer<Self> {
         PyClassInitializer::from(PyConstraintBase).add_subclass(
@@ -130,9 +130,9 @@ impl PyEqualLengthConstraint {
     /// entity.
     fn targets_segment(
         &self,
-        _p1: u64,
-        _p2: u64,
-        entity_id: Option<u64>,
+        _p1: i64,
+        _p2: i64,
+        entity_id: Option<i64>,
     ) -> bool {
         entity_id.is_some_and(|eid| self.entity_ids.contains(&eid))
     }
@@ -142,7 +142,7 @@ impl PyEqualLengthConstraint {
     fn constrains_radius(
         &self,
         _registry: PointCtx<'_>,
-        entity_id: u64,
+        entity_id: i64,
     ) -> bool {
         self.entity_ids.contains(&entity_id)
     }
@@ -172,7 +172,9 @@ impl PyEqualLengthConstraint {
 impl PyEqualLengthConstraint {
     pub(crate) fn into_constraint(self) -> CoreConstraint {
         CoreConstraint {
-            entity_ids: self.entity_ids,
+            entity_ids: self.entity_ids.iter()
+                .map(|&id| id as u64)
+                .collect(),
             user_visible: self.user_visible,
         }
     }

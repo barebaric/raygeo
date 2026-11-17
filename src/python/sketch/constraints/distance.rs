@@ -25,10 +25,10 @@ use crate::sketch::constraints::distance::DistanceConstraint as CoreConstraint;
 pub struct PyDistanceConstraint {
     /// First point.
     #[pyo3(get, set)]
-    pub p1: u64,
+    pub p1: i64,
     /// Second point.
     #[pyo3(get, set)]
-    pub p2: u64,
+    pub p2: i64,
     /// Resolved distance value.
     #[pyo3(get, set)]
     pub value: f64,
@@ -49,8 +49,8 @@ impl PyDistanceConstraint {
     #[new]
     #[pyo3(signature = (p1, p2, value, user_visible = true))]
     fn new(
-        p1: u64,
-        p2: u64,
+        p1: i64,
+        p2: i64,
         value: f64,
         user_visible: bool,
     ) -> PyClassInitializer<Self> {
@@ -154,9 +154,9 @@ impl PyDistanceConstraint {
     #[pyo3(signature = (p1, p2, entity_id, registry))]
     fn targets_segment(
         &self,
-        p1: u64,
-        p2: u64,
-        entity_id: Option<u64>,
+        p1: i64,
+        p2: i64,
+        entity_id: Option<i64>,
         registry: PointCtx<'_>,
     ) -> bool {
         let _ = (entity_id, registry);
@@ -168,7 +168,7 @@ impl PyDistanceConstraint {
     fn constrains_radius(
         &self,
         registry: PointCtx<'_>,
-        entity_id: u64,
+        entity_id: i64,
     ) -> bool {
         let _ = (registry, entity_id);
         false
@@ -198,7 +198,7 @@ impl PyDistanceConstraint {
 
 impl PyDistanceConstraint {
     pub(crate) fn into_constraint(self) -> CoreConstraint {
-        let mut core = CoreConstraint::new(self.p1, self.p2, self.value);
+        let mut core = CoreConstraint::new(self.p1 as u64, self.p2 as u64, self.value);
         core.user_visible = self.user_visible;
         core.set_expression(self.expression);
         core

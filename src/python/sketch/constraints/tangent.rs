@@ -24,10 +24,10 @@ use crate::sketch::constraints::tangent::TangentConstraint as CoreConstraint;
 pub struct PyTangentConstraint {
     /// The tangent line.
     #[pyo3(get, set)]
-    pub line_id: u64,
+    pub line_id: i64,
     /// The tangent circle or arc.
     #[pyo3(get, set)]
-    pub shape_id: u64,
+    pub shape_id: i64,
     /// Reference user-visibility flag.
     #[pyo3(get)]
     pub user_visible: bool,
@@ -43,8 +43,8 @@ impl PyTangentConstraint {
     #[new]
     #[pyo3(signature = (line_id, shape_id, user_visible = true))]
     fn new(
-        line_id: u64,
-        shape_id: u64,
+        line_id: i64,
+        shape_id: i64,
         user_visible: bool,
     ) -> PyClassInitializer<Self> {
         PyClassInitializer::from(PyConstraintBase).add_subclass(
@@ -152,8 +152,8 @@ impl PyTangentConstraint {
 impl PyTangentConstraint {
     pub(crate) fn into_constraint(self) -> CoreConstraint {
         CoreConstraint {
-            line_id: self.line_id,
-            shape_id: self.shape_id,
+            line_id: self.line_id as u64,
+            shape_id: self.shape_id as u64,
             user_visible: self.user_visible,
         }
     }

@@ -24,10 +24,10 @@ use crate::sketch::constraints::symmetry::SymmetryConstraint as CoreConstraint;
 pub struct PySymmetryConstraint {
     /// First point.
     #[pyo3(get, set)]
-    pub p1: u64,
+    pub p1: i64,
     /// Second point.
     #[pyo3(get, set)]
-    pub p2: u64,
+    pub p2: i64,
     /// Symmetry center point, for point symmetry.
     #[pyo3(get, set)]
     pub center: Option<u64>,
@@ -50,8 +50,8 @@ impl PySymmetryConstraint {
     #[pyo3(signature = (p1, p2, center = None, axis = None,
                         user_visible = true))]
     fn new(
-        p1: u64,
-        p2: u64,
+        p1: i64,
+        p2: i64,
         center: Option<u64>,
         axis: Option<u64>,
         user_visible: bool,
@@ -163,8 +163,8 @@ impl PySymmetryConstraint {
 impl PySymmetryConstraint {
     pub(crate) fn into_constraint(self) -> CoreConstraint {
         CoreConstraint {
-            p1: self.p1,
-            p2: self.p2,
+            p1: self.p1 as u64,
+            p2: self.p2 as u64,
             center: self.center,
             axis: self.axis,
             user_visible: self.user_visible,

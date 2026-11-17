@@ -26,7 +26,7 @@ use crate::sketch::constraints::radius::RadiusConstraint as CoreConstraint;
 pub struct PyRadiusConstraint {
     /// The constrained entity (circle or arc).
     #[pyo3(get, set)]
-    pub entity_id: u64,
+    pub entity_id: i64,
     /// Target radius value.
     #[pyo3(get, set)]
     pub value: f64,
@@ -44,7 +44,7 @@ impl PyRadiusConstraint {
     #[new]
     #[pyo3(signature = (entity_id, value, user_visible = true))]
     fn new(
-        entity_id: u64,
+        entity_id: i64,
         value: f64,
         user_visible: bool,
     ) -> PyClassInitializer<Self> {
@@ -140,9 +140,9 @@ impl PyRadiusConstraint {
     /// Whether this constraint restricts the given entity.
     fn targets_segment(
         &self,
-        _p1: u64,
-        _p2: u64,
-        entity_id: Option<u64>,
+        _p1: i64,
+        _p2: i64,
+        entity_id: Option<i64>,
     ) -> bool {
         entity_id.is_some_and(|eid| eid == self.entity_id)
     }
@@ -152,7 +152,7 @@ impl PyRadiusConstraint {
     fn constrains_radius(
         &self,
         _registry: PointCtx<'_>,
-        entity_id: u64,
+        entity_id: i64,
     ) -> bool {
         self.entity_id == entity_id
     }
@@ -182,7 +182,7 @@ impl PyRadiusConstraint {
 impl PyRadiusConstraint {
     pub(crate) fn into_constraint(self) -> CoreConstraint {
         CoreConstraint {
-            entity_id: self.entity_id,
+            entity_id: self.entity_id as u64,
             value: self.value,
             user_visible: self.user_visible,
             expression: self.expression,

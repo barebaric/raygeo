@@ -25,16 +25,16 @@ use crate::sketch::constraints::parallelogram::ParallelogramConstraint as CoreCo
 pub struct PyParallelogramConstraint {
     /// Origin point.
     #[pyo3(get, set)]
-    pub p_origin: u64,
+    pub p_origin: i64,
     /// Width point.
     #[pyo3(get, set)]
-    pub p_width: u64,
+    pub p_width: i64,
     /// Height point.
     #[pyo3(get, set)]
-    pub p_height: u64,
+    pub p_height: i64,
     /// Fourth corner.
     #[pyo3(get, set)]
-    pub p4: u64,
+    pub p4: i64,
     /// Reference user-visibility flag.
     #[pyo3(get)]
     pub user_visible: bool,
@@ -50,10 +50,10 @@ impl PyParallelogramConstraint {
     #[new]
     #[pyo3(signature = (p_origin, p_width, p_height, p4, user_visible = true))]
     fn new(
-        p_origin: u64,
-        p_width: u64,
-        p_height: u64,
-        p4: u64,
+        p_origin: i64,
+        p_width: i64,
+        p_height: i64,
+        p4: i64,
         user_visible: bool,
     ) -> PyClassInitializer<Self> {
         PyClassInitializer::from(PyConstraintBase).add_subclass(
@@ -162,10 +162,10 @@ impl PyParallelogramConstraint {
 impl PyParallelogramConstraint {
     pub(crate) fn into_constraint(self) -> CoreConstraint {
         let mut core = CoreConstraint::new(
-            self.p_origin,
-            self.p_width,
-            self.p_height,
-            self.p4,
+            self.p_origin as u64,
+            self.p_width as u64,
+            self.p_height as u64,
+            self.p4 as u64,
         );
         core.user_visible = self.user_visible;
         core

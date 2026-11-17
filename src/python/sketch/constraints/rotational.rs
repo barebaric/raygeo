@@ -24,13 +24,13 @@ use crate::sketch::constraints::rotational::RotationalConstraint as CoreConstrai
 pub struct PyRotationalConstraint {
     /// Rotation center.
     #[pyo3(get, set)]
-    pub center: u64,
+    pub center: i64,
     /// Source point.
     #[pyo3(get, set)]
-    pub p1: u64,
+    pub p1: i64,
     /// Rotated point.
     #[pyo3(get, set)]
-    pub p2: u64,
+    pub p2: i64,
     /// Rotation angle in radians (the reference ``value`` attribute).
     #[pyo3(get, set)]
     pub angle_rad: f64,
@@ -51,9 +51,9 @@ impl PyRotationalConstraint {
     #[new]
     #[pyo3(signature = (center, p1, p2, angle_rad, user_visible = true))]
     fn new(
-        center: u64,
-        p1: u64,
-        p2: u64,
+        center: i64,
+        p1: i64,
+        p2: i64,
         angle_rad: f64,
         user_visible: bool,
     ) -> PyClassInitializer<Self> {
@@ -188,7 +188,12 @@ impl PyRotationalConstraint {
 impl PyRotationalConstraint {
     pub(crate) fn into_constraint(self) -> CoreConstraint {
         let mut core =
-            CoreConstraint::new(self.center, self.p1, self.p2, self.angle_rad);
+            CoreConstraint::new(
+            self.center as u64,
+            self.p1 as u64,
+            self.p2 as u64,
+            self.angle_rad,
+        );
         core.user_visible = self.user_visible;
         core.set_expression(self.expression);
         core

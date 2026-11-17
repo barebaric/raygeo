@@ -25,10 +25,10 @@ use crate::sketch::constraints::coincident::CoincidentConstraint as CoreConstrai
 pub struct PyCoincidentConstraint {
     /// First point.
     #[pyo3(get, set)]
-    pub p1: u64,
+    pub p1: i64,
     /// Second point.
     #[pyo3(get, set)]
-    pub p2: u64,
+    pub p2: i64,
     /// Reference user-visibility flag.
     #[pyo3(get)]
     pub user_visible: bool,
@@ -43,7 +43,7 @@ impl PyCoincidentConstraint {
     /// Creates the constraint from its resolved points and values.
     #[new]
     #[pyo3(signature = (p1, p2, user_visible = true))]
-    fn new(p1: u64, p2: u64, user_visible: bool) -> PyClassInitializer<Self> {
+    fn new(p1: i64, p2: i64, user_visible: bool) -> PyClassInitializer<Self> {
         PyClassInitializer::from(PyConstraintBase).add_subclass(
             PyCoincidentConstraint {
                 p1,
@@ -150,7 +150,7 @@ impl PyCoincidentConstraint {
     pub(crate) fn into_constraint(self) -> CoreConstraint {
         CoreConstraint {
             user_visible: self.user_visible,
-            ..CoreConstraint::new(self.p1, self.p2)
+            ..CoreConstraint::new(self.p1 as u64, self.p2 as u64)
         }
     }
 }

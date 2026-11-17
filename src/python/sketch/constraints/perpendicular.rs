@@ -24,10 +24,10 @@ use crate::sketch::constraints::perpendicular::PerpendicularConstraint as CoreCo
 pub struct PyPerpendicularConstraint {
     /// First operand entity.
     #[pyo3(get, set)]
-    pub e1_id: u64,
+    pub e1_id: i64,
     /// Second operand entity.
     #[pyo3(get, set)]
-    pub e2_id: u64,
+    pub e2_id: i64,
     /// Reference user-visibility flag.
     #[pyo3(get)]
     pub user_visible: bool,
@@ -43,8 +43,8 @@ impl PyPerpendicularConstraint {
     #[new]
     #[pyo3(signature = (e1_id, e2_id, user_visible = true))]
     fn new(
-        e1_id: u64,
-        e2_id: u64,
+        e1_id: i64,
+        e2_id: i64,
         user_visible: bool,
     ) -> PyClassInitializer<Self> {
         PyClassInitializer::from(PyConstraintBase).add_subclass(
@@ -152,8 +152,8 @@ impl PyPerpendicularConstraint {
 impl PyPerpendicularConstraint {
     pub(crate) fn into_constraint(self) -> CoreConstraint {
         CoreConstraint {
-            e1_id: self.e1_id,
-            e2_id: self.e2_id,
+            e1_id: self.e1_id as u64,
+            e2_id: self.e2_id as u64,
             user_visible: self.user_visible,
         }
     }

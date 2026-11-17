@@ -17,7 +17,7 @@ impl<'a, 'py> FromPyObject<'a, 'py> for EntityId {
     fn extract(
         ob: pyo3::Borrowed<'a, 'py, PyAny>,
     ) -> Result<Self, Self::Error> {
-        Ok(EntityId(ob.extract::<u64>()?))
+        Ok(EntityId(ob.extract::<i64>()? as u64))
     }
 }
 
@@ -30,7 +30,7 @@ impl<'py> IntoPyObject<'py> for EntityId {
         self,
         py: Python<'py>,
     ) -> Result<Self::Output, Self::Error> {
-        Ok(self.0.into_pyobject(py)?.into_any())
+        Ok((self.0 as i64).into_pyobject(py)?.into_any())
     }
 }
 

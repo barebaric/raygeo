@@ -26,10 +26,10 @@ use crate::sketch::constraints::point_on_curve::PointOnCurveConstraint as CoreCo
 pub struct PyPointOnCurveConstraint {
     /// The constrained point.
     #[pyo3(get, set)]
-    pub point_id: u64,
+    pub point_id: i64,
     /// The constrained curve.
     #[pyo3(get, set)]
-    pub shape_id: u64,
+    pub shape_id: i64,
     /// Reference user-visibility flag.
     #[pyo3(get)]
     pub user_visible: bool,
@@ -45,8 +45,8 @@ impl PyPointOnCurveConstraint {
     #[new]
     #[pyo3(signature = (point_id, shape_id, user_visible = true))]
     fn new(
-        point_id: u64,
-        shape_id: u64,
+        point_id: i64,
+        shape_id: i64,
         user_visible: bool,
     ) -> PyClassInitializer<Self> {
         PyClassInitializer::from(PyConstraintBase).add_subclass(
@@ -151,8 +151,8 @@ impl PyPointOnCurveConstraint {
 impl PyPointOnCurveConstraint {
     pub(crate) fn into_constraint(self) -> CoreConstraint {
         CoreConstraint {
-            point_id: self.point_id,
-            shape_id: self.shape_id,
+            point_id: self.point_id as u64,
+            shape_id: self.shape_id as u64,
             user_visible: self.user_visible,
         }
     }
