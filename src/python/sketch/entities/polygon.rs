@@ -88,6 +88,11 @@ impl PyPolygon {
         self.inner.closed
     }
 
+    #[setter]
+    fn set_closed(&mut self, value: bool) {
+        self.inner.closed = value;
+    }
+
     /// The outer contour vertices in the local frame.
     #[getter]
     fn vertices(&self) -> Vec<(f64, f64)> {
