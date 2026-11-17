@@ -336,7 +336,8 @@ impl PySketchPoint {
         )
     }
 
-    /// The bezier entities connected to this point.
+    /// The bezier entities connected to this point, as the
+    /// registry's own Python objects.
     #[pyo3(signature = (registry, sketch = None))]
     fn get_connected_beziers<'py>(
         &self,
@@ -346,9 +347,9 @@ impl PySketchPoint {
     ) -> PyResult<Vec<Bound<'py, PyAny>>> {
         let mut point_ids = vec![self.inner.id];
         if let Some(sketch) = sketch {
-            if let Ok(ids) =
-                sketch.call_method1("get_coincident_points", (self.inner.id,))
-                    .and_then(|v| v.extract::<Vec<u64>>())
+            if let Ok(ids) = sketch
+                .call_method1("get_coincident_points", (self.inner.id,))
+                .and_then(|v| v.extract::<Vec<u64>>())
             {
                 point_ids.extend(ids);
             }
@@ -363,15 +364,17 @@ impl PySketchPoint {
             }
             let ids = entity.get_point_ids();
             if ids.iter().any(|pid| point_ids.contains(pid)) {
-                connected.push((eid, entity));
+                let raw = registry.0.call_method1("get_entity", (eid,))?;
+                if raw.is_none() {
+                    let object =
+                        super::entity_to_py(py, entity.as_ref(), &registry.0)?;
+                    connected.push(object);
+                } else {
+                    connected.push(raw);
+                }
             }
         }
-        connected
-            .into_iter()
-            .map(|(eid, entity)| {
-                super::entity_to_py(py, entity.as_ref(), &registry.0)
-            })
-            .collect()
+        Ok(connected)
     }
 
     /// The two bezier entities joined at this point, if any.
@@ -381,22 +384,16 @@ impl PySketchPoint {
         py: Python<'py>,
         registry: PointCtx<'py>,
         sketch: Option<&Bound<'py, PyAny>>,
-    ) -> PyResult<Py<PyAny>> {
+    ) -> PyResult<(Bound<'py, PyAny>, Bound<'py, PyAny>)> {
         let connected = self.get_connected_beziers(py, registry, sketch)?;
-        let pair: Vec<Bound<'_, PyAny>> = match connected.len() {
-            0 => vec![
-                py.None().into_bound(py),
-                py.None().into_bound(py),
-            ],
-            1 => vec![
-                connected[0].clone(),
-                py.None().into_bound(py),
-            ],
-            _ => vec![connected[0].clone(), connected[1].clone()],
-        };
-        let list = pyo3::types::PyTuple::new(py, pair)?;
-        Ok(list.into_any().unbind())
+        let none = py.None().into_bound(py);
+        match connected.len() {
+            0 => Ok((none.clone(), none)),
+            1 => Ok((connected[0].clone(), none)),
+            _ => Ok((connected[0].clone(), connected[1].clone())),
+        }
     }
+
 }
 
 /// Registers the point class with the given module.
