@@ -5,42 +5,39 @@ import builtins
 import collections.abc
 from raygeo.sketch import constraints
 from raygeo.sketch import protocols
-from raygeo.sketch import registry
 import typing
 __all__ = [
     "PointOnLineConstraint",
-    "PointOnTarget",
 ]
 
-@typing.final
 class PointOnLineConstraint(constraints.Constraint):
     r"""
     Enforces a point lies on a line or circle/arc circumference.
     """
     @property
-    def point(self) -> builtins.int:
+    def point_id(self) -> builtins.int:
+        r"""
+        The constrained point.
+        """
+    @point_id.setter
+    def point_id(self, value: builtins.int) -> None:
         r"""
         The constrained point.
         """
     @property
-    def target(self) -> PointOnTarget:
+    def shape_id(self) -> builtins.int:
         r"""
-        Resolved target geometry.
+        The target shape (line or radius-bearing entity).
+        """
+    @shape_id.setter
+    def shape_id(self, value: builtins.int) -> None:
+        r"""
+        The target shape (line or radius-bearing entity).
         """
     @property
     def user_visible(self) -> builtins.bool:
         r"""
         Reference user-visibility flag.
-        """
-    @property
-    def shape_id(self) -> typing.Optional[builtins.int]:
-        r"""
-        Reference shape entity id (resolved from the registry).
-        """
-    @shape_id.setter
-    def shape_id(self, value: typing.Optional[builtins.int]) -> None:
-        r"""
-        Reference shape entity id (resolved from the registry).
         """
     @property
     def status(self) -> builtins.int:
@@ -52,24 +49,25 @@ class PointOnLineConstraint(constraints.Constraint):
         r"""
         Reference validation status ordinal.
         """
-    @property
-    def point_id(self) -> builtins.int:
-        r"""
-        Point ids the constraint references.
-        Alias for point (reference naming).
-        """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __new__(cls, point: builtins.int, target: PointOnTarget, user_visible: builtins.bool = True) -> PointOnLineConstraint:
+    def __new__(cls, point_id: builtins.int, shape_id: builtins.int, user_visible: builtins.bool = True) -> PointOnLineConstraint:
         r"""
         Creates the point-on-line/curve constraint.
         """
-    def error(self, registry: registry.EntityRegistry, _ctx: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
+    def error(self, registry: protocols.Registry, _params: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
         r"""
         Returns the constraint error at the registry's point
         positions.
         """
-    def referenced_points(self) -> builtins.list[builtins.int]: ...
-    def get_referenced_point_ids(self) -> builtins.set[builtins.int]:
+    def gradient(self, registry: protocols.Registry) -> builtins.dict[builtins.int, builtins.list[tuple[builtins.float, builtins.float]]]:
+        r"""
+        Partial derivatives of the error by point id.
+        """
+    def referenced_points(self, registry: protocols.Registry) -> builtins.list[builtins.int]:
+        r"""
+        Point ids the constraint references.
+        """
+    def get_referenced_point_ids(self, registry: protocols.Registry) -> builtins.set[builtins.int]:
         r"""
         Alias for referenced_points (reference naming).
         """
@@ -85,45 +83,14 @@ class PointOnLineConstraint(constraints.Constraint):
         r"""
         Sets the reference user-visibility flag.
         """
-    def constrains_radius(self, registry: registry.EntityRegistry, entity_id: builtins.int) -> builtins.bool:
+    def constrains_radius(self, registry: protocols.Registry, entity_id: builtins.int) -> builtins.bool:
         r"""
         Whether this constraint determines the target's radius: true
-        when the target is a circle/arc circumference and the
-        constrained point is itself solver-constrained.
+        when the target is the given entity and the constrained point
+        is itself solver-constrained.
         """
-    def is_hit(self, mx: builtins.float, my: builtins.float, threshold: builtins.float, registry: registry.EntityRegistry, to_screen: typing.Optional[collections.abc.Callable[[tuple[float, float]], tuple[float, float]]] = None) -> builtins.bool:
+    def is_hit(self, mx: builtins.float, my: builtins.float, threshold: builtins.float, registry: protocols.Registry, to_screen: typing.Optional[collections.abc.Callable[[tuple[float, float]], tuple[float, float]]] = None) -> builtins.bool:
         r"""
         Whether the constraint's rendered symbol is hit at (mx, my).
         """
-
-class PointOnTarget:
-    r"""
-    The resolved target geometry: an infinite line, or a circle/arc
-    circumference.
-    """
-    @typing.final
-    class Line(PointOnTarget):
-        r"""
-        The infinite line through two points.
-        """
-        __match_args__ = ("l1", "l2",)
-        @property
-        def l1(self) -> builtins.int: ...
-        @property
-        def l2(self) -> builtins.int: ...
-        def __new__(cls, l1: builtins.int, l2: builtins.int) -> PointOnTarget.Line: ...
-    
-    @typing.final
-    class RadiusCurve(PointOnTarget):
-        r"""
-        The circle/arc through center and radius-bearing point.
-        """
-        __match_args__ = ("center", "radius_point",)
-        @property
-        def center(self) -> builtins.int: ...
-        @property
-        def radius_point(self) -> builtins.int: ...
-        def __new__(cls, center: builtins.int, radius_point: builtins.int) -> PointOnTarget.RadiusCurve: ...
-    
-    ...
 

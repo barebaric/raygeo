@@ -5,13 +5,11 @@ import builtins
 import collections.abc
 from raygeo.sketch import constraints
 from raygeo.sketch import protocols
-from raygeo.sketch import registry
 import typing
 __all__ = [
     "EqualLengthConstraint",
 ]
 
-@typing.final
 class EqualLengthConstraint(constraints.Constraint):
     r"""
     Enforces equal characteristic lengths, one residual per
@@ -20,24 +18,19 @@ class EqualLengthConstraint(constraints.Constraint):
     shorter-side fallback) into flat tuples.
     """
     @property
-    def pairs(self) -> builtins.list[builtins.list[builtins.int]]:
+    def entity_ids(self) -> builtins.list[builtins.int]:
         r"""
-        Resolved characteristic-length pairs.
+        The constrained entities.
+        """
+    @entity_ids.setter
+    def entity_ids(self, value: typing.Sequence[builtins.int]) -> None:
+        r"""
+        The constrained entities.
         """
     @property
     def user_visible(self) -> builtins.bool:
         r"""
         Reference user-visibility flag.
-        """
-    @property
-    def entity_ids(self) -> builtins.list[builtins.int]:
-        r"""
-        Reference entity ids (resolved from the registry).
-        """
-    @entity_ids.setter
-    def entity_ids(self, value: typing.Sequence[builtins.int]) -> None:
-        r"""
-        Reference entity ids (resolved from the registry).
         """
     @property
     def status(self) -> builtins.int:
@@ -50,20 +43,24 @@ class EqualLengthConstraint(constraints.Constraint):
         Reference validation status ordinal.
         """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __new__(cls, pairs: typing.Sequence[typing.Sequence[builtins.int]], user_visible: builtins.bool = True) -> EqualLengthConstraint:
+    def __new__(cls, entity_ids: typing.Sequence[builtins.int], user_visible: builtins.bool = True) -> EqualLengthConstraint:
         r"""
-        Creates the constraint from resolved pairs.
+        Creates the constraint for the given entities.
         """
-    def error(self, registry: registry.EntityRegistry, _ctx: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
+    def error(self, registry: protocols.Registry, _ctx: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
         r"""
         Returns the constraint error at the registry's point
         positions.
         """
-    def referenced_points(self) -> builtins.list[builtins.int]:
+    def gradient(self, registry: protocols.Registry) -> builtins.dict[builtins.int, builtins.list[tuple[builtins.float, builtins.float]]]:
+        r"""
+        Partial derivatives of the error by point id.
+        """
+    def referenced_points(self, registry: protocols.Registry) -> builtins.list[builtins.int]:
         r"""
         Point ids the constraint references.
         """
-    def get_referenced_point_ids(self) -> builtins.set[builtins.int]:
+    def get_referenced_point_ids(self, registry: protocols.Registry) -> builtins.set[builtins.int]:
         r"""
         Alias for referenced_points (reference naming).
         """
@@ -79,19 +76,17 @@ class EqualLengthConstraint(constraints.Constraint):
         r"""
         Sets the reference user-visibility flag.
         """
-    def targets_segment(self, p1: builtins.int, p2: builtins.int, entity_id: typing.Optional[builtins.int], registry: registry.EntityRegistry) -> builtins.bool:
+    def targets_segment(self, _p1: builtins.int, _p2: builtins.int, entity_id: typing.Optional[builtins.int]) -> builtins.bool:
         r"""
         Whether this constraint restricts the length of the given
-        entity, matched through the registry by its defining points
-        (the point ids are ignored, mirroring the reference).
+        entity.
         """
-    def constrains_radius(self, registry: registry.EntityRegistry, entity_id: builtins.int) -> builtins.bool:
+    def constrains_radius(self, _registry: protocols.Registry, entity_id: builtins.int) -> builtins.bool:
         r"""
         Whether this constraint explicitly defines the radius/length
-        of the given entity, matched through the registry by its
-        defining points.
+        of the given entity.
         """
-    def is_hit(self, mx: builtins.float, my: builtins.float, threshold: builtins.float, registry: registry.EntityRegistry, to_screen: typing.Optional[collections.abc.Callable[[tuple[float, float]], tuple[float, float]]] = None) -> builtins.bool:
+    def is_hit(self, mx: builtins.float, my: builtins.float, threshold: builtins.float, registry: protocols.Registry, to_screen: typing.Optional[collections.abc.Callable[[tuple[float, float]], tuple[float, float]]] = None) -> builtins.bool:
         r"""
         Whether the constraint's rendered symbol is hit at (mx, my).
         """

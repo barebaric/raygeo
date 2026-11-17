@@ -5,46 +5,39 @@ import builtins
 import collections.abc
 from raygeo.sketch import constraints
 from raygeo.sketch import protocols
-from raygeo.sketch import registry
 import typing
 __all__ = [
     "RadiusConstraint",
 ]
 
-@typing.final
 class RadiusConstraint(constraints.Constraint):
     r"""
     Enforces the radius of a circle or arc.
     """
     @property
-    def center(self) -> builtins.int:
+    def entity_id(self) -> builtins.int:
         r"""
-        Center point of the circle/arc.
+        The constrained entity (circle or arc).
         """
-    @property
-    def radius_point(self) -> builtins.int:
+    @entity_id.setter
+    def entity_id(self, value: builtins.int) -> None:
         r"""
-        Radius-bearing point (circle radius point or arc start).
+        The constrained entity (circle or arc).
         """
     @property
     def value(self) -> builtins.float:
         r"""
-        Resolved radius value.
+        Target radius value.
+        """
+    @value.setter
+    def value(self, value: builtins.float) -> None:
+        r"""
+        Target radius value.
         """
     @property
     def user_visible(self) -> builtins.bool:
         r"""
         Reference user-visibility flag.
-        """
-    @property
-    def status(self) -> builtins.int:
-        r"""
-        Reference validation status ordinal.
-        """
-    @status.setter
-    def status(self, value: builtins.int) -> None:
-        r"""
-        Reference validation status ordinal.
         """
     @property
     def expression(self) -> typing.Optional[builtins.str]:
@@ -57,32 +50,31 @@ class RadiusConstraint(constraints.Constraint):
         Sets the expression string (evaluated caller-side).
         """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __new__(cls, center: builtins.int, radius_point: builtins.int, value: builtins.float, user_visible: builtins.bool = True) -> RadiusConstraint:
+    def __new__(cls, entity_id: builtins.int, value: builtins.float, user_visible: builtins.bool = True) -> RadiusConstraint:
         r"""
-        Creates the constraint from its resolved points and values.
+        Creates the constraint for an entity.
         """
-    def error(self, registry: registry.EntityRegistry, _ctx: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
+    def error(self, registry: protocols.Registry, _params: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
         r"""
-        Returns the constraint error at the registry's point
-        positions.
+        Returns the constraint error at the registry's point positions.
         """
-    def referenced_points(self) -> builtins.list[builtins.int]:
+    def gradient(self, registry: protocols.Registry) -> builtins.dict[builtins.int, builtins.list[tuple[builtins.float, builtins.float]]]:
+        r"""
+        Partial derivatives of the error by point id.
+        """
+    def referenced_points(self, registry: protocols.Registry) -> builtins.list[builtins.int]:
         r"""
         Point ids the constraint references.
         """
-    def get_referenced_point_ids(self) -> builtins.set[builtins.int]:
+    def get_referenced_point_ids(self, registry: protocols.Registry) -> builtins.set[builtins.int]:
         r"""
         Alias for referenced_points (reference naming).
-        """
-    def set_value(self, value: builtins.float) -> None:
-        r"""
-        Sets the resolved dimensional value.
         """
     def to_dict(self) -> dict:
         r"""
         Serializes to the reference constraint dictionary shape.
         """
-    def draw(self, ctx: protocols.Canvas, registry: protocols.DrawContext, to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], is_selected: builtins.bool = False, is_hovered: builtins.bool = False, point_radius: builtins.float = 5.0) -> None:
+    def draw(self, ctx: protocols.Canvas, registry: protocols.DrawContext, to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], is_selected: builtins.bool = False, is_hovered: builtins.bool = False, point_radius: builtins.float = 5.0, status: builtins.int = 1) -> None:
         r"""
         Draws the constraint's symbol onto the cairo context.
         """
@@ -90,20 +82,16 @@ class RadiusConstraint(constraints.Constraint):
         r"""
         Sets the reference user-visibility flag.
         """
-    def targets_segment(self, p1: builtins.int, p2: builtins.int, entity_id: typing.Optional[builtins.int], registry: registry.EntityRegistry) -> builtins.bool:
+    def targets_segment(self, _p1: builtins.int, _p2: builtins.int, entity_id: typing.Optional[builtins.int]) -> builtins.bool:
         r"""
-        Whether this constraint restricts the given entity.  The
-        entity is matched through the registry by its defining
-        points, mirroring the reference's stored entity id.
+        Whether this constraint restricts the given entity.
         """
-    def constrains_radius(self, registry: registry.EntityRegistry, entity_id: builtins.int) -> builtins.bool:
+    def constrains_radius(self, _registry: protocols.Registry, entity_id: builtins.int) -> builtins.bool:
         r"""
         Whether this constraint explicitly defines the radius of the
-        given entity.  The entity is matched through the registry by
-        its defining points, mirroring the reference's stored entity
-        id.
+        given entity.
         """
-    def is_hit(self, mx: builtins.float, my: builtins.float, threshold: builtins.float, registry: registry.EntityRegistry, to_screen: typing.Optional[collections.abc.Callable[[tuple[float, float]], tuple[float, float]]] = None) -> builtins.bool:
+    def is_hit(self, mx: builtins.float, my: builtins.float, threshold: builtins.float, registry: protocols.Registry, to_screen: typing.Optional[collections.abc.Callable[[tuple[float, float]], tuple[float, float]]] = None) -> builtins.bool:
         r"""
         Whether the constraint's rendered symbol is hit at (mx, my).
         """

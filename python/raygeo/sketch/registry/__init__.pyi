@@ -14,7 +14,6 @@ polymorphic queries.
 
 import builtins
 from raygeo import geo
-from raygeo.sketch import constraints
 from raygeo.sketch import entities
 from raygeo.sketch.entities import point
 from raygeo.sketch import types
@@ -173,46 +172,6 @@ class EntityRegistry:
     def set_construction(self, id: types.EntityID, construction: builtins.bool) -> None:
         r"""
         Sets the construction flag.
-        """
-    def add_constraint_json(self, dict: dict) -> builtins.int:
-        r"""
-        Adds a constraint from a reference constraint dictionary
-        (`.ryp` shape), resolving entity references through the
-        registry.  Returns the constraint handle.
-        """
-    def constraint_count(self) -> builtins.int:
-        r"""
-        Number of stored constraints.
-        """
-    def constraint_dict(self, index: builtins.int) -> dict:
-        r"""
-        The stored reference dictionary of a constraint.
-        """
-    def remove_constraint(self, index: builtins.int) -> None:
-        r"""
-        Removes a constraint by handle.
-        """
-    def constraint_residuals(self) -> builtins.list[builtins.float]:
-        r"""
-        Residual values of all stored constraints at the current
-        point positions.
-        """
-    def constraints(self) -> builtins.list[constraints.Constraint]:
-        r"""
-        All stored constraints as their concrete classes.
-        """
-    def get_constraint_object(self, index: builtins.int) -> typing.Optional[constraints.Constraint]:
-        r"""
-        The constraint object for a handle, or None.
-        """
-    def add_constraint(self, obj: typing.Any) -> builtins.int:
-        r"""
-        Adds a constraint object to the registry and returns its
-        handle.
-        """
-    def replace_constraint(self, index: builtins.int, obj: typing.Any) -> None:
-        r"""
-        Replaces the stored constraint at the given handle.
         """
     def point_constrained(self, id: types.EntityID) -> builtins.bool:
         r"""

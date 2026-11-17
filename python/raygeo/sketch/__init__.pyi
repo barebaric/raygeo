@@ -64,9 +64,10 @@ class Solver:
     r"""
     Trust-region least-squares solver for sketch constraint systems.
     """
-    def __new__(cls, points: typing.Sequence[PointDef], hard: typing.Sequence[typing.Any], auxiliary: typing.Optional[typing.Sequence[typing.Any]] = None, point_filter: typing.Optional[typing.Sequence[builtins.int]] = None) -> Solver:
+    def __new__(cls, points: typing.Sequence[PointDef], registry: registry.EntityRegistry, hard: typing.Sequence[typing.Any], auxiliary: typing.Optional[typing.Sequence[typing.Any]] = None, point_filter: typing.Optional[typing.Sequence[builtins.int]] = None) -> Solver:
         r"""
-        Builds a solver from point definitions, hard constraints,
+        Builds a solver from point definitions, the entity registry
+        backing entity-reference constraints, hard constraints,
         auxiliary (weak) constraints, and an optional point filter.
         """
     def solve(self, tolerance: builtins.float, update_dof: builtins.bool) -> builtins.bool:

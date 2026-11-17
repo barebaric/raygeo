@@ -5,13 +5,11 @@ import builtins
 import collections.abc
 from raygeo.sketch import constraints
 from raygeo.sketch import protocols
-from raygeo.sketch import registry
 import typing
 __all__ = [
     "DistanceConstraint",
 ]
 
-@typing.final
 class DistanceConstraint(constraints.Constraint):
     r"""
     Enforces a fixed distance between two points.
@@ -21,13 +19,28 @@ class DistanceConstraint(constraints.Constraint):
         r"""
         First point.
         """
+    @p1.setter
+    def p1(self, value: builtins.int) -> None:
+        r"""
+        First point.
+        """
     @property
     def p2(self) -> builtins.int:
         r"""
         Second point.
         """
+    @p2.setter
+    def p2(self, value: builtins.int) -> None:
+        r"""
+        Second point.
+        """
     @property
     def value(self) -> builtins.float:
+        r"""
+        Resolved distance value.
+        """
+    @value.setter
+    def value(self, value: builtins.float) -> None:
         r"""
         Resolved distance value.
         """
@@ -61,22 +74,22 @@ class DistanceConstraint(constraints.Constraint):
         r"""
         Creates the constraint from its resolved points and values.
         """
-    def error(self, registry: registry.EntityRegistry, _ctx: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
+    def error(self, registry: protocols.Registry, _ctx: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
         r"""
         Returns the constraint error at the registry's point
         positions.
         """
-    def referenced_points(self) -> builtins.list[builtins.int]:
+    def gradient(self, registry: protocols.Registry) -> builtins.dict[builtins.int, builtins.list[tuple[builtins.float, builtins.float]]]:
+        r"""
+        Partial derivatives of the error by point id.
+        """
+    def referenced_points(self, registry: protocols.Registry) -> builtins.list[builtins.int]:
         r"""
         Point ids the constraint references.
         """
-    def get_referenced_point_ids(self) -> builtins.set[builtins.int]:
+    def get_referenced_point_ids(self, registry: protocols.Registry) -> builtins.set[builtins.int]:
         r"""
         Alias for referenced_points (reference naming).
-        """
-    def set_value(self, value: builtins.float) -> None:
-        r"""
-        Sets the resolved dimensional value.
         """
     def to_dict(self) -> dict:
         r"""
@@ -90,18 +103,18 @@ class DistanceConstraint(constraints.Constraint):
         r"""
         Sets the reference user-visibility flag.
         """
-    def targets_segment(self, p1: builtins.int, p2: builtins.int, entity_id: typing.Optional[builtins.int], registry: registry.EntityRegistry) -> builtins.bool:
+    def targets_segment(self, p1: builtins.int, p2: builtins.int, entity_id: typing.Optional[builtins.int], registry: protocols.Registry) -> builtins.bool:
         r"""
         Whether this constraint defines the length/distance of the
         segment (p1, p2).  The entity id is ignored: distance
         constraints track points only.
         """
-    def constrains_radius(self, registry: registry.EntityRegistry, entity_id: builtins.int) -> builtins.bool:
+    def constrains_radius(self, registry: protocols.Registry, entity_id: builtins.int) -> builtins.bool:
         r"""
         Whether this constraint explicitly defines the radius/length
         of the given entity.
         """
-    def is_hit(self, mx: builtins.float, my: builtins.float, threshold: builtins.float, registry: registry.EntityRegistry, to_screen: typing.Optional[collections.abc.Callable[[tuple[float, float]], tuple[float, float]]] = None) -> builtins.bool:
+    def is_hit(self, mx: builtins.float, my: builtins.float, threshold: builtins.float, registry: protocols.Registry, to_screen: typing.Optional[collections.abc.Callable[[tuple[float, float]], tuple[float, float]]] = None) -> builtins.bool:
         r"""
         Whether the constraint's rendered symbol is hit at (mx, my).
         """

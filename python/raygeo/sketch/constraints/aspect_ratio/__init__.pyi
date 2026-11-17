@@ -5,13 +5,11 @@ import builtins
 import collections.abc
 from raygeo.sketch import constraints
 from raygeo.sketch import protocols
-from raygeo.sketch import registry
 import typing
 __all__ = [
     "AspectRatioConstraint",
 ]
 
-@typing.final
 class AspectRatioConstraint(constraints.Constraint):
     r"""
     Enforces dist(p1, p2) == ratio * dist(p3, p4).
@@ -21,8 +19,18 @@ class AspectRatioConstraint(constraints.Constraint):
         r"""
         First point of the reference segment.
         """
+    @p1.setter
+    def p1(self, value: builtins.int) -> None:
+        r"""
+        First point of the reference segment.
+        """
     @property
     def p2(self) -> builtins.int:
+        r"""
+        Second point of the reference segment.
+        """
+    @p2.setter
+    def p2(self, value: builtins.int) -> None:
         r"""
         Second point of the reference segment.
         """
@@ -31,13 +39,28 @@ class AspectRatioConstraint(constraints.Constraint):
         r"""
         First point of the scaled segment.
         """
+    @p3.setter
+    def p3(self, value: builtins.int) -> None:
+        r"""
+        First point of the scaled segment.
+        """
     @property
     def p4(self) -> builtins.int:
         r"""
         Second point of the scaled segment.
         """
+    @p4.setter
+    def p4(self, value: builtins.int) -> None:
+        r"""
+        Second point of the scaled segment.
+        """
     @property
     def ratio(self) -> builtins.float:
+        r"""
+        Resolved ratio value.
+        """
+    @ratio.setter
+    def ratio(self, value: builtins.float) -> None:
         r"""
         Resolved ratio value.
         """
@@ -62,22 +85,22 @@ class AspectRatioConstraint(constraints.Constraint):
         Creates the aspect-ratio constraint from its resolved points
         and ratio.
         """
-    def error(self, registry: registry.EntityRegistry, _ctx: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
+    def error(self, registry: protocols.Registry, _ctx: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
         r"""
         Returns the constraint error at the registry's point
         positions.
         """
-    def referenced_points(self) -> builtins.list[builtins.int]:
+    def gradient(self, registry: protocols.Registry) -> builtins.dict[builtins.int, builtins.list[tuple[builtins.float, builtins.float]]]:
+        r"""
+        Partial derivatives of the error by point id.
+        """
+    def referenced_points(self, registry: protocols.Registry) -> builtins.list[builtins.int]:
         r"""
         Point ids the constraint references.
         """
-    def get_referenced_point_ids(self) -> builtins.set[builtins.int]:
+    def get_referenced_point_ids(self, registry: protocols.Registry) -> builtins.set[builtins.int]:
         r"""
         Alias for referenced_points (reference naming).
-        """
-    def set_ratio(self, ratio: builtins.float) -> None:
-        r"""
-        Sets the resolved ratio value.
         """
     def to_dict(self) -> dict:
         r"""
@@ -87,7 +110,7 @@ class AspectRatioConstraint(constraints.Constraint):
         r"""
         Draws the constraint's symbol onto the cairo context.
         """
-    def is_hit(self, mx: builtins.float, my: builtins.float, threshold: builtins.float, registry: registry.EntityRegistry, to_screen: typing.Optional[collections.abc.Callable[[tuple[float, float]], tuple[float, float]]] = None) -> builtins.bool:
+    def is_hit(self, mx: builtins.float, my: builtins.float, threshold: builtins.float, registry: protocols.Registry, to_screen: typing.Optional[collections.abc.Callable[[tuple[float, float]], tuple[float, float]]] = None) -> builtins.bool:
         r"""
         Whether the constraint's rendered symbol is hit at (mx, my).
         """

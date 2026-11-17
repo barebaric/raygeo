@@ -5,64 +5,39 @@ import builtins
 import collections.abc
 from raygeo.sketch import constraints
 from raygeo.sketch import protocols
-from raygeo.sketch import registry
 import typing
 __all__ = [
     "PointOnCurveConstraint",
 ]
 
-@typing.final
 class PointOnCurveConstraint(constraints.Constraint):
     r"""
-    Enforces a point lies on a cubic Bezier curve.  The control
-    points are stored as offsets from their owning endpoints; curves
-    without control points use the straight-segment residual
-    (`is_line`).
+    Enforces a point lies on a cubic Bezier curve.
     """
     @property
-    def point(self) -> builtins.int:
+    def point_id(self) -> builtins.int:
+        r"""
+        The constrained point.
+        """
+    @point_id.setter
+    def point_id(self, value: builtins.int) -> None:
         r"""
         The constrained point.
         """
     @property
-    def start(self) -> builtins.int:
+    def shape_id(self) -> builtins.int:
         r"""
-        Curve start point.
+        The constrained curve.
         """
-    @property
-    def end(self) -> builtins.int:
+    @shape_id.setter
+    def shape_id(self, value: builtins.int) -> None:
         r"""
-        Curve end point.
-        """
-    @property
-    def cp1_offset(self) -> tuple[builtins.float, builtins.float]:
-        r"""
-        First control point as offset from the start point.
-        """
-    @property
-    def cp2_offset(self) -> tuple[builtins.float, builtins.float]:
-        r"""
-        Second control point as offset from the end point.
-        """
-    @property
-    def is_line(self) -> builtins.bool:
-        r"""
-        Whether the curve degenerates to a straight segment.
+        The constrained curve.
         """
     @property
     def user_visible(self) -> builtins.bool:
         r"""
         Reference user-visibility flag.
-        """
-    @property
-    def shape_id(self) -> typing.Optional[builtins.int]:
-        r"""
-        Reference shape entity id (resolved from the registry).
-        """
-    @shape_id.setter
-    def shape_id(self, value: typing.Optional[builtins.int]) -> None:
-        r"""
-        Reference shape entity id (resolved from the registry).
         """
     @property
     def status(self) -> builtins.int:
@@ -74,24 +49,25 @@ class PointOnCurveConstraint(constraints.Constraint):
         r"""
         Reference validation status ordinal.
         """
-    @property
-    def point_id(self) -> builtins.int:
-        r"""
-        Point ids the constraint references.
-        Alias for point (reference naming).
-        """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __new__(cls, point: builtins.int, start: builtins.int, end: builtins.int, cp1_offset: tuple[builtins.float, builtins.float], cp2_offset: tuple[builtins.float, builtins.float], is_line: builtins.bool, user_visible: builtins.bool = True) -> PointOnCurveConstraint:
+    def __new__(cls, point_id: builtins.int, shape_id: builtins.int, user_visible: builtins.bool = True) -> PointOnCurveConstraint:
         r"""
         Creates the point-on-curve constraint.
         """
-    def error(self, registry: registry.EntityRegistry, _ctx: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
+    def error(self, registry: protocols.Registry, _params: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
         r"""
         Returns the constraint error at the registry's point
         positions.
         """
-    def referenced_points(self) -> builtins.list[builtins.int]: ...
-    def get_referenced_point_ids(self) -> builtins.set[builtins.int]:
+    def gradient(self, registry: protocols.Registry) -> builtins.dict[builtins.int, builtins.list[tuple[builtins.float, builtins.float]]]:
+        r"""
+        Partial derivatives of the error by point id.
+        """
+    def referenced_points(self, registry: protocols.Registry) -> builtins.list[builtins.int]:
+        r"""
+        Point ids the constraint references.
+        """
+    def get_referenced_point_ids(self, registry: protocols.Registry) -> builtins.set[builtins.int]:
         r"""
         Alias for referenced_points (reference naming).
         """
@@ -107,7 +83,7 @@ class PointOnCurveConstraint(constraints.Constraint):
         r"""
         Sets the reference user-visibility flag.
         """
-    def is_hit(self, mx: builtins.float, my: builtins.float, threshold: builtins.float, registry: registry.EntityRegistry, to_screen: typing.Optional[collections.abc.Callable[[tuple[float, float]], tuple[float, float]]] = None) -> builtins.bool:
+    def is_hit(self, mx: builtins.float, my: builtins.float, threshold: builtins.float, registry: protocols.Registry, to_screen: typing.Optional[collections.abc.Callable[[tuple[float, float]], tuple[float, float]]] = None) -> builtins.bool:
         r"""
         Whether the constraint's rendered symbol is hit at (mx, my).
         """

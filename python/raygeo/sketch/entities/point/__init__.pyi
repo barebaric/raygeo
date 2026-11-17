@@ -2,13 +2,13 @@
 # ruff: noqa: E501, F401, F403, F405
 
 import builtins
+from raygeo.sketch import protocols
 from raygeo.sketch import types
 import typing
 __all__ = [
     "SketchPoint",
 ]
 
-@typing.final
 class SketchPoint:
     r"""
     A sketch point: coordinates and solver flags.
@@ -22,6 +22,15 @@ class SketchPoint:
         r"""
         Unique point id, stable across solves.
         """
+    @id.setter
+    def id(self, value: types.EntityID) -> None: ...
+    @property
+    def waypoint_type(self) -> builtins.str:
+        r"""
+        Waypoint type string ("sharp"/"smooth"/"symmetric").
+        """
+    @waypoint_type.setter
+    def waypoint_type(self, value: builtins.str) -> None: ...
     @property
     def x(self) -> builtins.float:
         r"""
@@ -55,6 +64,19 @@ class SketchPoint:
         r"""
         Creates a point view with the given id and coordinates.
         """
+    def pos(self) -> tuple[builtins.float, builtins.float]:
+        r"""
+        The point position as a ``(x, y)`` tuple.
+        """
+    def to_dict(self) -> dict:
+        r"""
+        Serializes to the reference point dictionary shape.
+        """
+    @staticmethod
+    def from_dict(dict: dict) -> SketchPoint:
+        r"""
+        Builds a point from the reference point dictionary shape.
+        """
     def __getitem__(self, index: builtins.int) -> builtins.float:
         r"""
         Index 0 gives x, index 1 gives y (pair-like access).
@@ -80,5 +102,30 @@ class SketchPoint:
     def __repr__(self) -> builtins.str:
         r"""
         Returns a readable representation.
+        """
+    def is_sharp(self) -> builtins.bool:
+        r"""
+        Whether the waypoint role is sharp.
+        """
+    def is_smooth(self) -> builtins.bool:
+        r"""
+        Whether the waypoint role is smooth.
+        """
+    def is_symmetric(self) -> builtins.bool:
+        r"""
+        Whether the waypoint role is symmetric.
+        """
+    def is_in_rect(self, rect: tuple[builtins.float, builtins.float, builtins.float, builtins.float]) -> builtins.bool:
+        r"""
+        Whether the point lies inside the given rect.
+        """
+    def get_connected_beziers(self, registry: protocols.Registry, sketch: typing.Optional[typing.Any] = None) -> builtins.list[typing.Any]:
+        r"""
+        The bezier entities connected to this point, as the
+        registry's own Python objects.
+        """
+    def get_paired_beziers(self, registry: protocols.Registry, sketch: typing.Optional[typing.Any] = None) -> tuple[typing.Any, typing.Any]:
+        r"""
+        The two bezier entities joined at this point, if any.
         """
 

@@ -5,14 +5,11 @@ import builtins
 import collections.abc
 from raygeo.sketch import constraints
 from raygeo.sketch import protocols
-from raygeo.sketch import registry
 import typing
 __all__ = [
     "SymmetryConstraint",
-    "SymmetryTarget",
 ]
 
-@typing.final
 class SymmetryConstraint(constraints.Constraint):
     r"""
     Enforces two points are symmetric about a point or a line.
@@ -22,15 +19,40 @@ class SymmetryConstraint(constraints.Constraint):
         r"""
         First point.
         """
+    @p1.setter
+    def p1(self, value: builtins.int) -> None:
+        r"""
+        First point.
+        """
     @property
     def p2(self) -> builtins.int:
         r"""
         Second point.
         """
-    @property
-    def target(self) -> SymmetryTarget:
+    @p2.setter
+    def p2(self, value: builtins.int) -> None:
         r"""
-        Symmetry reference.
+        Second point.
+        """
+    @property
+    def center(self) -> typing.Optional[builtins.int]:
+        r"""
+        Symmetry center point, for point symmetry.
+        """
+    @center.setter
+    def center(self, value: typing.Optional[builtins.int]) -> None:
+        r"""
+        Symmetry center point, for point symmetry.
+        """
+    @property
+    def axis(self) -> typing.Optional[builtins.int]:
+        r"""
+        Symmetry axis line entity, for line symmetry.
+        """
+    @axis.setter
+    def axis(self, value: typing.Optional[builtins.int]) -> None:
+        r"""
+        Symmetry axis line entity, for line symmetry.
         """
     @property
     def user_visible(self) -> builtins.bool:
@@ -48,20 +70,24 @@ class SymmetryConstraint(constraints.Constraint):
         Reference validation status ordinal.
         """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __new__(cls, p1: builtins.int, p2: builtins.int, target: SymmetryTarget, user_visible: builtins.bool = True) -> SymmetryConstraint:
+    def __new__(cls, p1: builtins.int, p2: builtins.int, center: typing.Optional[builtins.int] = None, axis: typing.Optional[builtins.int] = None, user_visible: builtins.bool = True) -> SymmetryConstraint:
         r"""
         Creates the symmetry constraint.
         """
-    def error(self, registry: registry.EntityRegistry, _ctx: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
+    def error(self, registry: protocols.Registry, _params: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
         r"""
         Returns the constraint error at the registry's point
         positions.
         """
-    def referenced_points(self) -> builtins.list[builtins.int]:
+    def gradient(self, registry: protocols.Registry) -> builtins.dict[builtins.int, builtins.list[tuple[builtins.float, builtins.float]]]:
+        r"""
+        Partial derivatives of the error by point id.
+        """
+    def referenced_points(self, registry: protocols.Registry) -> builtins.list[builtins.int]:
         r"""
         Point ids the constraint references.
         """
-    def get_referenced_point_ids(self) -> builtins.set[builtins.int]:
+    def get_referenced_point_ids(self, registry: protocols.Registry) -> builtins.set[builtins.int]:
         r"""
         Alias for referenced_points (reference naming).
         """
@@ -77,37 +103,8 @@ class SymmetryConstraint(constraints.Constraint):
         r"""
         Sets the reference user-visibility flag.
         """
-    def is_hit(self, mx: builtins.float, my: builtins.float, threshold: builtins.float, registry: registry.EntityRegistry, to_screen: typing.Optional[collections.abc.Callable[[tuple[float, float]], tuple[float, float]]] = None) -> builtins.bool:
+    def is_hit(self, mx: builtins.float, my: builtins.float, threshold: builtins.float, registry: protocols.Registry, to_screen: typing.Optional[collections.abc.Callable[[tuple[float, float]], tuple[float, float]]] = None) -> builtins.bool:
         r"""
         Whether the constraint's rendered symbol is hit at (mx, my).
         """
-
-class SymmetryTarget:
-    r"""
-    The symmetry reference: point symmetry about a center, or line
-    symmetry about an axis line.
-    """
-    @typing.final
-    class Point(SymmetryTarget):
-        r"""
-        The center is the midpoint of p1 and p2.
-        """
-        __match_args__ = ("center",)
-        @property
-        def center(self) -> builtins.int: ...
-        def __new__(cls, center: builtins.int) -> SymmetryTarget.Point: ...
-    
-    @typing.final
-    class Line(SymmetryTarget):
-        r"""
-        p1 and p2 are mirrored across the line (l1, l2).
-        """
-        __match_args__ = ("l1", "l2",)
-        @property
-        def l1(self) -> builtins.int: ...
-        @property
-        def l2(self) -> builtins.int: ...
-        def __new__(cls, l1: builtins.int, l2: builtins.int) -> SymmetryTarget.Line: ...
-    
-    ...
 

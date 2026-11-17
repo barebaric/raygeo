@@ -5,13 +5,11 @@ import builtins
 import collections.abc
 from raygeo.sketch import constraints
 from raygeo.sketch import protocols
-from raygeo.sketch import registry
 import typing
 __all__ = [
     "VerticalConstraint",
 ]
 
-@typing.final
 class VerticalConstraint(constraints.Constraint):
     r"""
     Enforces two points have the same X coordinate.
@@ -21,8 +19,18 @@ class VerticalConstraint(constraints.Constraint):
         r"""
         First point.
         """
+    @p1.setter
+    def p1(self, value: builtins.int) -> None:
+        r"""
+        First point.
+        """
     @property
     def p2(self) -> builtins.int:
+        r"""
+        Second point.
+        """
+    @p2.setter
+    def p2(self, value: builtins.int) -> None:
         r"""
         Second point.
         """
@@ -46,16 +54,20 @@ class VerticalConstraint(constraints.Constraint):
         r"""
         Creates the constraint from its resolved points and values.
         """
-    def error(self, registry: registry.EntityRegistry, _ctx: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
+    def error(self, registry: protocols.Registry, _ctx: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
         r"""
         Returns the constraint error at the registry's point
         positions.
         """
-    def referenced_points(self) -> builtins.list[builtins.int]:
+    def gradient(self, registry: protocols.Registry) -> builtins.dict[builtins.int, builtins.list[tuple[builtins.float, builtins.float]]]:
+        r"""
+        Partial derivatives of the error by point id.
+        """
+    def referenced_points(self, registry: protocols.Registry) -> builtins.list[builtins.int]:
         r"""
         Point ids the constraint references.
         """
-    def get_referenced_point_ids(self) -> builtins.set[builtins.int]:
+    def get_referenced_point_ids(self, registry: protocols.Registry) -> builtins.set[builtins.int]:
         r"""
         Alias for referenced_points (reference naming).
         """
@@ -75,7 +87,7 @@ class VerticalConstraint(constraints.Constraint):
         r"""
         Whether this constraint pins geometry to global axes.
         """
-    def is_hit(self, mx: builtins.float, my: builtins.float, threshold: builtins.float, registry: registry.EntityRegistry, to_screen: typing.Optional[collections.abc.Callable[[tuple[float, float]], tuple[float, float]]] = None) -> builtins.bool:
+    def is_hit(self, mx: builtins.float, my: builtins.float, threshold: builtins.float, registry: protocols.Registry, to_screen: typing.Optional[collections.abc.Callable[[tuple[float, float]], tuple[float, float]]] = None) -> builtins.bool:
         r"""
         Whether the constraint's rendered symbol is hit at (mx, my).
         """

@@ -5,36 +5,34 @@ import builtins
 import collections.abc
 from raygeo.sketch import constraints
 from raygeo.sketch import protocols
-from raygeo.sketch import registry
 import typing
 __all__ = [
     "TangentConstraint",
 ]
 
-@typing.final
 class TangentConstraint(constraints.Constraint):
     r"""
     Enforces a line is tangent to a circle/arc.
     """
     @property
-    def l1(self) -> builtins.int:
+    def line_id(self) -> builtins.int:
         r"""
-        First point of the line.
+        The tangent line.
+        """
+    @line_id.setter
+    def line_id(self, value: builtins.int) -> None:
+        r"""
+        The tangent line.
         """
     @property
-    def l2(self) -> builtins.int:
+    def shape_id(self) -> builtins.int:
         r"""
-        Second point of the line.
+        The tangent circle or arc.
         """
-    @property
-    def center(self) -> builtins.int:
+    @shape_id.setter
+    def shape_id(self, value: builtins.int) -> None:
         r"""
-        Center point of the circle/arc.
-        """
-    @property
-    def radius_point(self) -> builtins.int:
-        r"""
-        Radius-bearing point (circle radius point or arc start).
+        The tangent circle or arc.
         """
     @property
     def user_visible(self) -> builtins.bool:
@@ -52,20 +50,24 @@ class TangentConstraint(constraints.Constraint):
         Reference validation status ordinal.
         """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __new__(cls, l1: builtins.int, l2: builtins.int, center: builtins.int, radius_point: builtins.int, user_visible: builtins.bool = True) -> TangentConstraint:
+    def __new__(cls, line_id: builtins.int, shape_id: builtins.int, user_visible: builtins.bool = True) -> TangentConstraint:
         r"""
-        Creates the constraint from its resolved points and values.
+        Creates the constraint between a line and a circle/arc.
         """
-    def error(self, registry: registry.EntityRegistry, _ctx: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
+    def error(self, registry: protocols.Registry, _ctx: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
         r"""
         Returns the constraint error at the registry's point
         positions.
         """
-    def referenced_points(self) -> builtins.list[builtins.int]:
+    def gradient(self, registry: protocols.Registry) -> builtins.dict[builtins.int, builtins.list[tuple[builtins.float, builtins.float]]]:
+        r"""
+        Partial derivatives of the error by point id.
+        """
+    def referenced_points(self, registry: protocols.Registry) -> builtins.list[builtins.int]:
         r"""
         Point ids the constraint references.
         """
-    def get_referenced_point_ids(self) -> builtins.set[builtins.int]:
+    def get_referenced_point_ids(self, registry: protocols.Registry) -> builtins.set[builtins.int]:
         r"""
         Alias for referenced_points (reference naming).
         """
@@ -81,7 +83,7 @@ class TangentConstraint(constraints.Constraint):
         r"""
         Sets the reference user-visibility flag.
         """
-    def is_hit(self, mx: builtins.float, my: builtins.float, threshold: builtins.float, registry: registry.EntityRegistry, to_screen: typing.Optional[collections.abc.Callable[[tuple[float, float]], tuple[float, float]]] = None) -> builtins.bool:
+    def is_hit(self, mx: builtins.float, my: builtins.float, threshold: builtins.float, registry: protocols.Registry, to_screen: typing.Optional[collections.abc.Callable[[tuple[float, float]], tuple[float, float]]] = None) -> builtins.bool:
         r"""
         Whether the constraint's rendered symbol is hit at (mx, my).
         """

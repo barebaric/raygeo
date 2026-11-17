@@ -5,29 +5,32 @@ import builtins
 import collections.abc
 from raygeo.sketch import constraints
 from raygeo.sketch import protocols
-from raygeo.sketch import registry
 import typing
 __all__ = [
     "DiameterConstraint",
 ]
 
-@typing.final
 class DiameterConstraint(constraints.Constraint):
     r"""
     Enforces the diameter of a circle.
     """
     @property
-    def center(self) -> builtins.int:
+    def circle_id(self) -> builtins.int:
         r"""
-        Center point of the circle.
+        The constrained circle.
         """
-    @property
-    def radius_point(self) -> builtins.int:
+    @circle_id.setter
+    def circle_id(self, value: builtins.int) -> None:
         r"""
-        Radius-bearing point of the circle.
+        The constrained circle.
         """
     @property
     def value(self) -> builtins.float:
+        r"""
+        Resolved diameter value.
+        """
+    @value.setter
+    def value(self, value: builtins.float) -> None:
         r"""
         Resolved diameter value.
         """
@@ -57,26 +60,26 @@ class DiameterConstraint(constraints.Constraint):
         Sets the expression string (evaluated caller-side).
         """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __new__(cls, center: builtins.int, radius_point: builtins.int, value: builtins.float, user_visible: builtins.bool = True) -> DiameterConstraint:
+    def __new__(cls, circle_id: builtins.int, value: builtins.float, user_visible: builtins.bool = True) -> DiameterConstraint:
         r"""
-        Creates the constraint from its resolved points and values.
+        Creates the constraint for a circle.
         """
-    def error(self, registry: registry.EntityRegistry, _ctx: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
+    def error(self, registry: protocols.Registry, _ctx: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
         r"""
         Returns the constraint error at the registry's point
         positions.
         """
-    def referenced_points(self) -> builtins.list[builtins.int]:
+    def gradient(self, registry: protocols.Registry) -> builtins.dict[builtins.int, builtins.list[tuple[builtins.float, builtins.float]]]:
+        r"""
+        Partial derivatives of the error by point id.
+        """
+    def referenced_points(self, registry: protocols.Registry) -> builtins.list[builtins.int]:
         r"""
         Point ids the constraint references.
         """
-    def get_referenced_point_ids(self) -> builtins.set[builtins.int]:
+    def get_referenced_point_ids(self, registry: protocols.Registry) -> builtins.set[builtins.int]:
         r"""
         Alias for referenced_points (reference naming).
-        """
-    def set_value(self, value: builtins.float) -> None:
-        r"""
-        Sets the resolved dimensional value.
         """
     def to_dict(self) -> dict:
         r"""
@@ -90,20 +93,16 @@ class DiameterConstraint(constraints.Constraint):
         r"""
         Sets the reference user-visibility flag.
         """
-    def targets_segment(self, p1: builtins.int, p2: builtins.int, entity_id: typing.Optional[builtins.int], registry: registry.EntityRegistry) -> builtins.bool:
+    def targets_segment(self, _p1: builtins.int, _p2: builtins.int, entity_id: typing.Optional[builtins.int]) -> builtins.bool:
         r"""
-        Whether this constraint restricts the given entity.  The
-        entity is matched through the registry by its defining
-        points, mirroring the reference's stored circle id.
+        Whether this constraint restricts the given entity.
         """
-    def constrains_radius(self, registry: registry.EntityRegistry, entity_id: builtins.int) -> builtins.bool:
+    def constrains_radius(self, _registry: protocols.Registry, entity_id: builtins.int) -> builtins.bool:
         r"""
         Whether this constraint explicitly defines the radius of the
-        given entity.  The entity is matched through the registry by
-        its defining points, mirroring the reference's stored circle
-        id.
+        given entity.
         """
-    def is_hit(self, mx: builtins.float, my: builtins.float, threshold: builtins.float, registry: registry.EntityRegistry, to_screen: typing.Optional[collections.abc.Callable[[tuple[float, float]], tuple[float, float]]] = None) -> builtins.bool:
+    def is_hit(self, mx: builtins.float, my: builtins.float, threshold: builtins.float, registry: protocols.Registry, to_screen: typing.Optional[collections.abc.Callable[[tuple[float, float]], tuple[float, float]]] = None) -> builtins.bool:
         r"""
         Whether the constraint's rendered symbol is hit at (mx, my).
         """

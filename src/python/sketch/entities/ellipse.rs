@@ -45,15 +45,18 @@ impl PyEllipse {
         construction: bool,
         helper_line_ids: Option<Vec<u64>>,
     ) -> PyClassInitializer<Self> {
+        let mut inner = CoreEllipse::new(
+            id,
+            center_idx,
+            radius_x_pt_idx,
+            radius_y_pt_idx,
+            construction,
+        );
+        inner.helper_line_ids = helper_line_ids.unwrap_or_default();
+        let helper_line_ids = inner.helper_line_ids.clone();
         PyClassInitializer::from(PyEntityBase).add_subclass(PyEllipse {
-            inner: CoreEllipse::new(
-                id,
-                center_idx,
-                radius_x_pt_idx,
-                radius_y_pt_idx,
-                construction,
-            ),
-            helper_line_ids: helper_line_ids.unwrap_or_default(),
+            inner,
+            helper_line_ids,
             registry: None,
         })
     }
