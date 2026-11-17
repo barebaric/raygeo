@@ -84,6 +84,20 @@ class Constraint:
         if ids is not None:
             self.__dict__["entity_ids"] = list(ids)
 
+    def __setattr__(self, name, value):
+        super().__setattr__(name, value)
+        if name in self.__dict__ and not name.startswith("_"):
+            self.__dict__[name] = getattr(self, name)
+
+    def __deepcopy__(self, memo):
+        clone = type(self).from_dict(self.to_dict())
+        clone.status = self.status
+        memo[id(self)] = clone
+        return clone
+
+    def __copy__(self):
+        return self.__deepcopy__({})
+
     def is_world_anchored(self) -> bool:
         """Returns True if this constraint pins geometry to global axes.
 

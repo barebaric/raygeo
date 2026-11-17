@@ -421,6 +421,7 @@ pub(crate) fn constraint_gradient(
     constraint: &dyn SketchConstraint,
     registry: &mut PointCtx<'_>,
 ) -> HashMap<u64, Vec<(f64, f64)>> {
+    let total_rows = constraint.residual_count(registry);
     let entries = constraint.gradient(registry);
     let mut map: HashMap<u64, Vec<(f64, f64)>> = HashMap::new();
     for (point_id, row, dx, dy) in entries {
@@ -430,6 +431,13 @@ pub(crate) fn constraint_gradient(
         }
         let (ox, oy) = rows[row];
         rows[row] = (ox + dx, oy + dy);
+    }
+    // The reference mapping gives every referenced point a list as
+    // long as the constraint's residual count.
+    for rows in map.values_mut() {
+        if rows.len() < total_rows {
+            rows.resize(total_rows, (0.0, 0.0));
+        }
     }
     map
 }
