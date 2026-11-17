@@ -79,7 +79,7 @@ class DragConstraint(constraints.Constraint):
         r"""
         Creates the drag constraint for a point and target position.
         """
-    def gradient(self, registry: protocols.Registry, _params: typing.Optional[typing.Any] = None) -> builtins.dict[builtins.int, builtins.list[tuple[builtins.float, builtins.float]]]:
+    def gradient(self, reg: protocols.Registry, params: typing.Optional[typing.Any] = None) -> builtins.dict[builtins.int, builtins.list[tuple[builtins.float, builtins.float]]]:
         r"""
         Partial derivatives of the error by point id.
         """
@@ -95,7 +95,7 @@ class DragConstraint(constraints.Constraint):
         r"""
         Sets the target coordinates and pull strength.
         """
-    def error(self, registry: protocols.Registry, _params: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
+    def error(self, reg: protocols.Registry, params: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
         r"""
         Returns the constraint error at the registry's point positions.
         """

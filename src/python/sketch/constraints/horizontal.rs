@@ -68,16 +68,13 @@ impl PyHorizontalConstraint {
     }
 
     /// Partial derivatives of the error by point id.
-    #[pyo3(signature = (registry, _params = None))]
+    #[pyo3(signature = (reg, params = None))]
     fn gradient(
         &self,
-        mut registry: PointCtx<'_>,
-        _params: Option<Py<PyAny>>,
+        mut reg: PointCtx<'_>,
+        params: Option<Py<PyAny>>,
     ) -> HashMap<u64, Vec<(f64, f64)>> {
-        super::constraint_gradient(
-            &self.clone().into_constraint(),
-            &mut registry,
-        )
+        super::constraint_gradient(&self.clone().into_constraint(), &mut reg)
     }
 
     /// Point ids the constraint references.
