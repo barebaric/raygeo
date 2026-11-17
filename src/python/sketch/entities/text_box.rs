@@ -142,6 +142,11 @@ impl PyTextBox {
         self.inner.construction_line_ids.clone()
     }
 
+    #[setter]
+    fn set_construction_line_ids(&mut self, value: Vec<u64>) {
+        self.inner.construction_line_ids = value;
+    }
+
     #[getter]
     fn content(&self) -> String {
         self.live().content.clone()
@@ -261,6 +266,16 @@ impl PyTextBox {
     #[getter]
     fn fill_color(&self) -> Option<(f64, f64, f64, f64)> {
         self.inner.base.fill_color.map(|c| (c[0], c[1], c[2], c[3]))
+    }
+
+    #[setter]
+    #[pyo3(name = "fill_color")]
+    fn set_fill_color_attr(
+        &mut self,
+        value: Option<(f64, f64, f64, f64)>,
+    ) {
+        self.inner.base_mut().fill_color =
+            value.map(|(r, g, b, a)| [r, g, b, a]);
     }
 
     /// The entity type name.

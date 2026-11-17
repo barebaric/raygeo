@@ -107,6 +107,11 @@ impl PyArc {
         self.inner.clockwise
     }
 
+    #[setter]
+    fn set_clockwise(&mut self, value: bool) {
+        self.inner.clockwise = value;
+    }
+
     /// Whether the entity is construction geometry.
     #[getter]
     fn construction(&self) -> bool {
@@ -167,6 +172,16 @@ impl PyArc {
     #[getter]
     fn fill_color(&self) -> Option<(f64, f64, f64, f64)> {
         self.inner.base.fill_color.map(|c| (c[0], c[1], c[2], c[3]))
+    }
+
+    #[setter]
+    #[pyo3(name = "fill_color")]
+    fn set_fill_color_attr(
+        &mut self,
+        value: Option<(f64, f64, f64, f64)>,
+    ) {
+        self.inner.base_mut().fill_color =
+            value.map(|(r, g, b, a)| [r, g, b, a]);
     }
 
     /// The arc's midpoint in model coordinates, if defined.
