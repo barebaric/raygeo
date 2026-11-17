@@ -95,6 +95,7 @@ def test_serialization_round_trip(setup_env):
     reg = setup_env
     c = RotationalConstraint(1, 2, 3, math.radians(45), user_visible=False)
     restored = _ModelRotationalConstraint.from_dict(c.to_dict())
+    assert restored.to_dict() == c.to_dict()
     assert restored.user_visible is False
     assert restored.value == c.value
 

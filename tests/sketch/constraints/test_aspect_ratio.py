@@ -197,6 +197,7 @@ def test_aspect_ratio_constraint_serialization_round_trip(setup_env):
     original = AspectRatioConstraint(p1, p2, p3, p4, 2.5)
 
     restored = _ModelAspectRatioConstraint.from_dict(original.to_dict())
+    assert restored.to_dict() == original.to_dict()
 
 
 def test_aspect_ratio_constraint_serialization_dict_format(setup_env):

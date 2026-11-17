@@ -43,7 +43,7 @@ def test_collinear_constraint_serialization():
         "p3": 3,
         "user_visible": True,
     }
-    restored = _ModelCollinearConstraint.from_dict(data)
+    _ModelCollinearConstraint.from_dict(data)
 
 
 def test_collinear_constraint_user_visible():

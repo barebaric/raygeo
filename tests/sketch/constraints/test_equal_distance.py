@@ -129,6 +129,7 @@ def test_equal_distance_constraint_serialization_round_trip(setup_env):
 
     # Serialize to dict and rebuild through the model layer
     restored = _ModelEqualDistanceConstraint.from_dict(original.to_dict())
+    assert restored.to_dict() == original.to_dict()
 
 
 def test_equal_distance_draw(setup_env):

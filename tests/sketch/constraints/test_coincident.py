@@ -95,6 +95,7 @@ def test_coincident_constraint_serialization_round_trip(setup_env):
 
     # Serialize to dict and rebuild through the model layer
     restored = _ModelCoincidentConstraint.from_dict(original.to_dict())
+    assert restored.to_dict() == original.to_dict()
 
 
 def test_coincident_is_hit(setup_env):

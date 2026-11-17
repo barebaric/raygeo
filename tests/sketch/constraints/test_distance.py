@@ -145,6 +145,7 @@ def test_distance_constraint_serialization_round_trip(setup_env):
 
     # Serialize to dict and rebuild through the model layer
     restored = _ModelDistanceConstraint.from_dict(original.to_dict())
+    assert restored.to_dict() == original.to_dict()
 
 
 def test_distance_constraint_serialization_round_trip_with_expression(
@@ -165,6 +166,7 @@ def test_distance_constraint_serialization_round_trip_with_expression(
     # Deserialize from dict through the model layer,
     # re-attaching the stored expression
     restored = _ModelDistanceConstraint.from_dict(serialized)
+    assert restored.to_dict() == serialized
 
 
 def test_distance_is_hit(setup_env):

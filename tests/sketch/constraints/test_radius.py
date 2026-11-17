@@ -152,7 +152,6 @@ def test_radius_constraint_gradient(setup_env):
     constraint = RadiusConstraint(arc_id, 12.0)
 
     # The arc's defining points: start, center.
-    start, center = reg.get_point(0), reg.get_point(2)
     _assert_gradient_matches_fd(reg, constraint, [0, 2])
 
 
