@@ -90,36 +90,6 @@ pub struct PyClearingWorkplanOptions {
 }
 
 impl PyClearingWorkplanOptions {
-    pub fn into_core(self) -> ClearingWorkplanOptions {
-        let cd = match self.cut_direction.as_str() {
-            "cw" => CutDirection::Cw,
-            _ => CutDirection::Ccw,
-        };
-        ClearingWorkplanOptions {
-            tool_radius: self.tool_radius,
-            step_over: self.step_over,
-            step_length: self.step_length,
-            target_z: self.target_z,
-            safe_z: self.safe_z,
-            wall_margin: self.wall_margin,
-            safe_margin: self.safe_margin,
-            stock_to_leave: self.stock_to_leave,
-            plunge_pitch: self.plunge_pitch,
-            angular_step: self.angular_step,
-            area_tolerance: self.area_tolerance,
-            max_deflection_deg: self.max_deflection_deg,
-            finishing: self.finishing,
-            max_entry_angle_deg: self.max_entry_angle_deg,
-            cut_direction: cd,
-            travel_mode: match self.travel_mode.as_str() {
-                "safe_z" => crate::ops::assembly::adaptive::TravelMode::SafeZ,
-                _ => crate::ops::assembly::adaptive::TravelMode::ClearedArea,
-            },
-            feed_rate: self.feed_rate,
-            plunge_feed: self.plunge_feed,
-        }
-    }
-
     pub fn from_core(opts: &ClearingWorkplanOptions) -> Self {
         PyClearingWorkplanOptions {
             tool_radius: opts.tool_radius,
@@ -153,7 +123,6 @@ impl PyClearingWorkplanOptions {
         }
     }
 }
-
 #[gen_stub_pymethods]
 #[pyo3::pymethods]
 impl PyClearingWorkplanOptions {

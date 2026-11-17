@@ -14,6 +14,7 @@ class DistanceConstraint(constraints.Constraint):
     r"""
     Enforces a fixed distance between two points.
     """
+    @property
     def p1(self) -> builtins.int:
         r"""
         First point.
@@ -23,6 +24,7 @@ class DistanceConstraint(constraints.Constraint):
         r"""
         First point.
         """
+    @property
     def p2(self) -> builtins.int:
         r"""
         Second point.
@@ -32,6 +34,7 @@ class DistanceConstraint(constraints.Constraint):
         r"""
         Second point.
         """
+    @property
     def value(self) -> builtins.float:
         r"""
         Resolved distance value.
@@ -41,10 +44,17 @@ class DistanceConstraint(constraints.Constraint):
         r"""
         Resolved distance value.
         """
+    @property
     def user_visible(self) -> builtins.bool:
         r"""
         Reference user-visibility flag.
         """
+    @user_visible.setter
+    def user_visible(self, value: builtins.bool) -> None:
+        r"""
+        Reference user-visibility flag.
+        """
+    @property
     def status(self) -> builtins.int:
         r"""
         Reference validation status ordinal.
@@ -54,22 +64,87 @@ class DistanceConstraint(constraints.Constraint):
         r"""
         Reference validation status ordinal.
         """
+    @property
     def expression(self) -> typing.Optional[builtins.str]:
         r"""
-        The stored expression string, if any (evaluated caller-side).
+        Stored expression string (evaluated by `update_from_context`).
         """
     @expression.setter
     def expression(self, value: typing.Optional[builtins.str]) -> None:
         r"""
-        Sets the expression string (evaluated caller-side).
+        Stored expression string (evaluated by `update_from_context`).
         """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __new__(cls, p1: builtins.int, p2: builtins.int, value: builtins.float, user_visible: builtins.bool = True) -> typing.Self:
+    def __new__(cls, p1: builtins.int, p2: builtins.int, value: typing.Any, expression: typing.Optional[builtins.str] = None, user_visible: builtins.bool = True) -> DistanceConstraint:
         r"""
         Creates the constraint from its resolved points and values.
+        """
+    def error(self, reg: protocols.Registry, params: typing.Optional[typing.Any] = None) -> builtins.float:
+        r"""
+        Returns the constraint error at the registry's point
+        positions.
+        """
+    def gradient(self, reg: protocols.Registry, params: typing.Optional[typing.Any] = None) -> builtins.dict[builtins.int, builtins.list[tuple[builtins.float, builtins.float]]]:
+        r"""
+        Partial derivatives of the error by point id.
         """
     def referenced_points(self, registry: protocols.Registry) -> builtins.list[builtins.int]:
         r"""
         Point ids the constraint references.
+        """
+    def to_dict(self) -> dict:
+        r"""
+        Serializes to the reference constraint dictionary shape.
+        """
+    @classmethod
+    def from_dict(cls, data: dict) -> typing.Any:
+        r"""
+        Rebuilds the constraint from its reference dictionary shape.
+        """
+    def draw(self, ctx: protocols.Canvas, registry: protocols.DrawContext, to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], is_selected: builtins.bool = False, is_hovered: builtins.bool = False, point_radius: builtins.float = 5.0) -> None:
+        r"""
+        Draws the constraint's symbol onto the cairo context.
+        """
+    def targets_segment(self, p1: builtins.int, p2: builtins.int, _entity_id: typing.Optional[builtins.int] = None) -> builtins.bool:
+        r"""
+        Whether this constraint defines the length/distance of the
+        segment (p1, p2).  The entity id is ignored: distance
+        constraints track points only.
+        """
+    def is_hit(self, sx: builtins.float, sy: builtins.float, registry: protocols.Registry, to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], element: typing.Optional[typing.Any], threshold: builtins.float) -> builtins.bool:
+        r"""
+        Whether the constraint's rendered symbol is hit at (sx, sy).
+        """
+    @classmethod
+    def get_type_key(cls) -> builtins.str:
+        r"""
+        The string key identifying this constraint type.
+        """
+    @staticmethod
+    def get_type_name() -> builtins.str:
+        r"""
+        The human-readable type name (translated).
+        """
+    @classmethod
+    def can_apply_to(cls, selection: typing.Any, sketch: typing.Optional[typing.Any] = None) -> builtins.bool:
+        r"""
+        Whether this constraint can be applied to the selection.
+        """
+    @classmethod
+    def applies_to_entities(cls, entities: typing.Any) -> builtins.bool:
+        r"""
+        Whether the operand is a line.
+        """
+    def get_title(self) -> builtins.str:
+        r"""
+        The human-readable title for this constraint.
+        """
+    def get_subtitle(self, registry: protocols.Registry) -> builtins.str:
+        r"""
+        The subtitle describing the constrained points.
+        """
+    def get_edit_subtitle(self) -> builtins.str:
+        r"""
+        The user-facing hint for the constraint edit dialog.
         """
 

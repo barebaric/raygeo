@@ -7,9 +7,6 @@ import pytest
 
 from raygeo.sketch import PointDef, Solver
 from raygeo.sketch.constraints.collinear import CollinearConstraint
-from raygeo.sketch.model.constraints.collinear import (
-    CollinearConstraint as _ModelCollinearConstraint,
-)
 from raygeo.sketch.registry import EntityRegistry
 
 
@@ -43,7 +40,7 @@ def test_collinear_constraint_serialization():
         "p3": 3,
         "user_visible": True,
     }
-    _ModelCollinearConstraint.from_dict(data)
+    CollinearConstraint.from_dict(data)
 
 
 def test_collinear_constraint_user_visible():
@@ -65,7 +62,7 @@ def test_collinear_constraint_error_zero(sketch_with_points):
     reg.set_point_position(p3, 5, 5)
 
     constraint = CollinearConstraint(p1, p2, p3)
-    error = constraint.error(reg)[0]
+    error = constraint.error(reg)
     assert abs(error) < 1e-9
 
 
@@ -74,7 +71,7 @@ def test_collinear_constraint_error_non_zero(sketch_with_points):
     reg, p1, p2, p3 = sketch_with_points
     # p1=(0,0), p2=(10,10), p3=(20,0)
     constraint = CollinearConstraint(p1, p2, p3)
-    error = constraint.error(reg)[0]
+    error = constraint.error(reg)
 
     # Expected error:
     #   (p2.x - p1.x) * (p3.y - p1.y) - (p2.y - p1.y) * (p3.x - p1.x)
@@ -128,7 +125,7 @@ def test_collinear_solver_integration(sketch_with_points):
     # verify the error is now zero.
     x, y = solver.positions()[2]
     reg.set_point_position(p3, x, y)
-    error = constraint.error(reg)[0]
+    error = constraint.error(reg)
     assert abs(error) < 1e-6
 
 

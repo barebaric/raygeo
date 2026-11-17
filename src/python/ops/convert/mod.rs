@@ -535,13 +535,6 @@ impl PyEncodeOutput {
             inner: std::sync::Arc::new(core),
         }
     }
-
-    pub fn into_core(self) -> EncodeOutput {
-        (*self.inner)
-            .downcast_ref::<EncodeOutput>()
-            .expect("PyEncodeOutput holds non-EncodeOutput")
-            .clone()
-    }
 }
 
 #[gen_stub_pymethods]

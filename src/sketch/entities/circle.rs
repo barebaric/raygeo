@@ -98,6 +98,10 @@ impl Entity for Circle {
         vec![self.center, self.radius_point]
     }
 
+    fn center_point_id(&self) -> Option<u64> {
+        Some(self.center)
+    }
+
     fn characteristic_length_pairs(&self) -> Vec<[u64; 2]> {
         vec![[self.center, self.radius_point]]
     }

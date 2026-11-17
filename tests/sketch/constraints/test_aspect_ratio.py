@@ -7,9 +7,6 @@ import pytest
 
 from raygeo.sketch import PointDef, Solver
 from raygeo.sketch.constraints.aspect_ratio import AspectRatioConstraint
-from raygeo.sketch.model.constraints.aspect_ratio import (
-    AspectRatioConstraint as _ModelAspectRatioConstraint,
-)
 from raygeo.sketch.registry import EntityRegistry
 
 
@@ -60,7 +57,7 @@ def test_aspect_ratio_constraint(setup_env):
     dist1 = 10.0
     dist2 = 5.0
     expected_error = dist1 - dist2 * 2.0
-    assert c.error(reg)[0] == pytest.approx(expected_error)
+    assert c.error(reg) == pytest.approx(expected_error)
     assert c.user_visible is True
 
 
@@ -86,7 +83,7 @@ def test_aspect_ratio_constraint_perfect_match(setup_env):
     p4 = reg.add_point(5, 10)
 
     c = AspectRatioConstraint(p1, p2, p3, p4, 2.0)
-    assert c.error(reg)[0] == pytest.approx(0.0)
+    assert c.error(reg) == pytest.approx(0.0)
 
 
 def test_aspect_ratio_constraint_diagonal_lines(setup_env):
@@ -100,7 +97,7 @@ def test_aspect_ratio_constraint_diagonal_lines(setup_env):
     dist1 = 10.0
     dist2 = 5.0
     expected_error = dist1 - dist2 * 1.0
-    assert c.error(reg)[0] == pytest.approx(expected_error)
+    assert c.error(reg) == pytest.approx(expected_error)
 
 
 def test_aspect_ratio_constraint_zero_ratio(setup_env):
@@ -113,7 +110,7 @@ def test_aspect_ratio_constraint_zero_ratio(setup_env):
     c = AspectRatioConstraint(p1, p2, p3, p4, 0.0)
     dist1 = 10.0
     expected_error = dist1
-    assert c.error(reg)[0] == pytest.approx(expected_error)
+    assert c.error(reg) == pytest.approx(expected_error)
 
 
 def test_aspect_ratio_constraint_zero_second_distance(setup_env):
@@ -126,7 +123,7 @@ def test_aspect_ratio_constraint_zero_second_distance(setup_env):
     c = AspectRatioConstraint(p1, p2, p3, p4, 2.0)
     dist1 = 10.0
     expected_error = dist1
-    assert c.error(reg)[0] == pytest.approx(expected_error)
+    assert c.error(reg) == pytest.approx(expected_error)
 
 
 # deferred: constrains_radius — the base-class flag is not bound on
@@ -196,7 +193,7 @@ def test_aspect_ratio_constraint_serialization_round_trip(setup_env):
 
     original = AspectRatioConstraint(p1, p2, p3, p4, 2.5)
 
-    restored = _ModelAspectRatioConstraint.from_dict(original.to_dict())
+    restored = AspectRatioConstraint.from_dict(original.to_dict())
     assert restored.to_dict() == original.to_dict()
 
 

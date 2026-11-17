@@ -3,16 +3,17 @@
 use std::collections::HashMap;
 
 use pyo3::prelude::*;
-use pyo3::types::PyDict;
+use pyo3::types::{PyAny, PyDict, PyType};
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
-use super::PyConstraintBase;
+use super::radius::{dict_expression, dict_type, split_value};
+use super::{surface, PyConstraintBase};
 use crate::python::sketch::context::PointCtx;
 use crate::python::sketch::protocols::{Canvas, DrawContext, ScreenMap};
 use crate::sketch::constraint::SketchConstraint;
 use crate::sketch::constraints::rotational::RotationalConstraint as CoreConstraint;
 
-/// Enforces p2 is p1 rotated by angle_rad about center.
+/// Enforces p2 is p1 rotated by `value` radians about center.
 #[gen_stub_pyclass]
 #[pyclass(
     extends = PyConstraintBase,
@@ -33,16 +34,17 @@ pub struct PyRotationalConstraint {
     /// Rotated point.
     #[pyo3(get, set)]
     pub p2: i64,
-    /// Rotation angle in radians (the reference ``value`` attribute).
+    /// Rotation angle in radians.
     #[pyo3(get, set)]
-    pub angle_rad: f64,
+    pub value: f64,
     /// Reference user-visibility flag.
-    #[pyo3(get)]
+    #[pyo3(get, set)]
     pub user_visible: bool,
     /// Reference validation status ordinal.
     #[pyo3(get, set)]
     pub status: u8,
-    /// Stored expression string (evaluated caller-side).
+    /// Stored expression string (evaluated by `update_from_context`).
+    #[pyo3(get, set)]
     pub expression: Option<String>,
 }
 
@@ -51,25 +53,28 @@ pub struct PyRotationalConstraint {
 impl PyRotationalConstraint {
     /// Creates the constraint from its resolved points and values.
     #[new]
-    #[pyo3(signature = (center, p1, p2, angle_rad, user_visible = true))]
+    #[pyo3(signature = (center, p1, p2, value, expression = None,
+                        user_visible = false))]
     fn new(
         center: i64,
         p1: i64,
         p2: i64,
-        angle_rad: f64,
+        value: &Bound<'_, PyAny>,
+        expression: Option<String>,
         user_visible: bool,
-    ) -> PyClassInitializer<Self> {
-        PyClassInitializer::from(PyConstraintBase).add_subclass(
+    ) -> PyResult<PyClassInitializer<Self>> {
+        let (value, expression) = split_value(value, expression)?;
+        Ok(PyClassInitializer::from(PyConstraintBase).add_subclass(
             PyRotationalConstraint {
                 center,
                 p1,
                 p2,
-                angle_rad,
+                value,
                 user_visible,
                 status: 1,
-                expression: None,
+                expression,
             },
-        )
+        ))
     }
 
     /// Returns the constraint error at the registry's point
@@ -87,6 +92,7 @@ impl PyRotationalConstraint {
         mut reg: PointCtx<'_>,
         params: Option<Py<PyAny>>,
     ) -> HashMap<u64, Vec<(f64, f64)>> {
+        let _ = params;
         super::constraint_gradient(&self.clone().into_constraint(), &mut reg)
     }
 
@@ -95,17 +101,42 @@ impl PyRotationalConstraint {
         self.clone().into_constraint().referenced_points(&registry)
     }
 
-    /// Alias for referenced_points (reference naming).
-    fn get_referenced_point_ids(
-        &self,
-        registry: PointCtx<'_>,
-    ) -> std::collections::HashSet<u64> {
-        self.referenced_points(registry).into_iter().collect()
-    }
-
     /// Serializes to the reference constraint dictionary shape.
     fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
-        super::dict_from_value(py, &self.clone().into_constraint().to_json())
+        let dict = PyDict::new(py);
+        dict_type(&dict, "RotationalConstraint")?;
+        dict.set_item("center", self.center)?;
+        dict.set_item("p1", self.p1)?;
+        dict.set_item("p2", self.p2)?;
+        dict.set_item("value", self.value)?;
+        dict.set_item("user_visible", self.user_visible)?;
+        dict_expression(&dict, &self.expression)?;
+        Ok(dict)
+    }
+
+    /// Rebuilds the constraint from its reference dictionary shape.
+    #[classmethod]
+    fn from_dict(
+        cls: &Bound<'_, PyType>,
+        py: Python<'_>,
+        data: &Bound<'_, PyDict>,
+    ) -> PyResult<Py<PyAny>> {
+        let kwargs = PyDict::new(py);
+        kwargs.set_item("center", data.get_item("center")?)?;
+        kwargs.set_item("p1", data.get_item("p1")?)?;
+        kwargs.set_item("p2", data.get_item("p2")?)?;
+        kwargs.set_item("value", data.get_item("value")?)?;
+        match data.get_item("expression")? {
+            Some(value) => kwargs.set_item("expression", value)?,
+            None => kwargs.set_item("expression", py.None())?,
+        }
+        kwargs.set_item(
+            "user_visible",
+            data.get_item("user_visible")?
+                .and_then(|value| value.extract::<bool>().ok())
+                .unwrap_or(false),
+        )?;
+        Ok(cls.as_any().call((), Some(&kwargs))?.unbind())
     }
 
     /// Draws the constraint's symbol onto the cairo context.
@@ -133,7 +164,7 @@ impl PyRotationalConstraint {
         )
     }
 
-    /// Whether the constraint's rendered symbol is hit at (mx, my).
+    /// Whether the constraint's rendered symbol is hit at (sx, sy).
     #[pyo3(signature = (sx, sy, registry, to_screen, element,
                         threshold))]
     fn is_hit(
@@ -157,32 +188,21 @@ impl PyRotationalConstraint {
         )
     }
 
-    /// Sets the reference user-visibility flag.
-    fn set_user_visible(&mut self, value: bool) {
-        self.user_visible = value;
+    /// The string key identifying this constraint type.
+    #[classmethod]
+    fn get_type_key(_cls: &Bound<'_, PyType>) -> &'static str {
+        "rotational"
     }
 
-    /// The rotation angle in radians (reference ``value`` attribute).
-    #[getter]
-    fn value(&self) -> f64 {
-        self.angle_rad
+    /// The human-readable type name (translated).
+    #[staticmethod]
+    fn get_type_name(py: Python<'_>) -> String {
+        surface::gettext(py, "Rotational Array")
     }
 
-    #[setter]
-    fn set_value(&mut self, value: f64) {
-        self.angle_rad = value;
-    }
-
-    /// The stored expression string, if any (evaluated caller-side).
-    #[getter]
-    fn expression(&self) -> Option<String> {
-        self.expression.clone()
-    }
-
-    /// Sets the expression string (evaluated caller-side).
-    #[setter]
-    fn set_expression(&mut self, expression: Option<String>) {
-        self.expression = expression;
+    /// The human-readable title for this constraint.
+    fn get_title(slf: &Bound<'_, Self>, _py: Python<'_>) -> PyResult<String> {
+        surface::title_degrees(slf.as_any())
     }
 }
 
@@ -192,7 +212,7 @@ impl PyRotationalConstraint {
             self.center as u64,
             self.p1 as u64,
             self.p2 as u64,
-            self.angle_rad,
+            self.value,
         );
         core.user_visible = self.user_visible;
         core.set_expression(self.expression);

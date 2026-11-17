@@ -4,9 +4,6 @@ raygeo bindings (entity-reference contract)."""
 import pytest
 
 from raygeo.sketch.constraints.diameter import DiameterConstraint
-from raygeo.sketch.model.constraints.diameter import (
-    DiameterConstraint as ModelDiameterConstraint,
-)
 from raygeo.sketch.registry import EntityRegistry
 
 
@@ -27,7 +24,7 @@ def test_diameter_constraint(setup_env):
     circle_id = _circle(reg)
 
     c = DiameterConstraint(circle_id, 20.0)
-    assert c.error(reg, None) == pytest.approx([0.0])
+    assert c.error(reg, None) == pytest.approx(0.0)
     assert c.user_visible is True
 
 
@@ -36,7 +33,7 @@ def test_diameter_constraint_non_zero(setup_env):
     circle_id = _circle(reg)
 
     c = DiameterConstraint(circle_id, 10.0)
-    assert c.error(reg, None) == pytest.approx([10.0])
+    assert c.error(reg, None) == pytest.approx(10.0)
 
 
 def test_diameter_constraint_user_visible(setup_env):
@@ -88,9 +85,9 @@ def test_diameter_constraint_serialization_round_trip(setup_env):
     circle_id = _circle(reg)
 
     original = DiameterConstraint(circle_id, 20.0)
-    restored = ModelDiameterConstraint.from_dict(original.to_dict())
+    restored = DiameterConstraint.from_dict(original.to_dict())
     assert original.error(reg, None) == pytest.approx(
-        [restored.error(reg, None)]
+        restored.error(reg, None)
     )
     assert original.user_visible == restored.user_visible
 
@@ -105,5 +102,5 @@ def test_diameter_constraint_with_expression(setup_env):
     c.expression = "d_val"
 
     # Current d=10, target=10. Error = 0.
-    assert c.error(reg, None) == pytest.approx([0.0])
+    assert c.error(reg, None) == pytest.approx(0.0)
     assert c.expression == "d_val"

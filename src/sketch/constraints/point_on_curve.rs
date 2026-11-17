@@ -34,6 +34,7 @@ fn get_bezier_endpoint_weights(t: f64) -> (f64, f64) {
 
 /// Resolves the constrained bezier: `(point on curve ok, start, end,
 /// cp1 offset, cp2 offset)`.
+#[allow(clippy::type_complexity)]
 fn resolve_bezier(
     ctx: &dyn PointContext,
     shape_id: u64,

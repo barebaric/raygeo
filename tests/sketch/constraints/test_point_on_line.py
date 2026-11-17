@@ -32,7 +32,7 @@ def test_point_on_line(setup_env):
     pt = reg.add_point(5, 0)
 
     c = PointOnLineConstraint(pt, line_id)
-    assert c.error(reg, None) == pytest.approx([0.0], abs=1e-6)
+    assert c.error(reg, None) == pytest.approx(0.0, abs=1e-6)
     assert c.user_visible is True
 
 
@@ -42,7 +42,7 @@ def test_point_off_line(setup_env):
     pt = reg.add_point(5, 5)
 
     c = PointOnLineConstraint(pt, line_id)
-    assert abs(c.error(reg, None)[0]) > 1.0
+    assert abs(c.error(reg, None)) > 1.0
 
 
 def test_point_on_circle(setup_env):
@@ -51,7 +51,7 @@ def test_point_on_circle(setup_env):
     pt = reg.add_point(40, 0)
 
     c = PointOnLineConstraint(pt, circle_id)
-    assert c.error(reg, None) == pytest.approx([0.0], abs=1e-6)
+    assert c.error(reg, None) == pytest.approx(0.0, abs=1e-6)
 
 
 def test_point_off_circle(setup_env):
@@ -60,7 +60,7 @@ def test_point_off_circle(setup_env):
     pt = reg.add_point(10, 0)
 
     c = PointOnLineConstraint(pt, circle_id)
-    assert abs(c.error(reg, None)[0]) > 1.0
+    assert abs(c.error(reg, None)) > 1.0
 
 
 def test_constrains_radius_when_point_constrained(setup_env):

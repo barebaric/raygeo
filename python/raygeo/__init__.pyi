@@ -79,6 +79,8 @@ Examples
     100.0
 """
 
+import builtins
+from raygeo.sketch import protocols
 from . import cnc
 from . import compressed_array
 from . import fstring
@@ -91,8 +93,10 @@ from . import sketch
 from . import svg
 from . import trace
 __all__ = [
+    "closest_point_on_bezier",
     "cnc",
     "compressed_array",
+    "draw_symmetry_arrows",
     "fstring",
     "geo",
     "image",
@@ -103,4 +107,17 @@ __all__ = [
     "svg",
     "trace",
 ]
+
+def closest_point_on_bezier(xs: tuple[builtins.float, builtins.float, builtins.float, builtins.float], ys: tuple[builtins.float, builtins.float, builtins.float, builtins.float], px: builtins.float, py: builtins.float) -> tuple[builtins.float, builtins.float, builtins.float]:
+    r"""
+    Finds the point on a cubic Bezier curve closest to `(px, py)`,
+    returning `(t, bx, by)`: the curve parameter and the coordinates
+    of the closest curve point (the reference module-level helper).
+    """
+
+def draw_symmetry_arrows(ctx: protocols.Canvas, s1: tuple[builtins.float, builtins.float], s2: tuple[builtins.float, builtins.float]) -> None:
+    r"""
+    Draws the two symmetry arrow heads along the segment between
+    two screen-space points (the reference module-level helper).
+    """
 

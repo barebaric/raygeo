@@ -29,7 +29,7 @@ def test_tangent_constraint(setup_env):
     line_id, circle_id = _tangent_setup(reg)
 
     c = TangentConstraint(line_id, circle_id)
-    assert c.error(reg, None) == pytest.approx([0.0], abs=1e-6)
+    assert c.error(reg, None) == pytest.approx(0.0, abs=1e-6)
     assert c.user_visible is True
 
 
@@ -45,7 +45,7 @@ def test_tangent_constraint_non_tangent(setup_env):
     c = TangentConstraint(line_id, circle_id)
     # Circle center is at y=50, radius=20, so bottom is at y=30.
     # Line is at y=10. Distance from center to line = 40 != radius.
-    assert abs(c.error(reg, None)[0]) > 1.0
+    assert abs(c.error(reg, None)) > 1.0
 
 
 def test_tangent_entity_ids(setup_env):

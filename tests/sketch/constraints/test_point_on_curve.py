@@ -25,7 +25,7 @@ def test_point_on_curve(setup_env):
     pt = reg.add_point(50, 15)
 
     c = PointOnCurveConstraint(pt, bezier_id)
-    assert c.error(reg, None) == pytest.approx([0.0], abs=0.01)
+    assert c.error(reg, None) == pytest.approx(0.0, abs=0.01)
     assert c.user_visible is True
 
 
@@ -35,7 +35,7 @@ def test_point_off_curve(setup_env):
     pt = reg.add_point(50, 100)
 
     c = PointOnCurveConstraint(pt, bezier_id)
-    assert abs(c.error(reg, None)[0]) > 1.0
+    assert abs(c.error(reg, None)) > 1.0
 
 
 def test_entity_refs(setup_env):

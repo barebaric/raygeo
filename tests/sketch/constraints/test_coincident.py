@@ -7,9 +7,6 @@ import pytest
 
 from raygeo.sketch import PointDef, Solver
 from raygeo.sketch.constraints.coincident import CoincidentConstraint
-from raygeo.sketch.model.constraints.coincident import (
-    CoincidentConstraint as _ModelCoincidentConstraint,
-)
 from raygeo.sketch.registry import EntityRegistry
 
 
@@ -94,7 +91,7 @@ def test_coincident_constraint_serialization_round_trip(setup_env):
     original = CoincidentConstraint(p1, p2)
 
     # Serialize to dict and rebuild through the model layer
-    restored = _ModelCoincidentConstraint.from_dict(original.to_dict())
+    restored = CoincidentConstraint.from_dict(original.to_dict())
     assert restored.to_dict() == original.to_dict()
 
 

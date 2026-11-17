@@ -27,7 +27,7 @@ def test_angle_90_degrees(setup_env):
     l1, l2 = _perpendicular_lines(reg)
 
     c = AngleConstraint(l2, l1, 90.0)
-    assert c.error(reg, None) == pytest.approx([0.0], abs=1e-4)
+    assert c.error(reg, None) == pytest.approx(0.0, abs=1e-4)
     assert c.user_visible is True
 
 
@@ -36,7 +36,7 @@ def test_angle_45_degrees(setup_env):
     l1, l2 = _perpendicular_lines(reg)
 
     c = AngleConstraint(l2, l1, 45.0)
-    assert abs(c.error(reg, None)[0]) > 1.0
+    assert abs(c.error(reg, None)) > 1.0
 
 
 def test_angle_non_zero_error(setup_env):
@@ -44,7 +44,7 @@ def test_angle_non_zero_error(setup_env):
     l1, l2 = _perpendicular_lines(reg)
 
     c = AngleConstraint(l2, l1, 30.0)
-    assert abs(c.error(reg, None)[0]) > 1.0
+    assert abs(c.error(reg, None)) > 1.0
 
 
 def test_angle_user_visible(setup_env):

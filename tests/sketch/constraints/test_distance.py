@@ -6,9 +6,6 @@ import pytest
 
 from raygeo.sketch import PointDef, Solver
 from raygeo.sketch.constraints.distance import DistanceConstraint
-from raygeo.sketch.model.constraints.distance import (
-    DistanceConstraint as _ModelDistanceConstraint,
-)
 from raygeo.sketch.registry import EntityRegistry
 
 
@@ -55,12 +52,12 @@ def test_distance_constraint(setup_env):
 
     # Target is 10, actual is 10. Error should be 10 - 10 = 0.
     c = DistanceConstraint(p1, p2, 10.0)
-    assert c.error(reg)[0] == pytest.approx(0.0)
+    assert c.error(reg) == pytest.approx(0.0)
     assert c.user_visible is True
 
     # Target is 5, actual is 10. Error should be 10 - 5 = 5.
     c2 = DistanceConstraint(p1, p2, 5.0)
-    assert c2.error(reg)[0] == pytest.approx(5.0)
+    assert c2.error(reg) == pytest.approx(5.0)
 
 
 def test_distance_constraint_user_visible(setup_env):
@@ -119,7 +116,7 @@ def test_distance_constraint_with_expression(setup_env):
     c.expression = "width"
 
     # Actual dist is 10, target dist is 20. Error is 10 - 20 = -10.
-    assert c.error(reg)[0] == pytest.approx(-10.0)
+    assert c.error(reg) == pytest.approx(-10.0)
     assert c.expression == "width"
 
 
@@ -144,7 +141,7 @@ def test_distance_constraint_serialization_round_trip(setup_env):
     original = DistanceConstraint(p1, p2, 5.0)
 
     # Serialize to dict and rebuild through the model layer
-    restored = _ModelDistanceConstraint.from_dict(original.to_dict())
+    restored = DistanceConstraint.from_dict(original.to_dict())
     assert restored.to_dict() == original.to_dict()
 
 
@@ -165,7 +162,7 @@ def test_distance_constraint_serialization_round_trip_with_expression(
 
     # Deserialize from dict through the model layer,
     # re-attaching the stored expression
-    restored = _ModelDistanceConstraint.from_dict(serialized)
+    restored = DistanceConstraint.from_dict(serialized)
     assert restored.to_dict() == serialized
 
 

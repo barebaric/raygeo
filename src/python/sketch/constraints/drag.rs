@@ -3,11 +3,10 @@
 use std::collections::HashMap;
 
 use pyo3::prelude::*;
-use pyo3::types::PyDict;
+use pyo3::types::{PyAny, PyDict};
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use super::PyConstraintBase;
-
 use crate::python::sketch::context::PointCtx;
 use crate::python::sketch::protocols::{Canvas, DrawContext, ScreenMap};
 use crate::sketch::constraint::SketchConstraint;
@@ -71,6 +70,21 @@ impl PyDragConstraint {
         )
     }
 
+    /// Returns the constraint error at the registry's point positions.
+    #[pyo3(signature = (reg, params = None))]
+    fn error(
+        &self,
+        reg: PointCtx<'_>,
+        params: Option<Py<PyAny>>,
+    ) -> (f64, f64) {
+        let _ = params;
+        let errors = self.clone().into_constraint().error(&reg);
+        (
+            errors.first().copied().unwrap_or(0.0),
+            errors.get(1).copied().unwrap_or(0.0),
+        )
+    }
+
     /// Partial derivatives of the error by point id.
     #[pyo3(signature = (reg, params = None))]
     fn gradient(
@@ -78,6 +92,7 @@ impl PyDragConstraint {
         mut reg: PointCtx<'_>,
         params: Option<Py<PyAny>>,
     ) -> HashMap<u64, Vec<(f64, f64)>> {
+        let _ = params;
         super::constraint_gradient(&self.clone().into_constraint(), &mut reg)
     }
 
@@ -86,30 +101,11 @@ impl PyDragConstraint {
         self.clone().into_constraint().referenced_points(&registry)
     }
 
-    /// Alias for referenced_points (reference naming).
-    fn get_referenced_point_ids(
-        &self,
-        registry: PointCtx<'_>,
-    ) -> std::collections::HashSet<u64> {
-        self.referenced_points(registry).into_iter().collect()
-    }
-
     /// Sets the target coordinates and pull strength.
     fn set_target(&mut self, target_x: f64, target_y: f64, weight: f64) {
         self.target_x = target_x;
         self.target_y = target_y;
         self.weight = weight;
-    }
-
-    /// Returns the constraint error at the registry's point positions.
-    #[pyo3(signature = (reg, params = None))]
-    fn error(&self, reg: PointCtx<'_>, params: Option<Py<PyAny>>) -> Vec<f64> {
-        self.clone().into_constraint().error(&reg)
-    }
-
-    /// Serializes to the reference constraint dictionary shape.
-    fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
-        super::dict_from_value(py, &self.clone().into_constraint().to_json())
     }
 
     /// Draws the constraint's symbol onto the cairo context.
@@ -159,6 +155,26 @@ impl PyDragConstraint {
             &registry,
             Some(&to_screen),
         )
+    }
+
+    /// Deep-copies the transient constraint structurally: the
+    /// reference drag constraint has no serialization shape.
+    fn __deepcopy__<'py>(
+        &self,
+        py: Python<'py>,
+        memo: &Bound<'py, PyDict>,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let _ = memo;
+        let clone = Py::new(
+            py,
+            PyClassInitializer::from(PyConstraintBase)
+                .add_subclass(self.clone()),
+        )?;
+        Ok(clone.into_bound(py).into_any())
+    }
+
+    fn __copy__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+        Self::__deepcopy__(self, py, &PyDict::new(py))
     }
 }
 

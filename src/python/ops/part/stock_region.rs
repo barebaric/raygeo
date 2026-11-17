@@ -66,25 +66,6 @@ impl PyStockRegion {
     }
 }
 
-impl PyStockRegion {
-    pub fn from_parts(
-        boundary: Vec<(f64, f64)>,
-        islands: Vec<Vec<(f64, f64)>>,
-    ) -> Self {
-        let b: crate::geo::types::Polygon = boundary
-            .into_iter()
-            .map(|(x, y)| Point::new(x, y))
-            .collect();
-        let i: Vec<crate::geo::types::Polygon> = islands
-            .into_iter()
-            .map(|v| v.into_iter().map(|(x, y)| Point::new(x, y)).collect())
-            .collect();
-        PyStockRegion {
-            inner: StockRegion::new(b, i),
-        }
-    }
-}
-
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyStockRegion>()?;
     Ok(())

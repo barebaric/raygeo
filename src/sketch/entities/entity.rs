@@ -202,6 +202,12 @@ pub trait Entity: Send + Sync {
         false
     }
 
+    /// The id of the entity's center point, for radius-bearing
+    /// entities (`None` otherwise).
+    fn center_point_id(&self) -> Option<u64> {
+        None
+    }
+
     fn is_closed_loop(&self) -> bool {
         false
     }

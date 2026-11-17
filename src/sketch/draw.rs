@@ -133,7 +133,23 @@ pub trait CairoLike {
     fn get_line_width(&self) -> f64;
     fn translate(&self, x: f64, y: f64);
     fn rotate(&self, angle: f64);
+
+    /// The ink extents `(x, y, width, height)` of the text at the
+    /// host label font size, when the host text stack is available
+    /// (`None` otherwise).
+    fn text_extents(&self, _text: &str, _font_px: f64) -> Option<TextExtents> {
+        None
+    }
+
+    /// Shows the text at the cairo context's current point through
+    /// the host text stack; `false` when unavailable.
+    fn show_text(&self, _text: &str, _font_px: f64) -> bool {
+        false
+    }
 }
+
+/// The Pango ink extents of a text layout.
+pub type TextExtents = (f64, f64, f64, f64);
 
 /// Screen-space parameter of the horizontal/vertical markers along
 /// the segment.
@@ -273,7 +289,8 @@ fn label_metrics(text: &str, font_px: f64, scale: f64) -> (f64, f64, f64) {
 }
 
 /// Strokes the glyph outlines of `text`, centered on the given
-/// screen position, through the raygeo text stack.
+/// screen position, through the raygeo text stack.  When the host
+/// text stack is available the glyphs render through it instead.
 fn draw_glyphs(
     ctx: &dyn CairoLike,
     text: &str,
@@ -282,6 +299,12 @@ fn draw_glyphs(
     cy: f64,
     scale: f64,
 ) {
+    if let Some((ink_x, ink_y, width, height)) = ctx.text_extents(text, font_px)
+    {
+        ctx.move_to(cx - width / 2.0 - ink_x, cy - height / 2.0 - ink_y);
+        ctx.show_text(text, font_px);
+        return;
+    }
     let config = label_config(font_px, scale);
     let Some(geo) = text_to_geometry(text, &config) else {
         return;

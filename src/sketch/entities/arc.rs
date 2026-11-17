@@ -182,6 +182,10 @@ impl Entity for Arc {
         vec![self.start, self.end, self.center]
     }
 
+    fn center_point_id(&self) -> Option<u64> {
+        Some(self.center)
+    }
+
     fn get_endpoint_ids(&self) -> Vec<u64> {
         vec![self.start, self.end]
     }

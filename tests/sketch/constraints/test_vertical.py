@@ -7,9 +7,6 @@ import pytest
 
 from raygeo.sketch import PointDef, Solver
 from raygeo.sketch.constraints.vertical import VerticalConstraint
-from raygeo.sketch.model.constraints.vertical import (
-    VerticalConstraint as _ModelVerticalConstraint,
-)
 from raygeo.sketch.registry import EntityRegistry
 
 
@@ -56,7 +53,7 @@ def test_vertical_constraint(setup_env):
     p2 = reg.add_point(5, 10)
 
     c = VerticalConstraint(p1, p2)
-    assert c.error(reg)[0] == pytest.approx(-5.0)
+    assert c.error(reg) == pytest.approx(-5.0)
     assert c.user_visible is True
 
 
@@ -94,7 +91,7 @@ def test_vertical_constraint_serialization_round_trip(setup_env):
     original = VerticalConstraint(p1, p2)
 
     # Serialize to dict and rebuild through the model layer
-    restored = _ModelVerticalConstraint.from_dict(original.to_dict())
+    restored = VerticalConstraint.from_dict(original.to_dict())
     assert restored.to_dict() == original.to_dict()
 
 

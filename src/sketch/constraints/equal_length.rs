@@ -164,13 +164,11 @@ impl SketchConstraint for EqualLengthConstraint {
             (bx - ax).hypot(by - ay)
         };
         let base_pairs = &per_entity[0];
-        let base_lens: Vec<f64> =
-            base_pairs.iter().map(|p| pair_length(p)).collect();
+        let base_lens: Vec<f64> = base_pairs.iter().map(&pair_length).collect();
 
         let mut errors = Vec::new();
         for pairs in &per_entity[1..] {
-            let ent_lens: Vec<f64> =
-                pairs.iter().map(|p| pair_length(p)).collect();
+            let ent_lens: Vec<f64> = pairs.iter().map(&pair_length).collect();
             let n = base_lens.len().max(ent_lens.len());
             for j in 0..n {
                 let bl = if j < base_lens.len() {

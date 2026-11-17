@@ -22,7 +22,7 @@ def test_perpendicular_lines(setup_env):
     l2 = reg.add_line(p3, p4)
 
     c = PerpendicularConstraint(l1, l2)
-    assert c.error(reg, None) == pytest.approx([0.0], abs=1e-6)
+    assert c.error(reg, None) == pytest.approx(0.0, abs=1e-6)
     assert c.user_visible is True
 
 
@@ -36,7 +36,7 @@ def test_non_perpendicular_lines(setup_env):
     l2 = reg.add_line(p3, p4)
 
     c = PerpendicularConstraint(l1, l2)
-    assert abs(c.error(reg, None)[0]) > 1.0
+    assert abs(c.error(reg, None)) > 1.0
 
 
 def test_entity_refs(setup_env):

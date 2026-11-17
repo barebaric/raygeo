@@ -14,6 +14,7 @@ class RadiusConstraint(constraints.Constraint):
     r"""
     Enforces the radius of a circle or arc.
     """
+    @property
     def entity_id(self) -> builtins.int:
         r"""
         The constrained entity (circle or arc).
@@ -23,6 +24,7 @@ class RadiusConstraint(constraints.Constraint):
         r"""
         The constrained entity (circle or arc).
         """
+    @property
     def value(self) -> builtins.float:
         r"""
         Target radius value.
@@ -32,26 +34,112 @@ class RadiusConstraint(constraints.Constraint):
         r"""
         Target radius value.
         """
+    @property
     def user_visible(self) -> builtins.bool:
         r"""
         Reference user-visibility flag.
         """
+    @user_visible.setter
+    def user_visible(self, value: builtins.bool) -> None:
+        r"""
+        Reference user-visibility flag.
+        """
+    @property
+    def status(self) -> builtins.int:
+        r"""
+        Reference validation status ordinal.
+        """
+    @status.setter
+    def status(self, value: builtins.int) -> None:
+        r"""
+        Reference validation status ordinal.
+        """
+    @property
     def expression(self) -> typing.Optional[builtins.str]:
         r"""
-        The stored expression string, if any (evaluated caller-side).
+        Stored expression string (evaluated by `update_from_context`).
         """
     @expression.setter
     def expression(self, value: typing.Optional[builtins.str]) -> None:
         r"""
-        Sets the expression string (evaluated caller-side).
+        Stored expression string (evaluated by `update_from_context`).
         """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __new__(cls, entity_id: builtins.int, value: builtins.float, user_visible: builtins.bool = True) -> typing.Self:
+    def __new__(cls, entity_id: builtins.int, value: typing.Any, expression: typing.Optional[builtins.str] = None, user_visible: builtins.bool = True) -> RadiusConstraint:
         r"""
         Creates the constraint for an entity.
         """
+    def error(self, reg: protocols.Registry, params: typing.Optional[typing.Any] = None) -> builtins.float:
+        r"""
+        Returns the constraint error at the registry's point
+        positions.
+        """
+    def gradient(self, reg: protocols.Registry, params: typing.Optional[typing.Any] = None) -> builtins.dict[builtins.int, builtins.list[tuple[builtins.float, builtins.float]]]:
+        r"""
+        Partial derivatives of the error by point id.
+        """
     def referenced_points(self, registry: protocols.Registry) -> builtins.list[builtins.int]:
         r"""
-        Point ids the constraint references.
+        Point ids the constraint references, resolved through the
+        registry.
+        """
+    def to_dict(self) -> dict:
+        r"""
+        Serializes to the reference constraint dictionary shape.
+        """
+    @classmethod
+    def from_dict(cls, data: dict) -> typing.Any:
+        r"""
+        Rebuilds the constraint from its reference dictionary shape.
+        """
+    def draw(self, ctx: protocols.Canvas, registry: protocols.DrawContext, to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], is_selected: builtins.bool = False, is_hovered: builtins.bool = False, point_radius: builtins.float = 5.0) -> None:
+        r"""
+        Draws the constraint's symbol onto the cairo context.
+        """
+    def targets_segment(self, _p1: builtins.int, _p2: builtins.int, entity_id: typing.Optional[builtins.int]) -> builtins.bool:
+        r"""
+        Whether this constraint restricts the given entity.
+        """
+    def constrains_radius(self, _registry: protocols.Registry, entity_id: builtins.int) -> builtins.bool:
+        r"""
+        Whether this constraint explicitly defines the radius of the
+        given entity.
+        """
+    def is_hit(self, sx: builtins.float, sy: builtins.float, registry: protocols.Registry, to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], element: typing.Optional[typing.Any], threshold: builtins.float) -> builtins.bool:
+        r"""
+        Whether the constraint's rendered symbol is hit at (sx, sy).
+        """
+    @classmethod
+    def get_type_key(cls) -> builtins.str:
+        r"""
+        The string key identifying this constraint type.
+        """
+    @staticmethod
+    def get_type_name() -> builtins.str:
+        r"""
+        The human-readable type name (translated).
+        """
+    @classmethod
+    def can_apply_to(cls, selection: typing.Any, sketch: typing.Optional[typing.Any] = None) -> builtins.bool:
+        r"""
+        Whether this constraint can be applied to the selection.
+        """
+    @classmethod
+    def applies_to_entities(cls, entities: typing.Any) -> builtins.bool:
+        r"""
+        Whether the operands are radius-bearing entities.
+        """
+    def get_title(self) -> builtins.str:
+        r"""
+        The human-readable title for this constraint.
+        """
+    def get_subtitle(self, registry: protocols.Registry) -> builtins.str:
+        r"""
+        The human-readable subtitle describing the constrained
+        entity.
+        """
+    def get_edit_subtitle(self) -> builtins.str:
+        r"""
+        The user-facing hint for the constraint edit dialog.
         """
 

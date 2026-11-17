@@ -6,9 +6,6 @@ import pytest
 
 from raygeo.sketch import PointDef, Solver
 from raygeo.sketch.constraints.radius import RadiusConstraint
-from raygeo.sketch.model.constraints.radius import (
-    RadiusConstraint as ModelRadiusConstraint,
-)
 from raygeo.sketch.registry import EntityRegistry
 
 
@@ -69,12 +66,12 @@ def test_radius_constraint_on_arc(setup_env):
 
     # Current radius is 10. Target is 10. Error = 0.
     c = RadiusConstraint(arc_id, 10.0)
-    assert c.error(reg, None) == pytest.approx([0.0])
+    assert c.error(reg, None) == pytest.approx(0.0)
     assert c.user_visible is True
 
     # Target is 5. Error = 10 - 5 = 5.
     c2 = RadiusConstraint(arc_id, 5.0)
-    assert c2.error(reg, None) == pytest.approx([5.0])
+    assert c2.error(reg, None) == pytest.approx(5.0)
 
 
 def test_radius_constraint_on_circle(setup_env):
@@ -82,10 +79,10 @@ def test_radius_constraint_on_circle(setup_env):
     circle_id = _circle(reg)
 
     c = RadiusConstraint(circle_id, 10.0)
-    assert c.error(reg, None) == pytest.approx([0.0])
+    assert c.error(reg, None) == pytest.approx(0.0)
 
     c2 = RadiusConstraint(circle_id, 5.0)
-    assert c2.error(reg, None) == pytest.approx([5.0])
+    assert c2.error(reg, None) == pytest.approx(5.0)
 
 
 def test_radius_constraint_user_visible(setup_env):
@@ -137,12 +134,10 @@ def test_radius_constraint_invalid_entity(setup_env):
     p2 = reg.add_point(10, 10)
     line_id = reg.add_line(p1, p2)
 
-    # The core resolves the line's defining points through the
-    # radius formula, yielding a non-zero distance error rather
-    # than a crash.
+    # The reference guard keeps the error at zero for
+    # non-radius-bearing entities.
     c = RadiusConstraint(line_id, 5.0)
-    result = c.error(reg, None)
-    assert isinstance(result, list)
+    assert c.error(reg, None) == pytest.approx(0.0)
 
 
 def test_radius_constraint_gradient(setup_env):
@@ -160,9 +155,9 @@ def test_radius_constraint_serialization_round_trip(setup_env):
     circle_id = _circle(reg)
 
     original = RadiusConstraint(circle_id, 10.0)
-    restored = ModelRadiusConstraint.from_dict(original.to_dict())
+    restored = RadiusConstraint.from_dict(original.to_dict())
     assert original.error(reg, None) == pytest.approx(
-        [restored.error(reg, None)]
+        restored.error(reg, None)
     )
     assert original.user_visible == restored.user_visible
 
@@ -177,7 +172,7 @@ def test_radius_constraint_with_expression(setup_env):
     c.expression = "r_val"
 
     # Current r=5, target=10. Error = 5 - 10 = -5.
-    assert c.error(reg, None) == pytest.approx([-5.0])
+    assert c.error(reg, None) == pytest.approx(-5.0)
     assert c.expression == "r_val"
 
 

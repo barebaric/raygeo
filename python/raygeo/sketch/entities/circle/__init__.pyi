@@ -15,6 +15,7 @@ class Circle(entities.Entity):
     r"""
     A circle defined by a center and a radius point.
     """
+    @property
     def id(self) -> types.EntityID:
         r"""
         Unique entity id.
@@ -35,24 +36,28 @@ class Circle(entities.Entity):
         """
     @radius_pt_idx.setter
     def radius_pt_idx(self, value: builtins.int) -> None: ...
+    @property
     def construction(self) -> builtins.bool:
         r"""
         Whether the entity is construction geometry.
         """
     @construction.setter
     def construction(self, value: builtins.bool) -> None: ...
+    @property
     def invisible(self) -> builtins.bool:
         r"""
         Whether the entity is excluded from toolpath output.
         """
     @invisible.setter
     def invisible(self, value: builtins.bool) -> None: ...
+    @property
     def array_copy(self) -> builtins.bool:
         r"""
         Whether the entity was created as part of an array copy.
         """
     @array_copy.setter
     def array_copy(self, value: builtins.bool) -> None: ...
+    @property
     def constrained(self) -> builtins.bool:
         r"""
         Whether the entity is fully constrained, as computed by the
@@ -60,23 +65,69 @@ class Circle(entities.Entity):
         """
     @constrained.setter
     def constrained(self, value: builtins.bool) -> None: ...
+    @property
     def fill_color(self) -> typing.Optional[tuple[builtins.float, builtins.float, builtins.float, builtins.float]]:
         r"""
         Fill color as (r, g, b, a), or None.
         """
     @fill_color.setter
     def fill_color(self, value: typing.Optional[tuple[builtins.float, builtins.float, builtins.float, builtins.float]]) -> None: ...
+    @property
     def type(self) -> builtins.str:
         r"""
         The entity type name (attribute alias).
         """
-    def __new__(cls, id: builtins.int, center_idx: builtins.int, radius_pt_idx: builtins.int, construction: builtins.bool = False) -> typing.Self:
+    def __new__(cls, id: builtins.int, center_idx: builtins.int, radius_pt_idx: builtins.int, construction: builtins.bool = False) -> Circle:
         r"""
         Creates a circle with the given id and defining point ids.
         """
     def type_name(self) -> builtins.str:
         r"""
         The entity type name.
+        """
+    def get_point_ids(self) -> builtins.list[builtins.int]:
+        r"""
+        The point ids the entity is defined by.
+        """
+    def to_dict(self) -> dict:
+        r"""
+        Serializes the entity to the reference dictionary shape.
+        """
+    def geometry_signature(self, registry: protocols.Registry) -> dict:
+        r"""
+        Returns the geometry signature used for change detection.
+        """
+    def to_geometry(self, registry: protocols.Registry) -> geo.Geometry:
+        r"""
+        Returns the entity's toolpath geometry in model coordinates.
+        """
+    def to_polygon_vertices(self, registry: protocols.Registry, forward: builtins.bool = True) -> builtins.list[tuple[builtins.float, builtins.float]]:
+        r"""
+        Returns the entity's outline as polygon vertices.
+        """
+    def to_polyline(self, registry: protocols.Registry, tolerance: builtins.float = 0.1) -> builtins.list[tuple[builtins.float, builtins.float]]:
+        r"""
+        Returns the entity's centerline as polyline vertices.
+        """
+    def hit_test(self, mx: builtins.float, my: builtins.float, threshold: builtins.float, registry: protocols.Registry) -> builtins.bool:
+        r"""
+        Whether the entity is hit at model coordinates (mx, my).
+        """
+    def contains_point(self, registry: protocols.Registry, x: builtins.float, y: builtins.float) -> builtins.bool:
+        r"""
+        Whether the model-space point lies inside the entity.
+        """
+    def signed_distance_to(self, px: builtins.float, py: builtins.float, registry: protocols.Registry) -> typing.Optional[builtins.float]:
+        r"""
+        Signed distance from the model-space point, if defined.
+        """
+    def tangent_at(self, registry: protocols.Registry, point_id: builtins.int) -> typing.Optional[tuple[builtins.float, builtins.float]]:
+        r"""
+        Tangent direction at the point nearest the model-space point.
+        """
+    def mirror(self, direction: builtins.str, position: builtins.float) -> None:
+        r"""
+        Mirrors the entity across the axis.
         """
     def set_fill_color(self, color: typing.Optional[typing.Sequence[builtins.float]]) -> builtins.bool:
         r"""
@@ -92,6 +143,85 @@ class Circle(entities.Entity):
         Entities compare equal by id (raygeo hands out fresh views).
         """
     def __hash__(self) -> builtins.int: ...
+    def get_drag_anchor_points(self, point_id: builtins.int) -> builtins.list[builtins.int]:
+        r"""
+        Point ids that act as drag anchors for the given point.
+        """
+    def restore_base_flags(self, data: dict) -> None:
+        r"""
+        Restores base flags serialized by to_dict() but not accepted
+        as constructor arguments.
+        """
+    def is_radius_entity(self) -> builtins.bool:
+        r"""
+        Whether the entity has a radius (arc, circle).
+        """
+    def is_closed_loop(self) -> builtins.bool:
+        r"""
+        Whether the entity forms a closed loop.
+        """
+    def is_edge_entity(self) -> builtins.bool:
+        r"""
+        Whether the entity participates in edge/chaining adjacency
+        for loop detection (line, arc, bezier).
+        """
+    def get_endpoint_ids(self) -> builtins.list[builtins.int]:
+        r"""
+        The entity ids of the curve endpoints.
+        """
+    def get_junction_point_ids(self) -> builtins.list[builtins.int]:
+        r"""
+        Point ids acting as junction candidates for chaining.
+        """
+    def get_helper_ids(self) -> builtins.list[builtins.int]:
+        r"""
+        Auxiliary/child entity ids belonging to this compound entity.
+        """
+    def clear_helper_references(self) -> None:
+        r"""
+        Drops this entity's references to its helper entities.
+        """
+    def get_ignorable_unconstrained_points(self) -> builtins.list[builtins.int]:
+        r"""
+        Point ids that can remain unconstrained when this entity is
+        constrained.
+        """
+    def supports_point_on_curve(self) -> builtins.bool:
+        r"""
+        Whether a point can be constrained onto this entity's curve.
+        """
+    def supports_fill(self) -> builtins.bool:
+        r"""
+        Whether this entity can receive a fill color.
+        """
+    def characteristic_length(self, registry: protocols.Registry) -> builtins.float:
+        r"""
+        The characteristic length used by equal-length constraints.
+        """
+    def characteristic_length_pairs(self) -> builtins.list[builtins.list[builtins.int]]:
+        r"""
+        The defining-point pairs of the characteristic length.
+        """
+    def enclosed_signed_area(self, registry: protocols.Registry) -> typing.Optional[builtins.float]:
+        r"""
+        The signed area enclosed by the entity, if defined.
+        """
+    def get_rigidly_connected_points(self, point_id: builtins.int) -> builtins.list[builtins.int]:
+        r"""
+        Point ids that move rigidly with the given point.
+        """
+    def get_all_frame_point_ids(self, registry: protocols.Registry) -> builtins.list[builtins.int]:
+        r"""
+        Frame point ids of a text box, for containment checks.
+        """
+    def get_state(self) -> typing.Optional[dict]:
+        r"""
+        Solver-relevant discrete state for undo/redo snapshots.
+        """
+    def set_state(self, state: dict) -> None:
+        r"""
+        Restores solver-relevant discrete state from a snapshot.
+        """
     def radius(self, registry: protocols.Registry) -> builtins.float:
         r"""
         The entity radius at the registry's point positions.
@@ -99,6 +229,27 @@ class Circle(entities.Entity):
     def get_midpoint(self, registry: protocols.Registry) -> typing.Optional[tuple[builtins.float, builtins.float]]:
         r"""
         A point on the circumference (the radius point).
+        """
+    def update_constrained_status(self, registry: protocols.Registry, constraints: typing.Any) -> None:
+        r"""
+        Updates the constrained flag from defining-point status and
+        constraints that dimension this entity's radius or length.
+        """
+    def is_contained_by(self, rect: tuple[builtins.float, builtins.float, builtins.float, builtins.float], registry: protocols.Registry) -> builtins.bool:
+        r"""
+        Whether the entity is fully contained by the given rect.
+        """
+    def intersects_rect(self, rect: tuple[builtins.float, builtins.float, builtins.float, builtins.float], registry: protocols.Registry) -> builtins.bool:
+        r"""
+        Whether the entity intersects the given rect.
+        """
+    def append_to_geometry(self, geo: geo.Geometry, registry: protocols.Registry, forward: builtins.bool = True) -> None:
+        r"""
+        Appends the entity's outline to the geometry.
+        """
+    def create_fill_geometry(self, registry: protocols.Registry) -> typing.Optional[geo.Geometry]:
+        r"""
+        The fill geometry of the entity, if it supports fills.
         """
     @staticmethod
     def from_dict(data: dict) -> Circle:

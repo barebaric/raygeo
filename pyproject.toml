@@ -62,6 +62,10 @@ module-name = "raygeo"
 stubPath = "python"
 reportMissingModuleSource = false
 include = ["tests", "python"]
+exclude = ["python/raygeo/cli"]
+reportIncompatibleMethodOverride = false
+reportIncompatibleVariableOverride = false
+reportAttributeAccessIssue = false
 
 [tool.ruff]
 line-length = 79

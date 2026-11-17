@@ -60,7 +60,7 @@ class SketchPoint:
         """
     @constrained.setter
     def constrained(self, value: builtins.bool) -> None: ...
-    def __new__(cls, id: builtins.int, x: builtins.float, y: builtins.float, fixed: builtins.bool = False) -> typing.Self:
+    def __new__(cls, id: builtins.int, x: builtins.float, y: builtins.float, fixed: builtins.bool = False) -> SketchPoint:
         r"""
         Creates a point view with the given id and coordinates.
         """

@@ -168,7 +168,7 @@ impl PySketchPoint {
             .unwrap_or_else(|| "sharp".to_string());
         Ok(PySketchPoint {
             inner: crate::sketch::entities::point::SketchPoint {
-                id: id as u64,
+                id,
                 x,
                 y,
                 fixed,

@@ -1,16 +1,17 @@
 //! Bindings for the parallelogram constraint.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use pyo3::prelude::*;
-use pyo3::types::PyDict;
+use pyo3::types::{PyAny, PyDict, PyType};
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
-use super::PyConstraintBase;
+use super::radius::dict_type;
+use super::{surface, PyConstraintBase};
 
 use crate::python::sketch::context::PointCtx;
 use crate::python::sketch::protocols::{Canvas, DrawContext, ScreenMap};
-use crate::sketch::constraint::SketchConstraint;
+use crate::sketch::constraint::{PointContext, SketchConstraint};
 use crate::sketch::constraints::parallelogram::ParallelogramConstraint as CoreConstraint;
 
 /// Enforces (p_width - p_origin) == (p4 - p_height).
@@ -38,7 +39,7 @@ pub struct PyParallelogramConstraint {
     #[pyo3(get, set)]
     pub p4: i64,
     /// Reference user-visibility flag.
-    #[pyo3(get)]
+    #[pyo3(get, set)]
     pub user_visible: bool,
     /// Reference validation status ordinal.
     #[pyo3(get, set)]
@@ -50,7 +51,8 @@ pub struct PyParallelogramConstraint {
 impl PyParallelogramConstraint {
     /// Creates the constraint from its resolved points and values.
     #[new]
-    #[pyo3(signature = (p_origin, p_width, p_height, p4, user_visible = true))]
+    #[pyo3(signature = (p_origin, p_width, p_height, p4,
+                        user_visible = false))]
     fn new(
         p_origin: i64,
         p_width: i64,
@@ -70,9 +72,9 @@ impl PyParallelogramConstraint {
         )
     }
 
-    /// Sets the reference user-visibility flag.
-    fn set_user_visible(&mut self, value: bool) {
-        self.user_visible = value;
+    /// The set of point ids this constraint references.
+    fn get_referenced_point_ids(&self) -> HashSet<i64> {
+        HashSet::from([self.p_origin, self.p_width, self.p_height, self.p4])
     }
 
     /// Partial derivatives of the error by point id.
@@ -82,6 +84,7 @@ impl PyParallelogramConstraint {
         mut reg: PointCtx<'_>,
         params: Option<Py<PyAny>>,
     ) -> HashMap<u64, Vec<(f64, f64)>> {
+        let _ = params;
         super::constraint_gradient(&self.clone().into_constraint(), &mut reg)
     }
 
@@ -90,24 +93,52 @@ impl PyParallelogramConstraint {
         self.clone().into_constraint().referenced_points(&registry)
     }
 
-    /// Alias for referenced_points (reference naming).
-    fn get_referenced_point_ids(
-        &self,
-        registry: PointCtx<'_>,
-    ) -> std::collections::HashSet<u64> {
-        self.referenced_points(registry).into_iter().collect()
-    }
-
     /// Returns the constraint error at the registry's point positions.
     #[pyo3(signature = (reg, params = None))]
-    fn error(&self, reg: PointCtx<'_>, params: Option<Py<PyAny>>) -> Vec<f64> {
+    fn error(
+        &self,
+        reg: PointCtx<'_>,
+        params: Option<Py<PyAny>>,
+    ) -> (f64, f64) {
         let _ = params;
-        self.clone().into_constraint().error(&reg)
+        let errors = self.clone().into_constraint().error(&reg);
+        (
+            errors.first().copied().unwrap_or(0.0),
+            errors.get(1).copied().unwrap_or(0.0),
+        )
     }
 
     /// Serializes to the reference constraint dictionary shape.
     fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
-        super::dict_from_value(py, &self.clone().into_constraint().to_json())
+        let dict = PyDict::new(py);
+        dict_type(&dict, "ParallelogramConstraint")?;
+        dict.set_item("p_origin", self.p_origin)?;
+        dict.set_item("p_width", self.p_width)?;
+        dict.set_item("p_height", self.p_height)?;
+        dict.set_item("p4", self.p4)?;
+        dict.set_item("user_visible", self.user_visible)?;
+        Ok(dict)
+    }
+
+    /// Rebuilds the constraint from its reference dictionary shape.
+    #[classmethod]
+    fn from_dict(
+        cls: &Bound<'_, PyType>,
+        py: Python<'_>,
+        data: &Bound<'_, PyDict>,
+    ) -> PyResult<Py<PyAny>> {
+        let kwargs = PyDict::new(py);
+        kwargs.set_item("p_origin", data.get_item("p_origin")?)?;
+        kwargs.set_item("p_width", data.get_item("p_width")?)?;
+        kwargs.set_item("p_height", data.get_item("p_height")?)?;
+        kwargs.set_item("p4", data.get_item("p4")?)?;
+        kwargs.set_item(
+            "user_visible",
+            data.get_item("user_visible")?
+                .and_then(|value| value.extract::<bool>().ok())
+                .unwrap_or(false),
+        )?;
+        Ok(cls.as_any().call((), Some(&kwargs))?.unbind())
     }
 
     /// Draws the constraint's symbol onto the cairo context.
@@ -133,6 +164,38 @@ impl PyParallelogramConstraint {
             point_radius,
             self.status,
         )
+    }
+
+    /// The human-readable type name (translated).
+    #[staticmethod]
+    fn get_type_name(py: Python<'_>) -> String {
+        surface::gettext(py, "Parallelogram")
+    }
+
+    /// Whether this constraint can be applied to the selection.
+    #[classmethod]
+    #[pyo3(signature = (selection, _sketch = None))]
+    fn can_apply_to(
+        _cls: &Bound<'_, PyType>,
+        selection: &Bound<'_, PyAny>,
+        _sketch: Option<&Bound<'_, PyAny>>,
+    ) -> PyResult<bool> {
+        let (point_ids, entity_ids) = surface::selection_ids(selection)?;
+        Ok(point_ids.len() == 4 && entity_ids.is_empty())
+    }
+
+    /// The human-readable title for this constraint.
+    fn get_title(slf: &Bound<'_, Self>, _py: Python<'_>) -> PyResult<String> {
+        surface::title_plain(slf.as_any())
+    }
+
+    /// The subtitle describing the constrained points.
+    fn get_subtitle(&self, py: Python<'_>, registry: PointCtx<'_>) -> String {
+        let Some(origin) = registry.get_point(self.p_origin as u64) else {
+            return String::new();
+        };
+        let coord = surface::format_coord(py, origin.x, origin.y);
+        surface::gettext_format(py, "Origin at {}", &[&coord])
     }
 
     /// Whether the constraint's rendered symbol is hit at (mx, my).

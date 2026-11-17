@@ -3,13 +3,14 @@
 use std::collections::HashMap;
 
 use pyo3::prelude::*;
-use pyo3::types::PyDict;
+use pyo3::types::{PyAny, PyDict, PyType};
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
-use super::PyConstraintBase;
+use super::radius::dict_type;
+use super::{surface, PyConstraintBase};
 use crate::python::sketch::context::PointCtx;
 use crate::python::sketch::protocols::{Canvas, DrawContext, ScreenMap};
-use crate::sketch::constraint::SketchConstraint;
+use crate::sketch::constraint::{PointContext, SketchConstraint};
 use crate::sketch::constraints::perpendicular::PerpendicularConstraint as CoreConstraint;
 
 /// Enforces perpendicularity between two entities.
@@ -31,7 +32,7 @@ pub struct PyPerpendicularConstraint {
     #[pyo3(get, set)]
     pub e2_id: i64,
     /// Reference user-visibility flag.
-    #[pyo3(get)]
+    #[pyo3(get, set)]
     pub user_visible: bool,
     /// Reference validation status ordinal.
     #[pyo3(get, set)]
@@ -62,8 +63,14 @@ impl PyPerpendicularConstraint {
     /// Returns the constraint error at the registry's point
     /// positions.
     #[pyo3(signature = (reg, params = None))]
-    fn error(&self, reg: PointCtx<'_>, params: Option<Py<PyAny>>) -> Vec<f64> {
-        self.clone().into_constraint().error(&reg)
+    fn error(&self, reg: PointCtx<'_>, params: Option<Py<PyAny>>) -> f64 {
+        let _ = params;
+        self.clone()
+            .into_constraint()
+            .error(&reg)
+            .first()
+            .copied()
+            .unwrap_or(0.0)
     }
 
     /// Partial derivatives of the error by point id.
@@ -73,6 +80,7 @@ impl PyPerpendicularConstraint {
         mut reg: PointCtx<'_>,
         params: Option<Py<PyAny>>,
     ) -> HashMap<u64, Vec<(f64, f64)>> {
+        let _ = params;
         super::constraint_gradient(&self.clone().into_constraint(), &mut reg)
     }
 
@@ -81,17 +89,33 @@ impl PyPerpendicularConstraint {
         self.clone().into_constraint().referenced_points(&registry)
     }
 
-    /// Alias for referenced_points (reference naming).
-    fn get_referenced_point_ids(
-        &self,
-        registry: PointCtx<'_>,
-    ) -> std::collections::HashSet<u64> {
-        self.referenced_points(registry).into_iter().collect()
-    }
-
     /// Serializes to the reference constraint dictionary shape.
     fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
-        super::dict_from_value(py, &self.clone().into_constraint().to_json())
+        let dict = PyDict::new(py);
+        dict_type(&dict, "PerpendicularConstraint")?;
+        dict.set_item("e1_id", self.e1_id)?;
+        dict.set_item("e2_id", self.e2_id)?;
+        dict.set_item("user_visible", self.user_visible)?;
+        Ok(dict)
+    }
+
+    /// Rebuilds the constraint from its reference dictionary shape.
+    #[classmethod]
+    fn from_dict(
+        cls: &Bound<'_, PyType>,
+        py: Python<'_>,
+        data: &Bound<'_, PyDict>,
+    ) -> PyResult<Py<PyAny>> {
+        let kwargs = PyDict::new(py);
+        kwargs.set_item("e1_id", data.get_item("e1_id")?)?;
+        kwargs.set_item("e2_id", data.get_item("e2_id")?)?;
+        kwargs.set_item(
+            "user_visible",
+            data.get_item("user_visible")?
+                .and_then(|value| value.extract::<bool>().ok())
+                .unwrap_or(true),
+        )?;
+        Ok(cls.as_any().call((), Some(&kwargs))?.unbind())
     }
 
     /// Draws the constraint's symbol onto the cairo context.
@@ -119,9 +143,67 @@ impl PyPerpendicularConstraint {
         )
     }
 
-    /// Sets the reference user-visibility flag.
-    fn set_user_visible(&mut self, value: bool) {
-        self.user_visible = value;
+    /// The string key identifying this constraint type.
+    #[classmethod]
+    fn get_type_key(_cls: &Bound<'_, PyType>) -> &'static str {
+        "perp"
+    }
+
+    /// The human-readable type name (translated).
+    #[staticmethod]
+    fn get_type_name(py: Python<'_>) -> String {
+        surface::gettext(py, "Perpendicular")
+    }
+
+    /// Whether this constraint can be applied to the selection.
+    #[classmethod]
+    #[pyo3(signature = (selection, sketch = None))]
+    fn can_apply_to(
+        _cls: &Bound<'_, PyType>,
+        selection: &Bound<'_, PyAny>,
+        sketch: Option<&Bound<'_, PyAny>>,
+    ) -> PyResult<bool> {
+        let (point_ids, entity_ids) = surface::selection_ids(selection)?;
+        if !point_ids.is_empty() || entity_ids.len() != 2 {
+            return Ok(false);
+        }
+        let Some(entities) = surface::resolve_entities(selection, sketch)?
+        else {
+            return Ok(false);
+        };
+        Ok(applies_check(&entities))
+    }
+
+    /// Whether both operands are lines or radius-bearing entities.
+    #[classmethod]
+    fn applies_to_entities(
+        _cls: &Bound<'_, PyType>,
+        entities: &Bound<'_, PyAny>,
+    ) -> PyResult<bool> {
+        let resolved = surface::entities_from_py(entities)?;
+        Ok(applies_check(&resolved))
+    }
+
+    /// The human-readable title for this constraint.
+    fn get_title(slf: &Bound<'_, Self>, _py: Python<'_>) -> PyResult<String> {
+        surface::title_plain(slf.as_any())
+    }
+
+    /// The subtitle describing the constrained entities.
+    fn get_subtitle(&self, py: Python<'_>, registry: PointCtx<'_>) -> String {
+        let first = registry.get_entity(self.e1_id as u64);
+        let second = registry.get_entity(self.e2_id as u64);
+        let (Some(first), Some(second)) = (first, second) else {
+            return String::new();
+        };
+        surface::gettext_format(
+            py,
+            "Between {} and {}",
+            &[
+                &surface::entity_label(first.as_ref()),
+                &surface::entity_label(second.as_ref()),
+            ],
+        )
     }
 
     /// Whether the constraint's rendered symbol is hit at (mx, my).
@@ -147,6 +229,19 @@ impl PyPerpendicularConstraint {
             Some(&to_screen),
         )
     }
+}
+
+/// The reference `applies_to_entities` body: exactly two operands,
+/// both lines or radius-bearing entities.
+fn applies_check(
+    entities: &[Option<Box<dyn crate::sketch::entities::Entity>>],
+) -> bool {
+    entities.len() == 2
+        && entities.iter().all(|entity| {
+            entity.as_deref().is_some_and(|entity| {
+                entity.type_name() == "line" || entity.is_radius_entity()
+            })
+        })
 }
 
 impl PyPerpendicularConstraint {
