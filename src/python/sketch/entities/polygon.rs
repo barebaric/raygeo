@@ -75,10 +75,20 @@ impl PyPolygon {
         self.inner.center as i64
     }
 
+    #[setter]
+    fn set_center_idx(&mut self, value: i64) {
+        self.inner.center = value as u64;
+    }
+
     /// Handle point id.
     #[getter]
     fn handle_idx(&self) -> i64 {
         self.inner.handle as i64
+    }
+
+    #[setter]
+    fn set_handle_idx(&mut self, value: i64) {
+        self.inner.handle = value as u64;
     }
 
     /// Whether the polygon contour is closed.

@@ -63,8 +63,8 @@ impl PyLine {
     }
 
     #[setter]
-    fn set_p1_idx(&mut self, value: u64) {
-        self.inner.p1 = value;
+    fn set_p1_idx(&mut self, value: i64) {
+        self.inner.p1 = value as u64;
     }
 
     /// Second endpoint point id.
@@ -74,8 +74,8 @@ impl PyLine {
     }
 
     #[setter]
-    fn set_p2_idx(&mut self, value: u64) {
-        self.inner.p2 = value;
+    fn set_p2_idx(&mut self, value: i64) {
+        self.inner.p2 = value as u64;
     }
 
     /// Whether the entity is construction geometry.

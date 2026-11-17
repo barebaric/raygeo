@@ -64,8 +64,8 @@ impl PyCircle {
     }
 
     #[setter]
-    fn set_center_idx(&mut self, value: u64) {
-        self.inner.center = value;
+    fn set_center_idx(&mut self, value: i64) {
+        self.inner.center = value as u64;
     }
 
     /// Radius point id.
@@ -75,8 +75,8 @@ impl PyCircle {
     }
 
     #[setter]
-    fn set_radius_pt_idx(&mut self, value: u64) {
-        self.inner.radius_point = value;
+    fn set_radius_pt_idx(&mut self, value: i64) {
+        self.inner.radius_point = value as u64;
     }
 
     /// Whether the entity is construction geometry.

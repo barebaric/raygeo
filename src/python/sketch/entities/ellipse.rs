@@ -83,8 +83,8 @@ impl PyEllipse {
     }
 
     #[setter]
-    fn set_center_idx(&mut self, value: u64) {
-        self.inner.center = value;
+    fn set_center_idx(&mut self, value: i64) {
+        self.inner.center = value as u64;
     }
 
     /// Helper construction line ids.
@@ -107,8 +107,8 @@ impl PyEllipse {
     }
 
     #[setter]
-    fn set_radius_x_pt_idx(&mut self, value: u64) {
-        self.inner.radius_x_point = value;
+    fn set_radius_x_pt_idx(&mut self, value: i64) {
+        self.inner.radius_x_point = value as u64;
     }
 
     /// Alias for radius_y_point_idx.
@@ -118,8 +118,8 @@ impl PyEllipse {
     }
 
     #[setter]
-    fn set_radius_y_pt_idx(&mut self, value: u64) {
-        self.inner.radius_y_point = value;
+    fn set_radius_y_pt_idx(&mut self, value: i64) {
+        self.inner.radius_y_point = value as u64;
     }
 
     #[getter]

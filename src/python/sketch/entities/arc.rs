@@ -74,8 +74,8 @@ impl PyArc {
     }
 
     #[setter]
-    fn set_start_idx(&mut self, value: u64) {
-        self.inner.start = value;
+    fn set_start_idx(&mut self, value: i64) {
+        self.inner.start = value as u64;
     }
 
     /// End point id.
@@ -85,8 +85,8 @@ impl PyArc {
     }
 
     #[setter]
-    fn set_end_idx(&mut self, value: u64) {
-        self.inner.end = value;
+    fn set_end_idx(&mut self, value: i64) {
+        self.inner.end = value as u64;
     }
 
     /// Center point id.
@@ -96,8 +96,8 @@ impl PyArc {
     }
 
     #[setter]
-    fn set_center_idx(&mut self, value: u64) {
-        self.inner.center = value;
+    fn set_center_idx(&mut self, value: i64) {
+        self.inner.center = value as u64;
     }
 
     /// Whether the arc sweeps clockwise from start to end.

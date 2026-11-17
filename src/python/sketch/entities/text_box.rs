@@ -117,16 +117,31 @@ impl PyTextBox {
         self.inner.origin as i64
     }
 
+    #[setter]
+    fn set_origin_id(&mut self, value: i64) {
+        self.inner.origin = value as u64;
+    }
+
     /// Width point id.
     #[getter]
     fn width_id(&self) -> i64 {
         self.inner.width as i64
     }
 
+    #[setter]
+    fn set_width_id(&mut self, value: i64) {
+        self.inner.width = value as u64;
+    }
+
     /// Height point id.
     #[getter]
     fn height_id(&self) -> i64 {
         self.inner.height as i64
+    }
+
+    #[setter]
+    fn set_height_id(&mut self, value: i64) {
+        self.inner.height = value as u64;
     }
 
     /// The text content.
