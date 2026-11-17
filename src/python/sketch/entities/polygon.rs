@@ -37,8 +37,8 @@ impl PyPolygon {
                         construction = false, rings = None))]
     fn new(
         id: i64,
-        center_idx: u64,
-        handle_idx: u64,
+        center_idx: i64,
+        handle_idx: i64,
         vertices: Vec<(f64, f64)>,
         closed: bool,
         construction: bool,
@@ -47,8 +47,8 @@ impl PyPolygon {
         PyClassInitializer::from(PyEntityBase).add_subclass(PyPolygon {
             inner: CorePolygon::new(
                 id as u64,
-                center_idx,
-                handle_idx,
+                center_idx as u64,
+                handle_idx as u64,
                 vertices,
                 closed,
                 construction,
@@ -71,14 +71,14 @@ impl PyPolygon {
 
     /// Center point id.
     #[getter]
-    fn center_idx(&self) -> u64 {
-        self.inner.center
+    fn center_idx(&self) -> i64 {
+        self.inner.center as i64
     }
 
     /// Handle point id.
     #[getter]
-    fn handle_idx(&self) -> u64 {
-        self.inner.handle
+    fn handle_idx(&self) -> i64 {
+        self.inner.handle as i64
     }
 
     /// Whether the polygon contour is closed.

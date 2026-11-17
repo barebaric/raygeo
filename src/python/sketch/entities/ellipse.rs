@@ -39,17 +39,17 @@ impl PyEllipse {
                         construction = false, helper_line_ids = None))]
     fn new(
         id: i64,
-        center_idx: u64,
-        radius_x_pt_idx: u64,
-        radius_y_pt_idx: u64,
+        center_idx: i64,
+        radius_x_pt_idx: i64,
+        radius_y_pt_idx: i64,
         construction: bool,
         helper_line_ids: Option<Vec<u64>>,
     ) -> PyClassInitializer<Self> {
         let mut inner = CoreEllipse::new(
             id as u64,
-            center_idx,
-            radius_x_pt_idx,
-            radius_y_pt_idx,
+            center_idx as u64,
+            radius_x_pt_idx as u64,
+            radius_y_pt_idx as u64,
             construction,
         );
         inner.helper_line_ids = helper_line_ids.unwrap_or_default();
@@ -74,8 +74,8 @@ impl PyEllipse {
 
     /// Center point id.
     #[getter]
-    fn center_idx(&self) -> u64 {
-        self.inner.center
+    fn center_idx(&self) -> i64 {
+        self.inner.center as i64
     }
 
     #[setter]
@@ -98,8 +98,8 @@ impl PyEllipse {
     /// X-radius point id.
     /// Alias for radius_x_point_idx.
     #[getter]
-    fn radius_x_pt_idx(&self) -> u64 {
-        self.inner.radius_x_point
+    fn radius_x_pt_idx(&self) -> i64 {
+        self.inner.radius_x_point as i64
     }
 
     #[setter]
@@ -109,8 +109,8 @@ impl PyEllipse {
 
     /// Alias for radius_y_point_idx.
     #[getter]
-    fn radius_y_pt_idx(&self) -> u64 {
-        self.inner.radius_y_point
+    fn radius_y_pt_idx(&self) -> i64 {
+        self.inner.radius_y_point as i64
     }
 
     #[setter]

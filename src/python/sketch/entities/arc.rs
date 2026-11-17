@@ -37,18 +37,18 @@ impl PyArc {
     #[allow(clippy::too_many_arguments)]
     fn new(
         id: i64,
-        start_idx: u64,
-        end_idx: u64,
-        center_idx: u64,
+        start_idx: i64,
+        end_idx: i64,
+        center_idx: i64,
         clockwise: bool,
         construction: bool,
     ) -> PyClassInitializer<Self> {
         PyClassInitializer::from(PyEntityBase).add_subclass(PyArc {
             inner: CoreArc::new(
                 id as u64,
-                start_idx,
-                end_idx,
-                center_idx,
+                start_idx as u64,
+                end_idx as u64,
+                center_idx as u64,
                 clockwise,
                 construction,
             ),
@@ -69,8 +69,8 @@ impl PyArc {
 
     /// Start point id.
     #[getter]
-    fn start_idx(&self) -> u64 {
-        self.inner.start
+    fn start_idx(&self) -> i64 {
+        self.inner.start as i64
     }
 
     #[setter]
@@ -80,8 +80,8 @@ impl PyArc {
 
     /// End point id.
     #[getter]
-    fn end_idx(&self) -> u64 {
-        self.inner.end
+    fn end_idx(&self) -> i64 {
+        self.inner.end as i64
     }
 
     #[setter]
@@ -91,8 +91,8 @@ impl PyArc {
 
     /// Center point id.
     #[getter]
-    fn center_idx(&self) -> u64 {
-        self.inner.center
+    fn center_idx(&self) -> i64 {
+        self.inner.center as i64
     }
 
     #[setter]

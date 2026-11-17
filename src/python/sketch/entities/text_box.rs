@@ -68,15 +68,15 @@ impl PyTextBox {
     #[allow(clippy::too_many_arguments)]
     fn new(
         id: i64,
-        origin_id: u64,
-        width_id: u64,
-        height_id: u64,
+        origin_id: i64,
+        width_id: i64,
+        height_id: i64,
         content: String,
         font_config: Option<&Bound<'_, PyAny>>,
         construction: bool,
     ) -> PyClassInitializer<Self> {
         let mut inner =
-            CoreTextBox::new(id as u64, origin_id, width_id, height_id, content, construction);
+            CoreTextBox::new(id as u64, origin_id as u64, width_id as u64, height_id as u64, content, construction);
         if let Some(config) = font_config {
             if let Ok(size) = config.getattr("size").and_then(|v| v.extract::<f64>()) {
                 let family: String = config
@@ -113,20 +113,20 @@ impl PyTextBox {
 
     /// Origin point id.
     #[getter]
-    fn origin_id(&self) -> u64 {
-        self.inner.origin
+    fn origin_id(&self) -> i64 {
+        self.inner.origin as i64
     }
 
     /// Width point id.
     #[getter]
-    fn width_id(&self) -> u64 {
-        self.inner.width
+    fn width_id(&self) -> i64 {
+        self.inner.width as i64
     }
 
     /// Height point id.
     #[getter]
-    fn height_id(&self) -> u64 {
-        self.inner.height
+    fn height_id(&self) -> i64 {
+        self.inner.height as i64
     }
 
     /// The text content.

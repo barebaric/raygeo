@@ -35,12 +35,12 @@ impl PyLine {
     #[pyo3(signature = (id, p1_idx, p2_idx, construction = false))]
     fn new(
         id: i64,
-        p1_idx: u64,
-        p2_idx: u64,
+        p1_idx: i64,
+        p2_idx: i64,
         construction: bool,
     ) -> PyClassInitializer<Self> {
         PyClassInitializer::from(PyEntityBase).add_subclass(PyLine {
-            inner: CoreLine::new(id as u64, p1_idx, p2_idx, construction),
+            inner: CoreLine::new(id as u64, p1_idx as u64, p2_idx as u64, construction),
             registry: None,
         })
     }
@@ -58,8 +58,8 @@ impl PyLine {
 
     /// First endpoint point id.
     #[getter]
-    fn p1_idx(&self) -> u64 {
-        self.inner.p1
+    fn p1_idx(&self) -> i64 {
+        self.inner.p1 as i64
     }
 
     #[setter]
@@ -69,8 +69,8 @@ impl PyLine {
 
     /// Second endpoint point id.
     #[getter]
-    fn p2_idx(&self) -> u64 {
-        self.inner.p2
+    fn p2_idx(&self) -> i64 {
+        self.inner.p2 as i64
     }
 
     #[setter]

@@ -37,8 +37,8 @@ impl PyBezier {
                         cp1 = None, cp2 = None))]
     fn new(
         id: i64,
-        start_idx: u64,
-        end_idx: u64,
+        start_idx: i64,
+        end_idx: i64,
         construction: bool,
         cp1: Option<(f64, f64)>,
         cp2: Option<(f64, f64)>,
@@ -46,8 +46,8 @@ impl PyBezier {
         PyClassInitializer::from(PyEntityBase).add_subclass(PyBezier {
             inner: CoreBezier::new(
                 id as u64,
-                start_idx,
-                end_idx,
+                start_idx as u64,
+                end_idx as u64,
                 construction,
                 cp1.map(|p| [p.0, p.1]),
                 cp2.map(|p| [p.0, p.1]),
@@ -69,8 +69,8 @@ impl PyBezier {
 
     /// Start point id.
     #[getter]
-    fn start_idx(&self) -> u64 {
-        self.inner.start
+    fn start_idx(&self) -> i64 {
+        self.inner.start as i64
     }
 
     #[setter]
@@ -80,8 +80,8 @@ impl PyBezier {
 
     /// End point id.
     #[getter]
-    fn end_idx(&self) -> u64 {
-        self.inner.end
+    fn end_idx(&self) -> i64 {
+        self.inner.end as i64
     }
 
     #[setter]

@@ -36,12 +36,12 @@ impl PyCircle {
     #[pyo3(signature = (id, center_idx, radius_pt_idx, construction = false))]
     fn new(
         id: i64,
-        center_idx: u64,
-        radius_pt_idx: u64,
+        center_idx: i64,
+        radius_pt_idx: i64,
         construction: bool,
     ) -> PyClassInitializer<Self> {
         PyClassInitializer::from(PyEntityBase).add_subclass(PyCircle {
-            inner: CoreCircle::new(id as u64, center_idx, radius_pt_idx, construction),
+            inner: CoreCircle::new(id as u64, center_idx as u64, radius_pt_idx as u64, construction),
             registry: None,
         })
     }
@@ -59,8 +59,8 @@ impl PyCircle {
 
     /// Center point id.
     #[getter]
-    fn center_idx(&self) -> u64 {
-        self.inner.center
+    fn center_idx(&self) -> i64 {
+        self.inner.center as i64
     }
 
     #[setter]
@@ -70,8 +70,8 @@ impl PyCircle {
 
     /// Radius point id.
     #[getter]
-    fn radius_pt_idx(&self) -> u64 {
-        self.inner.radius_point
+    fn radius_pt_idx(&self) -> i64 {
+        self.inner.radius_point as i64
     }
 
     #[setter]
