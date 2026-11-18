@@ -9,10 +9,10 @@ use crate::geo::shape::line::{
 };
 use crate::geo::shape::rect::does_rect_contain_rect;
 use crate::geo::types::{Point, Rect};
+use crate::sketch::constraint::PointContext;
 
 use super::entity::{quantize, Entity, EntityBase};
 use super::mirror::MirrorAxis;
-use crate::sketch::registry::EntityRegistry;
 
 /// A cubic bezier between two points, with the control points stored
 /// as offsets relative to their owning endpoints.
@@ -91,7 +91,7 @@ impl Bezier {
     /// owning endpoint for absent control points.
     pub fn get_control_points_or_endpoints(
         &self,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
     ) -> (f64, f64, f64, f64) {
         let Some((sx, sy)) = model.point_position(self.start) else {
             return (0.0, 0.0, 0.0, 0.0);
@@ -117,7 +117,7 @@ impl Bezier {
         self.cp1.is_none() && self.cp2.is_none()
     }
 
-    fn bbox(&self, model: &EntityRegistry) -> Rect {
+    fn bbox(&self, model: &dyn PointContext) -> Rect {
         let Some((sx, sy)) = model.point_position(self.start) else {
             return Rect::new(0.0, 0.0, 0.0, 0.0);
         };
@@ -150,6 +150,9 @@ impl Entity for Bezier {
 
     fn as_any(&self) -> &dyn std::any::Any {
         self
+    }
+    fn clone_box(&self) -> Box<dyn Entity> {
+        Box::new(self.clone())
     }
 
     fn type_name(&self) -> &'static str {
@@ -198,7 +201,7 @@ impl Entity for Bezier {
         }
     }
 
-    fn geometry_signature(&self, model: &EntityRegistry) -> Value {
+    fn geometry_signature(&self, model: &dyn PointContext) -> Value {
         let mut signature =
             match super::entity::points_signature(model, &self.get_point_ids())
             {
@@ -242,7 +245,7 @@ impl Entity for Bezier {
 
     fn tangent_at(
         &self,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
         point_id: u64,
     ) -> Option<(f64, f64)> {
         let (sx, sy) = model.point_position(self.start)?;
@@ -260,7 +263,7 @@ impl Entity for Bezier {
         &self,
         px: f64,
         py: f64,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
     ) -> Option<f64> {
         let (sx, sy) = model.point_position(self.start)?;
         let (ex, ey) = model.point_position(self.end)?;
@@ -293,7 +296,7 @@ impl Entity for Bezier {
         mx: f64,
         my: f64,
         threshold: f64,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
     ) -> bool {
         let (Some((sx, sy)), Some((ex, ey))) = (
             model.point_position(self.start),
@@ -328,7 +331,7 @@ impl Entity for Bezier {
 
     fn compute_constrained(
         &self,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
         _constrains_radius: &dyn Fn(u64) -> bool,
     ) -> bool {
         let s = model.get_point(self.start).map(|p| p.constrained);
@@ -336,11 +339,11 @@ impl Entity for Bezier {
         s.unwrap_or(false) && e.unwrap_or(false)
     }
 
-    fn is_contained_by(&self, rect: Rect, model: &EntityRegistry) -> bool {
+    fn is_contained_by(&self, rect: Rect, model: &dyn PointContext) -> bool {
         does_rect_contain_rect(rect, self.bbox(model))
     }
 
-    fn intersects_rect(&self, rect: Rect, model: &EntityRegistry) -> bool {
+    fn intersects_rect(&self, rect: Rect, model: &dyn PointContext) -> bool {
         let (Some((sx, sy)), Some((ex, ey))) = (
             model.point_position(self.start),
             model.point_position(self.end),
@@ -376,7 +379,7 @@ impl Entity for Bezier {
         })
     }
 
-    fn to_geometry(&self, model: &EntityRegistry) -> Geometry {
+    fn to_geometry(&self, model: &dyn PointContext) -> Geometry {
         let mut geo = Geometry::new();
         let (Some((sx, sy)), Some((ex, ey))) = (
             model.point_position(self.start),
@@ -403,7 +406,7 @@ impl Entity for Bezier {
     fn append_to_geometry(
         &self,
         geo: &mut Geometry,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
         forward: bool,
     ) {
         let (Some((sx, sy)), Some((ex, ey))) = (
@@ -440,7 +443,7 @@ impl Entity for Bezier {
 
     fn to_polygon_vertices(
         &self,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
         forward: bool,
     ) -> Vec<(f64, f64)> {
         let (Some((sx, sy)), Some((ex, ey))) = (

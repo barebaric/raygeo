@@ -1,6 +1,7 @@
 //! Bindings for the text box entity.
 
-use pyo3::exceptions::PyValueError;
+use crate::python::sketch::registry::value_from_dict;
+use pyo3::exceptions::{PyNotImplementedError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
@@ -12,6 +13,8 @@ use crate::geo::shape::text::FontConfig as CoreFontConfig;
 use crate::python::geo::geometry::Geometry as PyGeometry;
 use crate::python::geo::shape::text::PyFontConfig;
 use crate::python::sketch::constraints::dict_from_value;
+use crate::python::sketch::context::PointCtx;
+use crate::python::sketch::entities::signature_to_py;
 use crate::python::sketch::registry::PyEntityRegistry;
 use crate::sketch::entities::mirror::{MirrorAxis, MirrorDirection};
 use crate::sketch::entities::text_box::TextBoxEntity as CoreTextBox;
@@ -20,11 +23,12 @@ use crate::sketch::entities::Entity;
 /// A text box framed by origin, width and height points.
 #[gen_stub_pyclass]
 #[pyclass(
-    extends = PyEntityBase,module = "raygeo.sketch.entities.text_box", name = "TextBox")]
+    extends = PyEntityBase,
+    subclass,module = "raygeo.sketch.entities.text_box", name = "TextBox")]
 pub struct PyTextBox {
     pub inner: CoreTextBox,
     /// Live back-reference to the owning registry, if any.
-    pub registry: Option<Py<PyAny>>,
+    pub registry: Option<Py<PyEntityRegistry>>,
 }
 
 impl PyTextBox {
@@ -34,9 +38,7 @@ impl PyTextBox {
     fn live(&self) -> CoreTextBox {
         if let Some(registry) = &self.registry {
             return Python::attach(|py| {
-                if let Ok(reg) =
-                    registry.bind(py).extract::<PyRef<'_, PyEntityRegistry>>()
-                {
+                if let Ok(reg) = registry.bind(py).try_borrow() {
                     if let Some(entity) =
                         reg.inner.get_entity(self.inner.base.id)
                     {
@@ -57,26 +59,52 @@ impl PyTextBox {
 #[gen_stub_pymethods]
 #[pymethods]
 impl PyTextBox {
-    /// Creates an unattached text box; an id is assigned on
-    /// insertion.
+    /// Creates a text box with the given id and frame point ids.
     #[new]
-    #[pyo3(signature = (origin, width, height, content = String::new(), font_family = "sans-serif".to_string(), font_size = 10.0, bold = false, italic = false))]
+    #[pyo3(signature = (id, origin_id, width_id, height_id,
+                        content = String::new(), font_config = None,
+                        construction = false))]
     #[allow(clippy::too_many_arguments)]
     fn new(
-        origin: u64,
-        width: u64,
-        height: u64,
+        id: i64,
+        origin_id: i64,
+        width_id: i64,
+        height_id: i64,
         content: String,
-        font_family: String,
-        font_size: f64,
-        bold: bool,
-        italic: bool,
+        font_config: Option<&Bound<'_, PyAny>>,
+        construction: bool,
     ) -> PyClassInitializer<Self> {
-        let mut inner =
-            CoreTextBox::new(0, origin, width, height, content, false);
-        inner.font_config = CoreFontConfig::new(&font_family, font_size)
-            .bold(bold)
-            .italic(italic);
+        let mut inner = CoreTextBox::new(
+            id as u64,
+            origin_id as u64,
+            width_id as u64,
+            height_id as u64,
+            content,
+            construction,
+        );
+        if let Some(config) = font_config {
+            if let Ok(size) =
+                config.getattr("size").and_then(|v| v.extract::<f64>())
+            {
+                let family: String = config
+                    .getattr("family")
+                    .and_then(|v| v.extract())
+                    .unwrap_or_else(|_| "sans-serif".to_string());
+                inner.font_config = CoreFontConfig::new(&family, size)
+                    .bold(
+                        config
+                            .getattr("bold")
+                            .and_then(|v| v.extract())
+                            .unwrap_or(false),
+                    )
+                    .italic(
+                        config
+                            .getattr("italic")
+                            .and_then(|v| v.extract())
+                            .unwrap_or(false),
+                    );
+            }
+        }
         PyClassInitializer::from(PyEntityBase).add_subclass(PyTextBox {
             inner,
             registry: None,
@@ -96,32 +124,57 @@ impl PyTextBox {
 
     /// Origin point id.
     #[getter]
-    fn origin_id(&self) -> u64 {
-        self.inner.origin
+    fn origin_id(&self) -> i64 {
+        self.inner.origin as i64
+    }
+
+    #[setter]
+    fn set_origin_id(&mut self, value: i64) {
+        self.inner.origin = value as u64;
     }
 
     /// Width point id.
     #[getter]
-    fn width_id(&self) -> u64 {
-        self.inner.width
+    fn width_id(&self) -> i64 {
+        self.inner.width as i64
+    }
+
+    #[setter]
+    fn set_width_id(&mut self, value: i64) {
+        self.inner.width = value as u64;
     }
 
     /// Height point id.
     #[getter]
-    fn height_id(&self) -> u64 {
-        self.inner.height
+    fn height_id(&self) -> i64 {
+        self.inner.height as i64
+    }
+
+    #[setter]
+    fn set_height_id(&mut self, value: i64) {
+        self.inner.height = value as u64;
     }
 
     /// The text content.
     /// The ids of the frame construction lines.
     /// The fourth frame corner point id, if resolvable.
-    fn get_fourth_corner_id(&self, registry: &PyEntityRegistry) -> Option<u64> {
-        self.inner.get_fourth_corner_id(&registry.inner)
+    fn get_fourth_corner_id(&self, registry: PointCtx<'_>) -> Option<u64> {
+        self.inner.get_fourth_corner_id(&registry)
     }
 
     #[getter]
-    fn construction_line_ids(&self) -> Vec<u64> {
-        self.inner.construction_line_ids.clone()
+    fn construction_line_ids(&self) -> Vec<i64> {
+        self.inner
+            .construction_line_ids
+            .iter()
+            .map(|&id| id as i64)
+            .collect()
+    }
+
+    #[setter]
+    fn set_construction_line_ids(&mut self, value: Vec<i64>) {
+        self.inner.construction_line_ids =
+            value.iter().map(|&id| id as u64).collect();
     }
 
     #[getter]
@@ -245,6 +298,13 @@ impl PyTextBox {
         self.inner.base.fill_color.map(|c| (c[0], c[1], c[2], c[3]))
     }
 
+    #[setter]
+    #[pyo3(name = "fill_color")]
+    fn set_fill_color_attr(&mut self, value: Option<(f64, f64, f64, f64)>) {
+        self.inner.base_mut().fill_color =
+            value.map(|(r, g, b, a)| [r, g, b, a]);
+    }
+
     /// The entity type name.
     fn type_name(&self) -> &'static str {
         self.inner.type_name()
@@ -271,14 +331,14 @@ impl PyTextBox {
     fn geometry_signature<'py>(
         &self,
         py: Python<'py>,
-        registry: &PyEntityRegistry,
-    ) -> PyResult<Bound<'py, PyDict>> {
-        dict_from_value(py, &self.inner.geometry_signature(&registry.inner))
+        registry: PointCtx<'_>,
+    ) -> PyResult<Bound<'py, pyo3::types::PyTuple>> {
+        signature_to_py(py, &self.inner.geometry_signature(&registry))
     }
 
     /// Returns the entity's toolpath geometry in model coordinates.
-    fn to_geometry(&self, registry: &PyEntityRegistry) -> PyGeometry {
-        let geometry = Entity::to_geometry(&self.inner, &registry.inner);
+    fn to_geometry(&self, registry: PointCtx<'_>) -> PyGeometry {
+        let geometry = Entity::to_geometry(&self.inner, &registry);
         PyGeometry { inner: geometry }
     }
 
@@ -286,20 +346,20 @@ impl PyTextBox {
     #[pyo3(signature = (registry, forward = true))]
     fn to_polygon_vertices(
         &self,
-        registry: &PyEntityRegistry,
+        registry: PointCtx<'_>,
         forward: bool,
     ) -> Vec<(f64, f64)> {
-        self.inner.to_polygon_vertices(&registry.inner, forward)
+        self.inner.to_polygon_vertices(&registry, forward)
     }
 
     /// Returns the entity's centerline as polyline vertices.
     #[pyo3(signature = (registry, tolerance = 0.1))]
     fn to_polyline(
         &self,
-        registry: &PyEntityRegistry,
+        registry: PointCtx<'_>,
         tolerance: f64,
     ) -> Vec<(f64, f64)> {
-        self.inner.to_polyline(&registry.inner, tolerance)
+        self.inner.to_polyline(&registry, tolerance)
     }
 
     /// Whether the entity is hit at model coordinates (mx, my).
@@ -309,19 +369,14 @@ impl PyTextBox {
         mx: f64,
         my: f64,
         threshold: f64,
-        registry: &PyEntityRegistry,
+        registry: PointCtx<'_>,
     ) -> bool {
-        self.inner.hit_test(mx, my, threshold, &registry.inner)
+        self.inner.hit_test(mx, my, threshold, &registry)
     }
 
     /// Whether the model-space point lies inside the entity.
-    fn contains_point(
-        &self,
-        registry: &PyEntityRegistry,
-        x: f64,
-        y: f64,
-    ) -> bool {
-        self.inner.contains_point(&registry.inner, x, y)
+    fn contains_point(&self, registry: PointCtx<'_>, x: f64, y: f64) -> bool {
+        self.inner.contains_point(&registry, x, y)
     }
 
     /// Signed distance from the model-space point, if defined.
@@ -329,18 +384,22 @@ impl PyTextBox {
         &self,
         px: f64,
         py: f64,
-        registry: &PyEntityRegistry,
+        registry: PointCtx<'_>,
     ) -> Option<f64> {
-        self.inner.signed_distance_to(px, py, &registry.inner)
+        self.inner.signed_distance_to(px, py, &registry)
     }
 
     /// Tangent direction at the point nearest the model-space point.
     fn tangent_at(
         &self,
-        registry: &PyEntityRegistry,
+        registry: PointCtx<'_>,
         point_id: u64,
-    ) -> Option<(f64, f64)> {
-        self.inner.tangent_at(&registry.inner, point_id)
+    ) -> PyResult<(f64, f64)> {
+        self.inner.tangent_at(&registry, point_id).ok_or_else(|| {
+            PyNotImplementedError::new_err(
+                "tangent not defined for this entity",
+            )
+        })
     }
 
     /// Mirrors the entity across the axis.
@@ -403,8 +462,217 @@ impl PyTextBox {
         self.inner.get_drag_anchor_points(point_id)
     }
     /// All four frame corner point ids.
-    fn get_all_frame_point_ids(&self, registry: &PyEntityRegistry) -> Vec<u64> {
-        self.inner.get_all_frame_point_ids(&registry.inner)
+    fn get_all_frame_point_ids(&self, registry: PointCtx<'_>) -> Vec<u64> {
+        self.inner.get_all_frame_point_ids(&registry)
+    }
+
+    /// Restores base flags serialized by to_dict() but not accepted
+    /// as constructor arguments.
+    fn restore_base_flags(&mut self, data: &Bound<'_, PyDict>) {
+        let get = |key: &str| -> bool {
+            data.get_item(key)
+                .ok()
+                .flatten()
+                .and_then(|v| v.extract().ok())
+                .unwrap_or(false)
+        };
+        self.inner.base_mut().invisible = get("invisible");
+        self.inner.base_mut().array_copy = get("array_copy");
+    }
+
+    /// Whether the entity has a radius (arc, circle).
+    fn is_radius_entity(&self) -> bool {
+        self.inner.is_radius_entity()
+    }
+
+    /// Whether the entity forms a closed loop.
+    fn is_closed_loop(&self) -> bool {
+        self.inner.is_closed_loop()
+    }
+
+    /// Whether the entity participates in edge/chaining adjacency
+    /// for loop detection (line, arc, bezier).
+    fn is_edge_entity(&self) -> bool {
+        self.inner.is_edge_entity()
+    }
+
+    /// The entity ids of the curve endpoints.
+    fn get_endpoint_ids(&self) -> Vec<u64> {
+        self.inner.get_endpoint_ids()
+    }
+
+    /// Point ids acting as junction candidates for chaining.
+    fn get_junction_point_ids(&self) -> Vec<u64> {
+        self.inner.get_junction_point_ids()
+    }
+
+    /// Auxiliary/child entity ids belonging to this compound entity.
+    fn get_helper_ids(&self) -> Vec<u64> {
+        self.inner.get_helper_ids()
+    }
+
+    /// Drops this entity's references to its helper entities.
+    fn clear_helper_references(&mut self) {
+        self.inner.clear_helper_references()
+    }
+
+    /// Point ids that can remain unconstrained when this entity is
+    /// constrained.
+    fn get_ignorable_unconstrained_points(&self) -> Vec<u64> {
+        self.inner.get_ignorable_unconstrained_points()
+    }
+
+    /// Whether a point can be constrained onto this entity's curve.
+    fn supports_point_on_curve(&self) -> bool {
+        self.inner.supports_point_on_curve()
+    }
+
+    /// Whether this entity can receive a fill color.
+    fn supports_fill(&self) -> bool {
+        self.inner.supports_fill()
+    }
+
+    /// The characteristic length used by equal-length constraints.
+    fn characteristic_length(&self, registry: PointCtx<'_>) -> f64 {
+        self.inner.characteristic_length(&registry)
+    }
+
+    /// The defining-point pairs of the characteristic length.
+    fn characteristic_length_pairs(&self) -> Vec<[u64; 2]> {
+        self.inner.characteristic_length_pairs()
+    }
+
+    /// The signed area enclosed by the entity, if defined.
+    fn enclosed_signed_area(&self, registry: PointCtx<'_>) -> PyResult<f64> {
+        self.inner.enclosed_signed_area(&registry).ok_or_else(|| {
+            PyNotImplementedError::new_err(
+                "signed area not defined for this entity",
+            )
+        })
+    }
+
+    /// Point ids that move rigidly with the given point.
+    fn get_rigidly_connected_points(&self, point_id: u64) -> Vec<u64> {
+        self.inner.get_rigidly_connected_points(point_id)
+    }
+
+    /// Solver-relevant discrete state for undo/redo snapshots.
+    fn get_state<'py>(
+        &self,
+        py: Python<'py>,
+    ) -> PyResult<Option<Bound<'py, PyDict>>> {
+        match self.inner.get_state() {
+            Some(value) => dict_from_value(py, &value).map(Some),
+            None => Ok(None),
+        }
+    }
+
+    /// Restores solver-relevant discrete state from a snapshot.
+    fn set_state(&mut self, state: &Bound<'_, PyDict>) -> PyResult<()> {
+        let value = value_from_dict(state)?;
+        self.inner.set_state(&value);
+        Ok(())
+    }
+
+    /// Updates the constrained flag from defining-point status and
+    /// constraints that dimension this entity's radius or length.
+    fn update_constrained_status(
+        &mut self,
+        registry: PointCtx<'_>,
+        constraints: &Bound<'_, PyAny>,
+    ) -> PyResult<()> {
+        let constrained =
+            self.inner.compute_constrained(&registry, &|eid: u64| {
+                Python::attach(|_py| {
+                    let registry = registry.0.clone();
+                    let mut constrained = false;
+                    if let Ok(iter) = constraints.try_iter() {
+                        for constraint in iter.flatten() {
+                            if let Ok(flag) = constraint
+                                .call_method1(
+                                    "constrains_radius",
+                                    (&registry, eid),
+                                )
+                                .and_then(|v| v.extract::<bool>())
+                            {
+                                if flag {
+                                    constrained = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    constrained
+                })
+            });
+        self.inner.base_mut().constrained = constrained;
+        Ok(())
+    }
+
+    /// Whether the entity is fully contained by the given rect.
+    fn is_contained_by(
+        &self,
+        rect: (f64, f64, f64, f64),
+        registry: PointCtx<'_>,
+    ) -> bool {
+        let rect = crate::geo::types::Rect {
+            min: crate::geo::types::Point::new(rect.0, rect.1),
+            max: crate::geo::types::Point::new(rect.2, rect.3),
+        };
+        self.inner.is_contained_by(rect, &registry)
+    }
+
+    /// Whether the entity intersects the given rect.
+    fn intersects_rect(
+        &self,
+        rect: (f64, f64, f64, f64),
+        registry: PointCtx<'_>,
+    ) -> bool {
+        let rect = crate::geo::types::Rect {
+            min: crate::geo::types::Point::new(rect.0, rect.1),
+            max: crate::geo::types::Point::new(rect.2, rect.3),
+        };
+        self.inner.intersects_rect(rect, &registry)
+    }
+
+    /// Appends the entity's outline to the geometry.
+    #[pyo3(signature = (geo, registry, forward = true))]
+    fn append_to_geometry(
+        &self,
+        geo: &mut crate::python::geo::geometry::Geometry,
+        registry: PointCtx<'_>,
+        forward: bool,
+    ) {
+        self.inner
+            .append_to_geometry(&mut geo.inner, &registry, forward);
+    }
+
+    /// The fill geometry of the entity, if it supports fills.
+    fn create_fill_geometry(
+        &self,
+        registry: PointCtx<'_>,
+    ) -> Option<crate::python::geo::geometry::Geometry> {
+        self.inner.create_fill_geometry(&registry).map(|geometry| {
+            crate::python::geo::geometry::Geometry { inner: geometry }
+        })
+    }
+
+    /// Builds an entity from its reference dictionary shape.
+    #[staticmethod]
+    fn from_dict(
+        py: Python<'_>,
+        data: &Bound<'_, PyDict>,
+    ) -> PyResult<Py<PyTextBox>> {
+        let value = value_from_dict(data)?;
+        let inner = CoreTextBox::from_json(&value)
+            .ok_or_else(|| PyValueError::new_err("invalid text_box dict"))?;
+        Py::new(
+            py,
+            PyClassInitializer::from(PyEntityBase).add_subclass(PyTextBox {
+                inner,
+                registry: None,
+            }),
+        )
     }
 }
 

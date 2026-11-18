@@ -5,19 +5,22 @@ import builtins
 import collections.abc
 from raygeo.sketch import constraints
 from raygeo.sketch import protocols
-from raygeo.sketch import registry
 import typing
 __all__ = [
     "DragConstraint",
 ]
 
-@typing.final
 class DragConstraint(constraints.Constraint):
     r"""
     Softly pulls a point towards a target coordinate.
     """
     @property
-    def point(self) -> builtins.int:
+    def point_id(self) -> builtins.int:
+        r"""
+        The dragged point.
+        """
+    @point_id.setter
+    def point_id(self, value: builtins.int) -> None:
         r"""
         The dragged point.
         """
@@ -26,8 +29,18 @@ class DragConstraint(constraints.Constraint):
         r"""
         Target X coordinate.
         """
+    @target_x.setter
+    def target_x(self, value: builtins.float) -> None:
+        r"""
+        Target X coordinate.
+        """
     @property
     def target_y(self) -> builtins.float:
+        r"""
+        Target Y coordinate.
+        """
+    @target_y.setter
+    def target_y(self, value: builtins.float) -> None:
         r"""
         Target Y coordinate.
         """
@@ -35,6 +48,21 @@ class DragConstraint(constraints.Constraint):
     def weight(self) -> builtins.float:
         r"""
         Pull strength.
+        """
+    @weight.setter
+    def weight(self, value: builtins.float) -> None:
+        r"""
+        Pull strength.
+        """
+    @property
+    def user_visible(self) -> builtins.bool:
+        r"""
+        Reference user-visibility flag.
+        """
+    @user_visible.setter
+    def user_visible(self, value: builtins.bool) -> None:
+        r"""
+        Reference user-visibility flag.
         """
     @property
     def status(self) -> builtins.int:
@@ -47,36 +75,38 @@ class DragConstraint(constraints.Constraint):
         Reference validation status ordinal.
         """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __new__(cls, point: builtins.int, target_x: builtins.float, target_y: builtins.float, weight: builtins.float = 1.0) -> DragConstraint:
+    def __new__(cls, point_id: builtins.int, target_x: builtins.float, target_y: builtins.float, weight: builtins.float = 0.1, user_visible: builtins.bool = True) -> DragConstraint:
         r"""
-        Creates the constraint from its resolved points and values.
+        Creates the drag constraint for a point and target position.
         """
-    def referenced_points(self) -> builtins.list[builtins.int]:
+    def error(self, reg: protocols.Registry, params: typing.Optional[typing.Any] = None) -> tuple[builtins.float, builtins.float]:
+        r"""
+        Returns the constraint error at the registry's point positions.
+        """
+    def gradient(self, reg: protocols.Registry, params: typing.Optional[typing.Any] = None) -> builtins.dict[builtins.int, builtins.list[tuple[builtins.float, builtins.float]]]:
+        r"""
+        Partial derivatives of the error by point id.
+        """
+    def referenced_points(self, registry: protocols.Registry) -> builtins.list[builtins.int]:
         r"""
         Point ids the constraint references.
-        """
-    def get_referenced_point_ids(self) -> builtins.set[builtins.int]:
-        r"""
-        Alias for referenced_points (reference naming).
         """
     def set_target(self, target_x: builtins.float, target_y: builtins.float, weight: builtins.float) -> None:
         r"""
         Sets the target coordinates and pull strength.
         """
-    def error(self, registry: registry.EntityRegistry, _ctx: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
-        r"""
-        Returns the constraint error at the registry's point positions.
-        """
-    def to_dict(self) -> dict:
-        r"""
-        Serializes to the reference constraint dictionary shape.
-        """
-    def draw(self, ctx: protocols.Canvas, registry: protocols.DrawContext, to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], is_selected: builtins.bool = False, is_hovered: builtins.bool = False, point_radius: builtins.float = 5.0) -> None:
+    def draw(self, ctx: protocols.Canvas, registry: typing.Any, to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], is_selected: builtins.bool = False, is_hovered: builtins.bool = False, point_radius: builtins.float = 5.0) -> None:
         r"""
         Draws the constraint's symbol onto the cairo context.
         """
-    def is_hit(self, mx: builtins.float, my: builtins.float, threshold: builtins.float, registry: registry.EntityRegistry, to_screen: typing.Optional[collections.abc.Callable[[tuple[float, float]], tuple[float, float]]] = None) -> builtins.bool:
+    def is_hit(self, sx: builtins.float, sy: builtins.float, registry: protocols.Registry, to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], element: typing.Optional[typing.Any], threshold: builtins.float) -> builtins.bool:
         r"""
         Whether the constraint's rendered symbol is hit at (mx, my).
         """
+    def __deepcopy__(self, memo: dict) -> typing.Any:
+        r"""
+        Deep-copies the transient constraint structurally: the
+        reference drag constraint has no serialization shape.
+        """
+    def __copy__(self) -> typing.Any: ...
 

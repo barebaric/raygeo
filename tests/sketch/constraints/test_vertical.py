@@ -21,7 +21,7 @@ def _solver(reg, constraint, pids):
         position = reg.get_point(pid)
         assert position is not None
         points.append(PointDef(pid, position[0], position[1], False))
-    return Solver(points, [constraint], [])
+    return Solver(points, reg, [constraint], [])
 
 
 def _assert_gradient_matches_fd(reg, constraint, pids, tol=1e-5, eps=1e-6):
@@ -53,7 +53,7 @@ def test_vertical_constraint(setup_env):
     p2 = reg.add_point(5, 10)
 
     c = VerticalConstraint(p1, p2)
-    assert c.error(reg)[0] == pytest.approx(-5.0)
+    assert c.error(reg) == pytest.approx(-5.0)
     assert c.user_visible is True
 
 
@@ -90,19 +90,9 @@ def test_vertical_constraint_serialization_round_trip(setup_env):
     # Create original constraint
     original = VerticalConstraint(p1, p2)
 
-    # Serialize to dict
-    serialized = original.to_dict()
-
-    # Deserialize from dict through the registry and rebuild
-    handle = reg.add_constraint_json(serialized)
-    restored = VerticalConstraint(
-        reg.constraint_dict(handle)["p1"],
-        reg.constraint_dict(handle)["p2"],
-    )
-
-    # Check that the restored constraint has the same error
-    assert original.error(reg) == restored.error(reg)
-    assert original.user_visible == restored.user_visible
+    # Serialize to dict and rebuild through the model layer
+    restored = VerticalConstraint.from_dict(original.to_dict())
+    assert restored.to_dict() == original.to_dict()
 
 
 def test_vertical_is_hit(setup_env):
@@ -118,9 +108,12 @@ def test_vertical_is_hit(setup_env):
     symbol_x, symbol_y = 60, 20
 
     # Hit
-    assert c.is_hit(symbol_x, symbol_y, threshold, reg) is True
+    assert (
+        c.is_hit(symbol_x, symbol_y, reg, lambda pos: pos, None, threshold)
+        is True
+    )
     # Miss
-    assert c.is_hit(0, 0, threshold, reg) is False
+    assert c.is_hit(0, 0, reg, lambda pos: pos, None, threshold) is False
 
 
 # deferred: can_apply_to — command/UI layer

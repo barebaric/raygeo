@@ -11,7 +11,10 @@ joins) stay on the Rust-side canvas contract.
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
-from typing import Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
+
+if TYPE_CHECKING:
+    from raygeo.sketch.entities import Entity
 
 ScreenMap = Callable[[tuple[float, float]], tuple[float, float]]
 
@@ -116,3 +119,18 @@ class SolverConstraint(Protocol):
         is_hovered: bool = False,
         point_radius: float = 5.0,
     ) -> None: ...
+
+
+@runtime_checkable
+class Registry(Protocol):
+    """Read view over a sketch document, addressed by point id.
+
+    ``get_point`` returns the point object (or ``(x, y)`` pair) for
+    an id and ``get_entity`` the entity object for an entity id, so
+    entity-reference constraints and entity geometry resolve their
+    operands against the caller's live document.
+    """
+
+    def get_point(self, idx: int) -> Any: ...
+
+    def get_entity(self, idx: int) -> Entity | None: ...

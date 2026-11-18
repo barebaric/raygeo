@@ -13,7 +13,6 @@ use crate::sketch::draw::{
     draw_status_color, format_value, screen_scale, CairoLike, DrawContext,
     DrawStyle,
 };
-use crate::sketch::registry::EntityRegistry;
 
 /// Weight of the angular residual.
 pub const ANGLE_WEIGHT: f64 = 10.0;
@@ -36,20 +35,16 @@ const GRAD_FD_EPS: f64 = 1e-6;
 /// finite differences, mirroring the reference implementation.
 #[derive(Clone, Debug, PartialEq)]
 pub struct AngleConstraint {
-    /// First point of the anchor line.
-    pub p1: u64,
-    /// Second point of the anchor line.
-    pub p2: u64,
-    /// First point of the other line.
-    pub p3: u64,
-    /// Second point of the other line.
-    pub p4: u64,
+    /// The anchor line entity.
+    pub e1_id: u64,
+    /// The other line entity.
+    pub e2_id: u64,
     /// Far point of the anchor line; `None` picks the endpoint
     /// farther from the intersection.
-    pub e1_far: Option<u64>,
+    pub e1_far_idx: Option<u64>,
     /// Far point of the other line.
-    pub e2_far: Option<u64>,
-    /// Resolved angle value in degrees.
+    pub e2_far_idx: Option<u64>,
+    /// Angle value in degrees.
     pub value_deg: f64,
     /// Reference user-visibility flag.
     pub user_visible: bool,
@@ -57,24 +52,40 @@ pub struct AngleConstraint {
     pub expression: Option<String>,
 }
 
+/// Resolves the two line entities to their defining point ids
+/// `(p1, p2, p3, p4)`.
+fn resolve_line_points(
+    ctx: &dyn PointContext,
+    e1_id: u64,
+    e2_id: u64,
+) -> Option<(u64, u64, u64, u64)> {
+    let e1 = ctx.get_entity(e1_id)?;
+    if e1.type_name() != "line" {
+        return None;
+    }
+    let e2 = ctx.get_entity(e2_id)?;
+    if e2.type_name() != "line" {
+        return None;
+    }
+    let ids1 = e1.get_point_ids();
+    let ids2 = e2.get_point_ids();
+    Some((ids1[0], ids1[1], ids2[0], ids2[1]))
+}
+
 impl AngleConstraint {
-    /// Creates an angle constraint with a resolved value.
+    /// Creates an angle constraint between two lines.
     pub fn new(
-        p1: u64,
-        p2: u64,
-        p3: u64,
-        p4: u64,
-        e1_far: Option<u64>,
-        e2_far: Option<u64>,
+        e1_id: u64,
+        e2_id: u64,
         value_deg: f64,
+        e1_far_idx: Option<u64>,
+        e2_far_idx: Option<u64>,
     ) -> Self {
         AngleConstraint {
-            p1,
-            p2,
-            p3,
-            p4,
-            e1_far,
-            e2_far,
+            e1_id,
+            e2_id,
+            e1_far_idx,
+            e2_far_idx,
             value_deg,
             user_visible: true,
             expression: None,
@@ -119,34 +130,46 @@ impl SketchConstraint for AngleConstraint {
         AngleConstraint::to_json(self)
     }
 
-    fn referenced_points(&self) -> Vec<u64> {
-        let mut ids = vec![self.p1, self.p2, self.p3, self.p4];
-        for far in [self.e1_far, self.e2_far].into_iter().flatten() {
-            if !ids.contains(&far) {
-                ids.push(far);
+    fn referenced_points(&self, ctx: &dyn PointContext) -> Vec<u64> {
+        match resolve_line_points(ctx, self.e1_id, self.e2_id) {
+            Some((p1, p2, p3, p4)) => {
+                let mut ids = vec![p1, p2, p3, p4];
+                for far in
+                    [self.e1_far_idx, self.e2_far_idx].into_iter().flatten()
+                {
+                    if !ids.contains(&far) {
+                        ids.push(far);
+                    }
+                }
+                ids
             }
+            None => vec![],
         }
-        ids
     }
 
-    fn residual_count(&self) -> usize {
+    fn residual_count(&self, _ctx: &dyn PointContext) -> usize {
         1
     }
 
     fn error(&self, reg: &dyn PointContext) -> Vec<f64> {
+        let Some((p1, p2, p3, p4)) =
+            resolve_line_points(reg, self.e1_id, self.e2_id)
+        else {
+            return vec![0.0];
+        };
         let intersection = get_line_line_intersection(
-            Point::new(reg.xy(self.p1).0, reg.xy(self.p1).1),
-            Point::new(reg.xy(self.p2).0, reg.xy(self.p2).1),
-            Point::new(reg.xy(self.p3).0, reg.xy(self.p3).1),
-            Point::new(reg.xy(self.p4).0, reg.xy(self.p4).1),
+            Point::new(reg.xy(p1).0, reg.xy(p1).1),
+            Point::new(reg.xy(p2).0, reg.xy(p2).1),
+            Point::new(reg.xy(p3).0, reg.xy(p3).1),
+            Point::new(reg.xy(p4).0, reg.xy(p4).1),
         );
         let (ix, iy) = match intersection {
             Some(point) => (point.x, point.y),
             None => return vec![0.0],
         };
 
-        let far1 = self.far_point(self.p1, self.p2, self.e1_far, ix, iy, reg);
-        let far2 = self.far_point(self.p3, self.p4, self.e2_far, ix, iy, reg);
+        let far1 = self.far_point(p1, p2, self.e1_far_idx, ix, iy, reg);
+        let far2 = self.far_point(p3, p4, self.e2_far_idx, ix, iy, reg);
 
         let dx1 = far1.0 - ix;
         let dy1 = far1.1 - iy;
@@ -177,35 +200,40 @@ impl SketchConstraint for AngleConstraint {
         mx: f64,
         my: f64,
         threshold: f64,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
         to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
     ) -> bool {
-        let (Some(p1), Some(p2), Some(p3), Some(p4)) = (
-            model.get_point(self.p1),
-            model.get_point(self.p2),
-            model.get_point(self.p3),
-            model.get_point(self.p4),
+        let Some((p1, p2, p3, p4)) =
+            resolve_line_points(model, self.e1_id, self.e2_id)
+        else {
+            return false;
+        };
+        let (Some(pt1), Some(pt2), Some(pt3), Some(pt4)) = (
+            model.get_point(p1),
+            model.get_point(p2),
+            model.get_point(p3),
+            model.get_point(p4),
         ) else {
             return false;
         };
 
         let intersection = get_line_line_intersection(
-            Point::new(p1.x, p1.y),
-            Point::new(p2.x, p2.y),
-            Point::new(p3.x, p3.y),
-            Point::new(p4.x, p4.y),
+            Point::new(pt1.x, pt1.y),
+            Point::new(pt2.x, pt2.y),
+            Point::new(pt3.x, pt3.y),
+            Point::new(pt4.x, pt4.y),
         );
         let (ix, iy) = match intersection {
             Some(point) => (point.x, point.y),
             None => (
-                (p1.x + p2.x + p3.x + p4.x) / 4.0,
-                (p1.y + p2.y + p3.y + p4.y) / 4.0,
+                (pt1.x + pt2.x + pt3.x + pt4.x) / 4.0,
+                (pt1.y + pt2.y + pt3.y + pt4.y) / 4.0,
             ),
         };
         let (sx, sy) = to_screen((ix, iy));
 
-        let far1 = self.far_point(self.p1, self.p2, self.e1_far, ix, iy, model);
-        let far2 = self.far_point(self.p3, self.p4, self.e2_far, ix, iy, model);
+        let far1 = self.far_point(p1, p2, self.e1_far_idx, ix, iy, model);
+        let far2 = self.far_point(p3, p4, self.e2_far_idx, ix, iy, model);
         let far1_screen = to_screen(far1);
         let far2_screen = to_screen(far2);
 
@@ -233,11 +261,16 @@ impl SketchConstraint for AngleConstraint {
         ctx: &dyn CairoLike,
         style: &DrawStyle,
     ) {
+        let Some((line_p1, line_p2, line_p3, line_p4)) =
+            resolve_line_points_from_context(context, self.e1_id, self.e2_id)
+        else {
+            return;
+        };
         let (Some(p1), Some(p2), Some(p3), Some(p4)) = (
-            context.get_point(self.p1),
-            context.get_point(self.p2),
-            context.get_point(self.p3),
-            context.get_point(self.p4),
+            context.get_point(line_p1),
+            context.get_point(line_p2),
+            context.get_point(line_p3),
+            context.get_point(line_p4),
         ) else {
             return;
         };
@@ -257,9 +290,9 @@ impl SketchConstraint for AngleConstraint {
         let (sx, sy) = to_screen((ix, iy));
 
         let far1 =
-            draw_far_point(context, self.p1, self.p2, self.e1_far, ix, iy);
+            draw_far_point(context, line_p1, line_p2, self.e1_far_idx, ix, iy);
         let far2 =
-            draw_far_point(context, self.p3, self.p4, self.e2_far, ix, iy);
+            draw_far_point(context, line_p3, line_p4, self.e2_far_idx, ix, iy);
         let far1_screen = to_screen(far1);
         let far2_screen = to_screen(far2);
         let anchor_ang = (far1_screen.1 - sy).atan2(far1_screen.0 - sx);
@@ -292,9 +325,14 @@ impl SketchConstraint for AngleConstraint {
     }
 
     fn gradient(&self, reg: &mut dyn PointContext) -> Vec<JacobianEntry> {
+        let Some((p1, p2, p3, p4)) =
+            resolve_line_points(reg, self.e1_id, self.e2_id)
+        else {
+            return vec![];
+        };
         let mut entries = Vec::new();
         let mut seen: Vec<u64> = Vec::new();
-        for pid in [self.p1, self.p2, self.p3, self.p4] {
+        for pid in [p1, p2, p3, p4] {
             if seen.contains(&pid) {
                 continue;
             }
@@ -345,20 +383,44 @@ impl AngleConstraint {
     pub fn to_json(&self) -> Value {
         let mut data = json!({
             "type": "AngleConstraint",
+            "e1_id": self.e1_id,
+            "e2_id": self.e2_id,
+            "value": self.value_deg,
             "user_visible": self.user_visible,
+            "e1_far_idx": self.e1_far_idx,
+            "e2_far_idx": self.e2_far_idx,
         });
-        data["p1_idx"] = json!(self.p1);
-        data["p2_idx"] = json!(self.p2);
-        data["p3_idx"] = json!(self.p3);
-        data["p4_idx"] = json!(self.p4);
-        data["value"] = json!(self.value_deg);
-        data["e1_far_idx"] = json!(self.e1_far);
-        data["e2_far_idx"] = json!(self.e2_far);
         if let Some(expression) = &self.expression {
             data["expression"] = json!(expression);
         }
         data
     }
+}
+
+/// Resolves the two line entities for the draw path, where entities
+/// are inspected through the draw context's duck-typed surface.
+fn resolve_line_points_from_context(
+    context: &dyn DrawContext,
+    e1_id: u64,
+    e2_id: u64,
+) -> Option<(u64, u64, u64, u64)> {
+    if context
+        .entity_type(e1_id)
+        .map(|name| name.as_ref() != "line")
+        .unwrap_or(true)
+    {
+        return None;
+    }
+    if context
+        .entity_type(e2_id)
+        .map(|name| name.as_ref() != "line")
+        .unwrap_or(true)
+    {
+        return None;
+    }
+    let ids1 = context.entity_point_ids(e1_id)?;
+    let ids2 = context.entity_point_ids(e2_id)?;
+    Some((ids1[0], ids1[1], ids2[0], ids2[1]))
 }
 
 /// Resolves the far endpoint for the drawn arc through the draw

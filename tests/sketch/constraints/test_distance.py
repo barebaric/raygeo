@@ -20,7 +20,7 @@ def _solver(reg, constraint, pids):
         position = reg.get_point(pid)
         assert position is not None
         points.append(PointDef(pid, position[0], position[1], False))
-    return Solver(points, [constraint], [])
+    return Solver(points, reg, [constraint], [])
 
 
 def _assert_gradient_matches_fd(reg, constraint, pids, tol=1e-5, eps=1e-6):
@@ -52,12 +52,12 @@ def test_distance_constraint(setup_env):
 
     # Target is 10, actual is 10. Error should be 10 - 10 = 0.
     c = DistanceConstraint(p1, p2, 10.0)
-    assert c.error(reg)[0] == pytest.approx(0.0)
+    assert c.error(reg) == pytest.approx(0.0)
     assert c.user_visible is True
 
     # Target is 5, actual is 10. Error should be 10 - 5 = 5.
     c2 = DistanceConstraint(p1, p2, 5.0)
-    assert c2.error(reg)[0] == pytest.approx(5.0)
+    assert c2.error(reg) == pytest.approx(5.0)
 
 
 def test_distance_constraint_user_visible(setup_env):
@@ -92,16 +92,16 @@ def test_distance_targets_segment(setup_env):
     c = DistanceConstraint(p1, p2, 10.0)
 
     # Should match exact pair (order independent)
-    assert c.targets_segment(p1, p2, None, reg) is True
-    assert c.targets_segment(p2, p1, None, reg) is True
+    assert c.targets_segment(p1, p2) is True
+    assert c.targets_segment(p2, p1) is True
 
     # Should not match subset or disjoint
-    assert c.targets_segment(p1, p3, None, reg) is False
-    assert c.targets_segment(p3, p2, None, reg) is False
+    assert c.targets_segment(p1, p3) is False
+    assert c.targets_segment(p3, p2) is False
 
     # Entity ID is ignored by DistanceConstraint logic (it only
     # tracks points)
-    assert c.targets_segment(p1, p2, 999, reg) is True
+    assert c.targets_segment(p1, p2, 999) is True
 
 
 def test_distance_constraint_with_expression(setup_env):
@@ -116,7 +116,7 @@ def test_distance_constraint_with_expression(setup_env):
     c.expression = "width"
 
     # Actual dist is 10, target dist is 20. Error is 10 - 20 = -10.
-    assert c.error(reg)[0] == pytest.approx(-10.0)
+    assert c.error(reg) == pytest.approx(-10.0)
     assert c.expression == "width"
 
 
@@ -140,17 +140,9 @@ def test_distance_constraint_serialization_round_trip(setup_env):
     # Create original constraint
     original = DistanceConstraint(p1, p2, 5.0)
 
-    # Serialize to dict
-    serialized = original.to_dict()
-
-    # Deserialize from dict through the registry and rebuild
-    handle = reg.add_constraint_json(serialized)
-    data = reg.constraint_dict(handle)
-    restored = DistanceConstraint(data["p1"], data["p2"], data["value"])
-
-    # Check that the restored constraint has the same error
-    assert original.error(reg) == restored.error(reg)
-    assert original.user_visible == restored.user_visible
+    # Serialize to dict and rebuild through the model layer
+    restored = DistanceConstraint.from_dict(original.to_dict())
+    assert restored.to_dict() == original.to_dict()
 
 
 def test_distance_constraint_serialization_round_trip_with_expression(
@@ -168,15 +160,10 @@ def test_distance_constraint_serialization_round_trip_with_expression(
     # Serialize to dict
     serialized = original.to_dict()
 
-    # Deserialize from dict through the registry and rebuild,
+    # Deserialize from dict through the model layer,
     # re-attaching the stored expression
-    handle = reg.add_constraint_json(serialized)
-    data = reg.constraint_dict(handle)
-    restored = DistanceConstraint(data["p1"], data["p2"], data["value"])
-    restored.expression = data.get("expression")
-
-    # Check that the restored constraint has the same error
-    assert original.error(reg) == restored.error(reg)
+    restored = DistanceConstraint.from_dict(serialized)
+    assert restored.to_dict() == serialized
 
 
 def test_distance_is_hit(setup_env):
@@ -188,16 +175,16 @@ def test_distance_is_hit(setup_env):
     threshold = 15.0
 
     # Hit on the line segment (at midpoint)
-    assert c.is_hit(50, 0, threshold, reg) is True
+    assert c.is_hit(50, 0, reg, lambda pos: pos, None, threshold) is True
 
     # Hit on the line segment (not at midpoint)
-    assert c.is_hit(70, 0, threshold, reg) is True
+    assert c.is_hit(70, 0, reg, lambda pos: pos, None, threshold) is True
 
     # Hit near the line segment (within threshold)
-    assert c.is_hit(50, 10, threshold, reg) is True
+    assert c.is_hit(50, 10, reg, lambda pos: pos, None, threshold) is True
 
     # Miss - far from the line segment (beyond threshold)
-    assert c.is_hit(50, 20, threshold, reg) is False
+    assert c.is_hit(50, 20, reg, lambda pos: pos, None, threshold) is False
 
 
 # deferred: can_apply_to — command/UI layer

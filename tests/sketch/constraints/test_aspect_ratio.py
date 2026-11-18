@@ -21,7 +21,7 @@ def _solver(reg, constraint, pids):
         position = reg.get_point(pid)
         assert position is not None
         points.append(PointDef(pid, position[0], position[1], False))
-    return Solver(points, [constraint], [])
+    return Solver(points, reg, [constraint], [])
 
 
 def _assert_gradient_matches_fd(reg, constraint, pids, tol=1e-5, eps=1e-6):
@@ -57,7 +57,7 @@ def test_aspect_ratio_constraint(setup_env):
     dist1 = 10.0
     dist2 = 5.0
     expected_error = dist1 - dist2 * 2.0
-    assert c.error(reg)[0] == pytest.approx(expected_error)
+    assert c.error(reg) == pytest.approx(expected_error)
     assert c.user_visible is True
 
 
@@ -83,7 +83,7 @@ def test_aspect_ratio_constraint_perfect_match(setup_env):
     p4 = reg.add_point(5, 10)
 
     c = AspectRatioConstraint(p1, p2, p3, p4, 2.0)
-    assert c.error(reg)[0] == pytest.approx(0.0)
+    assert c.error(reg) == pytest.approx(0.0)
 
 
 def test_aspect_ratio_constraint_diagonal_lines(setup_env):
@@ -97,7 +97,7 @@ def test_aspect_ratio_constraint_diagonal_lines(setup_env):
     dist1 = 10.0
     dist2 = 5.0
     expected_error = dist1 - dist2 * 1.0
-    assert c.error(reg)[0] == pytest.approx(expected_error)
+    assert c.error(reg) == pytest.approx(expected_error)
 
 
 def test_aspect_ratio_constraint_zero_ratio(setup_env):
@@ -110,7 +110,7 @@ def test_aspect_ratio_constraint_zero_ratio(setup_env):
     c = AspectRatioConstraint(p1, p2, p3, p4, 0.0)
     dist1 = 10.0
     expected_error = dist1
-    assert c.error(reg)[0] == pytest.approx(expected_error)
+    assert c.error(reg) == pytest.approx(expected_error)
 
 
 def test_aspect_ratio_constraint_zero_second_distance(setup_env):
@@ -123,7 +123,7 @@ def test_aspect_ratio_constraint_zero_second_distance(setup_env):
     c = AspectRatioConstraint(p1, p2, p3, p4, 2.0)
     dist1 = 10.0
     expected_error = dist1
-    assert c.error(reg)[0] == pytest.approx(expected_error)
+    assert c.error(reg) == pytest.approx(expected_error)
 
 
 # deferred: constrains_radius — the base-class flag is not bound on
@@ -193,21 +193,8 @@ def test_aspect_ratio_constraint_serialization_round_trip(setup_env):
 
     original = AspectRatioConstraint(p1, p2, p3, p4, 2.5)
 
-    serialized = original.to_dict()
-
-    handle = reg.add_constraint_json(serialized)
-    data = reg.constraint_dict(handle)
-    restored = AspectRatioConstraint(
-        data["p1"], data["p2"], data["p3"], data["p4"], data["ratio"]
-    )
-
-    assert original.error(reg) == restored.error(reg)
-    assert original.p1 == restored.p1
-    assert original.p2 == restored.p2
-    assert original.p3 == restored.p3
-    assert original.p4 == restored.p4
-    assert original.ratio == restored.ratio
-    assert original.user_visible == restored.user_visible
+    restored = AspectRatioConstraint.from_dict(original.to_dict())
+    assert restored.to_dict() == original.to_dict()
 
 
 def test_aspect_ratio_constraint_serialization_dict_format(setup_env):

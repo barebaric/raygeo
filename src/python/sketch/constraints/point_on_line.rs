@@ -1,75 +1,24 @@
 //! Bindings for the point-on-line constraint.
 
+use std::collections::HashMap;
+
 use pyo3::prelude::*;
-use pyo3::types::PyDict;
-use pyo3_stub_gen::derive::{
-    gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pymethods,
-};
+use pyo3::types::{PyAny, PyDict, PyType};
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
-use super::PyConstraintBase;
-use crate::python::sketch::protocols::{Canvas, DrawContext, ScreenMap};
-use crate::python::sketch::registry::PyEntityRegistry;
+use super::radius::dict_type;
+use super::{surface, PyConstraintBase};
+use crate::python::sketch::context::PointCtx;
+use crate::python::sketch::protocols::{Canvas, ScreenMap};
+use crate::sketch::constraint::PointContext;
 use crate::sketch::constraint::SketchConstraint;
-use crate::sketch::constraints::point_on_line::{
-    PointOnLineConstraint as CoreConstraint, PointOnTarget,
-};
-
-/// The resolved target geometry: an infinite line, or a circle/arc
-/// circumference.
-#[gen_stub_pyclass_complex_enum]
-#[pyclass(
-    frozen,
-    eq,
-    from_py_object,
-    module = "raygeo.sketch.constraints.point_on_line",
-    name = "PointOnTarget"
-)]
-#[derive(Clone, PartialEq)]
-pub enum PyPointOnTarget {
-    /// The infinite line through two points.
-    Line { l1: u64, l2: u64 },
-    /// The circle/arc through center and radius-bearing point.
-    RadiusCurve { center: u64, radius_point: u64 },
-}
-
-impl From<&PyPointOnTarget> for PointOnTarget {
-    fn from(value: &PyPointOnTarget) -> Self {
-        match value {
-            PyPointOnTarget::Line { l1, l2 } => {
-                PointOnTarget::Line { l1: *l1, l2: *l2 }
-            }
-            PyPointOnTarget::RadiusCurve {
-                center,
-                radius_point,
-            } => PointOnTarget::RadiusCurve {
-                center: *center,
-                radius_point: *radius_point,
-            },
-        }
-    }
-}
-
-impl From<&PointOnTarget> for PyPointOnTarget {
-    fn from(value: &PointOnTarget) -> Self {
-        match value {
-            PointOnTarget::Line { l1, l2 } => {
-                PyPointOnTarget::Line { l1: *l1, l2: *l2 }
-            }
-            PointOnTarget::RadiusCurve {
-                center,
-                radius_point,
-            } => PyPointOnTarget::RadiusCurve {
-                center: *center,
-                radius_point: *radius_point,
-            },
-        }
-    }
-}
+use crate::sketch::constraints::point_on_line::PointOnLineConstraint as CoreConstraint;
 
 /// Enforces a point lies on a line or circle/arc circumference.
 #[gen_stub_pyclass]
 #[pyclass(
     extends = PyConstraintBase,
+    subclass,
     eq,
     from_py_object,
     module = "raygeo.sketch.constraints.point_on_line",
@@ -78,17 +27,14 @@ impl From<&PointOnTarget> for PyPointOnTarget {
 #[derive(Clone, PartialEq)]
 pub struct PyPointOnLineConstraint {
     /// The constrained point.
-    #[pyo3(get)]
-    pub point: u64,
-    /// Resolved target geometry.
-    #[pyo3(get)]
-    pub target: PyPointOnTarget,
-    /// Reference user-visibility flag.
-    #[pyo3(get)]
-    pub user_visible: bool,
-    /// Reference shape entity id (resolved from the registry).
     #[pyo3(get, set)]
-    pub shape_id: Option<u64>,
+    pub point_id: i64,
+    /// The target shape (line or radius-bearing entity).
+    #[pyo3(get, set)]
+    pub shape_id: i64,
+    /// Reference user-visibility flag.
+    #[pyo3(get, set)]
+    pub user_visible: bool,
     /// Reference validation status ordinal.
     #[pyo3(get, set)]
     pub status: u8,
@@ -99,18 +45,17 @@ pub struct PyPointOnLineConstraint {
 impl PyPointOnLineConstraint {
     /// Creates the point-on-line/curve constraint.
     #[new]
-    #[pyo3(signature = (point, target, user_visible = true))]
+    #[pyo3(signature = (point_id, shape_id, user_visible = true))]
     fn new(
-        point: u64,
-        target: PyPointOnTarget,
+        point_id: i64,
+        shape_id: i64,
         user_visible: bool,
     ) -> PyClassInitializer<Self> {
-        PyClassInitializer::from(PyConstraintBase).add_subclass(
+        PyClassInitializer::from(PyConstraintBase::default()).add_subclass(
             PyPointOnLineConstraint {
-                point,
-                target,
+                point_id,
+                shape_id,
                 user_visible,
-                shape_id: None,
                 status: 1,
             },
         )
@@ -118,34 +63,60 @@ impl PyPointOnLineConstraint {
 
     /// Returns the constraint error at the registry's point
     /// positions.
-    #[pyo3(signature = (registry, _ctx = None))]
-    fn error(
+    #[pyo3(signature = (reg, params = None))]
+    fn error(&self, reg: PointCtx<'_>, params: Option<Py<PyAny>>) -> f64 {
+        let _ = params;
+        self.clone()
+            .into_constraint()
+            .error(&reg)
+            .first()
+            .copied()
+            .unwrap_or(0.0)
+    }
+
+    /// Partial derivatives of the error by point id.
+    #[pyo3(signature = (reg, params = None))]
+    fn gradient(
         &self,
-        registry: &PyEntityRegistry,
-        _ctx: Option<Py<PyAny>>,
-    ) -> Vec<f64> {
-        self.clone().into_constraint().error(&registry.inner)
+        mut reg: PointCtx<'_>,
+        params: Option<Py<PyAny>>,
+    ) -> HashMap<u64, Vec<(f64, f64)>> {
+        let _ = params;
+        super::constraint_gradient(&self.clone().into_constraint(), &mut reg)
     }
 
     /// Point ids the constraint references.
-    /// Alias for point (reference naming).
-    #[getter]
-    fn point_id(&self) -> u64 {
-        self.point
-    }
-
-    fn referenced_points(&self) -> Vec<u64> {
-        self.clone().into_constraint().referenced_points()
-    }
-
-    /// Alias for referenced_points (reference naming).
-    fn get_referenced_point_ids(&self) -> std::collections::HashSet<u64> {
-        self.referenced_points().into_iter().collect()
+    fn referenced_points(&self, registry: PointCtx<'_>) -> Vec<u64> {
+        self.clone().into_constraint().referenced_points(&registry)
     }
 
     /// Serializes to the reference constraint dictionary shape.
     fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
-        super::dict_from_value(py, &self.clone().into_constraint().to_json())
+        let dict = PyDict::new(py);
+        dict_type(&dict, "PointOnLineConstraint")?;
+        dict.set_item("point_id", self.point_id)?;
+        dict.set_item("shape_id", self.shape_id)?;
+        dict.set_item("user_visible", self.user_visible)?;
+        Ok(dict)
+    }
+
+    /// Rebuilds the constraint from its reference dictionary shape.
+    #[classmethod]
+    fn from_dict(
+        cls: &Bound<'_, PyType>,
+        py: Python<'_>,
+        data: &Bound<'_, PyDict>,
+    ) -> PyResult<Py<PyAny>> {
+        let kwargs = PyDict::new(py);
+        kwargs.set_item("point_id", data.get_item("point_id")?)?;
+        kwargs.set_item("shape_id", data.get_item("shape_id")?)?;
+        kwargs.set_item(
+            "user_visible",
+            data.get_item("user_visible")?
+                .and_then(|value| value.extract::<bool>().ok())
+                .unwrap_or(true),
+        )?;
+        Ok(cls.as_any().call((), Some(&kwargs))?.unbind())
     }
 
     /// Draws the constraint's symbol onto the cairo context.
@@ -155,7 +126,7 @@ impl PyPointOnLineConstraint {
     fn draw<'py>(
         &self,
         ctx: Canvas<'py>,
-        registry: DrawContext<'py>,
+        registry: &Bound<'py, PyAny>,
         to_screen: ScreenMap<'py>,
         is_selected: bool,
         is_hovered: bool,
@@ -164,7 +135,7 @@ impl PyPointOnLineConstraint {
         super::constraint_draw(
             &self.clone().into_constraint(),
             &ctx,
-            &registry,
+            registry,
             &to_screen,
             is_selected,
             is_hovered,
@@ -173,83 +144,138 @@ impl PyPointOnLineConstraint {
         )
     }
 
-    /// Sets the reference user-visibility flag.
-    fn set_user_visible(&mut self, value: bool) {
-        self.user_visible = value;
+    /// The point that can be dragged to manipulate this constraint.
+    fn get_draggable_point(&self) -> i64 {
+        self.point_id
+    }
+
+    /// The string key identifying this constraint type.
+    #[classmethod]
+    fn get_type_key(_cls: &Bound<'_, PyType>) -> &'static str {
+        "point_on_line"
+    }
+
+    /// The human-readable type name (translated).
+    #[staticmethod]
+    fn get_type_name(py: Python<'_>) -> String {
+        surface::gettext(py, "Point on Line")
+    }
+
+    /// Whether this constraint can be applied to the selection.
+    #[classmethod]
+    #[pyo3(signature = (selection, sketch = None))]
+    fn can_apply_to(
+        _cls: &Bound<'_, PyType>,
+        selection: &Bound<'_, PyAny>,
+        sketch: Option<&Bound<'_, PyAny>>,
+    ) -> PyResult<bool> {
+        let (point_ids, entity_ids) = surface::selection_ids(selection)?;
+        if point_ids.len() != 1 || entity_ids.len() != 1 {
+            return Ok(false);
+        }
+        let Some(entities) = surface::resolve_entities(selection, sketch)?
+        else {
+            return Ok(false);
+        };
+        if !applies_check(&entities) {
+            return Ok(false);
+        }
+        let Some(entity) = entities[0].as_deref() else {
+            return Ok(false);
+        };
+        let point_id = point_ids[0] as u64;
+        Ok(!entity.get_junction_point_ids().contains(&point_id))
+    }
+
+    /// Whether the operand is a line or radius-bearing entity.
+    #[classmethod]
+    fn applies_to_entities(
+        _cls: &Bound<'_, PyType>,
+        entities: &Bound<'_, PyAny>,
+    ) -> PyResult<bool> {
+        let resolved = surface::entities_from_py(entities)?;
+        Ok(applies_check(&resolved))
+    }
+
+    /// The human-readable title for this constraint.
+    fn get_title(slf: &Bound<'_, Self>, _py: Python<'_>) -> PyResult<String> {
+        surface::title_plain(slf.as_any())
+    }
+
+    /// The subtitle describing the constrained point.
+    fn get_subtitle(&self, py: Python<'_>, registry: PointCtx<'_>) -> String {
+        let points = |id: i64| -> Option<(f64, f64)> {
+            registry
+                .get_point(id as u64)
+                .map(|point| (point.x, point.y))
+        };
+        surface::subtitle_point_at(py, &points, self.point_id)
     }
 
     /// Whether this constraint determines the target's radius: true
-    /// when the target is a circle/arc circumference and the
-    /// constrained point is itself solver-constrained.
+    /// when the target is the given entity and the constrained point
+    /// is itself solver-constrained.
     fn constrains_radius(
         &self,
-        registry: &PyEntityRegistry,
-        entity_id: u64,
+        registry: PointCtx<'_>,
+        entity_id: i64,
     ) -> bool {
-        let PyPointOnTarget::RadiusCurve {
-            center,
-            radius_point,
-        } = &self.target
-        else {
-            return false;
-        };
-        if !super::entity_contains_points(
-            registry,
-            entity_id,
-            &[*center, *radius_point],
-        ) {
+        if self.shape_id != entity_id {
             return false;
         }
         registry
-            .inner
-            .get_point(self.point)
+            .get_point(self.point_id as u64)
             .is_some_and(|point| point.constrained)
     }
 
     /// Whether the constraint's rendered symbol is hit at (mx, my).
-    #[pyo3(signature = (mx, my, threshold, registry, to_screen = None))]
+    #[pyo3(signature = (sx, sy, registry, to_screen, element,
+                        threshold))]
     fn is_hit(
         &self,
-        mx: f64,
-        my: f64,
+        sx: f64,
+        sy: f64,
+        registry: PointCtx<'_>,
+        to_screen: ScreenMap<'_>,
+        element: Option<&Bound<'_, PyAny>>,
         threshold: f64,
-        registry: &PyEntityRegistry,
-        to_screen: Option<ScreenMap<'_>>,
     ) -> bool {
+        let _ = element;
         let constraint = self.clone().into_constraint();
         super::constraint_is_hit(
             &constraint,
-            mx,
-            my,
+            sx,
+            sy,
             threshold,
-            registry,
-            to_screen.as_ref(),
+            &registry,
+            Some(&to_screen),
         )
     }
+}
+
+/// The reference `applies_to_entities` body: exactly one operand,
+/// and it must be a line or radius-bearing entity.
+fn applies_check(
+    entities: &[Option<Box<dyn crate::sketch::entities::Entity>>],
+) -> bool {
+    entities.len() == 1
+        && entities[0].as_deref().is_some_and(|entity| {
+            entity.type_name() == "line" || entity.is_radius_entity()
+        })
 }
 
 impl PyPointOnLineConstraint {
     pub(crate) fn into_constraint(self) -> CoreConstraint {
         CoreConstraint {
+            point_id: self.point_id as u64,
+            shape_id: self.shape_id as u64,
             user_visible: self.user_visible,
-            ..CoreConstraint::new(self.point, PointOnTarget::from(&self.target))
-        }
-    }
-
-    pub(crate) fn from_core(core: CoreConstraint) -> Self {
-        PyPointOnLineConstraint {
-            point: core.point,
-            target: PyPointOnTarget::from(&core.target),
-            user_visible: core.user_visible,
-            shape_id: None,
-            status: 1,
         }
     }
 }
 
-/// Registers the constraint classes with the given module.
+/// Registers the constraint class with the given module.
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_class::<PyPointOnTarget>()?;
     m.add_class::<PyPointOnLineConstraint>()?;
 
     let sys_modules = m.py().import("sys")?.getattr("modules")?;

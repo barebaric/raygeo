@@ -21,7 +21,7 @@ def _solver(reg, constraint, pids):
         position = reg.get_point(pid)
         assert position is not None
         points.append(PointDef(pid, position[0], position[1], False))
-    return Solver(points, [constraint], [])
+    return Solver(points, reg, [constraint], [])
 
 
 def test_error_zero_when_satisfied(setup_env):
@@ -89,22 +89,15 @@ def test_gradient_matches_finite_difference(setup_env):
 
 
 def test_serialization_round_trip(setup_env):
-    reg = setup_env
+    _ = setup_env
     c = RotationalConstraint(1, 2, 3, math.radians(45), user_visible=False)
-    handle = reg.add_constraint_json(c.to_dict())
-    data = reg.constraint_dict(handle)
-    restored = RotationalConstraint(
-        data["center"], data["p1"], data["p2"], data["value"]
-    )
-    assert restored.center == 1
-    assert restored.p1 == 2
-    assert restored.p2 == 3
-    assert restored.angle_rad == pytest.approx(c.angle_rad)
-    assert data["user_visible"] is False
+    restored = RotationalConstraint.from_dict(c.to_dict())
+    assert restored.to_dict() == c.to_dict()
+    assert restored.user_visible is False
+    assert restored.value == c.value
 
 
 # deferred: expression value update — expressions are resolved
 # caller-side in the binding; there is no update_from_context.
-
 # deferred: depends_on_points — reference reporting is not bound on
 # the resolved constraint.

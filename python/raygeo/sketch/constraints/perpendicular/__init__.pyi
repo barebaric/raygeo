@@ -5,25 +5,42 @@ import builtins
 import collections.abc
 from raygeo.sketch import constraints
 from raygeo.sketch import protocols
-from raygeo.sketch import registry
 import typing
 __all__ = [
     "PerpendicularConstraint",
-    "PerpendicularTarget",
 ]
 
-@typing.final
 class PerpendicularConstraint(constraints.Constraint):
     r"""
     Enforces perpendicularity between two entities.
     """
     @property
-    def target(self) -> PerpendicularTarget:
+    def e1_id(self) -> builtins.int:
         r"""
-        Resolved operand geometry.
+        First operand entity.
+        """
+    @e1_id.setter
+    def e1_id(self, value: builtins.int) -> None:
+        r"""
+        First operand entity.
+        """
+    @property
+    def e2_id(self) -> builtins.int:
+        r"""
+        Second operand entity.
+        """
+    @e2_id.setter
+    def e2_id(self, value: builtins.int) -> None:
+        r"""
+        Second operand entity.
         """
     @property
     def user_visible(self) -> builtins.bool:
+        r"""
+        Reference user-visibility flag.
+        """
+    @user_visible.setter
+    def user_visible(self, value: builtins.bool) -> None:
         r"""
         Reference user-visibility flag.
         """
@@ -38,91 +55,66 @@ class PerpendicularConstraint(constraints.Constraint):
         Reference validation status ordinal.
         """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __new__(cls, target: PerpendicularTarget, user_visible: builtins.bool = True) -> PerpendicularConstraint:
+    def __new__(cls, e1_id: builtins.int, e2_id: builtins.int, user_visible: builtins.bool = True) -> PerpendicularConstraint:
         r"""
-        Creates the constraint from resolved operands.
+        Creates the constraint between two entities.
         """
-    def error(self, registry: registry.EntityRegistry, _ctx: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
+    def error(self, reg: protocols.Registry, params: typing.Optional[typing.Any] = None) -> builtins.float:
         r"""
         Returns the constraint error at the registry's point
         positions.
         """
-    def referenced_points(self) -> builtins.list[builtins.int]:
+    def gradient(self, reg: protocols.Registry, params: typing.Optional[typing.Any] = None) -> builtins.dict[builtins.int, builtins.list[tuple[builtins.float, builtins.float]]]:
+        r"""
+        Partial derivatives of the error by point id.
+        """
+    def referenced_points(self, registry: protocols.Registry) -> builtins.list[builtins.int]:
         r"""
         Point ids the constraint references.
-        """
-    def get_referenced_point_ids(self) -> builtins.set[builtins.int]:
-        r"""
-        Alias for referenced_points (reference naming).
         """
     def to_dict(self) -> dict:
         r"""
         Serializes to the reference constraint dictionary shape.
         """
-    def draw(self, ctx: protocols.Canvas, registry: protocols.DrawContext, to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], is_selected: builtins.bool = False, is_hovered: builtins.bool = False, point_radius: builtins.float = 5.0) -> None:
+    @classmethod
+    def from_dict(cls, data: dict) -> typing.Any:
+        r"""
+        Rebuilds the constraint from its reference dictionary shape.
+        """
+    def draw(self, ctx: protocols.Canvas, registry: typing.Any, to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], is_selected: builtins.bool = False, is_hovered: builtins.bool = False, point_radius: builtins.float = 5.0) -> None:
         r"""
         Draws the constraint's symbol onto the cairo context.
         """
-    def set_user_visible(self, value: builtins.bool) -> None:
+    @classmethod
+    def get_type_key(cls) -> builtins.str:
         r"""
-        Sets the reference user-visibility flag.
+        The string key identifying this constraint type.
         """
-    def is_hit(self, mx: builtins.float, my: builtins.float, threshold: builtins.float, registry: registry.EntityRegistry, to_screen: typing.Optional[collections.abc.Callable[[tuple[float, float]], tuple[float, float]]] = None) -> builtins.bool:
+    @staticmethod
+    def get_type_name() -> builtins.str:
+        r"""
+        The human-readable type name (translated).
+        """
+    @classmethod
+    def can_apply_to(cls, selection: typing.Any, sketch: typing.Optional[typing.Any] = None) -> builtins.bool:
+        r"""
+        Whether this constraint can be applied to the selection.
+        """
+    @classmethod
+    def applies_to_entities(cls, entities: typing.Any) -> builtins.bool:
+        r"""
+        Whether both operands are lines or radius-bearing entities.
+        """
+    def get_title(self) -> builtins.str:
+        r"""
+        The human-readable title for this constraint.
+        """
+    def get_subtitle(self, registry: protocols.Registry) -> builtins.str:
+        r"""
+        The subtitle describing the constrained entities.
+        """
+    def is_hit(self, sx: builtins.float, sy: builtins.float, registry: protocols.Registry, to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], element: typing.Optional[typing.Any], threshold: builtins.float) -> builtins.bool:
         r"""
         Whether the constraint's rendered symbol is hit at (mx, my).
         """
-
-class PerpendicularTarget:
-    r"""
-    The resolved geometry of the two perpendicular operands: two
-    lines, a line through a circle/arc center, or two circles meeting
-    at a right angle.
-    """
-    @typing.final
-    class LineLine(PerpendicularTarget):
-        r"""
-        Line-line: direction dot product.
-        """
-        __match_args__ = ("a1", "a2", "b1", "b2",)
-        @property
-        def a1(self) -> builtins.int: ...
-        @property
-        def a2(self) -> builtins.int: ...
-        @property
-        def b1(self) -> builtins.int: ...
-        @property
-        def b2(self) -> builtins.int: ...
-        def __new__(cls, a1: builtins.int, a2: builtins.int, b1: builtins.int, b2: builtins.int) -> PerpendicularTarget.LineLine: ...
-    
-    @typing.final
-    class LineCenter(PerpendicularTarget):
-        r"""
-        Line and circle/arc: the line passes through the center.
-        """
-        __match_args__ = ("l1", "l2", "center",)
-        @property
-        def l1(self) -> builtins.int: ...
-        @property
-        def l2(self) -> builtins.int: ...
-        @property
-        def center(self) -> builtins.int: ...
-        def __new__(cls, l1: builtins.int, l2: builtins.int, center: builtins.int) -> PerpendicularTarget.LineCenter: ...
-    
-    @typing.final
-    class Circles(PerpendicularTarget):
-        r"""
-        Circle/arc pair: r1² + r2² == dist(c1, c2)².
-        """
-        __match_args__ = ("c1", "r1_point", "c2", "r2_point",)
-        @property
-        def c1(self) -> builtins.int: ...
-        @property
-        def r1_point(self) -> builtins.int: ...
-        @property
-        def c2(self) -> builtins.int: ...
-        @property
-        def r2_point(self) -> builtins.int: ...
-        def __new__(cls, c1: builtins.int, r1_point: builtins.int, c2: builtins.int, r2_point: builtins.int) -> PerpendicularTarget.Circles: ...
-    
-    ...
 

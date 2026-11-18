@@ -1,6 +1,7 @@
 //! Bindings for the arc entity.
 
-use pyo3::exceptions::PyValueError;
+use crate::python::sketch::registry::{value_from_dict, PyEntityRegistry};
+use pyo3::exceptions::{PyNotImplementedError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
@@ -10,7 +11,8 @@ use crate::python::sketch::types::EntityId;
 use super::PyEntityBase;
 use crate::python::geo::geometry::Geometry as PyGeometry;
 use crate::python::sketch::constraints::dict_from_value;
-use crate::python::sketch::registry::PyEntityRegistry;
+use crate::python::sketch::context::PointCtx;
+use crate::python::sketch::entities::signature_to_py;
 use crate::sketch::entities::arc::Arc as CoreArc;
 use crate::sketch::entities::mirror::{MirrorAxis, MirrorDirection};
 use crate::sketch::entities::Entity;
@@ -18,28 +20,39 @@ use crate::sketch::entities::Entity;
 /// A circular arc from start to end around a center.
 #[gen_stub_pyclass]
 #[pyclass(
-    extends = PyEntityBase,module = "raygeo.sketch.entities.arc", name = "Arc")]
+    extends = PyEntityBase,
+    subclass,module = "raygeo.sketch.entities.arc", name = "Arc")]
 pub struct PyArc {
     pub inner: CoreArc,
     /// Live back-reference to the owning registry, if any.
-    pub registry: Option<Py<PyAny>>,
+    pub registry: Option<Py<PyEntityRegistry>>,
 }
 
 #[gen_stub_pymethods]
 #[pymethods]
 impl PyArc {
-    /// Creates an unattached arc; an id is assigned on insertion.
+    /// Creates an arc with the given id and defining point ids.
     #[new]
-    #[pyo3(signature = (start, end, center, clockwise = false, construction = false))]
+    #[pyo3(signature = (id, start_idx, end_idx, center_idx,
+                        clockwise = false, construction = false))]
+    #[allow(clippy::too_many_arguments)]
     fn new(
-        start: u64,
-        end: u64,
-        center: u64,
+        id: i64,
+        start_idx: i64,
+        end_idx: i64,
+        center_idx: i64,
         clockwise: bool,
         construction: bool,
     ) -> PyClassInitializer<Self> {
         PyClassInitializer::from(PyEntityBase).add_subclass(PyArc {
-            inner: CoreArc::new(0, start, end, center, clockwise, construction),
+            inner: CoreArc::new(
+                id as u64,
+                start_idx as u64,
+                end_idx as u64,
+                center_idx as u64,
+                clockwise,
+                construction,
+            ),
             registry: None,
         })
     }
@@ -57,26 +70,46 @@ impl PyArc {
 
     /// Start point id.
     #[getter]
-    fn start_idx(&self) -> u64 {
-        self.inner.start
+    fn start_idx(&self) -> i64 {
+        self.inner.start as i64
+    }
+
+    #[setter]
+    fn set_start_idx(&mut self, value: i64) {
+        self.inner.start = value as u64;
     }
 
     /// End point id.
     #[getter]
-    fn end_idx(&self) -> u64 {
-        self.inner.end
+    fn end_idx(&self) -> i64 {
+        self.inner.end as i64
+    }
+
+    #[setter]
+    fn set_end_idx(&mut self, value: i64) {
+        self.inner.end = value as u64;
     }
 
     /// Center point id.
     #[getter]
-    fn center_idx(&self) -> u64 {
-        self.inner.center
+    fn center_idx(&self) -> i64 {
+        self.inner.center as i64
+    }
+
+    #[setter]
+    fn set_center_idx(&mut self, value: i64) {
+        self.inner.center = value as u64;
     }
 
     /// Whether the arc sweeps clockwise from start to end.
     #[getter]
     fn clockwise(&self) -> bool {
         self.inner.clockwise
+    }
+
+    #[setter]
+    fn set_clockwise(&mut self, value: bool) {
+        self.inner.clockwise = value;
     }
 
     /// Whether the entity is construction geometry.
@@ -141,9 +174,16 @@ impl PyArc {
         self.inner.base.fill_color.map(|c| (c[0], c[1], c[2], c[3]))
     }
 
+    #[setter]
+    #[pyo3(name = "fill_color")]
+    fn set_fill_color_attr(&mut self, value: Option<(f64, f64, f64, f64)>) {
+        self.inner.base_mut().fill_color =
+            value.map(|(r, g, b, a)| [r, g, b, a]);
+    }
+
     /// The arc's midpoint in model coordinates, if defined.
-    fn get_midpoint(&self, registry: &PyEntityRegistry) -> Option<(f64, f64)> {
-        self.inner.get_midpoint(&registry.inner)
+    fn get_midpoint(&self, registry: PointCtx<'_>) -> Option<(f64, f64)> {
+        self.inner.get_midpoint(&registry)
     }
 
     /// The entity type name.
@@ -172,14 +212,14 @@ impl PyArc {
     fn geometry_signature<'py>(
         &self,
         py: Python<'py>,
-        registry: &PyEntityRegistry,
-    ) -> PyResult<Bound<'py, PyDict>> {
-        dict_from_value(py, &self.inner.geometry_signature(&registry.inner))
+        registry: PointCtx<'_>,
+    ) -> PyResult<Bound<'py, pyo3::types::PyTuple>> {
+        signature_to_py(py, &self.inner.geometry_signature(&registry))
     }
 
     /// Returns the entity's toolpath geometry in model coordinates.
-    fn to_geometry(&self, registry: &PyEntityRegistry) -> PyGeometry {
-        let geometry = self.inner.to_geometry(&registry.inner);
+    fn to_geometry(&self, registry: PointCtx<'_>) -> PyGeometry {
+        let geometry = self.inner.to_geometry(&registry);
         PyGeometry { inner: geometry }
     }
 
@@ -187,20 +227,20 @@ impl PyArc {
     #[pyo3(signature = (registry, forward = true))]
     fn to_polygon_vertices(
         &self,
-        registry: &PyEntityRegistry,
+        registry: PointCtx<'_>,
         forward: bool,
     ) -> Vec<(f64, f64)> {
-        self.inner.to_polygon_vertices(&registry.inner, forward)
+        self.inner.to_polygon_vertices(&registry, forward)
     }
 
     /// Returns the entity's centerline as polyline vertices.
     #[pyo3(signature = (registry, tolerance = 0.1))]
     fn to_polyline(
         &self,
-        registry: &PyEntityRegistry,
+        registry: PointCtx<'_>,
         tolerance: f64,
     ) -> Vec<(f64, f64)> {
-        self.inner.to_polyline(&registry.inner, tolerance)
+        self.inner.to_polyline(&registry, tolerance)
     }
 
     /// Whether the entity is hit at model coordinates (mx, my).
@@ -210,19 +250,14 @@ impl PyArc {
         mx: f64,
         my: f64,
         threshold: f64,
-        registry: &PyEntityRegistry,
+        registry: PointCtx<'_>,
     ) -> bool {
-        self.inner.hit_test(mx, my, threshold, &registry.inner)
+        self.inner.hit_test(mx, my, threshold, &registry)
     }
 
     /// Whether the model-space point lies inside the entity.
-    fn contains_point(
-        &self,
-        registry: &PyEntityRegistry,
-        x: f64,
-        y: f64,
-    ) -> bool {
-        self.inner.contains_point(&registry.inner, x, y)
+    fn contains_point(&self, registry: PointCtx<'_>, x: f64, y: f64) -> bool {
+        self.inner.contains_point(&registry, x, y)
     }
 
     /// Signed distance from the model-space point, if defined.
@@ -230,18 +265,22 @@ impl PyArc {
         &self,
         px: f64,
         py: f64,
-        registry: &PyEntityRegistry,
+        registry: PointCtx<'_>,
     ) -> Option<f64> {
-        self.inner.signed_distance_to(px, py, &registry.inner)
+        self.inner.signed_distance_to(px, py, &registry)
     }
 
     /// Tangent direction at the point nearest the model-space point.
     fn tangent_at(
         &self,
-        registry: &PyEntityRegistry,
+        registry: PointCtx<'_>,
         point_id: u64,
-    ) -> Option<(f64, f64)> {
-        self.inner.tangent_at(&registry.inner, point_id)
+    ) -> PyResult<(f64, f64)> {
+        self.inner.tangent_at(&registry, point_id).ok_or_else(|| {
+            PyNotImplementedError::new_err(
+                "tangent not defined for this entity",
+            )
+        })
     }
 
     /// Mirrors the entity across the axis.
@@ -303,13 +342,232 @@ impl PyArc {
     fn is_angle_within_sweep(
         &self,
         angle: f64,
-        registry: &PyEntityRegistry,
+        registry: PointCtx<'_>,
     ) -> bool {
-        self.inner.is_angle_within_sweep(angle, &registry.inner)
+        self.inner.is_angle_within_sweep(angle, &registry)
     }
     /// Point ids that act as drag anchors for the given point.
     fn get_drag_anchor_points(&self, point_id: u64) -> Vec<u64> {
         self.inner.get_drag_anchor_points(point_id)
+    }
+
+    /// Restores base flags serialized by to_dict() but not accepted
+    /// as constructor arguments.
+    fn restore_base_flags(&mut self, data: &Bound<'_, PyDict>) {
+        let get = |key: &str| -> bool {
+            data.get_item(key)
+                .ok()
+                .flatten()
+                .and_then(|v| v.extract().ok())
+                .unwrap_or(false)
+        };
+        self.inner.base_mut().invisible = get("invisible");
+        self.inner.base_mut().array_copy = get("array_copy");
+    }
+
+    /// Whether the entity has a radius (arc, circle).
+    fn is_radius_entity(&self) -> bool {
+        self.inner.is_radius_entity()
+    }
+
+    /// Whether the entity forms a closed loop.
+    fn is_closed_loop(&self) -> bool {
+        self.inner.is_closed_loop()
+    }
+
+    /// Whether the entity participates in edge/chaining adjacency
+    /// for loop detection (line, arc, bezier).
+    fn is_edge_entity(&self) -> bool {
+        self.inner.is_edge_entity()
+    }
+
+    /// The entity ids of the curve endpoints.
+    fn get_endpoint_ids(&self) -> Vec<u64> {
+        self.inner.get_endpoint_ids()
+    }
+
+    /// Point ids acting as junction candidates for chaining.
+    fn get_junction_point_ids(&self) -> Vec<u64> {
+        self.inner.get_junction_point_ids()
+    }
+
+    /// Auxiliary/child entity ids belonging to this compound entity.
+    fn get_helper_ids(&self) -> Vec<u64> {
+        self.inner.get_helper_ids()
+    }
+
+    /// Drops this entity's references to its helper entities.
+    fn clear_helper_references(&mut self) {
+        self.inner.clear_helper_references()
+    }
+
+    /// Point ids that can remain unconstrained when this entity is
+    /// constrained.
+    fn get_ignorable_unconstrained_points(&self) -> Vec<u64> {
+        self.inner.get_ignorable_unconstrained_points()
+    }
+
+    /// Whether a point can be constrained onto this entity's curve.
+    fn supports_point_on_curve(&self) -> bool {
+        self.inner.supports_point_on_curve()
+    }
+
+    /// Whether this entity can receive a fill color.
+    fn supports_fill(&self) -> bool {
+        self.inner.supports_fill()
+    }
+
+    /// The characteristic length used by equal-length constraints.
+    fn characteristic_length(&self, registry: PointCtx<'_>) -> f64 {
+        self.inner.characteristic_length(&registry)
+    }
+
+    /// The defining-point pairs of the characteristic length.
+    fn characteristic_length_pairs(&self) -> Vec<[u64; 2]> {
+        self.inner.characteristic_length_pairs()
+    }
+
+    /// The signed area enclosed by the entity, if defined.
+    fn enclosed_signed_area(&self, registry: PointCtx<'_>) -> PyResult<f64> {
+        self.inner.enclosed_signed_area(&registry).ok_or_else(|| {
+            PyNotImplementedError::new_err(
+                "signed area not defined for this entity",
+            )
+        })
+    }
+
+    /// Point ids that move rigidly with the given point.
+    fn get_rigidly_connected_points(&self, point_id: u64) -> Vec<u64> {
+        self.inner.get_rigidly_connected_points(point_id)
+    }
+
+    /// Frame point ids of a text box, for containment checks.
+    fn get_all_frame_point_ids(&self, registry: PointCtx<'_>) -> Vec<u64> {
+        self.inner.get_all_frame_point_ids(&registry)
+    }
+
+    /// Solver-relevant discrete state for undo/redo snapshots.
+    fn get_state<'py>(
+        &self,
+        py: Python<'py>,
+    ) -> PyResult<Option<Bound<'py, PyDict>>> {
+        match self.inner.get_state() {
+            Some(value) => dict_from_value(py, &value).map(Some),
+            None => Ok(None),
+        }
+    }
+
+    /// Restores solver-relevant discrete state from a snapshot.
+    fn set_state(&mut self, state: &Bound<'_, PyDict>) -> PyResult<()> {
+        let value = value_from_dict(state)?;
+        self.inner.set_state(&value);
+        Ok(())
+    }
+
+    /// The entity radius at the registry's point positions.
+    fn radius(&self, registry: PointCtx<'_>) -> f64 {
+        self.inner.radius(&registry)
+    }
+
+    /// Updates the constrained flag from defining-point status and
+    /// constraints that dimension this entity's radius or length.
+    fn update_constrained_status(
+        &mut self,
+        registry: PointCtx<'_>,
+        constraints: &Bound<'_, PyAny>,
+    ) -> PyResult<()> {
+        let constrained =
+            self.inner.compute_constrained(&registry, &|eid: u64| {
+                Python::attach(|_py| {
+                    let registry = registry.0.clone();
+                    let mut constrained = false;
+                    if let Ok(iter) = constraints.try_iter() {
+                        for constraint in iter.flatten() {
+                            if let Ok(flag) = constraint
+                                .call_method1(
+                                    "constrains_radius",
+                                    (&registry, eid),
+                                )
+                                .and_then(|v| v.extract::<bool>())
+                            {
+                                if flag {
+                                    constrained = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    constrained
+                })
+            });
+        self.inner.base_mut().constrained = constrained;
+        Ok(())
+    }
+
+    /// Whether the entity is fully contained by the given rect.
+    fn is_contained_by(
+        &self,
+        rect: (f64, f64, f64, f64),
+        registry: PointCtx<'_>,
+    ) -> bool {
+        let rect = crate::geo::types::Rect {
+            min: crate::geo::types::Point::new(rect.0, rect.1),
+            max: crate::geo::types::Point::new(rect.2, rect.3),
+        };
+        self.inner.is_contained_by(rect, &registry)
+    }
+
+    /// Whether the entity intersects the given rect.
+    fn intersects_rect(
+        &self,
+        rect: (f64, f64, f64, f64),
+        registry: PointCtx<'_>,
+    ) -> bool {
+        let rect = crate::geo::types::Rect {
+            min: crate::geo::types::Point::new(rect.0, rect.1),
+            max: crate::geo::types::Point::new(rect.2, rect.3),
+        };
+        self.inner.intersects_rect(rect, &registry)
+    }
+
+    /// Appends the entity's outline to the geometry.
+    #[pyo3(signature = (geo, registry, forward = true))]
+    fn append_to_geometry(
+        &self,
+        geo: &mut crate::python::geo::geometry::Geometry,
+        registry: PointCtx<'_>,
+        forward: bool,
+    ) {
+        self.inner
+            .append_to_geometry(&mut geo.inner, &registry, forward);
+    }
+
+    /// The fill geometry of the entity, if it supports fills.
+    fn create_fill_geometry(
+        &self,
+        registry: PointCtx<'_>,
+    ) -> Option<crate::python::geo::geometry::Geometry> {
+        self.inner.create_fill_geometry(&registry).map(|geometry| {
+            crate::python::geo::geometry::Geometry { inner: geometry }
+        })
+    }
+
+    /// Builds an entity from its reference dictionary shape.
+    #[staticmethod]
+    fn from_dict(
+        py: Python<'_>,
+        data: &Bound<'_, PyDict>,
+    ) -> PyResult<Py<PyArc>> {
+        let value = value_from_dict(data)?;
+        let inner = CoreArc::from_json(&value)
+            .ok_or_else(|| PyValueError::new_err("invalid arc dict"))?;
+        Py::new(
+            py,
+            PyClassInitializer::from(PyEntityBase).add_subclass(PyArc {
+                inner,
+                registry: None,
+            }),
+        )
     }
 }
 

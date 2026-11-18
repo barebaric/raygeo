@@ -9,7 +9,6 @@ use crate::sketch::draw::{
     draw_equal_symbol, screen_scale, CairoLike, DrawContext, DrawStyle,
     EQUAL_OFFSET_SCREEN,
 };
-use crate::sketch::registry::EntityRegistry;
 
 use std::f64::consts::FRAC_PI_2;
 
@@ -50,11 +49,11 @@ impl SketchConstraint for EqualDistanceConstraint {
         EqualDistanceConstraint::to_json(self)
     }
 
-    fn referenced_points(&self) -> Vec<u64> {
+    fn referenced_points(&self, _ctx: &dyn PointContext) -> Vec<u64> {
         vec![self.p1, self.p2, self.p3, self.p4]
     }
 
-    fn residual_count(&self) -> usize {
+    fn residual_count(&self, _ctx: &dyn PointContext) -> usize {
         1
     }
 
@@ -99,7 +98,7 @@ impl SketchConstraint for EqualDistanceConstraint {
         mx: f64,
         my: f64,
         threshold: f64,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
         to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
     ) -> bool {
         let (Some(pa), Some(pb), Some(pc), Some(pd)) = (

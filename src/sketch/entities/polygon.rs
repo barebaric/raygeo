@@ -10,10 +10,10 @@ use crate::geo::shape::polygon::{
     get_polygon_signed_area, is_point_inside_polygon,
 };
 use crate::geo::types::{Point, Rect};
+use crate::sketch::constraint::PointContext;
 
 use super::entity::{quantize, Entity, EntityBase};
 use super::mirror::MirrorAxis;
-use crate::sketch::registry::EntityRegistry;
 
 /// A polygon (optionally multi-ring) defined in a local frame: the
 /// rings are (u, v) coordinates relative to the frame spanned by
@@ -137,7 +137,7 @@ impl PolygonEntity {
     }
 
     /// Frame basis: (cx, cy, x_hat_x, x_hat_y, scale).
-    fn frame(&self, model: &EntityRegistry) -> (f64, f64, f64, f64, f64) {
+    fn frame(&self, model: &dyn PointContext) -> (f64, f64, f64, f64, f64) {
         let Some((cx, cy)) = model.point_position(self.center) else {
             return (0.0, 0.0, 1.0, 0.0, 0.0);
         };
@@ -156,7 +156,7 @@ impl PolygonEntity {
     /// The outer ring in world coordinates.
     pub fn get_world_vertices(
         &self,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
     ) -> Vec<(f64, f64)> {
         self.get_world_rings(model)
             .into_iter()
@@ -167,7 +167,7 @@ impl PolygonEntity {
     /// Every ring in world coordinates (outer first).
     pub fn get_world_rings(
         &self,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
     ) -> Vec<Vec<(f64, f64)>> {
         let (cx, cy, ux, uy, scale) = self.frame(model);
         self.rings
@@ -188,7 +188,7 @@ impl PolygonEntity {
     /// (world_vertices, closed) for offset processing.
     pub fn to_outline(
         &self,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
     ) -> (Vec<(f64, f64)>, bool) {
         (self.get_world_vertices(model), self.closed)
     }
@@ -209,6 +209,9 @@ impl Entity for PolygonEntity {
 
     fn as_any(&self) -> &dyn std::any::Any {
         self
+    }
+    fn clone_box(&self) -> Box<dyn Entity> {
+        Box::new(self.clone())
     }
 
     fn type_name(&self) -> &'static str {
@@ -278,7 +281,7 @@ impl Entity for PolygonEntity {
         self.normalize_ring_winding();
     }
 
-    fn geometry_signature(&self, model: &EntityRegistry) -> Value {
+    fn geometry_signature(&self, model: &dyn PointContext) -> Value {
         let mut signature =
             match super::entity::points_signature(model, &self.get_point_ids())
             {
@@ -299,7 +302,7 @@ impl Entity for PolygonEntity {
 
     fn compute_constrained(
         &self,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
         _constrains_radius: &dyn Fn(u64) -> bool,
     ) -> bool {
         let c = model.get_point(self.center).map(|p| p.constrained);
@@ -337,7 +340,7 @@ impl Entity for PolygonEntity {
         self.normalize_ring_winding();
     }
 
-    fn enclosed_signed_area(&self, model: &EntityRegistry) -> Option<f64> {
+    fn enclosed_signed_area(&self, model: &dyn PointContext) -> Option<f64> {
         // By convention, a single closed loop is CCW -> positive area.
         let rings = self.get_world_rings(model);
         let mut area = get_polygon_signed_area(&to_points(&rings[0])).abs();
@@ -347,7 +350,7 @@ impl Entity for PolygonEntity {
         Some(area)
     }
 
-    fn contains_point(&self, model: &EntityRegistry, x: f64, y: f64) -> bool {
+    fn contains_point(&self, model: &dyn PointContext, x: f64, y: f64) -> bool {
         // Inside the outer ring and not inside any hole.
         if !self.closed {
             return false;
@@ -371,7 +374,7 @@ impl Entity for PolygonEntity {
         mx: f64,
         my: f64,
         threshold: f64,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
     ) -> bool {
         for vertices in self.get_world_rings(model) {
             if vertices.len() < 2 {
@@ -396,7 +399,7 @@ impl Entity for PolygonEntity {
         false
     }
 
-    fn is_contained_by(&self, rect: Rect, model: &EntityRegistry) -> bool {
+    fn is_contained_by(&self, rect: Rect, model: &dyn PointContext) -> bool {
         let rings = self.get_world_rings(model);
         if rings.is_empty() || rings[0].is_empty() {
             return false;
@@ -411,7 +414,7 @@ impl Entity for PolygonEntity {
         })
     }
 
-    fn intersects_rect(&self, rect: Rect, model: &EntityRegistry) -> bool {
+    fn intersects_rect(&self, rect: Rect, model: &dyn PointContext) -> bool {
         let rings = self.get_world_rings(model);
         if rings.is_empty() || rings[0].len() < 2 {
             return false;
@@ -441,7 +444,7 @@ impl Entity for PolygonEntity {
         self.is_contained_by(rect, model)
     }
 
-    fn to_geometry(&self, model: &EntityRegistry) -> Geometry {
+    fn to_geometry(&self, model: &dyn PointContext) -> Geometry {
         let mut geo = Geometry::new();
         let rings = self.get_world_rings(model);
         for ring in rings {
@@ -461,7 +464,7 @@ impl Entity for PolygonEntity {
 
     fn to_polygon_vertices(
         &self,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
         forward: bool,
     ) -> Vec<(f64, f64)> {
         let mut vertices = self.get_world_vertices(model);

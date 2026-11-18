@@ -1,6 +1,7 @@
 //! Python bindings for the sketch module.
 
 pub(crate) mod constraints;
+pub(crate) mod context;
 pub(crate) mod entities;
 pub(crate) mod point;
 pub(crate) mod protocols;
@@ -67,6 +68,20 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     sys_modules.set_item("raygeo.sketch", &sketch_mod)?;
     sys_modules.set_item("raygeo.sketch.types", &types_mod)?;
     sys_modules.set_item("raygeo.sketch.protocols", &protocols_mod)?;
+
+    // The sketch package is created by the compiled module; giving it
+    // a path makes the regular Python packages that ship alongside it
+    // (python/raygeo/sketch/model, ...) importable as subpackages.
+    let raygeo = py.import("raygeo")?;
+    let init_file: String = raygeo.getattr("__file__")?.extract()?;
+    let sketch_dir = std::path::Path::new(&init_file)
+        .parent()
+        .map(|dir| dir.join("sketch"));
+    if let Some(sketch_dir) = sketch_dir {
+        let path =
+            pyo3::types::PyList::new(py, [sketch_dir.to_string_lossy()])?;
+        sketch_mod.setattr("__path__", &path)?;
+    }
 
     Ok(())
 }

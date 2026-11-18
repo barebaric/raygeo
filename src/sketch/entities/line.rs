@@ -7,9 +7,9 @@ use crate::geo::shape::line::{
     does_line_segment_intersect_rect, get_line_segment_closest_point,
 };
 use crate::geo::types::{Point, Rect};
+use crate::sketch::constraint::PointContext;
 
 use super::entity::{base_from_json, Entity, EntityBase};
-use crate::sketch::registry::EntityRegistry;
 
 /// A straight segment between two points.
 #[derive(Clone, Debug)]
@@ -66,6 +66,9 @@ impl Entity for Line {
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
+    fn clone_box(&self) -> Box<dyn Entity> {
+        Box::new(self.clone())
+    }
 
     fn type_name(&self) -> &'static str {
         "line"
@@ -97,7 +100,7 @@ impl Entity for Line {
 
     fn tangent_at(
         &self,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
         point_id: u64,
     ) -> Option<(f64, f64)> {
         let p1 = model.point_position(self.p1)?;
@@ -114,7 +117,7 @@ impl Entity for Line {
         &self,
         px: f64,
         py: f64,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
     ) -> Option<f64> {
         let p1 = model.point_position(self.p1)?;
         let p2 = model.point_position(self.p2)?;
@@ -133,7 +136,7 @@ impl Entity for Line {
         mx: f64,
         my: f64,
         threshold: f64,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
     ) -> bool {
         let (Some(p1), Some(p2)) =
             (model.point_position(self.p1), model.point_position(self.p2))
@@ -151,7 +154,7 @@ impl Entity for Line {
 
     fn compute_constrained(
         &self,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
         _constrains_radius: &dyn Fn(u64) -> bool,
     ) -> bool {
         let c1 = model.get_point(self.p1).map(|p| p.constrained);
@@ -159,7 +162,7 @@ impl Entity for Line {
         c1.unwrap_or(false) && c2.unwrap_or(false)
     }
 
-    fn is_contained_by(&self, rect: Rect, model: &EntityRegistry) -> bool {
+    fn is_contained_by(&self, rect: Rect, model: &dyn PointContext) -> bool {
         let (Some(p1), Some(p2)) =
             (model.point_position(self.p1), model.point_position(self.p2))
         else {
@@ -175,7 +178,7 @@ impl Entity for Line {
         )
     }
 
-    fn intersects_rect(&self, rect: Rect, model: &EntityRegistry) -> bool {
+    fn intersects_rect(&self, rect: Rect, model: &dyn PointContext) -> bool {
         let (Some(p1), Some(p2)) =
             (model.point_position(self.p1), model.point_position(self.p2))
         else {
@@ -188,7 +191,7 @@ impl Entity for Line {
         )
     }
 
-    fn to_geometry(&self, model: &EntityRegistry) -> Geometry {
+    fn to_geometry(&self, model: &dyn PointContext) -> Geometry {
         let mut geo = Geometry::new();
         let (Some(p1), Some(p2)) =
             (model.point_position(self.p1), model.point_position(self.p2))
@@ -203,7 +206,7 @@ impl Entity for Line {
     fn append_to_geometry(
         &self,
         geo: &mut Geometry,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
         forward: bool,
     ) {
         let end = if forward { self.p2 } else { self.p1 };
@@ -214,7 +217,7 @@ impl Entity for Line {
 
     fn to_polygon_vertices(
         &self,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
         forward: bool,
     ) -> Vec<(f64, f64)> {
         let start = if forward { self.p1 } else { self.p2 };
@@ -223,7 +226,7 @@ impl Entity for Line {
 
     fn to_polyline(
         &self,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
         _tolerance: f64,
     ) -> Vec<(f64, f64)> {
         // Overridden because raygeo's polygon conversion skips lone

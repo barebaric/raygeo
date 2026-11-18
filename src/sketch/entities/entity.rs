@@ -10,7 +10,7 @@
 
 use serde_json::{json, Value};
 
-use crate::sketch::registry::EntityRegistry;
+use crate::sketch::constraint::PointContext;
 
 /// Rounds to 6 decimals, matching the reference `quantize` used in
 /// geometry signatures.
@@ -119,6 +119,9 @@ pub trait Entity: Send + Sync {
     /// Downcast hook for the binding layer.
     fn as_any(&self) -> &dyn std::any::Any;
 
+    /// Clones the entity as a boxed trait object.
+    fn clone_box(&self) -> Box<dyn Entity>;
+
     /// The reference serialization type string.
     fn type_name(&self) -> &'static str;
 
@@ -150,7 +153,7 @@ pub trait Entity: Send + Sync {
     /// Hashable signature of all geometry affecting the entity's
     /// shape: quantized defining-point positions, extended by
     /// entity-internal state.
-    fn geometry_signature(&self, model: &EntityRegistry) -> Value {
+    fn geometry_signature(&self, model: &dyn PointContext) -> Value {
         points_signature(model, &self.get_point_ids())
     }
 
@@ -160,7 +163,7 @@ pub trait Entity: Send + Sync {
 
     /// Returns all frame point ids of a text box frame; other entity
     /// kinds return none.
-    fn get_all_frame_point_ids(&self, _model: &EntityRegistry) -> Vec<u64> {
+    fn get_all_frame_point_ids(&self, _model: &dyn PointContext) -> Vec<u64> {
         Vec::new()
     }
 
@@ -199,6 +202,12 @@ pub trait Entity: Send + Sync {
         false
     }
 
+    /// The id of the entity's center point, for radius-bearing
+    /// entities (`None` otherwise).
+    fn center_point_id(&self) -> Option<u64> {
+        None
+    }
+
     fn is_closed_loop(&self) -> bool {
         false
     }
@@ -206,7 +215,7 @@ pub trait Entity: Send + Sync {
     /// Signed area enclosed by this entity when it alone forms a
     /// closed loop; `None` when unsupported (the reference raises
     /// `NotImplementedError`).
-    fn enclosed_signed_area(&self, _model: &EntityRegistry) -> Option<f64> {
+    fn enclosed_signed_area(&self, _model: &dyn PointContext) -> Option<f64> {
         None
     }
 
@@ -224,7 +233,7 @@ pub trait Entity: Send + Sync {
         Vec::new()
     }
 
-    fn characteristic_length(&self, model: &EntityRegistry) -> f64 {
+    fn characteristic_length(&self, model: &dyn PointContext) -> f64 {
         let pairs = self.characteristic_length_pairs();
         let Some(pair) = pairs.first() else {
             return 0.0;
@@ -242,7 +251,7 @@ pub trait Entity: Send + Sync {
         _mx: f64,
         _my: f64,
         _threshold: f64,
-        _model: &EntityRegistry,
+        _model: &dyn PointContext,
     ) -> bool {
         false
     }
@@ -250,7 +259,7 @@ pub trait Entity: Send + Sync {
     fn is_contained_by(
         &self,
         _rect: crate::geo::types::Rect,
-        _model: &EntityRegistry,
+        _model: &dyn PointContext,
     ) -> bool {
         false
     }
@@ -258,7 +267,7 @@ pub trait Entity: Send + Sync {
     fn intersects_rect(
         &self,
         _rect: crate::geo::types::Rect,
-        _model: &EntityRegistry,
+        _model: &dyn PointContext,
     ) -> bool {
         false
     }
@@ -270,7 +279,7 @@ pub trait Entity: Send + Sync {
         &self,
         _px: f64,
         _py: f64,
-        _model: &EntityRegistry,
+        _model: &dyn PointContext,
     ) -> Option<f64> {
         None
     }
@@ -281,7 +290,7 @@ pub trait Entity: Send + Sync {
     /// `NotImplementedError`).
     fn tangent_at(
         &self,
-        _model: &EntityRegistry,
+        _model: &dyn PointContext,
         _point_id: u64,
     ) -> Option<(f64, f64)> {
         None
@@ -289,7 +298,7 @@ pub trait Entity: Send + Sync {
 
     fn contains_point(
         &self,
-        _model: &EntityRegistry,
+        _model: &dyn PointContext,
         _x: f64,
         _y: f64,
     ) -> bool {
@@ -300,14 +309,14 @@ pub trait Entity: Send + Sync {
 
     fn to_geometry(
         &self,
-        _model: &EntityRegistry,
+        _model: &dyn PointContext,
     ) -> crate::geo::geometry::Geometry {
         crate::geo::geometry::Geometry::new()
     }
 
     fn create_fill_geometry(
         &self,
-        _model: &EntityRegistry,
+        _model: &dyn PointContext,
     ) -> Option<crate::geo::geometry::Geometry> {
         None
     }
@@ -315,14 +324,14 @@ pub trait Entity: Send + Sync {
     fn append_to_geometry(
         &self,
         _geo: &mut crate::geo::geometry::Geometry,
-        _model: &EntityRegistry,
+        _model: &dyn PointContext,
         _forward: bool,
     ) {
     }
 
     fn to_polygon_vertices(
         &self,
-        _model: &EntityRegistry,
+        _model: &dyn PointContext,
         _forward: bool,
     ) -> Vec<(f64, f64)> {
         Vec::new()
@@ -330,7 +339,7 @@ pub trait Entity: Send + Sync {
 
     fn to_polyline(
         &self,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
         tolerance: f64,
     ) -> Vec<(f64, f64)> {
         match self.to_geometry(model).to_polygons(tolerance).first() {
@@ -341,7 +350,7 @@ pub trait Entity: Send + Sync {
 
     fn to_polylines(
         &self,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
         tolerance: f64,
     ) -> Vec<Vec<(f64, f64)>> {
         vec![self.to_polyline(model, tolerance)]
@@ -363,7 +372,7 @@ pub trait Entity: Send + Sync {
     /// an entity (radius/diameter constraints).
     fn compute_constrained(
         &self,
-        _model: &EntityRegistry,
+        _model: &dyn PointContext,
         _constrains_radius: &dyn Fn(u64) -> bool,
     ) -> bool {
         false
@@ -431,7 +440,7 @@ pub(crate) fn base_from_json(data: &Value) -> EntityBase {
 /// Quantized defining-point positions as a JSON array — the shared
 /// prefix of every entity's geometry signature.
 pub(crate) fn points_signature(
-    model: &EntityRegistry,
+    model: &dyn PointContext,
     point_ids: &[u64],
 ) -> Value {
     Value::Array(

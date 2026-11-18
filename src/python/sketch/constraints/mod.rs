@@ -17,31 +17,123 @@ pub(crate) mod point_on_curve;
 pub(crate) mod point_on_line;
 pub(crate) mod radius;
 pub(crate) mod rotational;
+pub(crate) mod surface;
 pub(crate) mod symmetry;
 pub(crate) mod tangent;
 pub(crate) mod vertical;
 
 use pyo3::call::PyCallArgs;
-use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;
-use pyo3::types::{PyAny, PyDict};
-use pyo3_stub_gen::derive::gen_stub_pyclass;
-use pyo3_stub_gen::{ImportKind, ImportRef, ModuleRef, PyStubType, TypeInfo};
+use pyo3::types::{PyAny, PyDict, PyType};
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 use serde_json::Value;
 use std::collections::{HashMap, HashSet};
 
-use crate::python::sketch::protocols::{
-    Canvas, DrawContext as RegistryContext, ScreenMap,
-};
-use crate::python::sketch::registry::PyEntityRegistry;
+use crate::python::sketch::context::PointCtx;
+use crate::python::sketch::protocols::{Canvas, ScreenMap};
 use crate::sketch::constraint::SketchConstraint;
 use crate::sketch::draw::{
     CairoLike, ConstraintStatus, DrawContext as DrawContextContract, DrawPoint,
-    DrawStyle,
+    DrawStyle, TextExtents,
 };
 
 /// Type of a leaf-module registration function.
 type LeafRegister = fn(&Bound<'_, PyModule>) -> PyResult<()>;
+
+/// Solver weight of the angle constraints, mirroring the reference
+/// `angle.py` constant.
+pub(crate) const ANGLE_WEIGHT: f64 = 10.0;
+
+// The reference package exposes every constraint class and the
+// solver constants at package level; declare the same surface for
+// the generated stubs.
+pyo3_stub_gen::module_variable!(
+    "raygeo.sketch.constraints",
+    "ANGLE_WEIGHT",
+    f64,
+    10.0
+);
+
+pyo3_stub_gen::reexport_module_members!(
+    "raygeo.sketch.constraints" from "raygeo.sketch.constraints.angle";
+    "AngleConstraint"
+);
+pyo3_stub_gen::reexport_module_members!(
+    "raygeo.sketch.constraints" from "raygeo.sketch.constraints.aspect_ratio";
+    "AspectRatioConstraint"
+);
+pyo3_stub_gen::reexport_module_members!(
+    "raygeo.sketch.constraints" from "raygeo.sketch.constraints.coincident";
+    "CoincidentConstraint"
+);
+pyo3_stub_gen::reexport_module_members!(
+    "raygeo.sketch.constraints" from "raygeo.sketch.constraints.collinear";
+    "CollinearConstraint"
+);
+pyo3_stub_gen::reexport_module_members!(
+    "raygeo.sketch.constraints" from "raygeo.sketch.constraints.diameter";
+    "DiameterConstraint"
+);
+pyo3_stub_gen::reexport_module_members!(
+    "raygeo.sketch.constraints" from "raygeo.sketch.constraints.distance";
+    "DistanceConstraint"
+);
+pyo3_stub_gen::reexport_module_members!(
+    "raygeo.sketch.constraints" from "raygeo.sketch.constraints.drag";
+    "DragConstraint"
+);
+pyo3_stub_gen::reexport_module_members!(
+    "raygeo.sketch.constraints"
+    from "raygeo.sketch.constraints.equal_distance";
+    "EqualDistanceConstraint"
+);
+pyo3_stub_gen::reexport_module_members!(
+    "raygeo.sketch.constraints" from "raygeo.sketch.constraints.equal_length";
+    "EqualLengthConstraint"
+);
+pyo3_stub_gen::reexport_module_members!(
+    "raygeo.sketch.constraints" from "raygeo.sketch.constraints.horizontal";
+    "HorizontalConstraint"
+);
+pyo3_stub_gen::reexport_module_members!(
+    "raygeo.sketch.constraints"
+    from "raygeo.sketch.constraints.parallelogram";
+    "ParallelogramConstraint"
+);
+pyo3_stub_gen::reexport_module_members!(
+    "raygeo.sketch.constraints"
+    from "raygeo.sketch.constraints.perpendicular";
+    "PerpendicularConstraint"
+);
+pyo3_stub_gen::reexport_module_members!(
+    "raygeo.sketch.constraints"
+    from "raygeo.sketch.constraints.point_on_curve";
+    "PointOnCurveConstraint"
+);
+pyo3_stub_gen::reexport_module_members!(
+    "raygeo.sketch.constraints" from "raygeo.sketch.constraints.point_on_line";
+    "PointOnLineConstraint"
+);
+pyo3_stub_gen::reexport_module_members!(
+    "raygeo.sketch.constraints" from "raygeo.sketch.constraints.radius";
+    "RadiusConstraint"
+);
+pyo3_stub_gen::reexport_module_members!(
+    "raygeo.sketch.constraints" from "raygeo.sketch.constraints.rotational";
+    "RotationalConstraint"
+);
+pyo3_stub_gen::reexport_module_members!(
+    "raygeo.sketch.constraints" from "raygeo.sketch.constraints.symmetry";
+    "SymmetryConstraint"
+);
+pyo3_stub_gen::reexport_module_members!(
+    "raygeo.sketch.constraints" from "raygeo.sketch.constraints.tangent";
+    "TangentConstraint"
+);
+pyo3_stub_gen::reexport_module_members!(
+    "raygeo.sketch.constraints" from "raygeo.sketch.constraints.vertical";
+    "VerticalConstraint"
+);
 
 pub(crate) const MODULE_DOC: &str = "\
 Sketch constraint classes.
@@ -127,6 +219,15 @@ impl<'a> PyDrawContext<'a> {
             }
         }
     }
+
+    /// Probes an optional registry method: missing methods yield
+    /// `None` without recording an error.
+    fn try_call(&self, name: &str, id: u64) -> Option<Bound<'a, PyAny>> {
+        if self.error.borrow().is_some() {
+            return None;
+        }
+        self.registry.call_method1(name, (id,)).ok()
+    }
 }
 
 impl DrawContextContract for PyDrawContext<'_> {
@@ -140,41 +241,81 @@ impl DrawContextContract for PyDrawContext<'_> {
                 (x, y)
             }
         };
-        let fixed = match self.call("point_is_fixed", id) {
+        let fixed = match self.try_call("point_is_fixed", id) {
             Some(flag) => flag.extract::<bool>().unwrap_or(false),
-            None => false,
+            None => value
+                .getattr("fixed")
+                .ok()
+                .and_then(|flag| flag.extract().ok())
+                .unwrap_or(false),
+        };
+        let constrained = match self.try_call("point_constrained", id) {
+            Some(flag) => flag.extract::<bool>().unwrap_or(false),
+            None => value
+                .getattr("constrained")
+                .ok()
+                .and_then(|flag| flag.extract().ok())
+                .unwrap_or(false),
         };
         Some(DrawPoint {
             x: xy.0,
             y: xy.1,
             fixed,
+            constrained,
         })
     }
 
     fn entity_ids(&self) -> Vec<u64> {
-        self.registry
+        if let Ok(ids) = self
+            .registry
             .call_method0("entity_ids")
             .and_then(|ids| ids.extract::<Vec<u64>>())
-            .unwrap_or_default()
+        {
+            return ids;
+        }
+        // The reference registry exposes its entities as a list
+        // attribute instead of a method.
+        let entities = match self.registry.getattr("entities") {
+            Ok(entities) => entities,
+            Err(_) => return vec![],
+        };
+        let iter = match entities.try_iter() {
+            Ok(iter) => iter,
+            Err(_) => return vec![],
+        };
+        let mut ids = Vec::new();
+        for entity in iter.flatten() {
+            if let Ok(id) = entity.getattr("id").and_then(|v| v.extract()) {
+                ids.push(id);
+            }
+        }
+        ids
     }
 
     fn entity_type(&self, id: u64) -> Option<std::borrow::Cow<'static, str>> {
-        let value = self.call("entity_type", id)?;
-        let name: String = value.extract().ok()?;
-        match name.as_str() {
-            "line" => Some(std::borrow::Cow::Borrowed("line")),
-            "text_box" => Some(std::borrow::Cow::Borrowed("text_box")),
-            _ => Some(std::borrow::Cow::Owned(name)),
+        if let Some(value) = self.try_call("entity_type", id) {
+            if let Ok(name) = value.extract::<String>() {
+                return Some(std::borrow::Cow::Owned(name));
+            }
         }
+        let entity = self.call("get_entity", id)?;
+        let name: String =
+            entity.getattr("type").ok().and_then(|v| v.extract().ok())?;
+        Some(std::borrow::Cow::Owned(name))
     }
 
     fn entity_point_ids(&self, id: u64) -> Option<Vec<u64>> {
-        let value = self.call("entity_point_ids", id)?;
-        value.extract().ok()
+        if let Some(value) = self.try_call("entity_point_ids", id) {
+            if let Ok(ids) = value.extract::<Vec<u64>>() {
+                return Some(ids);
+            }
+        }
+        let entity = self.call("get_entity", id)?;
+        entity.call_method0("get_point_ids").ok()?.extract().ok()
     }
 
     fn point_in_text_box_frame(&self, point_id: u64) -> bool {
-        match self.call("point_is_in_text_box_frame", point_id) {
+        match self.try_call("point_is_in_text_box_frame", point_id) {
             Some(flag) => flag.extract::<bool>().unwrap_or(false),
             None => false,
         }
@@ -302,6 +443,107 @@ impl CairoLike for PyCairoAdapter<'_> {
     fn rotate(&self, angle: f64) {
         self.call("rotate", (angle,));
     }
+
+    fn text_extents(&self, text: &str, font_px: f64) -> Option<TextExtents> {
+        if self.error.borrow().is_some() {
+            return None;
+        }
+        let py = self.ctx.py();
+        let result = (|| -> PyResult<TextExtents> {
+            let (pango, pango_cairo) = host_text_stack(py)?;
+            let layout = create_text_layout(
+                &pango,
+                &pango_cairo,
+                &self.ctx,
+                text,
+                font_px,
+            )?;
+            let extents = layout.call_method0("get_pixel_extents")?;
+            let ink = extents.get_item(0)?;
+            let x: f64 = ink.getattr("x")?.extract()?;
+            let y: f64 = ink.getattr("y")?.extract()?;
+            let width: f64 = ink.getattr("width")?.extract()?;
+            let height: f64 = ink.getattr("height")?.extract()?;
+            Ok((x, y, width, height))
+        })();
+        result.ok()
+    }
+
+    fn show_text(&self, text: &str, font_px: f64) -> bool {
+        if self.error.borrow().is_some() {
+            return false;
+        }
+        let py = self.ctx.py();
+        let result = (|| -> PyResult<()> {
+            let (pango, pango_cairo) = host_text_stack(py)?;
+            let layout = create_text_layout(
+                &pango,
+                &pango_cairo,
+                &self.ctx,
+                text,
+                font_px,
+            )?;
+            pango_cairo.call_method1("show_layout", (&self.ctx, &layout))?;
+            Ok(())
+        })();
+        match result {
+            Ok(()) => true,
+            Err(err) => {
+                *self.error.borrow_mut() = Some(err);
+                false
+            }
+        }
+    }
+}
+
+/// The host `gi.repository` text stack: `(Pango, PangoCairo)`.
+fn host_text_stack(
+    py: Python<'_>,
+) -> PyResult<(Bound<'_, PyAny>, Bound<'_, PyAny>)> {
+    let gi = py.import("gi.repository")?;
+    let pango = gi.getattr("Pango")?;
+    let pango_cairo = gi.getattr("PangoCairo")?;
+    Ok((pango, pango_cairo))
+}
+
+/// Builds the reference `create_text_layout` equivalent: a Pango
+/// layout with the Sans font at the given absolute pixel size.
+fn create_text_layout<'py>(
+    pango: &Bound<'py, PyAny>,
+    pango_cairo: &Bound<'py, PyAny>,
+    ctx: &Bound<'py, PyAny>,
+    text: &str,
+    font_px: f64,
+) -> PyResult<Bound<'py, PyAny>> {
+    let layout = pango_cairo.call_method1("create_layout", (ctx,))?;
+    let font = pango.getattr("FontDescription")?.call0()?;
+    font.call_method1("set_family", ("Sans",))?;
+    let weight = pango.getattr("Weight")?.getattr("NORMAL")?;
+    font.call_method1("set_weight", (weight,))?;
+    let style = pango.getattr("Style")?.getattr("NORMAL")?;
+    font.call_method1("set_style", (style,))?;
+    let scale: f64 = pango.getattr("SCALE")?.extract()?;
+    font.call_method1("set_absolute_size", (font_px * scale,))?;
+    layout.call_method1("set_font_description", (&font,))?;
+    layout.call_method1("set_text", (text, -1))?;
+    Ok(layout)
+}
+
+/// Runs a draw helper against the caller's cairo context,
+/// surfacing the first recorded cairo error after the pass.
+pub(crate) fn draw_with_cairo(
+    ctx: &Canvas<'_>,
+    draw: impl FnOnce(&dyn CairoLike),
+) -> PyResult<()> {
+    let adapter = PyCairoAdapter {
+        ctx: ctx.0.clone(),
+        error: std::cell::RefCell::new(None),
+    };
+    draw(&adapter);
+    match adapter.error.into_inner() {
+        Some(err) => Err(err),
+        None => Ok(()),
+    }
 }
 
 /// Runs the core [`SketchConstraint::draw`] against the registry
@@ -311,7 +553,7 @@ impl CairoLike for PyCairoAdapter<'_> {
 pub(crate) fn constraint_draw(
     constraint: &dyn SketchConstraint,
     ctx: &Canvas<'_>,
-    registry: &RegistryContext<'_>,
+    registry: &Bound<'_, PyAny>,
     to_screen: &ScreenMap<'_>,
     is_selected: bool,
     is_hovered: bool,
@@ -336,7 +578,7 @@ pub(crate) fn constraint_draw(
         error: std::cell::RefCell::new(None),
     };
     let context = PyDrawContext {
-        registry: registry.0.clone(),
+        registry: registry.clone(),
         error: std::cell::RefCell::new(None),
     };
     constraint.draw(&context, &to_screen, &canvas, &style);
@@ -358,13 +600,13 @@ pub(crate) fn constraint_is_hit(
     mx: f64,
     my: f64,
     threshold: f64,
-    registry: &PyEntityRegistry,
+    registry: &PointCtx<'_>,
     to_screen: Option<&ScreenMap<'_>>,
 ) -> bool {
     match to_screen {
         None => {
             let identity = |point: (f64, f64)| point;
-            constraint.is_hit(mx, my, threshold, &registry.inner, &identity)
+            constraint.is_hit(mx, my, threshold, registry, &identity)
         }
         Some(function) => {
             let to_screen = |point: (f64, f64)| {
@@ -374,261 +616,282 @@ pub(crate) fn constraint_is_hit(
                     .and_then(|result| result.extract::<(f64, f64)>())
                     .unwrap_or(point)
             };
-            constraint.is_hit(mx, my, threshold, &registry.inner, &to_screen)
+            constraint.is_hit(mx, my, threshold, registry, &to_screen)
         }
     }
 }
 
-/// Whether the entity references all the given points.
-pub(crate) fn entity_contains_points(
-    registry: &PyEntityRegistry,
-    entity_id: u64,
-    points: &[u64],
-) -> bool {
-    match registry.inner.entity_point_ids(entity_id) {
-        Some(ids) => points.iter().all(|point| ids.contains(point)),
-        None => false,
-    }
-}
-
-/// Builds the Python object for a stored constraint by downcasting
-/// through the trait's `as_any` hook and converting field-wise.
-pub(crate) fn constraint_to_py<'py>(
-    py: Python<'py>,
+/// Runs the core [`SketchConstraint::gradient`] against the
+/// registry, returning the reference mapping shape
+/// `{point_id: [(d_error_dx, d_error_dy), ...]}` with one entry per
+/// scalar residual row.
+pub(crate) fn constraint_gradient(
     constraint: &dyn SketchConstraint,
-) -> PyResult<Bound<'py, PyAny>> {
-    use crate::sketch::constraints::angle::AngleConstraint;
-    use crate::sketch::constraints::aspect_ratio::AspectRatioConstraint;
-    use crate::sketch::constraints::coincident::CoincidentConstraint;
-    use crate::sketch::constraints::collinear::CollinearConstraint;
-    use crate::sketch::constraints::diameter::DiameterConstraint;
-    use crate::sketch::constraints::distance::DistanceConstraint;
-    use crate::sketch::constraints::drag::DragConstraint;
-    use crate::sketch::constraints::equal_distance::EqualDistanceConstraint;
-    use crate::sketch::constraints::equal_length::EqualLengthConstraint;
-    use crate::sketch::constraints::horizontal::HorizontalConstraint;
-    use crate::sketch::constraints::parallelogram::ParallelogramConstraint;
-    use crate::sketch::constraints::perpendicular::PerpendicularConstraint;
-    use crate::sketch::constraints::point_on_curve::PointOnCurveConstraint;
-    use crate::sketch::constraints::point_on_line::PointOnLineConstraint;
-    use crate::sketch::constraints::radius::RadiusConstraint;
-    use crate::sketch::constraints::rotational::RotationalConstraint;
-    use crate::sketch::constraints::symmetry::SymmetryConstraint;
-    use crate::sketch::constraints::tangent::TangentConstraint;
-    use crate::sketch::constraints::vertical::VerticalConstraint;
-
-    macro_rules! try_downcast {
-        ($any:ident, $core:ty, $pyclass:path, $base:path) => {
-            if let Some(core) = $any.downcast_ref::<$core>() {
-                let core = core.clone();
-                let initialized = PyClassInitializer::from($base)
-                    .add_subclass(<$pyclass>::from_core(core));
-                let object = Py::new(py, initialized)?;
-                return Ok(object.bind(py).clone().into_any());
-            }
-        };
-    }
-
-    let any = constraint.as_any();
-    try_downcast!(
-        any,
-        AngleConstraint,
-        angle::PyAngleConstraint,
-        PyConstraintBase
-    );
-    try_downcast!(
-        any,
-        AspectRatioConstraint,
-        aspect_ratio::PyAspectRatioConstraint,
-        PyConstraintBase
-    );
-    try_downcast!(
-        any,
-        CoincidentConstraint,
-        coincident::PyCoincidentConstraint,
-        PyConstraintBase
-    );
-    try_downcast!(
-        any,
-        CollinearConstraint,
-        collinear::PyCollinearConstraint,
-        PyConstraintBase
-    );
-    try_downcast!(
-        any,
-        DiameterConstraint,
-        diameter::PyDiameterConstraint,
-        PyConstraintBase
-    );
-    try_downcast!(
-        any,
-        DistanceConstraint,
-        distance::PyDistanceConstraint,
-        PyConstraintBase
-    );
-    try_downcast!(
-        any,
-        DragConstraint,
-        drag::PyDragConstraint,
-        PyConstraintBase
-    );
-    try_downcast!(
-        any,
-        EqualDistanceConstraint,
-        equal_distance::PyEqualDistanceConstraint,
-        PyConstraintBase
-    );
-    try_downcast!(
-        any,
-        EqualLengthConstraint,
-        equal_length::PyEqualLengthConstraint,
-        PyConstraintBase
-    );
-    try_downcast!(
-        any,
-        HorizontalConstraint,
-        horizontal::PyHorizontalConstraint,
-        PyConstraintBase
-    );
-    try_downcast!(
-        any,
-        ParallelogramConstraint,
-        parallelogram::PyParallelogramConstraint,
-        PyConstraintBase
-    );
-    try_downcast!(
-        any,
-        PerpendicularConstraint,
-        perpendicular::PyPerpendicularConstraint,
-        PyConstraintBase
-    );
-    try_downcast!(
-        any,
-        PointOnCurveConstraint,
-        point_on_curve::PyPointOnCurveConstraint,
-        PyConstraintBase
-    );
-    try_downcast!(
-        any,
-        PointOnLineConstraint,
-        point_on_line::PyPointOnLineConstraint,
-        PyConstraintBase
-    );
-    try_downcast!(
-        any,
-        RadiusConstraint,
-        radius::PyRadiusConstraint,
-        PyConstraintBase
-    );
-    try_downcast!(
-        any,
-        RotationalConstraint,
-        rotational::PyRotationalConstraint,
-        PyConstraintBase
-    );
-    try_downcast!(
-        any,
-        SymmetryConstraint,
-        symmetry::PySymmetryConstraint,
-        PyConstraintBase
-    );
-    try_downcast!(
-        any,
-        TangentConstraint,
-        tangent::PyTangentConstraint,
-        PyConstraintBase
-    );
-    try_downcast!(
-        any,
-        VerticalConstraint,
-        vertical::PyVerticalConstraint,
-        PyConstraintBase
-    );
-    Err(PyTypeError::new_err("unsupported constraint kind"))
-}
-
-/// Extracts an owned constraint from a Python constraint object.
-pub(crate) fn extract_constraint(
-    obj: &Bound<'_, PyAny>,
-) -> PyResult<Box<dyn SketchConstraint>> {
-    macro_rules! try_extract {
-        ($pyclass:ty) => {
-            if let Ok(constraint) = obj.extract::<PyRef<'_, $pyclass>>() {
-                return Ok(Box::new(constraint.clone().into_constraint()));
-            }
-        };
-    }
-
-    try_extract!(angle::PyAngleConstraint);
-    try_extract!(aspect_ratio::PyAspectRatioConstraint);
-    try_extract!(coincident::PyCoincidentConstraint);
-    try_extract!(collinear::PyCollinearConstraint);
-    try_extract!(diameter::PyDiameterConstraint);
-    try_extract!(distance::PyDistanceConstraint);
-    try_extract!(drag::PyDragConstraint);
-    try_extract!(equal_distance::PyEqualDistanceConstraint);
-    try_extract!(equal_length::PyEqualLengthConstraint);
-    try_extract!(horizontal::PyHorizontalConstraint);
-    try_extract!(parallelogram::PyParallelogramConstraint);
-    try_extract!(perpendicular::PyPerpendicularConstraint);
-    try_extract!(point_on_curve::PyPointOnCurveConstraint);
-    try_extract!(point_on_line::PyPointOnLineConstraint);
-    try_extract!(radius::PyRadiusConstraint);
-    try_extract!(rotational::PyRotationalConstraint);
-    try_extract!(symmetry::PySymmetryConstraint);
-    try_extract!(tangent::PyTangentConstraint);
-    try_extract!(vertical::PyVerticalConstraint);
-    Err(PyTypeError::new_err("expected a sketch constraint object"))
-}
-
-/// The common base class of every constraint binding: a nominal
-/// `Constraint` type for `isinstance` checks and annotations.  The
-/// per-class members live on the subclasses; polymorphism is carried
-/// by the Rust-side `SketchConstraint` trait.
-#[gen_stub_pyclass]
-#[pyclass(subclass, module = "raygeo.sketch.constraints", name = "Constraint")]
-#[derive(Default)]
-pub struct PyConstraintBase;
-
-/// The base of all constraint classes, for typed registry returns.
-pub struct AnyConstraint<'py>(pub Bound<'py, PyAny>);
-
-impl<'a, 'py> FromPyObject<'a, 'py> for AnyConstraint<'py> {
-    type Error = PyErr;
-
-    fn extract(ob: pyo3::Borrowed<'_, 'py, PyAny>) -> PyResult<Self> {
-        Ok(AnyConstraint(ob.to_owned()))
-    }
-}
-
-impl<'py> IntoPyObject<'py> for AnyConstraint<'py> {
-    type Target = PyAny;
-    type Output = Bound<'py, PyAny>;
-    type Error = PyErr;
-
-    fn into_pyobject(
-        self,
-        _py: Python<'py>,
-    ) -> Result<Self::Output, Self::Error> {
-        Ok(self.0)
-    }
-}
-
-impl PyStubType for AnyConstraint<'_> {
-    fn type_output() -> TypeInfo {
-        let module = ModuleRef::Named("raygeo.sketch.constraints".to_string());
-        TypeInfo {
-            name: "Constraint".to_string(),
-            source_module: None,
-            import: HashSet::from([ImportRef::Module(module.clone())]),
-            type_refs: HashMap::from([(
-                "Constraint".to_string(),
-                pyo3_stub_gen::TypeIdentifierRef {
-                    module,
-                    import_kind: ImportKind::Module,
-                },
-            )]),
+    registry: &mut PointCtx<'_>,
+) -> HashMap<u64, Vec<(f64, f64)>> {
+    let total_rows = constraint.residual_count(registry);
+    let entries = constraint.gradient(registry);
+    let mut map: HashMap<u64, Vec<(f64, f64)>> = HashMap::new();
+    for (point_id, row, dx, dy) in entries {
+        let rows = map.entry(point_id).or_default();
+        if rows.len() <= row {
+            rows.resize(row + 1, (0.0, 0.0));
         }
+        let (ox, oy) = rows[row];
+        rows[row] = (ox + dx, oy + dy);
+    }
+    // The reference mapping gives every referenced point a list as
+    // long as the constraint's residual count.
+    for rows in map.values_mut() {
+        if rows.len() < total_rows {
+            rows.resize(total_rows, (0.0, 0.0));
+        }
+    }
+    map
+}
+
+/// The common base class of every constraint binding, carrying the
+/// reference `Constraint` base surface.  The per-class members live
+/// on the subclasses; polymorphism is carried by the Rust-side
+/// `SketchConstraint` trait.
+#[gen_stub_pyclass]
+#[pyclass(
+    get_all,
+    set_all,
+    skip_from_py_object,
+    subclass,
+    module = "raygeo.sketch.constraints",
+    name = "Constraint"
+)]
+#[derive(Default, Clone)]
+pub struct PyConstraintBase {
+    /// The resolved dimension value (dimensional constraints).
+    pub value: f64,
+    /// The stored expression string (dimensional constraints).
+    pub expression: Option<String>,
+    /// The reference validation status ordinal.
+    pub status: u8,
+    /// Reference user-visibility flag.
+    pub user_visible: bool,
+}
+
+#[gen_stub_pymethods]
+#[pymethods]
+impl PyConstraintBase {
+    /// Whether the constraint can be applied to the selection.
+    #[classmethod]
+    #[pyo3(signature = (_selection, _sketch = None))]
+    fn can_apply_to(
+        _cls: &Bound<'_, PyType>,
+        _selection: &Bound<'_, PyAny>,
+        _sketch: Option<&Bound<'_, PyAny>>,
+    ) -> bool {
+        false
+    }
+
+    /// Whether the constraint type can apply to the given entities.
+    #[classmethod]
+    fn applies_to_entities(
+        _cls: &Bound<'_, PyType>,
+        entities: &Bound<'_, PyAny>,
+    ) -> PyResult<bool> {
+        let count = entities.try_iter()?.count();
+        Ok(count == 0)
+    }
+
+    /// The string key used to identify this constraint type; None
+    /// for constraints that cannot be created by users.
+    #[classmethod]
+    fn get_type_key(_cls: &Bound<'_, PyType>) -> Option<&'static str> {
+        None
+    }
+
+    /// The human-readable name of this constraint type.
+    #[staticmethod]
+    fn get_type_name() -> PyResult<String> {
+        Err(surface::type_name_unimplemented())
+    }
+
+    /// A human-readable title for this constraint.
+    fn get_title(slf: &Bound<'_, Self>) -> PyResult<String> {
+        surface::type_name(slf.as_any())
+    }
+
+    /// A human-readable subtitle describing the constrained
+    /// entities.
+    fn get_subtitle(&self, py: Python<'_>, registry: PointCtx<'_>) -> String {
+        let _ = (py, registry);
+        String::new()
+    }
+
+    /// The user-facing hint for the constraint edit dialog.
+    fn get_edit_subtitle(&self, py: Python<'_>) -> String {
+        surface::gettext(py, "Enter value or expression.")
+    }
+
+    /// Whether this constraint restricts the length/distance of the
+    /// segment (p1, p2) or of the given entity.
+    #[pyo3(signature = (p1, p2, entity_id = None))]
+    fn targets_segment(
+        &self,
+        p1: i64,
+        p2: i64,
+        entity_id: Option<i64>,
+    ) -> bool {
+        let _ = (p1, p2, entity_id);
+        false
+    }
+
+    /// The error of the constraint at the registry's positions.
+    #[pyo3(signature = (reg, params = None))]
+    fn error(&self, reg: PointCtx<'_>, params: Option<Py<PyAny>>) -> f64 {
+        let _ = (reg, params);
+        0.0
+    }
+
+    /// The partial derivatives of the error by point id.
+    #[pyo3(signature = (reg, params = None))]
+    fn gradient(
+        &self,
+        reg: PointCtx<'_>,
+        params: Option<Py<PyAny>>,
+    ) -> HashMap<u64, Vec<(f64, f64)>> {
+        let _ = (reg, params);
+        HashMap::new()
+    }
+
+    /// Whether the constraint explicitly defines the radius/length
+    /// of the given entity.
+    fn constrains_radius(
+        &self,
+        registry: PointCtx<'_>,
+        entity_id: i64,
+    ) -> bool {
+        let _ = (registry, entity_id);
+        false
+    }
+
+    /// Serializes the constraint to a dictionary.
+    fn to_dict<'py>(&self, py: Python<'py>) -> Bound<'py, PyDict> {
+        PyDict::new(py)
+    }
+
+    /// Whether the constraint's visual representation is hit.
+    #[pyo3(signature = (sx, sy, registry, to_screen, element,
+                        threshold))]
+    fn is_hit(
+        &self,
+        sx: f64,
+        sy: f64,
+        registry: PointCtx<'_>,
+        to_screen: ScreenMap<'_>,
+        element: Option<&Bound<'_, PyAny>>,
+        threshold: f64,
+    ) -> bool {
+        let _ = (sx, sy, registry, to_screen, element, threshold);
+        false
+    }
+
+    /// Draws the constraint's visual representation.
+    #[pyo3(signature = (ctx, registry, to_screen, is_selected = false,
+                        is_hovered = false, point_radius = 5.0))]
+    #[allow(clippy::too_many_arguments)]
+    fn draw<'py>(
+        &self,
+        ctx: Canvas<'py>,
+        registry: &Bound<'py, PyAny>,
+        to_screen: ScreenMap<'py>,
+        is_selected: bool,
+        is_hovered: bool,
+        point_radius: f64,
+    ) {
+        let _ = (
+            ctx,
+            registry,
+            to_screen,
+            is_selected,
+            is_hovered,
+            point_radius,
+        );
+    }
+
+    /// Re-evaluates the expression (if present) using the provided
+    /// context and updates `value` and `status`.
+    fn update_from_context(slf: &Bound<'_, Self>, context: &Bound<'_, PyDict>) {
+        surface::update_from_context(slf.as_any(), context)
+    }
+
+    /// Whether the constraint references any of the given points.
+    fn depends_on_points(
+        slf: &Bound<'_, Self>,
+        point_ids: &Bound<'_, PyAny>,
+    ) -> PyResult<bool> {
+        surface::depends_on_points(slf.as_any(), point_ids)
+    }
+
+    /// Whether the constraint references any of the given entities.
+    fn depends_on_entities(
+        slf: &Bound<'_, Self>,
+        entity_ids: &Bound<'_, PyAny>,
+    ) -> PyResult<bool> {
+        surface::depends_on_entities(slf.as_any(), entity_ids)
+    }
+
+    /// The set of point ids this constraint references.
+    fn get_referenced_point_ids(slf: &Bound<'_, Self>) -> HashSet<i64> {
+        surface::referenced_point_ids(slf.as_any())
+    }
+
+    /// The set of entity ids this constraint references.
+    fn get_referenced_entity_ids(slf: &Bound<'_, Self>) -> HashSet<i64> {
+        surface::referenced_entity_ids(slf.as_any())
+    }
+
+    /// Whether the constraint survives a mirror of all referenced
+    /// geometry.
+    fn is_mirror_compatible(&self) -> bool {
+        true
+    }
+
+    /// Updates the internal state for a mirror transform; a no-op
+    /// for mirror-invariant constraints.
+    fn mirror(&self, _axis: &Bound<'_, PyAny>) {}
+
+    /// Whether the constraint pins geometry to the global axes.
+    fn is_world_anchored(&self) -> bool {
+        false
+    }
+
+    /// A point id that can be dragged to manipulate this constraint.
+    fn get_draggable_point(&self) -> Option<i64> {
+        None
+    }
+
+    /// The reference attribute view of the constraint: the
+    /// `vars()` walk of the reference implementation sees exactly
+    /// these attributes.
+    #[getter]
+    fn __dict__(slf: &Bound<'_, Self>, py: Python<'_>) -> PyResult<Py<PyDict>> {
+        let dict = PyDict::new(py);
+        for name in surface::REFERENCE_ATTRS {
+            if let Ok(value) = slf.getattr(name) {
+                dict.set_item(name, value)?;
+            }
+        }
+        Ok(dict.unbind())
+    }
+
+    /// Deep-copies the constraint through its reference dictionary
+    /// shape, rebuilding via the concrete subclass's `from_dict`.
+    fn __deepcopy__<'py>(
+        slf: &Bound<'py, Self>,
+        memo: &Bound<'py, PyDict>,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        surface::deepcopy(slf.as_any(), memo)
+    }
+
+    fn __copy__<'py>(slf: &Bound<'py, Self>) -> PyResult<Bound<'py, PyAny>> {
+        Self::__deepcopy__(slf, &PyDict::new(slf.py()))
     }
 }
 
@@ -639,6 +902,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     constraints_mod.setattr("__doc__", MODULE_DOC)?;
 
     constraints_mod.add_class::<PyConstraintBase>()?;
+    constraints_mod.add("ANGLE_WEIGHT", ANGLE_WEIGHT)?;
 
     let leaves: [(&str, LeafRegister); 19] = [
         ("angle", angle::register),
@@ -666,6 +930,28 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
         register_leaf(&leaf_mod)?;
         constraints_mod.add_submodule(&leaf_mod)?;
     }
+
+    // The reference package exposes every constraint class at
+    // package level as well (`from .angle import AngleConstraint`).
+    constraints_mod.add_class::<angle::PyAngleConstraint>()?;
+    constraints_mod.add_class::<aspect_ratio::PyAspectRatioConstraint>()?;
+    constraints_mod.add_class::<coincident::PyCoincidentConstraint>()?;
+    constraints_mod.add_class::<collinear::PyCollinearConstraint>()?;
+    constraints_mod.add_class::<diameter::PyDiameterConstraint>()?;
+    constraints_mod.add_class::<distance::PyDistanceConstraint>()?;
+    constraints_mod.add_class::<drag::PyDragConstraint>()?;
+    constraints_mod.add_class::<equal_distance::PyEqualDistanceConstraint>()?;
+    constraints_mod.add_class::<equal_length::PyEqualLengthConstraint>()?;
+    constraints_mod.add_class::<horizontal::PyHorizontalConstraint>()?;
+    constraints_mod.add_class::<parallelogram::PyParallelogramConstraint>()?;
+    constraints_mod.add_class::<perpendicular::PyPerpendicularConstraint>()?;
+    constraints_mod.add_class::<point_on_curve::PyPointOnCurveConstraint>()?;
+    constraints_mod.add_class::<point_on_line::PyPointOnLineConstraint>()?;
+    constraints_mod.add_class::<radius::PyRadiusConstraint>()?;
+    constraints_mod.add_class::<rotational::PyRotationalConstraint>()?;
+    constraints_mod.add_class::<symmetry::PySymmetryConstraint>()?;
+    constraints_mod.add_class::<tangent::PyTangentConstraint>()?;
+    constraints_mod.add_class::<vertical::PyVerticalConstraint>()?;
 
     m.add_submodule(&constraints_mod)?;
 

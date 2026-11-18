@@ -9,9 +9,9 @@ use crate::geo::shape::arc::{
 use crate::geo::shape::circle::get_circle_signed_distance;
 use crate::geo::shape::rect::does_rect_contain_rect;
 use crate::geo::types::{Point, Rect};
+use crate::sketch::constraint::PointContext;
 
 use super::entity::{base_from_json, Entity, EntityBase};
-use crate::sketch::registry::EntityRegistry;
 
 /// A circular arc from start to end around a center.
 #[derive(Clone, Debug)]
@@ -77,7 +77,7 @@ impl Arc {
     }
 
     /// Radius from the defining points.
-    pub fn radius(&self, model: &EntityRegistry) -> f64 {
+    pub fn radius(&self, model: &dyn PointContext) -> f64 {
         let (Some((cx, cy)), Some((sx, sy))) = (
             model.point_position(self.center),
             model.point_position(self.start),
@@ -87,7 +87,7 @@ impl Arc {
         (sx - cx).hypot(sy - cy)
     }
 
-    fn positions(&self, model: &EntityRegistry) -> Option<ArcPositions> {
+    fn positions(&self, model: &dyn PointContext) -> Option<ArcPositions> {
         Some((
             model.point_position(self.start)?,
             model.point_position(self.end)?,
@@ -99,7 +99,7 @@ impl Arc {
     pub fn is_angle_within_sweep(
         &self,
         angle: f64,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
     ) -> bool {
         let Some(((sx, sy), (ex, ey), (cx, cy))) = self.positions(model) else {
             return false;
@@ -109,7 +109,7 @@ impl Arc {
         is_angle_between(angle, start_angle, end_angle, self.clockwise)
     }
 
-    fn bbox(&self, model: &EntityRegistry) -> Option<Rect> {
+    fn bbox(&self, model: &dyn PointContext) -> Option<Rect> {
         let ((sx, sy), (ex, ey), (cx, cy)) = self.positions(model)?;
         let bounds = get_arc_bounds(
             Point::new(sx, sy),
@@ -132,6 +132,9 @@ impl Entity for Arc {
 
     fn as_any(&self) -> &dyn std::any::Any {
         self
+    }
+    fn clone_box(&self) -> Box<dyn Entity> {
+        Box::new(self.clone())
     }
 
     fn type_name(&self) -> &'static str {
@@ -164,7 +167,7 @@ impl Entity for Arc {
         self.clockwise = !self.clockwise;
     }
 
-    fn geometry_signature(&self, model: &EntityRegistry) -> Value {
+    fn geometry_signature(&self, model: &dyn PointContext) -> Value {
         let mut signature =
             match super::entity::points_signature(model, &self.get_point_ids())
             {
@@ -177,6 +180,10 @@ impl Entity for Arc {
 
     fn get_point_ids(&self) -> Vec<u64> {
         vec![self.start, self.end, self.center]
+    }
+
+    fn center_point_id(&self) -> Option<u64> {
+        Some(self.center)
     }
 
     fn get_endpoint_ids(&self) -> Vec<u64> {
@@ -201,7 +208,7 @@ impl Entity for Arc {
 
     fn tangent_at(
         &self,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
         point_id: u64,
     ) -> Option<(f64, f64)> {
         let ((sx, sy), (ex, ey), (cx, cy)) = self.positions(model)?;
@@ -217,7 +224,7 @@ impl Entity for Arc {
         &self,
         px: f64,
         py: f64,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
     ) -> Option<f64> {
         let (cx, cy) = model.point_position(self.center)?;
         let radius = self.radius(model);
@@ -240,7 +247,7 @@ impl Entity for Arc {
         mx: f64,
         my: f64,
         threshold: f64,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
     ) -> bool {
         let Some((cx, cy)) = model.point_position(self.center) else {
             return false;
@@ -258,7 +265,7 @@ impl Entity for Arc {
 
     fn compute_constrained(
         &self,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
         _constrains_radius: &dyn Fn(u64) -> bool,
     ) -> bool {
         let s = model.get_point(self.start).map(|p| p.constrained);
@@ -267,7 +274,7 @@ impl Entity for Arc {
         s.unwrap_or(false) && e.unwrap_or(false) && c.unwrap_or(false)
     }
 
-    fn is_contained_by(&self, rect: Rect, model: &EntityRegistry) -> bool {
+    fn is_contained_by(&self, rect: Rect, model: &dyn PointContext) -> bool {
         // Strictly inside requires the entire bounding box inside.
         match self.bbox(model) {
             Some(arc_box) => does_rect_contain_rect(rect, arc_box),
@@ -275,7 +282,7 @@ impl Entity for Arc {
         }
     }
 
-    fn intersects_rect(&self, rect: Rect, model: &EntityRegistry) -> bool {
+    fn intersects_rect(&self, rect: Rect, model: &dyn PointContext) -> bool {
         let Some(((sx, sy), (ex, ey), (cx, cy))) = self.positions(model) else {
             return false;
         };
@@ -288,7 +295,7 @@ impl Entity for Arc {
         )
     }
 
-    fn to_geometry(&self, model: &EntityRegistry) -> Geometry {
+    fn to_geometry(&self, model: &dyn PointContext) -> Geometry {
         let mut geo = Geometry::new();
         let Some(((sx, sy), (ex, ey), (cx, cy))) = self.positions(model) else {
             return geo;
@@ -301,7 +308,7 @@ impl Entity for Arc {
     fn append_to_geometry(
         &self,
         geo: &mut Geometry,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
         forward: bool,
     ) {
         let Some(((sx, sy), (ex, ey), (cx, cy))) = self.positions(model) else {
@@ -329,7 +336,7 @@ impl Entity for Arc {
 
     fn to_polygon_vertices(
         &self,
-        model: &EntityRegistry,
+        model: &dyn PointContext,
         forward: bool,
     ) -> Vec<(f64, f64)> {
         let Some(((sx, sy), (ex, ey), (cx, cy))) = self.positions(model) else {
@@ -367,14 +374,14 @@ impl Entity for Arc {
         samples.into_iter().map(|p| (p.x, p.y)).collect()
     }
 
-    fn enclosed_signed_area(&self, _model: &EntityRegistry) -> Option<f64> {
+    fn enclosed_signed_area(&self, _model: &dyn PointContext) -> Option<f64> {
         None
     }
 }
 
 impl Arc {
     /// Midpoint on the arc's circumference.
-    pub fn get_midpoint(&self, model: &EntityRegistry) -> Option<(f64, f64)> {
+    pub fn get_midpoint(&self, model: &dyn PointContext) -> Option<(f64, f64)> {
         let ((sx, sy), (ex, ey), (cx, cy)) = self.positions(model)?;
         let mid = get_arc_midpoint(
             Point::new(sx, sy),

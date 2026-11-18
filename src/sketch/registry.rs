@@ -6,13 +6,13 @@ use std::collections::HashMap;
 
 use serde_json::Value;
 
-use crate::sketch::constraints::json::{constraint_from_dict, ConstraintEntry};
 use crate::sketch::entities::entity::Entity;
 pub use crate::sketch::entities::entity::FontConfig;
 use crate::sketch::entities::entity_from_json;
 use crate::sketch::entities::point::SketchPoint;
 
-use crate::sketch::constraint::{PointContext, SketchConstraint};
+use crate::sketch::constraint::PointContext;
+use crate::sketch::draw::DrawPoint;
 
 /// Stores all points and entities of a sketch document.
 #[derive(Default)]
@@ -21,7 +21,6 @@ pub struct EntityRegistry {
     point_index: HashMap<u64, usize>,
     entities: Vec<Box<dyn Entity>>,
     entity_index: HashMap<u64, usize>,
-    constraints: Vec<ConstraintEntry>,
     id_counter: u64,
     entity_version: u64,
     point_usage: HashMap<u64, u64>,
@@ -195,94 +194,6 @@ impl EntityRegistry {
 
     pub fn entity_version(&self) -> u64 {
         self.entity_version
-    }
-
-    /// Adds a constraint from a reference constraint dictionary
-    /// (`.ryp` shape), resolving entity references through this
-    /// registry.  Returns the constraint handle (list index).
-    pub fn add_constraint_json(&mut self, dict: &Value) -> Result<u64, String> {
-        let constraint = constraint_from_dict(dict, self)
-            .ok_or_else(|| "unsupported constraint dict".to_string())?;
-        Ok(self.push_constraint(constraint, dict.clone()))
-    }
-
-    /// Appends a pre-built constraint object, storing its reference
-    /// dictionary, and returns the constraint handle (list index).
-    pub fn add_constraint_object(
-        &mut self,
-        constraint: Box<dyn SketchConstraint>,
-    ) -> u64 {
-        let dict = constraint.to_json();
-        self.push_constraint(constraint, dict)
-    }
-
-    /// Replaces the stored constraint at the given handle.
-    pub fn replace_constraint(
-        &mut self,
-        index: u64,
-        constraint: Box<dyn SketchConstraint>,
-    ) -> Result<(), String> {
-        let Some(entry) = self.constraints.get_mut(index as usize) else {
-            return Err("constraint index out of range".to_string());
-        };
-        let dict = constraint.to_json();
-        let referenced = constraint.referenced_points();
-        *entry = ConstraintEntry::new(constraint, dict, referenced);
-        Ok(())
-    }
-
-    fn push_constraint(
-        &mut self,
-        constraint: Box<dyn SketchConstraint>,
-        dict: Value,
-    ) -> u64 {
-        let referenced = constraint.referenced_points();
-        let index = self.constraints.len();
-        self.constraints
-            .push(ConstraintEntry::new(constraint, dict, referenced));
-        index as u64
-    }
-
-    /// All stored constraints, in insertion order.
-    pub fn all_constraints(&self) -> &[ConstraintEntry] {
-        &self.constraints
-    }
-
-    /// The stored constraint at the given handle.
-    pub fn get_constraint(&self, index: u64) -> Option<&dyn SketchConstraint> {
-        self.constraints
-            .get(index as usize)
-            .map(|e| e.constraint.as_ref())
-    }
-
-    /// Number of stored constraints.
-    pub fn constraint_count(&self) -> usize {
-        self.constraints.len()
-    }
-
-    /// The stored reference dictionary of a constraint.
-    pub fn constraint_dict(&self, index: u64) -> Option<Value> {
-        self.constraints.get(index as usize).map(|e| e.dict.clone())
-    }
-
-    /// Removes a constraint by handle.
-    pub fn remove_constraint(&mut self, index: u64) {
-        if (index as usize) < self.constraints.len() {
-            self.constraints.remove(index as usize);
-        }
-    }
-
-    /// Residual values of all stored constraints at the current
-    /// point positions, in constraint order.
-    pub fn constraint_residuals(&self) -> Vec<f64> {
-        let mut residuals = Vec::new();
-        for entry in self.constraints.iter() {
-            if entry.constraint.residual_count() == 0 {
-                continue;
-            }
-            residuals.extend(entry.constraint.error(self));
-        }
-        residuals
     }
 
     // ── mutation ────────────────────────────────────────────────
@@ -526,9 +437,6 @@ impl EntityRegistry {
             "entities": self.entities.iter()
                 .map(|e| e.to_json())
                 .collect::<Vec<_>>(),
-            "constraints": self.constraints.iter()
-                .map(|e| e.dict.clone())
-                .collect::<Vec<_>>(),
             "id_counter": self.id_counter,
         })
     }
@@ -553,14 +461,6 @@ impl EntityRegistry {
                 model.entity_index.insert(eid, model.entities.len());
                 model.entities.push(entity);
             }
-        }
-        let empty_constraints: Vec<Value> = Vec::new();
-        let constraints_data = data
-            .get("constraints")
-            .and_then(Value::as_array)
-            .unwrap_or(&empty_constraints);
-        for constraint_data in constraints_data {
-            let _ = model.add_constraint_json(constraint_data);
         }
         model.id_counter =
             data.get("id_counter").and_then(Value::as_u64).unwrap_or(0);
@@ -597,13 +497,56 @@ impl EntityRegistry {
     }
 }
 
+impl Clone for EntityRegistry {
+    fn clone(&self) -> Self {
+        EntityRegistry {
+            points: self.points.clone(),
+            point_index: self.point_index.clone(),
+            entities: self.entities.iter().map(|e| e.clone_box()).collect(),
+            entity_index: self.entity_index.clone(),
+            id_counter: self.id_counter,
+            entity_version: self.entity_version,
+            point_usage: self.point_usage.clone(),
+        }
+    }
+}
+
 impl PointContext for EntityRegistry {
+    fn get_entity(&self, id: u64) -> Option<Box<dyn Entity>> {
+        EntityRegistry::get_entity(self, id).map(|e| e.clone_box())
+    }
+
+    fn point_position(&self, id: u64) -> Option<(f64, f64)> {
+        self.point_position(id)
+    }
+
+    fn get_point(&self, id: u64) -> Option<DrawPoint> {
+        self.get_point(id).map(|point| DrawPoint {
+            x: point.x,
+            y: point.y,
+            fixed: point.fixed,
+            constrained: point.constrained,
+        })
+    }
+
     fn xy(&self, id: u64) -> (f64, f64) {
         self.point_position(id).unwrap_or((0.0, 0.0))
     }
 
     fn set_xy(&mut self, id: u64, x: f64, y: f64) {
         let _ = self.set_point_position(id, x, y);
+    }
+
+    fn entity_ids(&self) -> Vec<u64> {
+        EntityRegistry::entity_ids(self)
+    }
+
+    fn entity_type(&self, id: u64) -> Option<std::borrow::Cow<'static, str>> {
+        EntityRegistry::entity_type(self, id).map(std::borrow::Cow::Borrowed)
+    }
+
+    fn entity_point_ids(&self, id: u64) -> Option<Vec<u64>> {
+        EntityRegistry::entity_point_ids(self, id)
     }
 }
 
@@ -614,6 +557,7 @@ impl crate::sketch::draw::DrawContext for EntityRegistry {
                 x: point.x,
                 y: point.y,
                 fixed: point.fixed,
+                constrained: point.constrained,
             })
     }
 

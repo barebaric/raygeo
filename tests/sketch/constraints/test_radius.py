@@ -1,5 +1,5 @@
-"""Port of the reference radius constraint tests against the raygeo
-bindings."""
+"""Port of the reference radius constraint tests against the
+raygeo bindings (entity-reference contract)."""
 
 import cairo
 import pytest
@@ -20,12 +20,12 @@ def _solver(reg, constraint, pids):
         position = reg.get_point(pid)
         assert position is not None
         points.append(PointDef(pid, position[0], position[1], False))
-    return Solver(points, [constraint], [])
+    return Solver(points, reg, [constraint], [])
 
 
 def _assert_gradient_matches_fd(reg, constraint, pids, tol=1e-5, eps=1e-6):
     """Compares the assembled analytic Jacobian against a central
-    finite difference of the residuals (check_grad port)."""
+    finite difference of the residuals."""
     jacobian = _solver(reg, constraint, pids).jacobian()
     for col, pid in enumerate(pids):
         x, y = reg.get_point(pid)
@@ -45,133 +45,120 @@ def _assert_gradient_matches_fd(reg, constraint, pids, tol=1e-5, eps=1e-6):
                 assert analytic == pytest.approx(finite, abs=tol)
 
 
-def test_radius_constraint(setup_env):
-    reg = setup_env
-    start = reg.add_point(10, 0)
-    end = reg.add_point(0, 10)
-    center = reg.add_point(0, 0)
-    reg.add_arc(start, end, center)
-
-    # Current radius is 10. Target is 10. Error = 10 - 10 = 0
-    c = RadiusConstraint(center, start, 10.0)
-    assert c.error(reg)[0] == pytest.approx(0.0)
-    assert c.user_visible is True
-
-    # Target is 5. Error = 10 - 5 = 5
-    c2 = RadiusConstraint(center, start, 5.0)
-    assert c2.error(reg)[0] == pytest.approx(5.0)
-
-
-def test_radius_constraint_user_visible(setup_env):
-    reg = setup_env
-    center = reg.add_point(0, 0)
-    radius_pt = reg.add_point(10, 0)
-    reg.add_circle(center, radius_pt)
-
-    c = RadiusConstraint(center, radius_pt, 10.0, user_visible=False)
-    assert c.user_visible is False
-
-    c2 = RadiusConstraint(center, radius_pt, 10.0, user_visible=True)
-    assert c2.user_visible is True
-
-
-def test_radius_constraint_on_circle(setup_env):
-    reg = setup_env
-    center = reg.add_point(0, 0)
-    radius_pt = reg.add_point(10, 0)
-    reg.add_circle(center, radius_pt)
-
-    # Current radius is 10. Target is 10. Error = 10 - 10 = 0
-    c = RadiusConstraint(center, radius_pt, 10.0)
-    assert c.error(reg)[0] == pytest.approx(0.0)
-
-    # Target is 5. Error = 10 - 5 = 5
-    c2 = RadiusConstraint(center, radius_pt, 5.0)
-    assert c2.error(reg)[0] == pytest.approx(5.0)
-
-
-def test_radius_constrains_radius_method(setup_env):
-    reg = setup_env
+def _arc(reg):
     start = reg.add_point(10, 0)
     end = reg.add_point(0, 10)
     center = reg.add_point(0, 0)
     arc_id = reg.add_arc(start, end, center)
-    # The binding resolves entities to points, so entity identity is
-    # matched through the defining points: a different entity must
-    # use different points.
-    other_start = reg.add_point(7, 0)
-    other_end = reg.add_point(0, 7)
-    other_id = reg.add_arc(other_start, other_end, center)
+    return arc_id
 
-    c = RadiusConstraint(center, start, 10.0)
 
-    # Should return True for the constrained entity
+def _circle(reg):
+    center = reg.add_point(0, 0)
+    radius_pt = reg.add_point(10, 0)
+    circle_id = reg.add_circle(center, radius_pt)
+    return circle_id
+
+
+def test_radius_constraint_on_arc(setup_env):
+    reg = setup_env
+    arc_id = _arc(reg)
+
+    # Current radius is 10. Target is 10. Error = 0.
+    c = RadiusConstraint(arc_id, 10.0)
+    assert c.error(reg, None) == pytest.approx(0.0)
+    assert c.user_visible is True
+
+    # Target is 5. Error = 10 - 5 = 5.
+    c2 = RadiusConstraint(arc_id, 5.0)
+    assert c2.error(reg, None) == pytest.approx(5.0)
+
+
+def test_radius_constraint_on_circle(setup_env):
+    reg = setup_env
+    circle_id = _circle(reg)
+
+    c = RadiusConstraint(circle_id, 10.0)
+    assert c.error(reg, None) == pytest.approx(0.0)
+
+    c2 = RadiusConstraint(circle_id, 5.0)
+    assert c2.error(reg, None) == pytest.approx(5.0)
+
+
+def test_radius_constraint_user_visible(setup_env):
+    reg = setup_env
+    circle_id = _circle(reg)
+
+    c = RadiusConstraint(circle_id, 10.0, user_visible=False)
+    assert c.user_visible is False
+
+    c2 = RadiusConstraint(circle_id, 10.0, user_visible=True)
+    assert c2.user_visible is True
+
+
+def test_radius_entity_id(setup_env):
+    reg = setup_env
+    arc_id = _arc(reg)
+
+    c = RadiusConstraint(arc_id, 10.0)
+    assert c.entity_id == arc_id
+
+
+def test_radius_constrains_radius_method(setup_env):
+    reg = setup_env
+    arc_id = _arc(reg)
+    circle_id = _circle(reg)
+
+    c = RadiusConstraint(arc_id, 10.0)
+
     assert c.constrains_radius(reg, arc_id) is True
-    # Should return False for others
-    assert c.constrains_radius(reg, other_id) is False
+    assert c.constrains_radius(reg, circle_id) is False
     assert c.constrains_radius(reg, 999) is False
 
 
 def test_radius_targets_segment(setup_env):
     reg = setup_env
-    start = reg.add_point(10, 0)
-    end = reg.add_point(0, 10)
-    center = reg.add_point(0, 0)
-    arc_id = reg.add_arc(start, end, center)
-    other_start = reg.add_point(7, 0)
-    other_end = reg.add_point(0, 7)
-    other_id = reg.add_arc(other_start, other_end, center)
+    arc_id = _arc(reg)
+    circle_id = _circle(reg)
 
-    c = RadiusConstraint(center, start, 10.0)
+    c = RadiusConstraint(arc_id, 10.0)
 
-    # Should match based on entity ID
-    assert c.targets_segment(0, 0, arc_id, reg) is True
-
-    # Should not match others
-    assert c.targets_segment(0, 0, other_id, reg) is False
-    assert c.targets_segment(0, 0, None, reg) is False
+    assert c.targets_segment(0, 0, arc_id) is True
+    assert c.targets_segment(0, 0, circle_id) is False
+    assert c.targets_segment(0, 0, None) is False
 
 
-# deferred: test_radius_constraint_invalid_entity — the binding
-# resolves constraints to points, so a radius constraint on a
-# non-radius entity is not expressible.
+def test_radius_constraint_invalid_entity(setup_env):
+    reg = setup_env
+    p1 = reg.add_point(0, 0)
+    p2 = reg.add_point(10, 10)
+    line_id = reg.add_line(p1, p2)
+
+    # The reference guard keeps the error at zero for
+    # non-radius-bearing entities.
+    c = RadiusConstraint(line_id, 5.0)
+    assert c.error(reg, None) == pytest.approx(0.0)
 
 
 def test_radius_constraint_gradient(setup_env):
     reg = setup_env
-    c_id = reg.add_point(5, 5)
-    s_id = reg.add_point(15, 5)
-    e_id = reg.add_point(5, 15)
-    reg.add_arc(s_id, e_id, c_id)
+    arc_id = _arc(reg)
 
-    constraint = RadiusConstraint(c_id, s_id, 12.0)
+    constraint = RadiusConstraint(arc_id, 12.0)
 
-    _assert_gradient_matches_fd(reg, constraint, [c_id, s_id])
+    # The arc's defining points: start, center.
+    _assert_gradient_matches_fd(reg, constraint, [0, 2])
 
 
 def test_radius_constraint_serialization_round_trip(setup_env):
     reg = setup_env
-    center = reg.add_point(0, 0)
-    radius_pt = reg.add_point(10, 0)
-    reg.add_circle(center, radius_pt)
+    circle_id = _circle(reg)
 
-    # Create original constraint
-    original = RadiusConstraint(center, radius_pt, 10.0)
-
-    # Serialize to dict
-    serialized = original.to_dict()
-
-    # Deserialize from dict through the registry and rebuild
-    handle = reg.add_constraint_json(serialized)
-    data = reg.constraint_dict(handle)
-    restored = RadiusConstraint(
-        data["center_idx"],
-        data["radius_pt_idx"],
-        data["value"],
+    original = RadiusConstraint(circle_id, 10.0)
+    restored = RadiusConstraint.from_dict(original.to_dict())
+    assert original.error(reg, None) == pytest.approx(
+        restored.error(reg, None)
     )
-
-    # Check that the restored constraint has the same error
-    assert original.error(reg) == restored.error(reg)
     assert original.user_visible == restored.user_visible
 
 
@@ -179,53 +166,41 @@ def test_radius_constraint_with_expression(setup_env):
     reg = setup_env
     center = reg.add_point(0, 0)
     radius_pt = reg.add_point(5, 0)
-    reg.add_circle(center, radius_pt)
+    circle_id = reg.add_circle(center, radius_pt)
 
-    # The binding resolves expressions caller-side, so the context
-    # value 10.0 for "r_val" is passed as the resolved value and the
-    # expression string is stored alongside (no update_from_context).
-    c = RadiusConstraint(center, radius_pt, 10.0)
+    c = RadiusConstraint(circle_id, 10.0)
     c.expression = "r_val"
 
-    # Current r=5, target=10. Error = 5 - 10 = -5
-    assert c.error(reg)[0] == pytest.approx(-5.0)
+    # Current r=5, target=10. Error = 5 - 10 = -5.
+    assert c.error(reg, None) == pytest.approx(-5.0)
     assert c.expression == "r_val"
 
 
 def test_radius_is_hit(setup_env):
     reg = setup_env
-    # The reference hits an arc whose label sits at the arc
-    # midpoint angle; the binding resolves the constraint to
-    # (center, radius point) only, so a circle with the label on the
-    # radius direction is used here.
     center = reg.add_point(0, 0)
     radius_pt = reg.add_point(100, 0)
-    reg.add_circle(center, radius_pt)
+    circle_id = reg.add_circle(center, radius_pt)
 
-    c = RadiusConstraint(center, radius_pt, 100)
+    c = RadiusConstraint(circle_id, 100)
 
     threshold = 15.0
 
-    # Label pos is at (radius + 20) along the radius vector:
-    # (100 + 20, 0) = (120, 0)
-    label_pos_x, label_pos_y = 120, 0
+    def to_screen(pos):
+        return pos
 
-    # Hit
-    assert c.is_hit(label_pos_x, label_pos_y, threshold, reg) is True
-    # Miss
-    assert c.is_hit(0, 0, threshold, reg) is False
+    # Label pos is at (radius + 20) along the radius vector: (120, 0).
+    label_x, label_y = 120, 0
 
-
-# deferred: can_apply_to — command/UI layer
+    assert c.is_hit(label_x, label_y, reg, to_screen, None, threshold) is True
+    assert c.is_hit(0, 0, reg, to_screen, None, threshold) is False
 
 
 def test_radius_draw(setup_env):
     reg = setup_env
-    center = reg.add_point(0, 0)
-    radius_pt = reg.add_point(5, 0)
-    reg.add_circle(center, radius_pt)
+    circle_id = _circle(reg)
 
-    c = RadiusConstraint(center, radius_pt, 10.0)
+    c = RadiusConstraint(circle_id, 10.0)
 
     ctx = cairo.Context(cairo.ImageSurface(cairo.FORMAT_ARGB32, 200, 200))
 

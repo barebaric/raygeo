@@ -5,57 +5,81 @@ import builtins
 import collections.abc
 from raygeo.sketch import constraints
 from raygeo.sketch import protocols
-from raygeo.sketch import registry
 import typing
 __all__ = [
+    "ANGLE_WEIGHT",
+    "ARC_RADIUS",
     "AngleConstraint",
+    "LABEL_RADIUS",
 ]
 
-@typing.final
+ANGLE_WEIGHT: builtins.float = 10.0
+ARC_RADIUS: builtins.float = 35.0
+LABEL_RADIUS: builtins.float = 25.0
 class AngleConstraint(constraints.Constraint):
     r"""
     Enforces a clockwise angle in degrees between two lines.  The
     angle is measured at the lines' intersection between the rays
-    selected by `e1_far`/`e2_far` (endpoint ids; `None` picks the
-    endpoint farther from the intersection).
+    selected by `e1_far_idx`/`e2_far_idx` (endpoint ids; `None` picks
+    the endpoint farther from the intersection).
     """
     @property
-    def p1(self) -> builtins.int:
+    def e1_id(self) -> builtins.int:
         r"""
-        First point of the anchor line.
+        The anchor line entity.
+        """
+    @e1_id.setter
+    def e1_id(self, value: builtins.int) -> None:
+        r"""
+        The anchor line entity.
         """
     @property
-    def p2(self) -> builtins.int:
+    def e2_id(self) -> builtins.int:
         r"""
-        Second point of the anchor line.
+        The other line entity.
+        """
+    @e2_id.setter
+    def e2_id(self, value: builtins.int) -> None:
+        r"""
+        The other line entity.
         """
     @property
-    def p3(self) -> builtins.int:
+    def e1_far_idx(self) -> typing.Optional[builtins.int]:
         r"""
-        First point of the other line.
+        Far point of the anchor line.
         """
-    @property
-    def p4(self) -> builtins.int:
-        r"""
-        Second point of the other line.
-        """
-    @property
-    def e1_far(self) -> typing.Optional[builtins.int]:
+    @e1_far_idx.setter
+    def e1_far_idx(self, value: typing.Optional[builtins.int]) -> None:
         r"""
         Far point of the anchor line.
         """
     @property
-    def e2_far(self) -> typing.Optional[builtins.int]:
+    def e2_far_idx(self) -> typing.Optional[builtins.int]:
+        r"""
+        Far point of the other line.
+        """
+    @e2_far_idx.setter
+    def e2_far_idx(self, value: typing.Optional[builtins.int]) -> None:
         r"""
         Far point of the other line.
         """
     @property
-    def value_deg(self) -> builtins.float:
+    def value(self) -> builtins.float:
         r"""
-        Resolved angle value in degrees.
+        Angle value in degrees.
+        """
+    @value.setter
+    def value(self, value: builtins.float) -> None:
+        r"""
+        Angle value in degrees.
         """
     @property
     def user_visible(self) -> builtins.bool:
+        r"""
+        Reference user-visibility flag.
+        """
+    @user_visible.setter
+    def user_visible(self, value: builtins.bool) -> None:
         r"""
         Reference user-visibility flag.
         """
@@ -70,54 +94,50 @@ class AngleConstraint(constraints.Constraint):
         Reference validation status ordinal.
         """
     @property
-    def value(self) -> builtins.float:
-        r"""
-        The angle value in degrees (alias of ``value_deg``).
-        """
-    @property
     def expression(self) -> typing.Optional[builtins.str]:
         r"""
-        The stored expression string, if any (evaluated caller-side).
+        Stored expression string (evaluated by `update_from_context`).
         """
     @expression.setter
     def expression(self, value: typing.Optional[builtins.str]) -> None:
         r"""
-        Sets the expression string (evaluated caller-side).
+        Stored expression string (evaluated by `update_from_context`).
         """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __new__(cls, p1: builtins.int, p2: builtins.int, p3: builtins.int, p4: builtins.int, value_deg: builtins.float, e1_far: typing.Optional[builtins.int] = None, e2_far: typing.Optional[builtins.int] = None, user_visible: builtins.bool = True) -> AngleConstraint:
+    def __new__(cls, e1_id: builtins.int, e2_id: builtins.int, value: typing.Any, expression: typing.Optional[builtins.str] = None, user_visible: builtins.bool = True, e1_far_idx: typing.Optional[builtins.int] = None, e2_far_idx: typing.Optional[builtins.int] = None) -> AngleConstraint:
         r"""
-        Creates the angle constraint from its resolved points and
-        value.
+        Creates the angle constraint between two lines.
         """
-    def error(self, registry: registry.EntityRegistry, _ctx: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
+    def error(self, reg: protocols.Registry, params: typing.Optional[typing.Any] = None) -> builtins.float:
         r"""
         Returns the constraint error at the registry's point
         positions.
         """
-    def referenced_points(self) -> builtins.list[builtins.int]:
+    def gradient(self, reg: protocols.Registry, params: typing.Optional[typing.Any] = None) -> builtins.dict[builtins.int, builtins.list[tuple[builtins.float, builtins.float]]]:
+        r"""
+        Partial derivatives of the error by point id.
+        """
+    def referenced_points(self, registry: protocols.Registry) -> builtins.list[builtins.int]:
         r"""
         Point ids the constraint references.
         """
     def get_referenced_point_ids(self) -> builtins.set[builtins.int]:
         r"""
-        Alias for referenced_points (reference naming).
-        """
-    def set_value(self, value_deg: builtins.float) -> None:
-        r"""
-        Sets the angle value in degrees.
+        The set of point ids this constraint references: the far
+        points selected on the two lines.
         """
     def to_dict(self) -> dict:
         r"""
         Serializes to the reference constraint dictionary shape.
         """
-    def draw(self, ctx: protocols.Canvas, registry: protocols.DrawContext, to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], is_selected: builtins.bool = False, is_hovered: builtins.bool = False, point_radius: builtins.float = 5.0) -> None:
+    @classmethod
+    def from_dict(cls, data: dict) -> typing.Any:
+        r"""
+        Rebuilds the constraint from its reference dictionary shape.
+        """
+    def draw(self, ctx: protocols.Canvas, registry: typing.Any, to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], is_selected: builtins.bool = False, is_hovered: builtins.bool = False, point_radius: builtins.float = 5.0) -> None:
         r"""
         Draws the constraint's symbol onto the cairo context.
-        """
-    def set_user_visible(self, value: builtins.bool) -> None:
-        r"""
-        Sets the reference user-visibility flag.
         """
     def is_mirror_compatible(self) -> builtins.bool:
         r"""
@@ -125,12 +145,45 @@ class AngleConstraint(constraints.Constraint):
         geometry.  An expression-based angle encodes user intent that
         does not auto-flip under reflection.
         """
-    def is_hit(self, mx: builtins.float, my: builtins.float, threshold: builtins.float, registry: registry.EntityRegistry, to_screen: typing.Optional[collections.abc.Callable[[tuple[float, float]], tuple[float, float]]] = None) -> builtins.bool:
+    def mirror(self, _axis: typing.Any) -> None:
         r"""
-        Whether the constraint's rendered symbol is hit at (mx, my).
+        Mirrors the angle value: reflection reverses the signed
+        (clockwise) angle, so the numeric value is negated.
         """
-    def mirror(self) -> None:
+    def is_hit(self, sx: builtins.float, sy: builtins.float, registry: protocols.Registry, to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], element: typing.Optional[typing.Any], threshold: builtins.float) -> builtins.bool:
         r"""
-        Mirrors the angle value (negates it).
+        Whether the constraint's rendered symbol is hit at (sx, sy).
+        """
+    @classmethod
+    def get_type_key(cls) -> builtins.str:
+        r"""
+        The string key identifying this constraint type.
+        """
+    @staticmethod
+    def get_type_name() -> builtins.str:
+        r"""
+        The human-readable type name (translated).
+        """
+    @classmethod
+    def can_apply_to(cls, selection: typing.Any, sketch: typing.Optional[typing.Any] = None) -> builtins.bool:
+        r"""
+        Whether this constraint can be applied to the selection.
+        """
+    @classmethod
+    def applies_to_entities(cls, entities: typing.Any) -> builtins.bool:
+        r"""
+        Whether both operands are lines.
+        """
+    def get_title(self) -> builtins.str:
+        r"""
+        The human-readable title for this constraint.
+        """
+    def get_subtitle(self, registry: protocols.Registry) -> builtins.str:
+        r"""
+        The subtitle describing the constrained entities.
+        """
+    def get_edit_subtitle(self) -> builtins.str:
+        r"""
+        The user-facing hint for the constraint edit dialog.
         """
 

@@ -5,64 +5,45 @@ import builtins
 import collections.abc
 from raygeo.sketch import constraints
 from raygeo.sketch import protocols
-from raygeo.sketch import registry
 import typing
 __all__ = [
     "PointOnCurveConstraint",
+    "closest_point_on_bezier",
 ]
 
-@typing.final
 class PointOnCurveConstraint(constraints.Constraint):
     r"""
-    Enforces a point lies on a cubic Bezier curve.  The control
-    points are stored as offsets from their owning endpoints; curves
-    without control points use the straight-segment residual
-    (`is_line`).
+    Enforces a point lies on a cubic Bezier curve.
     """
     @property
-    def point(self) -> builtins.int:
+    def point_id(self) -> builtins.int:
+        r"""
+        The constrained point.
+        """
+    @point_id.setter
+    def point_id(self, value: builtins.int) -> None:
         r"""
         The constrained point.
         """
     @property
-    def start(self) -> builtins.int:
+    def shape_id(self) -> builtins.int:
         r"""
-        Curve start point.
+        The constrained curve.
         """
-    @property
-    def end(self) -> builtins.int:
+    @shape_id.setter
+    def shape_id(self, value: builtins.int) -> None:
         r"""
-        Curve end point.
-        """
-    @property
-    def cp1_offset(self) -> tuple[builtins.float, builtins.float]:
-        r"""
-        First control point as offset from the start point.
-        """
-    @property
-    def cp2_offset(self) -> tuple[builtins.float, builtins.float]:
-        r"""
-        Second control point as offset from the end point.
-        """
-    @property
-    def is_line(self) -> builtins.bool:
-        r"""
-        Whether the curve degenerates to a straight segment.
+        The constrained curve.
         """
     @property
     def user_visible(self) -> builtins.bool:
         r"""
         Reference user-visibility flag.
         """
-    @property
-    def shape_id(self) -> typing.Optional[builtins.int]:
+    @user_visible.setter
+    def user_visible(self, value: builtins.bool) -> None:
         r"""
-        Reference shape entity id (resolved from the registry).
-        """
-    @shape_id.setter
-    def shape_id(self, value: typing.Optional[builtins.int]) -> None:
-        r"""
-        Reference shape entity id (resolved from the registry).
+        Reference user-visibility flag.
         """
     @property
     def status(self) -> builtins.int:
@@ -74,41 +55,78 @@ class PointOnCurveConstraint(constraints.Constraint):
         r"""
         Reference validation status ordinal.
         """
-    @property
-    def point_id(self) -> builtins.int:
-        r"""
-        Point ids the constraint references.
-        Alias for point (reference naming).
-        """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __new__(cls, point: builtins.int, start: builtins.int, end: builtins.int, cp1_offset: tuple[builtins.float, builtins.float], cp2_offset: tuple[builtins.float, builtins.float], is_line: builtins.bool, user_visible: builtins.bool = True) -> PointOnCurveConstraint:
+    def __new__(cls, point_id: builtins.int, shape_id: builtins.int, user_visible: builtins.bool = True) -> PointOnCurveConstraint:
         r"""
         Creates the point-on-curve constraint.
         """
-    def error(self, registry: registry.EntityRegistry, _ctx: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
+    def error(self, reg: protocols.Registry, params: typing.Optional[typing.Any] = None) -> builtins.float:
         r"""
         Returns the constraint error at the registry's point
         positions.
         """
-    def referenced_points(self) -> builtins.list[builtins.int]: ...
-    def get_referenced_point_ids(self) -> builtins.set[builtins.int]:
+    def gradient(self, reg: protocols.Registry, params: typing.Optional[typing.Any] = None) -> builtins.dict[builtins.int, builtins.list[tuple[builtins.float, builtins.float]]]:
         r"""
-        Alias for referenced_points (reference naming).
+        Partial derivatives of the error by point id.
+        """
+    def referenced_points(self, registry: protocols.Registry) -> builtins.list[builtins.int]:
+        r"""
+        Point ids the constraint references.
         """
     def to_dict(self) -> dict:
         r"""
         Serializes to the reference constraint dictionary shape.
         """
-    def draw(self, ctx: protocols.Canvas, registry: protocols.DrawContext, to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], is_selected: builtins.bool = False, is_hovered: builtins.bool = False, point_radius: builtins.float = 5.0) -> None:
+    @classmethod
+    def from_dict(cls, data: dict) -> typing.Any:
+        r"""
+        Rebuilds the constraint from its reference dictionary shape.
+        """
+    def draw(self, ctx: protocols.Canvas, registry: typing.Any, to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], is_selected: builtins.bool = False, is_hovered: builtins.bool = False, point_radius: builtins.float = 5.0) -> None:
         r"""
         Draws the constraint's symbol onto the cairo context.
         """
-    def set_user_visible(self, value: builtins.bool) -> None:
+    def get_draggable_point(self) -> builtins.int:
         r"""
-        Sets the reference user-visibility flag.
+        The point that can be dragged to manipulate this constraint.
         """
-    def is_hit(self, mx: builtins.float, my: builtins.float, threshold: builtins.float, registry: registry.EntityRegistry, to_screen: typing.Optional[collections.abc.Callable[[tuple[float, float]], tuple[float, float]]] = None) -> builtins.bool:
+    @classmethod
+    def get_type_key(cls) -> builtins.str:
+        r"""
+        The string key identifying this constraint type.
+        """
+    @staticmethod
+    def get_type_name() -> builtins.str:
+        r"""
+        The human-readable type name (translated).
+        """
+    @classmethod
+    def can_apply_to(cls, selection: typing.Any, sketch: typing.Optional[typing.Any] = None) -> builtins.bool:
+        r"""
+        Whether this constraint can be applied to the selection.
+        """
+    @classmethod
+    def applies_to_entities(cls, entities: typing.Any) -> builtins.bool:
+        r"""
+        Whether the operand supports point-on-curve constraints.
+        """
+    def get_title(self) -> builtins.str:
+        r"""
+        The human-readable title for this constraint.
+        """
+    def get_subtitle(self, registry: protocols.Registry) -> builtins.str:
+        r"""
+        The subtitle describing the constrained point.
+        """
+    def is_hit(self, sx: builtins.float, sy: builtins.float, registry: protocols.Registry, to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], element: typing.Optional[typing.Any], threshold: builtins.float) -> builtins.bool:
         r"""
         Whether the constraint's rendered symbol is hit at (mx, my).
         """
+
+def closest_point_on_bezier(xs: tuple[builtins.float, builtins.float, builtins.float, builtins.float], ys: tuple[builtins.float, builtins.float, builtins.float, builtins.float], px: builtins.float, py: builtins.float) -> tuple[builtins.float, builtins.float, builtins.float]:
+    r"""
+    Finds the point on a cubic Bezier curve closest to `(px, py)`,
+    returning `(t, bx, by)`: the curve parameter and the coordinates
+    of the closest curve point (the reference module-level helper).
+    """
 

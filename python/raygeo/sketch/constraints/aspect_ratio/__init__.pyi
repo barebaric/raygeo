@@ -5,13 +5,11 @@ import builtins
 import collections.abc
 from raygeo.sketch import constraints
 from raygeo.sketch import protocols
-from raygeo.sketch import registry
 import typing
 __all__ = [
     "AspectRatioConstraint",
 ]
 
-@typing.final
 class AspectRatioConstraint(constraints.Constraint):
     r"""
     Enforces dist(p1, p2) == ratio * dist(p3, p4).
@@ -21,8 +19,18 @@ class AspectRatioConstraint(constraints.Constraint):
         r"""
         First point of the reference segment.
         """
+    @p1.setter
+    def p1(self, value: builtins.int) -> None:
+        r"""
+        First point of the reference segment.
+        """
     @property
     def p2(self) -> builtins.int:
+        r"""
+        Second point of the reference segment.
+        """
+    @p2.setter
+    def p2(self, value: builtins.int) -> None:
         r"""
         Second point of the reference segment.
         """
@@ -31,8 +39,18 @@ class AspectRatioConstraint(constraints.Constraint):
         r"""
         First point of the scaled segment.
         """
+    @p3.setter
+    def p3(self, value: builtins.int) -> None:
+        r"""
+        First point of the scaled segment.
+        """
     @property
     def p4(self) -> builtins.int:
+        r"""
+        Second point of the scaled segment.
+        """
+    @p4.setter
+    def p4(self, value: builtins.int) -> None:
         r"""
         Second point of the scaled segment.
         """
@@ -41,8 +59,18 @@ class AspectRatioConstraint(constraints.Constraint):
         r"""
         Resolved ratio value.
         """
+    @ratio.setter
+    def ratio(self, value: builtins.float) -> None:
+        r"""
+        Resolved ratio value.
+        """
     @property
     def user_visible(self) -> builtins.bool:
+        r"""
+        Reference user-visibility flag.
+        """
+    @user_visible.setter
+    def user_visible(self, value: builtins.bool) -> None:
         r"""
         Reference user-visibility flag.
         """
@@ -62,37 +90,62 @@ class AspectRatioConstraint(constraints.Constraint):
         Creates the aspect-ratio constraint from its resolved points
         and ratio.
         """
-    def error(self, registry: registry.EntityRegistry, _ctx: typing.Optional[typing.Any] = None) -> builtins.list[builtins.float]:
+    def error(self, reg: protocols.Registry, params: typing.Optional[typing.Any] = None) -> builtins.float:
         r"""
         Returns the constraint error at the registry's point
         positions.
         """
-    def referenced_points(self) -> builtins.list[builtins.int]:
+    def gradient(self, reg: protocols.Registry, params: typing.Optional[typing.Any] = None) -> builtins.dict[builtins.int, builtins.list[tuple[builtins.float, builtins.float]]]:
+        r"""
+        Partial derivatives of the error by point id.
+        """
+    def referenced_points(self, registry: protocols.Registry) -> builtins.list[builtins.int]:
         r"""
         Point ids the constraint references.
-        """
-    def get_referenced_point_ids(self) -> builtins.set[builtins.int]:
-        r"""
-        Alias for referenced_points (reference naming).
-        """
-    def set_ratio(self, ratio: builtins.float) -> None:
-        r"""
-        Sets the resolved ratio value.
         """
     def to_dict(self) -> dict:
         r"""
         Serializes to the reference constraint dictionary shape.
         """
-    def draw(self, ctx: protocols.Canvas, registry: protocols.DrawContext, to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], is_selected: builtins.bool = False, is_hovered: builtins.bool = False, point_radius: builtins.float = 5.0) -> None:
+    @classmethod
+    def from_dict(cls, data: dict) -> typing.Any:
+        r"""
+        Rebuilds the constraint from its reference dictionary shape.
+        """
+    def draw(self, ctx: protocols.Canvas, registry: typing.Any, to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], is_selected: builtins.bool = False, is_hovered: builtins.bool = False, point_radius: builtins.float = 5.0) -> None:
         r"""
         Draws the constraint's symbol onto the cairo context.
         """
-    def is_hit(self, mx: builtins.float, my: builtins.float, threshold: builtins.float, registry: registry.EntityRegistry, to_screen: typing.Optional[collections.abc.Callable[[tuple[float, float]], tuple[float, float]]] = None) -> builtins.bool:
+    def is_hit(self, sx: builtins.float, sy: builtins.float, registry: protocols.Registry, to_screen: collections.abc.Callable[[tuple[float, float]], tuple[float, float]], element: typing.Optional[typing.Any], threshold: builtins.float) -> builtins.bool:
         r"""
         Whether the constraint's rendered symbol is hit at (mx, my).
         """
-    def set_user_visible(self, value: builtins.bool) -> None:
+    @classmethod
+    def get_type_key(cls) -> builtins.str:
         r"""
-        Sets the reference user-visibility flag.
+        The string key identifying this constraint type.
+        """
+    @staticmethod
+    def get_type_name() -> builtins.str:
+        r"""
+        The human-readable type name (translated).
+        """
+    @classmethod
+    def can_apply_to(cls, selection: typing.Any, sketch: typing.Optional[typing.Any] = None) -> builtins.bool:
+        r"""
+        Whether this constraint can be applied to the selection.
+        """
+    @classmethod
+    def applies_to_entities(cls, entities: typing.Any) -> builtins.bool:
+        r"""
+        Whether both operands are lines.
+        """
+    def get_title(self) -> builtins.str:
+        r"""
+        The human-readable title for this constraint.
+        """
+    def get_subtitle(self, registry: protocols.Registry) -> builtins.str:
+        r"""
+        The subtitle describing the reference segment.
         """
 

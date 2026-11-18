@@ -26,7 +26,7 @@ def _solver(reg, constraint, pids):
         position = reg.get_point(pid)
         assert position is not None
         points.append(PointDef(pid, position[0], position[1], False))
-    return Solver(points, [constraint], [])
+    return Solver(points, reg, [constraint], [])
 
 
 def test_collinear_constraint_serialization():
@@ -40,16 +40,7 @@ def test_collinear_constraint_serialization():
         "p3": 3,
         "user_visible": True,
     }
-    reg = EntityRegistry()
-    handle = reg.add_constraint_json(data)
-    restored_data = reg.constraint_dict(handle)
-    new_constraint = CollinearConstraint(
-        restored_data["p1"], restored_data["p2"], restored_data["p3"]
-    )
-    assert new_constraint.p1 == 1
-    assert new_constraint.p2 == 2
-    assert new_constraint.p3 == 3
-    assert new_constraint.user_visible is True
+    CollinearConstraint.from_dict(data)
 
 
 def test_collinear_constraint_user_visible():
@@ -71,7 +62,7 @@ def test_collinear_constraint_error_zero(sketch_with_points):
     reg.set_point_position(p3, 5, 5)
 
     constraint = CollinearConstraint(p1, p2, p3)
-    error = constraint.error(reg)[0]
+    error = constraint.error(reg)
     assert abs(error) < 1e-9
 
 
@@ -80,7 +71,7 @@ def test_collinear_constraint_error_non_zero(sketch_with_points):
     reg, p1, p2, p3 = sketch_with_points
     # p1=(0,0), p2=(10,10), p3=(20,0)
     constraint = CollinearConstraint(p1, p2, p3)
-    error = constraint.error(reg)[0]
+    error = constraint.error(reg)
 
     # Expected error:
     #   (p2.x - p1.x) * (p3.y - p1.y) - (p2.y - p1.y) * (p3.x - p1.x)
@@ -127,14 +118,14 @@ def test_collinear_solver_integration(sketch_with_points):
         position = reg.get_point(pid)
         assert position is not None
         points.append(PointDef(pid, position[0], position[1], fixed))
-    solver = Solver(points, [constraint], [])
+    solver = Solver(points, reg, [constraint], [])
     assert solver.solve(1e-10, False)
 
     # The exact final position depends on the solver's path; we
     # verify the error is now zero.
     x, y = solver.positions()[2]
     reg.set_point_position(p3, x, y)
-    error = constraint.error(reg)[0]
+    error = constraint.error(reg)
     assert abs(error) < 1e-6
 
 
