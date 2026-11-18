@@ -13,12 +13,19 @@ pub(crate) mod text_box;
 
 use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;
-use pyo3_stub_gen::derive::gen_stub_pyclass;
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction};
 use pyo3_stub_gen::{ImportKind, ImportRef, ModuleRef, PyStubType, TypeInfo};
 use std::collections::{HashMap, HashSet};
 
 use crate::python::sketch::registry::PyEntityRegistry;
 use crate::sketch::entities::Entity;
+
+/// Rounds a coordinate to the model's six-decimal precision.
+#[gen_stub_pyfunction(module = "raygeo.sketch.entities")]
+#[pyfunction]
+fn quantize(value: f64) -> f64 {
+    crate::sketch::entities::entity::quantize(value)
+}
 
 /// Formats a geometry signature as the reference tuple shape: the
 /// sorted `(key, value)` pairs of the JSON object.
@@ -996,6 +1003,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     entities_mod.add_class::<PyEntityBase>()?;
     offset::register(&entities_mod)?;
+    entities_mod.add_function(wrap_pyfunction!(quantize, &entities_mod)?)?;
 
     point::register(&entities_mod)?;
     line::register(&entities_mod)?;

@@ -16,6 +16,7 @@ from raygeo.sketch.entities import (
     Polygon,
     PolygonOutline,
     TextBox,
+    quantize,
 )
 from raygeo.sketch.registry import EntityRegistry
 
@@ -326,3 +327,27 @@ class TestReferenceRemap:
         assert symmetry.p2 == 20
         assert symmetry.center == 30
         assert symmetry.axis == 40
+
+
+class TestIdAllocation:
+    def test_allocate_id_and_append_entity(self):
+        registry = EntityRegistry()
+        p1 = registry.allocate_id()
+        p2 = registry.allocate_id()
+        registry.add_point_with_id(p1, 0.0, 0.0)
+        registry.add_point_with_id(p2, 10.0, 0.0)
+        entity_id = registry.allocate_id()
+        line = Line(entity_id, p1, p2)
+
+        assert registry.append_entity(line) == entity_id
+        assert registry.get_entity(entity_id) is not None
+        assert registry.allocate_id() == entity_id + 1
+
+    def test_allocate_ids_batch(self):
+        registry = EntityRegistry()
+        ids = registry.allocate_ids(3)
+        assert ids == [0, 1, 2]
+        assert registry.allocate_id() == 3
+
+    def test_quantize_helper(self):
+        assert quantize(1.23456789) == 1.234568

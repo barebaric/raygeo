@@ -199,6 +199,26 @@ impl EntityRegistry {
         &self.entities
     }
 
+    /// Allocates the next free id for a point or entity.
+    pub fn allocate_id(&mut self) -> u64 {
+        let id = self.id_counter;
+        self.id_counter += 1;
+        id
+    }
+
+    /// Allocates *count* consecutive ids.
+    pub fn allocate_ids(&mut self, count: usize) -> Vec<u64> {
+        (0..count).map(|_| self.allocate_id()).collect()
+    }
+
+    /// Appends a pre-built entity whose id is already final.
+    pub fn append_entity(&mut self, entity: Box<dyn Entity>) -> u64 {
+        let id = entity.base().id;
+        self.id_counter = self.id_counter.max(id + 1);
+        self.entity_version += 1;
+        self.push_entity(entity)
+    }
+
     /// Appends a pre-built entity object, assigning the next free
     /// id, and returns it.
     pub fn add_entity_object(&mut self, mut entity: Box<dyn Entity>) -> u64 {

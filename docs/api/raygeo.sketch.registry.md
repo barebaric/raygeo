@@ -150,6 +150,27 @@ Adds a point and returns its id.
 | `fixed`   | `bool = False`   |             |
 | _Returns_ | `types.EntityID` |             |
 
+### `add_point_with_id()`
+
+```python
+add_point_with_id(
+    id: types.EntityID,
+    x: float,
+    y: float,
+    fixed: bool = False,
+) -> None
+```
+
+Adds a point with an id already obtained from `allocate_id`.
+
+| Parameter | Type             | Description |
+| --------- | ---------------- | ----------- |
+| `id`      | `types.EntityID` |             |
+| `x`       | `float`          |             |
+| `y`       | `float`          |             |
+| `fixed`   | `bool = False`   |             |
+| _Returns_ | `None`           |             |
+
 ### `add_points()`
 
 ```python
@@ -216,6 +237,44 @@ Adds a text box and returns its id.
 | `bold`        | `bool = False`       |             |
 | `italic`      | `bool = False`       |             |
 | _Returns_     | `types.EntityID`     |             |
+
+### `allocate_id()`
+
+```python
+allocate_id() -> types.EntityID
+```
+
+Allocates the next free id for a point or entity.
+
+| Parameter | Type             | Description |
+| --------- | ---------------- | ----------- |
+| _Returns_ | `types.EntityID` |             |
+
+### `allocate_ids()`
+
+```python
+allocate_ids(count: int) -> list[types.EntityID]
+```
+
+Allocates *count* consecutive ids.
+
+| Parameter | Type                   | Description |
+| --------- | ---------------------- | ----------- |
+| `count`   | `int`                  |             |
+| _Returns_ | `list[types.EntityID]` |             |
+
+### `append_entity()`
+
+```python
+append_entity(obj: Any) -> int
+```
+
+Appends an entity whose id is already final.
+
+| Parameter | Type  | Description |
+| --------- | ----- | ----------- |
+| `obj`     | `Any` |             |
+| _Returns_ | `int` |             |
 
 ### `append_to_geometry()`
 

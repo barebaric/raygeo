@@ -760,3 +760,18 @@ Coarse polylines of the offset result for live preview.
 | `_registry` | `protocols.Registry`              |             |
 | `offset`    | `float`                           |             |
 | _Returns_   | `list[list[tuple[float, float]]]` |             |
+
+## Functions
+
+### `quantize()`
+
+```python
+quantize(value: float) -> float
+```
+
+Rounds a coordinate to the model's six-decimal precision.
+
+| Parameter | Type    | Description |
+| --------- | ------- | ----------- |
+| `value`   | `float` |             |
+| _Returns_ | `float` |             |

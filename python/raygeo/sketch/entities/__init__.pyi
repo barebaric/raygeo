@@ -40,6 +40,7 @@ __all__ = [
     "line",
     "point",
     "polygon",
+    "quantize",
     "text_box",
 ]
 
@@ -334,4 +335,9 @@ class PolygonOutline:
         r"""
         Coarse polylines of the offset result for live preview.
         """
+
+def quantize(value: builtins.float) -> builtins.float:
+    r"""
+    Rounds a coordinate to the model's six-decimal precision.
+    """
 
