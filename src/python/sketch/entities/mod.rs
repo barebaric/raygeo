@@ -27,25 +27,39 @@ fn quantize(value: f64) -> f64 {
     crate::sketch::entities::entity::quantize(value)
 }
 
-/// Formats a geometry signature as the reference tuple shape: the
-/// sorted `(key, value)` pairs of the JSON object.
+/// Formats a geometry signature as the reference tuple shape:
+/// sorted `(key, value)` pairs for objects, the values for arrays.
 pub(crate) fn signature_to_py<'py>(
     py: Python<'py>,
     value: &serde_json::Value,
 ) -> PyResult<Bound<'py, pyo3::types::PyTuple>> {
-    use pyo3::types::PyTuple;
+    use pyo3::types::{PyString, PyTuple};
 
-    let serde_json::Value::Object(map) = value else {
-        return Ok(PyTuple::empty(py));
+    let items: Vec<Bound<'py, PyAny>> = match value {
+        serde_json::Value::Object(map) => {
+            let mut pairs: Vec<(&String, &serde_json::Value)> =
+                map.iter().collect();
+            pairs.sort_by(|a, b| a.0.cmp(b.0));
+            let mut items = Vec::with_capacity(pairs.len());
+            for (key, item) in pairs {
+                let key = PyString::new(py, key);
+                let value =
+                    crate::python::sketch::constraints::value_to_py(py, item)?;
+                let pair = PyTuple::new(py, [key.into_any(), value])?;
+                items.push(pair.into_any());
+            }
+            items
+        }
+        serde_json::Value::Array(array) => array
+            .iter()
+            .map(|item| {
+                crate::python::sketch::constraints::value_to_py(py, item)
+            })
+            .collect::<PyResult<Vec<_>>>()?,
+        other => {
+            vec![crate::python::sketch::constraints::value_to_py(py, other)?]
+        }
     };
-    let mut pairs: Vec<(&String, &serde_json::Value)> = map.iter().collect();
-    pairs.sort_by(|a, b| a.0.cmp(b.0));
-    let mut items = Vec::with_capacity(pairs.len());
-    for (key, item) in pairs {
-        let key = pyo3::types::PyString::new(py, key);
-        let value = crate::python::sketch::constraints::value_to_py(py, item)?;
-        items.push((key, value));
-    }
     PyTuple::new(py, items)
 }
 
