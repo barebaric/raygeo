@@ -128,4 +128,14 @@ class SketchPoint:
         r"""
         The two bezier entities joined at this point, if any.
         """
+    def apply_constraint(self, registry: protocols.Registry, bezier: typing.Any, cp_index: builtins.int, sketch: typing.Optional[typing.Any] = None) -> None:
+        r"""
+        Applies the bezier-waypoint constraint after a control point
+        edit on one of the point's connected beziers.
+        """
+    def enforce_constraint(self, registry: protocols.Registry, sketch: typing.Optional[typing.Any] = None) -> None:
+        r"""
+        Re-enforces the bezier-waypoint constraint across every
+        connected bezier at this point.
+        """
 

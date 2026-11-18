@@ -650,6 +650,40 @@ pub(crate) fn constraint_gradient(
     map
 }
 
+/// Rewrites one id in place through *map*.
+pub(crate) fn remap_id(
+    value: &mut i64,
+    map: &std::collections::HashMap<i64, i64>,
+) {
+    if let Some(new) = map.get(value) {
+        *value = *new;
+    }
+}
+
+/// Rewrites an optional id in place through *map*.
+pub(crate) fn remap_opt(
+    value: &mut Option<i64>,
+    map: &std::collections::HashMap<i64, i64>,
+) {
+    if let Some(current) = value {
+        if let Some(new) = map.get(current) {
+            *value = Some(*new);
+        }
+    }
+}
+
+/// Rewrites a list of ids in place through *map*.
+pub(crate) fn remap_ids(
+    values: &mut [i64],
+    map: &std::collections::HashMap<i64, i64>,
+) {
+    for value in values {
+        if let Some(new) = map.get(value) {
+            *value = *new;
+        }
+    }
+}
+
 /// The common base class of every constraint binding, carrying the
 /// reference `Constraint` base surface.  The per-class members live
 /// on the subclasses; polymorphism is carried by the Rust-side

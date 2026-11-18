@@ -49,6 +49,8 @@ class Polygon(entities.Entity):
         r"""
         The outer contour vertices in the local frame.
         """
+    @vertices.setter
+    def vertices(self, value: typing.Sequence[tuple[builtins.float, builtins.float]]) -> None: ...
     @property
     def rings(self) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
         r"""
@@ -183,6 +185,15 @@ class Polygon(entities.Entity):
     def get_world_rings(self, registry: protocols.Registry) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
         r"""
         The polygon's rings in world coordinates.
+        """
+    @staticmethod
+    def normalize_vertices(center: tuple[builtins.float, builtins.float], handle: tuple[builtins.float, builtins.float], world_vertices: typing.Sequence[tuple[builtins.float, builtins.float]]) -> builtins.list[tuple[builtins.float, builtins.float]]:
+        r"""
+        Converts world coordinates to frame-local (u, v) pairs.
+        """
+    def to_outline(self, registry: protocols.Registry) -> tuple[builtins.list[tuple[builtins.float, builtins.float]], builtins.bool]:
+        r"""
+        Returns (world vertices, closed) for offset processing.
         """
     def is_closed_loop(self) -> builtins.bool:
         r"""

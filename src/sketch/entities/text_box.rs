@@ -12,7 +12,7 @@ use crate::geo::shape::text::{
 use crate::geo::types::{Point, Rect};
 use crate::sketch::constraint::PointContext;
 
-use super::entity::{Entity, EntityBase};
+use super::entity::{remap_id, remap_ids, Entity, EntityBase};
 
 /// A text box: content rendered through raygeo into glyph geometry,
 /// framed by origin/width/height points.
@@ -415,6 +415,13 @@ impl Entity for TextBoxEntity {
                 && rect.min.y <= *py
                 && *py <= rect.max.y
         })
+    }
+
+    fn remap_references(&mut self, map: &dyn Fn(u64) -> u64) {
+        remap_id(&mut self.origin, map);
+        remap_id(&mut self.width, map);
+        remap_id(&mut self.height, map);
+        remap_ids(&mut self.construction_line_ids, map);
     }
 
     fn to_geometry(&self, model: &dyn PointContext) -> Geometry {

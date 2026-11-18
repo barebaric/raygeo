@@ -78,6 +78,21 @@ impl EntityRegistry {
         }
     }
 
+    /// Sets a point's waypoint role.
+    pub fn set_point_waypoint_type(
+        &mut self,
+        id: u64,
+        waypoint_type: crate::sketch::entities::point::WaypointType,
+    ) -> bool {
+        match self.point_index.get(&id) {
+            Some(&i) => {
+                self.points[i].waypoint_type = waypoint_type;
+                true
+            }
+            None => false,
+        }
+    }
+
     /// Sets a point's solver-constrained flag.
     pub fn set_point_constrained(
         &mut self,
@@ -182,6 +197,26 @@ impl EntityRegistry {
     /// All entities, in storage order.
     pub fn all_entities(&self) -> &[Box<dyn Entity>] {
         &self.entities
+    }
+
+    /// Allocates the next free id for a point or entity.
+    pub fn allocate_id(&mut self) -> u64 {
+        let id = self.id_counter;
+        self.id_counter += 1;
+        id
+    }
+
+    /// Allocates *count* consecutive ids.
+    pub fn allocate_ids(&mut self, count: usize) -> Vec<u64> {
+        (0..count).map(|_| self.allocate_id()).collect()
+    }
+
+    /// Appends a pre-built entity whose id is already final.
+    pub fn append_entity(&mut self, entity: Box<dyn Entity>) -> u64 {
+        let id = entity.base().id;
+        self.id_counter = self.id_counter.max(id + 1);
+        self.entity_version += 1;
+        self.push_entity(entity)
     }
 
     /// Appends a pre-built entity object, assigning the next free

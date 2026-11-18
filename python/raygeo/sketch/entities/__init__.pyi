@@ -28,7 +28,9 @@ __all__ = [
     "Ellipse",
     "Entity",
     "Line",
+    "OffsetPlan",
     "Polygon",
+    "PolygonOutline",
     "SketchPoint",
     "TextBox",
     "arc",
@@ -38,6 +40,7 @@ __all__ = [
     "line",
     "point",
     "polygon",
+    "quantize",
     "text_box",
 ]
 
@@ -241,31 +244,33 @@ class Entity:
         Sets the fill color; returns whether the entity supports
         fills.
         """
+    def remap_references(self, id_map: typing.Mapping[builtins.int, builtins.int]) -> None:
+        r"""
+        Rewrites every point/entity id reference through *id_map*.
+        """
     def mirror(self, axis: typing.Any) -> None:
         r"""
         Mirrors the entity across the reference axis object.
         """
-    def transform_offsets(self, _placement: typing.Any) -> None:
+    def transform_offsets(self, placement: typing.Any) -> None:
         r"""
-        Transforms entity-internal offset state for a placement; the
-        reference default is a no-op.
+        Transforms entity-internal offset state for a placement.
         """
-    def rewrite_offsets_from(self, _template: typing.Any, _placement: typing.Any) -> None:
+    def rewrite_offsets_from(self, template: typing.Any, placement: typing.Any) -> None:
         r"""
-        Re-derives copy state from a template; the reference default
-        is a no-op.
+        Re-derives copy state from a template.
         """
-    def as_offset_item(self, _sketch: typing.Any) -> typing.Optional[typing.Any]:
+    def as_offset_item(self, sketch: typing.Any) -> typing.Optional[typing.Any]:
         r"""
         The offsettable item this entity forms on its own; the
         reference default is None.
         """
-    def plan_offset(self, _registry: protocols.Registry, _offset: builtins.float, _allocate_id: typing.Any) -> typing.Optional[typing.Any]:
+    def plan_offset(self, registry: protocols.Registry, offset: builtins.float, _allocate_id: typing.Any) -> typing.Optional[OffsetPlan]:
         r"""
         Returns a pure description of the offset changes; the
         reference default is None (no analytic offset).
         """
-    def preview_polylines(self, _registry: protocols.Registry, _offset: builtins.float) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
+    def preview_polylines(self, registry: protocols.Registry, offset: builtins.float) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
         r"""
         Coarse polylines of the entity's offset for live preview;
         the reference default is no preview.
@@ -276,4 +281,63 @@ class Entity:
         shape, rebuilding via the concrete class's `from_dict`.
         """
     def __copy__(self) -> typing.Any: ...
+
+@typing.final
+class OffsetPlan:
+    r"""
+    Description of the changes one offset operation makes.
+    """
+    @property
+    def point_moves(self) -> dict: ...
+    @point_moves.setter
+    def point_moves(self, value: dict) -> None: ...
+    @property
+    def points(self) -> list: ...
+    @points.setter
+    def points(self, value: list) -> None: ...
+    @property
+    def entities(self) -> list: ...
+    @entities.setter
+    def entities(self, value: list) -> None: ...
+    @property
+    def removed_entity_ids(self) -> list: ...
+    @removed_entity_ids.setter
+    def removed_entity_ids(self, value: list) -> None: ...
+    def __new__(cls) -> OffsetPlan: ...
+
+@typing.final
+class PolygonOutline:
+    r"""
+    A sampled outline produced from a connected chain of entities.
+    """
+    @property
+    def vertices(self) -> builtins.list[tuple[builtins.float, builtins.float]]: ...
+    @vertices.setter
+    def vertices(self, value: typing.Sequence[tuple[builtins.float, builtins.float]]) -> None: ...
+    @property
+    def closed(self) -> builtins.bool: ...
+    @closed.setter
+    def closed(self, value: builtins.bool) -> None: ...
+    @property
+    def source_ids(self) -> builtins.list[builtins.int]: ...
+    @source_ids.setter
+    def source_ids(self, value: typing.Sequence[builtins.int]) -> None: ...
+    def __new__(cls, vertices: typing.Sequence[tuple[builtins.float, builtins.float]], closed: builtins.bool = False, source_ids: typing.Optional[typing.Sequence[builtins.int]] = None) -> PolygonOutline: ...
+    def offset(self, distance: builtins.float, tolerance: builtins.float) -> builtins.list[tuple[builtins.list[tuple[builtins.float, builtins.float]], builtins.bool]]:
+        r"""
+        Offsets the outline into `(vertices, closed)` pairs.
+        """
+    def plan_offset(self, _registry: protocols.Registry, offset: builtins.float, allocate_id: typing.Any) -> typing.Optional[OffsetPlan]:
+        r"""
+        Plans the replacement geometry for this outline.
+        """
+    def preview_polylines(self, _registry: protocols.Registry, offset: builtins.float) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]:
+        r"""
+        Coarse polylines of the offset result for live preview.
+        """
+
+def quantize(value: builtins.float) -> builtins.float:
+    r"""
+    Rounds a coordinate to the model's six-decimal precision.
+    """
 

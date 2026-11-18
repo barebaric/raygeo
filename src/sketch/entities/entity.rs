@@ -18,6 +18,18 @@ pub fn quantize(value: f64) -> f64 {
     (value * 1.0e6).round() / 1.0e6
 }
 
+/// Rewrites one id through a remap function.
+pub fn remap_id(value: &mut u64, map: &dyn Fn(u64) -> u64) {
+    *value = map(*value);
+}
+
+/// Rewrites a list of ids through a remap function.
+pub fn remap_ids(values: &mut [u64], map: &dyn Fn(u64) -> u64) {
+    for value in values {
+        *value = map(*value);
+    }
+}
+
 /// RGBA color as `[r, g, b, a]`.
 pub type ColorRgba = [f64; 4];
 
@@ -121,6 +133,9 @@ pub trait Entity: Send + Sync {
 
     /// Clones the entity as a boxed trait object.
     fn clone_box(&self) -> Box<dyn Entity>;
+
+    /// Rewrites every id reference through *map*.
+    fn remap_references(&mut self, _map: &dyn Fn(u64) -> u64) {}
 
     /// The reference serialization type string.
     fn type_name(&self) -> &'static str;

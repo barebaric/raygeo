@@ -109,6 +109,15 @@ impl PyPolygon {
         self.inner.rings.first().cloned().unwrap_or_default()
     }
 
+    #[setter]
+    fn set_vertices(&mut self, value: Vec<(f64, f64)>) {
+        if let Some(ring) = self.inner.rings.first_mut() {
+            *ring = value;
+        } else {
+            self.inner.rings.push(value);
+        }
+    }
+
     /// All rings in the local frame (outer contour first, then holes).
     #[getter]
     fn rings(&self) -> Vec<Vec<(f64, f64)>> {
@@ -423,6 +432,30 @@ impl PyPolygon {
     /// The polygon's rings in world coordinates.
     fn get_world_rings(&self, registry: PointCtx<'_>) -> Vec<Vec<(f64, f64)>> {
         self.inner.get_world_rings(&registry)
+    }
+
+    /// Converts world coordinates to frame-local (u, v) pairs.
+    #[staticmethod]
+    fn normalize_vertices(
+        center: (f64, f64),
+        handle: (f64, f64),
+        world_vertices: Vec<(f64, f64)>,
+    ) -> PyResult<Vec<(f64, f64)>> {
+        if (handle.0 - center.0).hypot(handle.1 - center.1) < 1e-9 {
+            return Err(PyValueError::new_err(
+                "Polygon frame handle coincides with center",
+            ));
+        }
+        Ok(super::offset::normalize_vertices(
+            center,
+            handle,
+            &world_vertices,
+        ))
+    }
+
+    /// Returns (world vertices, closed) for offset processing.
+    fn to_outline(&self, registry: PointCtx<'_>) -> (Vec<(f64, f64)>, bool) {
+        (self.inner.get_world_vertices(&registry), self.inner.closed)
     }
 
     /// Whether the polygon is a closed loop.

@@ -63,7 +63,7 @@ impl PyTextBox {
     #[new]
     #[pyo3(signature = (id, origin_id, width_id, height_id,
                         content = String::new(), font_config = None,
-                        construction = false))]
+                        construction = false, construction_line_ids = None))]
     #[allow(clippy::too_many_arguments)]
     fn new(
         id: i64,
@@ -73,6 +73,7 @@ impl PyTextBox {
         content: String,
         font_config: Option<&Bound<'_, PyAny>>,
         construction: bool,
+        construction_line_ids: Option<Vec<i64>>,
     ) -> PyClassInitializer<Self> {
         let mut inner = CoreTextBox::new(
             id as u64,
@@ -105,6 +106,11 @@ impl PyTextBox {
                     );
             }
         }
+        inner.construction_line_ids = construction_line_ids
+            .unwrap_or_default()
+            .into_iter()
+            .map(|id| id as u64)
+            .collect();
         PyClassInitializer::from(PyEntityBase).add_subclass(PyTextBox {
             inner,
             registry: None,
@@ -673,6 +679,25 @@ impl PyTextBox {
                 registry: None,
             }),
         )
+    }
+
+    /// The four-corner frame polygon in world coordinates.
+    fn get_frame_polygon(
+        &self,
+        registry: PointCtx<'_>,
+    ) -> Option<Vec<(f64, f64)>> {
+        self.inner.get_frame_polygon(&registry)
+    }
+
+    /// Natural (width, height) of the text content.
+    fn get_natural_size(&self, content: Option<String>) -> (f64, f64) {
+        self.inner.get_natural_size(content.as_deref())
+    }
+
+    /// Font metrics `(ascent, descent, height)` for the configured font.
+    fn get_font_metrics(&self) -> (f64, f64, f64) {
+        crate::geo::shape::text::get_font_metrics(&self.inner.font_config)
+            .unwrap_or((0.0, 0.0, 0.0))
     }
 }
 

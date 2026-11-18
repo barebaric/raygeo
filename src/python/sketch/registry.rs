@@ -169,6 +169,42 @@ impl PyEntityRegistry {
         Ok(dict)
     }
 
+    /// Allocates the next free id for a point or entity.
+    fn allocate_id(&mut self) -> EntityId {
+        EntityId(self.inner.allocate_id())
+    }
+
+    /// Allocates *count* consecutive ids.
+    fn allocate_ids(&mut self, count: usize) -> Vec<EntityId> {
+        self.inner
+            .allocate_ids(count)
+            .into_iter()
+            .map(EntityId)
+            .collect()
+    }
+
+    /// Adds a point with an id already obtained from `allocate_id`.
+    #[pyo3(signature = (id, x, y, fixed = false))]
+    fn add_point_with_id(&mut self, id: EntityId, x: f64, y: f64, fixed: bool) {
+        self.inner.add_points(vec![
+            crate::sketch::entities::point::SketchPoint {
+                id: id.0,
+                x,
+                y,
+                fixed,
+                waypoint_type:
+                    crate::sketch::entities::point::WaypointType::Sharp,
+                constrained: false,
+            },
+        ]);
+    }
+
+    /// Appends an entity whose id is already final.
+    fn append_entity(&mut self, obj: &Bound<'_, PyAny>) -> PyResult<u64> {
+        let entity = extract_entity(obj)?;
+        Ok(self.inner.append_entity(entity))
+    }
+
     /// Adds a point and returns its id.
     #[pyo3(signature = (x, y, fixed = false))]
     fn add_point(&mut self, x: f64, y: f64, fixed: bool) -> EntityId {
@@ -541,6 +577,14 @@ impl PyEntityRegistry {
         reg.inner
             .get_point(id)
             .map(|point| PySketchPoint::live(point, slf))
+    }
+
+    /// Sets a point's waypoint role.
+    fn set_point_waypoint_type(&mut self, id: EntityId, value: String) -> bool {
+        let waypoint_type =
+            crate::sketch::entities::point::WaypointType::parse(&value)
+                .unwrap_or(crate::sketch::entities::point::WaypointType::Sharp);
+        self.inner.set_point_waypoint_type(id.0, waypoint_type)
     }
 
     /// Whether a point carries the fixed flag.

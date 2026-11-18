@@ -9,7 +9,7 @@ use crate::geo::shape::ellipse::{
 use crate::geo::types::{Point, Rect};
 use crate::sketch::constraint::PointContext;
 
-use super::entity::{Entity, EntityBase};
+use super::entity::{remap_id, remap_ids, Entity, EntityBase};
 
 /// An ellipse defined by center and the two radius points.
 #[derive(Clone, Debug)]
@@ -308,6 +308,13 @@ impl Entity for Ellipse {
             f64::INFINITY
         };
         dist_sq_far >= 1.0
+    }
+
+    fn remap_references(&mut self, map: &dyn Fn(u64) -> u64) {
+        remap_id(&mut self.center, map);
+        remap_id(&mut self.radius_x_point, map);
+        remap_id(&mut self.radius_y_point, map);
+        remap_ids(&mut self.helper_line_ids, map);
     }
 
     fn to_geometry(&self, model: &dyn PointContext) -> Geometry {

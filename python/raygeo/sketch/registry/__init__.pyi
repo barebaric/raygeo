@@ -49,6 +49,22 @@ class EntityRegistry:
         r"""
         Serializes the model to a reference registry dictionary.
         """
+    def allocate_id(self) -> types.EntityID:
+        r"""
+        Allocates the next free id for a point or entity.
+        """
+    def allocate_ids(self, count: builtins.int) -> builtins.list[types.EntityID]:
+        r"""
+        Allocates *count* consecutive ids.
+        """
+    def add_point_with_id(self, id: types.EntityID, x: builtins.float, y: builtins.float, fixed: builtins.bool = False) -> None:
+        r"""
+        Adds a point with an id already obtained from `allocate_id`.
+        """
+    def append_entity(self, obj: typing.Any) -> builtins.int:
+        r"""
+        Appends an entity whose id is already final.
+        """
     def add_point(self, x: builtins.float, y: builtins.float, fixed: builtins.bool = False) -> types.EntityID:
         r"""
         Adds a point and returns its id.
@@ -188,6 +204,10 @@ class EntityRegistry:
     def get_point_object(self, id: types.EntityID) -> typing.Optional[point.SketchPoint]:
         r"""
         The point object for an id (with id/coords/flags), or None.
+        """
+    def set_point_waypoint_type(self, id: types.EntityID, value: builtins.str) -> builtins.bool:
+        r"""
+        Sets a point's waypoint role.
         """
     def point_is_fixed(self, id: types.EntityID) -> builtins.bool:
         r"""

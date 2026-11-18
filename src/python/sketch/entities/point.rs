@@ -109,9 +109,18 @@ impl PySketchPoint {
 
     #[setter]
     fn set_waypoint_type(&mut self, value: String) {
-        self.inner.waypoint_type =
+        let waypoint_type =
             crate::sketch::entities::point::WaypointType::parse(&value)
                 .unwrap_or(crate::sketch::entities::point::WaypointType::Sharp);
+        self.inner.waypoint_type = waypoint_type;
+        if let Some(registry) = &self.registry {
+            Python::attach(|py| {
+                let _ = registry.bind(py).call_method1(
+                    "set_point_waypoint_type",
+                    (self.inner.id, value),
+                );
+            });
+        }
     }
 
     /// The point position as a ``(x, y)`` tuple.
@@ -395,6 +404,194 @@ impl PySketchPoint {
             _ => Ok((connected[0].clone(), connected[1].clone())),
         }
     }
+
+    /// Applies the bezier-waypoint constraint after a control point
+    /// edit on one of the point's connected beziers.
+    #[pyo3(signature = (registry, bezier, cp_index, sketch = None))]
+    fn apply_constraint(
+        &self,
+        py: Python<'_>,
+        registry: PointCtx<'_>,
+        bezier: &Bound<'_, PyAny>,
+        cp_index: i32,
+        sketch: Option<&Bound<'_, PyAny>>,
+    ) -> PyResult<()> {
+        if self.is_sharp() {
+            return Ok(());
+        }
+        let (b1, b2) = self.get_paired_beziers(py, registry, sketch)?;
+        if b1.is_none() || b2.is_none() {
+            return Ok(());
+        }
+        let other = if bezier.eq(&b1)? { &b2 } else { &b1 };
+        let mut point_ids = std::collections::HashSet::from([self.inner.id]);
+        if let Some(sketch) = sketch {
+            if let Ok(ids) = sketch
+                .call_method1("get_coincident_points", (self.inner.id,))
+                .and_then(|v| v.extract::<Vec<u64>>())
+            {
+                point_ids.extend(ids);
+            }
+        }
+        let start: u64 = bezier.getattr("start_idx")?.extract()?;
+        let end: u64 = bezier.getattr("end_idx")?.extract()?;
+        if start == self.inner.id && cp_index == 1 {
+            if let Some(cp) =
+                bezier.getattr("cp1")?.extract::<Option<(f64, f64)>>()?
+            {
+                let other_end: u64 = other.getattr("end_idx")?.extract()?;
+                let other_start: u64 = other.getattr("start_idx")?.extract()?;
+                if point_ids.contains(&other_end) {
+                    let old = other
+                        .getattr("cp2")?
+                        .extract::<Option<(f64, f64)>>()?;
+                    other.setattr(
+                        "cp2",
+                        constrained_cp(cp, old, self.is_symmetric()),
+                    )?;
+                } else if point_ids.contains(&other_start) {
+                    let old = other
+                        .getattr("cp1")?
+                        .extract::<Option<(f64, f64)>>()?;
+                    other.setattr(
+                        "cp1",
+                        constrained_cp(cp, old, self.is_symmetric()),
+                    )?;
+                }
+            }
+        } else if end == self.inner.id && cp_index == 2 {
+            if let Some(cp) =
+                bezier.getattr("cp2")?.extract::<Option<(f64, f64)>>()?
+            {
+                let other_end: u64 = other.getattr("end_idx")?.extract()?;
+                let other_start: u64 = other.getattr("start_idx")?.extract()?;
+                if point_ids.contains(&other_start) {
+                    let old = other
+                        .getattr("cp1")?
+                        .extract::<Option<(f64, f64)>>()?;
+                    other.setattr(
+                        "cp1",
+                        constrained_cp(cp, old, self.is_symmetric()),
+                    )?;
+                } else if point_ids.contains(&other_end) {
+                    let old = other
+                        .getattr("cp2")?
+                        .extract::<Option<(f64, f64)>>()?;
+                    other.setattr(
+                        "cp2",
+                        constrained_cp(cp, old, self.is_symmetric()),
+                    )?;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Re-enforces the bezier-waypoint constraint across every
+    /// connected bezier at this point.
+    #[pyo3(signature = (registry, sketch = None))]
+    fn enforce_constraint(
+        &self,
+        py: Python<'_>,
+        registry: PointCtx<'_>,
+        sketch: Option<&Bound<'_, PyAny>>,
+    ) -> PyResult<()> {
+        if self.is_sharp() {
+            return Ok(());
+        }
+        let beziers = self.get_connected_beziers(py, registry, sketch)?;
+        if beziers.len() < 2 {
+            return Ok(());
+        }
+        let mut point_ids = std::collections::HashSet::from([self.inner.id]);
+        if let Some(sketch) = sketch {
+            if let Ok(ids) = sketch
+                .call_method1("get_coincident_points", (self.inner.id,))
+                .and_then(|v| v.extract::<Vec<u64>>())
+            {
+                point_ids.extend(ids);
+            }
+        }
+        let mut cp_data: Vec<(Bound<'_, PyAny>, String, (f64, f64))> =
+            Vec::new();
+        for b in &beziers {
+            let start: u64 = b.getattr("start_idx")?.extract()?;
+            let end: u64 = b.getattr("end_idx")?.extract()?;
+            if point_ids.contains(&start) {
+                if let Some(cp) =
+                    b.getattr("cp1")?.extract::<Option<(f64, f64)>>()?
+                {
+                    cp_data.push((b.clone(), "cp1".to_string(), cp));
+                }
+            } else if point_ids.contains(&end) {
+                if let Some(cp) =
+                    b.getattr("cp2")?.extract::<Option<(f64, f64)>>()?
+                {
+                    cp_data.push((b.clone(), "cp2".to_string(), cp));
+                }
+            }
+        }
+        if cp_data.len() < 2 {
+            return Ok(());
+        }
+        if self.is_symmetric() {
+            let avg_length = cp_data
+                .iter()
+                .map(|(_, _, cp)| cp.0.hypot(cp.1))
+                .sum::<f64>()
+                / cp_data.len() as f64;
+            if avg_length < 1e-10 {
+                return Ok(());
+            }
+            let mut sum_dx = 0.0;
+            let mut sum_dy = 0.0;
+            for (_, attr, cp) in &cp_data {
+                let sign = if attr == "cp1" { 1.0 } else { -1.0 };
+                sum_dx += sign * cp.0;
+                sum_dy += sign * cp.1;
+            }
+            let length = sum_dx.hypot(sum_dy);
+            if length < 1e-10 {
+                return Ok(());
+            }
+            let direction = (sum_dx / length, sum_dy / length);
+            for (b, attr, _) in &cp_data {
+                let sign = if attr == "cp1" { 1.0 } else { -1.0 };
+                b.setattr(
+                    attr,
+                    (
+                        sign * direction.0 * avg_length,
+                        sign * direction.1 * avg_length,
+                    ),
+                )?;
+            }
+        }
+        Ok(())
+    }
+}
+
+fn constrained_cp(
+    modified: (f64, f64),
+    other: Option<(f64, f64)>,
+    symmetric: bool,
+) -> (f64, f64) {
+    if symmetric {
+        return (-modified.0, -modified.1);
+    }
+    let Some(other) = other else {
+        return (-modified.0, -modified.1);
+    };
+    let other_length = other.0.hypot(other.1);
+    if other_length < 1e-10 {
+        return (-modified.0, -modified.1);
+    }
+    let modified_length = modified.0.hypot(modified.1);
+    if modified_length < 1e-10 {
+        return (0.0, 0.0);
+    }
+    let direction =
+        (-modified.0 / modified_length, -modified.1 / modified_length);
+    (direction.0 * other_length, direction.1 * other_length)
 }
 
 /// Registers the point class with the given module.

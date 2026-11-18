@@ -12,7 +12,7 @@ use crate::geo::shape::polygon::{
 use crate::geo::types::{Point, Rect};
 use crate::sketch::constraint::PointContext;
 
-use super::entity::{quantize, Entity, EntityBase};
+use super::entity::{quantize, remap_id, Entity, EntityBase};
 use super::mirror::MirrorAxis;
 
 /// A polygon (optionally multi-ring) defined in a local frame: the
@@ -442,6 +442,11 @@ impl Entity for PolygonEntity {
             return true;
         }
         self.is_contained_by(rect, model)
+    }
+
+    fn remap_references(&mut self, map: &dyn Fn(u64) -> u64) {
+        remap_id(&mut self.center, map);
+        remap_id(&mut self.handle, map);
     }
 
     fn to_geometry(&self, model: &dyn PointContext) -> Geometry {

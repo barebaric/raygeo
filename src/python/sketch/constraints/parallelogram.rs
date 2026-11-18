@@ -93,6 +93,17 @@ impl PyParallelogramConstraint {
         self.clone().into_constraint().referenced_points(&registry)
     }
 
+    /// Rewrites every id reference through *id_map*.
+    fn remap_references(
+        &mut self,
+        id_map: std::collections::HashMap<i64, i64>,
+    ) {
+        super::remap_id(&mut self.p_origin, &id_map);
+        super::remap_id(&mut self.p_width, &id_map);
+        super::remap_id(&mut self.p_height, &id_map);
+        super::remap_id(&mut self.p4, &id_map);
+    }
+
     /// Returns the constraint error at the registry's point positions.
     #[pyo3(signature = (reg, params = None))]
     fn error(

@@ -9,7 +9,7 @@ use crate::geo::shape::line::{
 use crate::geo::types::{Point, Rect};
 use crate::sketch::constraint::PointContext;
 
-use super::entity::{base_from_json, Entity, EntityBase};
+use super::entity::{base_from_json, remap_id, Entity, EntityBase};
 
 /// A straight segment between two points.
 #[derive(Clone, Debug)]
@@ -222,6 +222,11 @@ impl Entity for Line {
     ) -> Vec<(f64, f64)> {
         let start = if forward { self.p1 } else { self.p2 };
         model.point_position(start).into_iter().collect()
+    }
+
+    fn remap_references(&mut self, map: &dyn Fn(u64) -> u64) {
+        remap_id(&mut self.p1, map);
+        remap_id(&mut self.p2, map);
     }
 
     fn to_polyline(

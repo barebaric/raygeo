@@ -6,18 +6,26 @@ pub(crate) mod bezier;
 pub(crate) mod circle;
 pub(crate) mod ellipse;
 pub(crate) mod line;
+pub(crate) mod offset;
 pub(crate) mod point;
 pub(crate) mod polygon;
 pub(crate) mod text_box;
 
 use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;
-use pyo3_stub_gen::derive::gen_stub_pyclass;
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction};
 use pyo3_stub_gen::{ImportKind, ImportRef, ModuleRef, PyStubType, TypeInfo};
 use std::collections::{HashMap, HashSet};
 
 use crate::python::sketch::registry::PyEntityRegistry;
 use crate::sketch::entities::Entity;
+
+/// Rounds a coordinate to the model's six-decimal precision.
+#[gen_stub_pyfunction(module = "raygeo.sketch.entities")]
+#[pyfunction]
+fn quantize(value: f64) -> f64 {
+    crate::sketch::entities::entity::quantize(value)
+}
 
 /// Formats a geometry signature as the reference tuple shape: the
 /// sorted `(key, value)` pairs of the JSON object.
@@ -666,6 +674,22 @@ impl PyEntityBase {
         }; crate::python::sketch::entities::line::PyLine, crate::python::sketch::entities::arc::PyArc, crate::python::sketch::entities::circle::PyCircle, crate::python::sketch::entities::ellipse::PyEllipse, crate::python::sketch::entities::bezier::PyBezier, crate::python::sketch::entities::polygon::PyPolygon, crate::python::sketch::entities::text_box::PyTextBox)
     }
 
+    /// Rewrites every point/entity id reference through *id_map*.
+    fn remap_references(
+        slf: &Bound<'_, Self>,
+        id_map: HashMap<i64, i64>,
+    ) -> PyResult<()> {
+        let map = |value: u64| -> u64 {
+            id_map
+                .get(&(value as i64))
+                .map(|new| *new as u64)
+                .unwrap_or(value)
+        };
+        with_entity_mut!(slf, |entity| {
+            entity.remap_references(&map);
+        }; crate::python::sketch::entities::line::PyLine, crate::python::sketch::entities::arc::PyArc, crate::python::sketch::entities::circle::PyCircle, crate::python::sketch::entities::ellipse::PyEllipse, crate::python::sketch::entities::bezier::PyBezier, crate::python::sketch::entities::polygon::PyPolygon, crate::python::sketch::entities::text_box::PyTextBox)
+    }
+
     /// Mirrors the entity across the reference axis object.
     fn mirror(slf: &Bound<'_, Self>, axis: &Bound<'_, PyAny>) -> PyResult<()> {
         let direction: String = axis.getattr("direction")?.extract()?;
@@ -689,49 +713,192 @@ impl PyEntityBase {
         }; crate::python::sketch::entities::line::PyLine, crate::python::sketch::entities::arc::PyArc, crate::python::sketch::entities::circle::PyCircle, crate::python::sketch::entities::ellipse::PyEllipse, crate::python::sketch::entities::bezier::PyBezier, crate::python::sketch::entities::polygon::PyPolygon, crate::python::sketch::entities::text_box::PyTextBox)
     }
 
-    /// Transforms entity-internal offset state for a placement; the
-    /// reference default is a no-op.
-    fn transform_offsets(&self, _placement: &Bound<'_, PyAny>) {}
+    /// Transforms entity-internal offset state for a placement.
+    fn transform_offsets(
+        slf: &Bound<'_, Self>,
+        placement: &Bound<'_, PyAny>,
+    ) -> PyResult<()> {
+        let any = slf.as_any();
+        if let Ok(mut bezier) = any.extract::<PyRefMut<
+            '_,
+            crate::python::sketch::entities::bezier::PyBezier,
+        >>() {
+            return offset::bezier_transform_offsets(
+                &mut bezier.inner,
+                placement,
+            );
+        }
+        if let Ok(mut polygon) = any.extract::<PyRefMut<
+            '_,
+            crate::python::sketch::entities::polygon::PyPolygon,
+        >>() {
+            return offset::polygon_transform_offsets(
+                &mut polygon.inner,
+                placement,
+            );
+        }
+        Ok(())
+    }
 
-    /// Re-derives copy state from a template; the reference default
-    /// is a no-op.
+    /// Re-derives copy state from a template.
     fn rewrite_offsets_from(
-        &self,
-        _template: &Bound<'_, PyAny>,
-        _placement: &Bound<'_, PyAny>,
-    ) {
+        slf: &Bound<'_, Self>,
+        template: &Bound<'_, PyAny>,
+        placement: &Bound<'_, PyAny>,
+    ) -> PyResult<()> {
+        let template_entity = extract_entity(template)?;
+        let template_any = template_entity.as_any();
+        let any = slf.as_any();
+        if let Ok(mut bezier) = any.extract::<PyRefMut<
+            '_,
+            crate::python::sketch::entities::bezier::PyBezier,
+        >>() {
+            if let Some(template) = template_any
+                .downcast_ref::<crate::sketch::entities::bezier::Bezier>()
+            {
+                return offset::bezier_rewrite_offsets_from(
+                    &mut bezier.inner,
+                    template,
+                    placement,
+                );
+            }
+        }
+        if let Ok(mut polygon) = any.extract::<PyRefMut<
+            '_,
+            crate::python::sketch::entities::polygon::PyPolygon,
+        >>() {
+            if let Some(template) = template_any
+                .downcast_ref::<crate::sketch::entities::polygon::PolygonEntity>()
+            {
+                return offset::polygon_rewrite_offsets_from(
+                    &mut polygon.inner,
+                    template,
+                    placement,
+                );
+            }
+        }
+        if let Ok(mut text_box) =
+            any.extract::<PyRefMut<
+                '_,
+                crate::python::sketch::entities::text_box::PyTextBox,
+            >>()
+        {
+            if let Some(template) = template_any
+                .downcast_ref::<crate::sketch::entities::text_box::TextBoxEntity>()
+            {
+                offset::text_box_rewrite_offsets_from(
+                    &mut text_box.inner,
+                    template,
+                );
+            }
+        }
+        Ok(())
     }
 
     /// The offsettable item this entity forms on its own; the
     /// reference default is None.
     fn as_offset_item<'py>(
-        &self,
-        _py: Python<'py>,
-        _sketch: &Bound<'_, PyAny>,
-    ) -> Option<Bound<'py, PyAny>> {
-        None
+        slf: &Bound<'py, Self>,
+        py: Python<'py>,
+        sketch: &Bound<'_, PyAny>,
+    ) -> PyResult<Option<Bound<'py, PyAny>>> {
+        let entity = extract_entity(slf.as_any())?;
+        let any = entity.as_any();
+        if any
+            .downcast_ref::<crate::sketch::entities::circle::Circle>()
+            .is_some()
+            || any
+                .downcast_ref::<crate::sketch::entities::arc::Arc>()
+                .is_some()
+            || any
+                .downcast_ref::<crate::sketch::entities::ellipse::Ellipse>()
+                .is_some()
+        {
+            return Ok(Some(slf.clone().into_any()));
+        }
+        if let Some(polygon) = any
+            .downcast_ref::<crate::sketch::entities::polygon::PolygonEntity>(
+        ) {
+            if polygon.closed {
+                return Ok(Some(slf.clone().into_any()));
+            }
+            let registry = sketch.getattr("registry")?;
+            let ctx = crate::python::sketch::context::PointCtx(registry);
+            return Ok(offset::polygon_as_offset_item(py, polygon, &ctx));
+        }
+        Ok(None)
     }
 
     /// Returns a pure description of the offset changes; the
     /// reference default is None (no analytic offset).
     fn plan_offset<'py>(
-        &self,
-        _py: Python<'py>,
-        _registry: crate::python::sketch::context::PointCtx<'_>,
-        _offset: f64,
+        slf: &Bound<'py, Self>,
+        py: Python<'py>,
+        registry: crate::python::sketch::context::PointCtx<'_>,
+        offset: f64,
         _allocate_id: &Bound<'_, PyAny>,
-    ) -> Option<Bound<'py, PyAny>> {
-        None
+    ) -> PyResult<Option<offset::PyOffsetPlan>> {
+        let entity = extract_entity(slf.as_any())?;
+        let any = entity.as_any();
+        if let Some(circle) =
+            any.downcast_ref::<crate::sketch::entities::circle::Circle>()
+        {
+            return Ok(offset::circle_plan(py, circle, &registry, offset));
+        }
+        if let Some(arc) =
+            any.downcast_ref::<crate::sketch::entities::arc::Arc>()
+        {
+            return Ok(offset::arc_plan(py, arc, &registry, offset));
+        }
+        if let Some(ellipse) =
+            any.downcast_ref::<crate::sketch::entities::ellipse::Ellipse>()
+        {
+            return Ok(offset::ellipse_plan(py, ellipse, &registry, offset));
+        }
+        if let Some(polygon) = any
+            .downcast_ref::<crate::sketch::entities::polygon::PolygonEntity>(
+        ) {
+            return offset::polygon_plan(
+                py,
+                polygon,
+                &registry,
+                offset,
+                _allocate_id,
+            );
+        }
+        Ok(None)
     }
 
     /// Coarse polylines of the entity's offset for live preview;
     /// the reference default is no preview.
     fn preview_polylines(
-        &self,
-        _registry: crate::python::sketch::context::PointCtx<'_>,
-        _offset: f64,
-    ) -> Vec<Vec<(f64, f64)>> {
-        Vec::new()
+        slf: &Bound<'_, Self>,
+        registry: crate::python::sketch::context::PointCtx<'_>,
+        offset: f64,
+    ) -> PyResult<Vec<Vec<(f64, f64)>>> {
+        let entity = extract_entity(slf.as_any())?;
+        let any = entity.as_any();
+        if let Some(circle) =
+            any.downcast_ref::<crate::sketch::entities::circle::Circle>()
+        {
+            return Ok(offset::circle_preview(circle, &registry, offset));
+        }
+        if let Some(arc) =
+            any.downcast_ref::<crate::sketch::entities::arc::Arc>()
+        {
+            return Ok(offset::arc_preview(arc, &registry, offset));
+        }
+        if let Some(ellipse) =
+            any.downcast_ref::<crate::sketch::entities::ellipse::Ellipse>()
+        {
+            return Ok(offset::ellipse_preview(ellipse, &registry, offset));
+        }
+        if let Some(polygon) = any
+            .downcast_ref::<crate::sketch::entities::polygon::PolygonEntity>(
+        ) {
+            return Ok(offset::polygon_preview(polygon, &registry, offset));
+        }
+        Ok(Vec::new())
     }
 
     /// Deep-copies the entity through its reference dictionary
@@ -835,6 +1002,8 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let entities_mod = PyModule::new(py, "entities")?;
 
     entities_mod.add_class::<PyEntityBase>()?;
+    offset::register(&entities_mod)?;
+    entities_mod.add_function(wrap_pyfunction!(quantize, &entities_mod)?)?;
 
     point::register(&entities_mod)?;
     line::register(&entities_mod)?;
