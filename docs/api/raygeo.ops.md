@@ -1892,6 +1892,7 @@ mesh_correction(
     dy: float,
     heights: numpy.NDArray[numpy.float64],
     z_offset: float = 0.0,
+    subdivide: bool = False,
 ) -> None
 ```
 
@@ -1910,6 +1911,7 @@ helical arc), and bezier control points are corrected at their own XY positions.
 | `dy`         | `float`                        | Grid row spacing in millimetres.                                                                          |
 | `heights`    | `numpy.NDArray[numpy.float64]` | 2-D float64 array of shape `(ny, nx)`; `heights[j, i]` is the surface height at `(x0 + i*dx, y0 + j*dy)`. |
 | `z_offset`   | `float = 0.0`                  | Constant Z added on top of every sampled height.                                                          |
+| `subdivide`  | `bool = False`                 | Split straight cutting moves where they cross a grid line, so Z follows the map between grid points.      |
 | _Returns_    | `None`                         |                                                                                                           |
 | _Complexity_ |                                | O(n) time, O(n) extra space                                                                               |
 
