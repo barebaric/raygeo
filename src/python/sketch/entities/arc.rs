@@ -1,6 +1,6 @@
 //! Bindings for the arc entity.
 
-use crate::python::sketch::registry::value_from_dict;
+use crate::python::sketch::registry::{value_from_dict, PyEntityRegistry};
 use pyo3::exceptions::{PyNotImplementedError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
@@ -25,7 +25,7 @@ use crate::sketch::entities::Entity;
 pub struct PyArc {
     pub inner: CoreArc,
     /// Live back-reference to the owning registry, if any.
-    pub registry: Option<Py<PyAny>>,
+    pub registry: Option<Py<PyEntityRegistry>>,
 }
 
 #[gen_stub_pymethods]

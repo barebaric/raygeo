@@ -528,7 +528,7 @@ impl PyEntityRegistry {
         let reg = slf.borrow();
         reg.inner
             .get_point(id)
-            .map(|point| PySketchPoint::live(point, slf.as_any()))
+            .map(|point| PySketchPoint::live(point, slf))
     }
 
     /// The point object for an id (with id/coords/flags), or None.
@@ -540,7 +540,7 @@ impl PyEntityRegistry {
         let reg = slf.borrow();
         reg.inner
             .get_point(id)
-            .map(|point| PySketchPoint::live(point, slf.as_any()))
+            .map(|point| PySketchPoint::live(point, slf))
     }
 
     /// Whether a point carries the fixed flag.
@@ -898,7 +898,7 @@ impl PyEntityRegistry {
         reg.inner
             .all_points()
             .iter()
-            .map(|point| PySketchPoint::live(point.clone(), slf.as_any()))
+            .map(|point| PySketchPoint::live(point.clone(), slf))
             .collect()
     }
 
@@ -912,7 +912,7 @@ impl PyEntityRegistry {
             .all_entities()
             .iter()
             .map(|entity| {
-                entity_to_py(py, entity.as_ref(), slf.as_any()).map(AnyEntity)
+                entity_to_py(py, entity.as_ref(), Some(slf)).map(AnyEntity)
             })
             .collect()
     }
@@ -935,7 +935,7 @@ impl PyEntityRegistry {
         let id = id.0;
         let reg = slf.borrow();
         match reg.inner.get_entity(id) {
-            Some(entity) => entity_to_py(py, entity, slf.as_any())
+            Some(entity) => entity_to_py(py, entity, Some(slf))
                 .map(|object| Some(AnyEntity(object))),
             None => Ok(None),
         }

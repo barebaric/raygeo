@@ -16,6 +16,7 @@ use pyo3_stub_gen::derive::gen_stub_pyclass;
 use pyo3_stub_gen::{ImportKind, ImportRef, ModuleRef, PyStubType, TypeInfo};
 use std::collections::{HashMap, HashSet};
 
+use crate::python::sketch::registry::PyEntityRegistry;
 use crate::sketch::entities::Entity;
 
 /// Formats a geometry signature as the reference tuple shape: the
@@ -44,7 +45,7 @@ pub(crate) fn signature_to_py<'py>(
 pub(crate) fn entity_to_py<'py>(
     py: Python<'py>,
     entity: &dyn Entity,
-    registry: &Bound<'_, PyAny>,
+    registry: Option<&Bound<'_, PyEntityRegistry>>,
 ) -> PyResult<Bound<'py, PyAny>> {
     use crate::python::sketch::entities::arc::PyArc;
     use crate::python::sketch::entities::bezier::PyBezier;
@@ -61,13 +62,14 @@ pub(crate) fn entity_to_py<'py>(
     use crate::sketch::entities::polygon::PolygonEntity;
     use crate::sketch::entities::text_box::TextBoxEntity;
 
+    let registry = registry.map(|reg| reg.clone().unbind());
     let any = entity.as_any();
     if let Some(line) = any.downcast_ref::<Line>() {
         let object = Py::new(
             py,
             PyClassInitializer::from(PyEntityBase).add_subclass(PyLine {
                 inner: line.clone(),
-                registry: Some(registry.clone().unbind()),
+                registry: registry.clone(),
             }),
         )?;
         return Ok(object.bind(py).clone().into_any());
@@ -77,7 +79,7 @@ pub(crate) fn entity_to_py<'py>(
             py,
             PyClassInitializer::from(PyEntityBase).add_subclass(PyArc {
                 inner: arc.clone(),
-                registry: Some(registry.clone().unbind()),
+                registry: registry.clone(),
             }),
         )?;
         return Ok(object.bind(py).clone().into_any());
@@ -87,7 +89,7 @@ pub(crate) fn entity_to_py<'py>(
             py,
             PyClassInitializer::from(PyEntityBase).add_subclass(PyCircle {
                 inner: circle.clone(),
-                registry: Some(registry.clone().unbind()),
+                registry: registry.clone(),
             }),
         )?;
         return Ok(object.bind(py).clone().into_any());
@@ -102,7 +104,7 @@ pub(crate) fn entity_to_py<'py>(
                     .iter()
                     .map(|&id| id as i64)
                     .collect(),
-                registry: Some(registry.clone().unbind()),
+                registry: registry.clone(),
             }),
         )?;
         return Ok(object.bind(py).clone().into_any());
@@ -112,7 +114,7 @@ pub(crate) fn entity_to_py<'py>(
             py,
             PyClassInitializer::from(PyEntityBase).add_subclass(PyBezier {
                 inner: bezier.clone(),
-                registry: Some(registry.clone().unbind()),
+                registry: registry.clone(),
             }),
         )?;
         return Ok(object.bind(py).clone().into_any());
@@ -122,7 +124,7 @@ pub(crate) fn entity_to_py<'py>(
             py,
             PyClassInitializer::from(PyEntityBase).add_subclass(PyPolygon {
                 inner: polygon.clone(),
-                registry: Some(registry.clone().unbind()),
+                registry: registry.clone(),
             }),
         )?;
         return Ok(object.bind(py).clone().into_any());
@@ -132,7 +134,7 @@ pub(crate) fn entity_to_py<'py>(
             py,
             PyClassInitializer::from(PyEntityBase).add_subclass(PyTextBox {
                 inner: text_box.clone(),
-                registry: Some(registry.clone().unbind()),
+                registry: registry.clone(),
             }),
         )?;
         return Ok(object.bind(py).clone().into_any());

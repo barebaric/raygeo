@@ -4,6 +4,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
 use crate::python::sketch::context::PointCtx;
+use crate::python::sketch::registry::PyEntityRegistry;
 use crate::sketch::constraint::PointContext;
 use pyo3::types::PyTuple;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
@@ -24,14 +25,14 @@ use crate::python::sketch::types::EntityId;
 pub struct PySketchPoint {
     pub inner: crate::sketch::entities::point::SketchPoint,
     /// Live back-reference to the owning registry, if any.
-    pub registry: Option<Py<PyAny>>,
+    pub registry: Option<Py<PyEntityRegistry>>,
 }
 
 impl PySketchPoint {
     /// Builds a live point view bound to a registry.
     pub fn live(
         inner: crate::sketch::entities::point::SketchPoint,
-        registry: &Bound<'_, PyAny>,
+        registry: &Bound<'_, PyEntityRegistry>,
     ) -> Self {
         PySketchPoint {
             inner,
@@ -56,12 +57,7 @@ impl PySketchPoint {
     fn current(&self) -> crate::sketch::entities::point::SketchPoint {
         if let Some(registry) = &self.registry {
             return Python::attach(|py| {
-                if let Ok(reg) =
-                    registry.bind(py).extract::<PyRef<
-                        '_,
-                        crate::python::sketch::registry::PyEntityRegistry,
-                    >>()
-                {
+                if let Ok(reg) = registry.bind(py).try_borrow() {
                     if let Some(point) = reg.inner.get_point(self.inner.id) {
                         return point;
                     }
@@ -369,8 +365,11 @@ impl PySketchPoint {
             if ids.iter().any(|pid| point_ids.contains(pid)) {
                 let raw = registry.0.call_method1("get_entity", (eid,))?;
                 if raw.is_none() {
-                    let object =
-                        super::entity_to_py(py, entity.as_ref(), &registry.0)?;
+                    let object = super::entity_to_py(
+                        py,
+                        entity.as_ref(),
+                        registry.0.cast::<PyEntityRegistry>().ok(),
+                    )?;
                     connected.push(object);
                 } else {
                     connected.push(raw);

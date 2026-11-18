@@ -28,7 +28,7 @@ use crate::sketch::entities::Entity;
 pub struct PyTextBox {
     pub inner: CoreTextBox,
     /// Live back-reference to the owning registry, if any.
-    pub registry: Option<Py<PyAny>>,
+    pub registry: Option<Py<PyEntityRegistry>>,
 }
 
 impl PyTextBox {
@@ -38,9 +38,7 @@ impl PyTextBox {
     fn live(&self) -> CoreTextBox {
         if let Some(registry) = &self.registry {
             return Python::attach(|py| {
-                if let Ok(reg) =
-                    registry.bind(py).extract::<PyRef<'_, PyEntityRegistry>>()
-                {
+                if let Ok(reg) = registry.bind(py).try_borrow() {
                     if let Some(entity) =
                         reg.inner.get_entity(self.inner.base.id)
                     {
