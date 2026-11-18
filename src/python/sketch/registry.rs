@@ -169,6 +169,23 @@ impl PyEntityRegistry {
         Ok(dict)
     }
 
+    /// Returns a deep copy of the model.
+    #[pyo3(name = "clone")]
+    fn clone_registry(&self) -> Self {
+        PyEntityRegistry {
+            inner: self.inner.clone(),
+        }
+    }
+
+    fn __copy__(&self) -> Self {
+        self.clone_registry()
+    }
+
+    /// The next id that an added point or entity would receive.
+    fn next_id(&self) -> EntityId {
+        EntityId(self.inner.next_id())
+    }
+
     /// Allocates the next free id for a point or entity.
     fn allocate_id(&mut self) -> EntityId {
         EntityId(self.inner.allocate_id())
@@ -203,6 +220,31 @@ impl PyEntityRegistry {
     fn append_entity(&mut self, obj: &Bound<'_, PyAny>) -> PyResult<u64> {
         let entity = extract_entity(obj)?;
         Ok(self.inner.append_entity(entity))
+    }
+
+    /// Position of an entity in storage order, or ``None``.
+    fn entity_index(&self, id: EntityId) -> Option<usize> {
+        self.inner.entity_index(id.0)
+    }
+
+    /// Replaces an entity in place, preserving its id and position.
+    fn replace_entity(
+        &mut self,
+        id: EntityId,
+        obj: &Bound<'_, PyAny>,
+    ) -> PyResult<bool> {
+        let entity = extract_entity(obj)?;
+        Ok(self.inner.replace_entity(id.0, entity))
+    }
+
+    /// Inserts an entity at `index` in storage order.
+    fn insert_entity(
+        &mut self,
+        index: usize,
+        obj: &Bound<'_, PyAny>,
+    ) -> PyResult<u64> {
+        let entity = extract_entity(obj)?;
+        Ok(self.inner.insert_entity(index, entity))
     }
 
     /// Adds a point and returns its id.
@@ -423,6 +465,11 @@ impl PyEntityRegistry {
         self.inner.set_point_constrained(id, constrained)
     }
 
+    /// Sets a point's fixed (anchor) flag.
+    fn set_point_fixed(&mut self, id: EntityId, fixed: bool) -> bool {
+        self.inner.set_point_fixed(id.0, fixed)
+    }
+
     /// Sets an entity's solver-constrained flag.
     fn set_entity_constrained(
         &mut self,
@@ -632,6 +679,18 @@ impl PyEntityRegistry {
             return;
         };
         entity.clear_helper_references();
+    }
+
+    /// Entity ids transitively connected through shared control points.
+    fn connected_entity_ids(
+        &self,
+        id: EntityId,
+    ) -> std::collections::HashSet<EntityId> {
+        self.inner
+            .connected_entity_ids(id.0)
+            .into_iter()
+            .map(EntityId)
+            .collect()
     }
 
     /// Points that move rigidly with `point_id`.

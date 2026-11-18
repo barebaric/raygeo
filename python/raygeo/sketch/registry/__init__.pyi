@@ -49,6 +49,15 @@ class EntityRegistry:
         r"""
         Serializes the model to a reference registry dictionary.
         """
+    def clone(self) -> EntityRegistry:
+        r"""
+        Returns a deep copy of the model.
+        """
+    def __copy__(self) -> EntityRegistry: ...
+    def next_id(self) -> types.EntityID:
+        r"""
+        The next id that an added point or entity would receive.
+        """
     def allocate_id(self) -> types.EntityID:
         r"""
         Allocates the next free id for a point or entity.
@@ -64,6 +73,18 @@ class EntityRegistry:
     def append_entity(self, obj: typing.Any) -> builtins.int:
         r"""
         Appends an entity whose id is already final.
+        """
+    def entity_index(self, id: types.EntityID) -> typing.Optional[builtins.int]:
+        r"""
+        Position of an entity in storage order, or ``None``.
+        """
+    def replace_entity(self, id: types.EntityID, obj: typing.Any) -> builtins.bool:
+        r"""
+        Replaces an entity in place, preserving its id and position.
+        """
+    def insert_entity(self, index: builtins.int, obj: typing.Any) -> builtins.int:
+        r"""
+        Inserts an entity at `index` in storage order.
         """
     def add_point(self, x: builtins.float, y: builtins.float, fixed: builtins.bool = False) -> types.EntityID:
         r"""
@@ -132,6 +153,10 @@ class EntityRegistry:
     def set_point_constrained(self, id: types.EntityID, constrained: builtins.bool) -> builtins.bool:
         r"""
         Sets a point's solver-constrained flag.
+        """
+    def set_point_fixed(self, id: types.EntityID, fixed: builtins.bool) -> builtins.bool:
+        r"""
+        Sets a point's fixed (anchor) flag.
         """
     def set_entity_constrained(self, id: types.EntityID, constrained: builtins.bool) -> builtins.bool:
         r"""
@@ -228,6 +253,10 @@ class EntityRegistry:
     def clear_helper_references(self, id: types.EntityID) -> None:
         r"""
         Drops the entity's references to its helper entities.
+        """
+    def connected_entity_ids(self, id: types.EntityID) -> builtins.set[types.EntityID]:
+        r"""
+        Entity ids transitively connected through shared control points.
         """
     def rigidly_connected_points(self, point_id: types.EntityID) -> builtins.list[types.EntityID]:
         r"""

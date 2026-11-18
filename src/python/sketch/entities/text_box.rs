@@ -564,6 +564,13 @@ impl PyTextBox {
     fn set_state(&mut self, state: &Bound<'_, PyDict>) -> PyResult<()> {
         let value = value_from_dict(state)?;
         self.inner.set_state(&value);
+        if let Some(registry) = &self.registry {
+            Python::attach(|py| {
+                let _ = registry
+                    .bind(py)
+                    .call_method1("set_state", (self.inner.base().id, state));
+            });
+        }
         Ok(())
     }
 
@@ -599,6 +606,14 @@ impl PyTextBox {
                 })
             });
         self.inner.base_mut().constrained = constrained;
+        if let Some(registry) = &self.registry {
+            Python::attach(|py| {
+                let _ = registry.bind(py).call_method1(
+                    "set_entity_constrained",
+                    (self.inner.base().id, constrained),
+                );
+            });
+        }
         Ok(())
     }
 
