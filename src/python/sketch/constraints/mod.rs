@@ -712,6 +712,10 @@ pub struct PyConstraintBase {
 #[gen_stub_pymethods]
 #[pymethods]
 impl PyConstraintBase {
+    /// Rewrites every id reference through *id_map*; concrete
+    /// constraints override this.
+    fn remap_references(&mut self, _id_map: HashMap<i64, i64>) {}
+
     /// Whether the constraint can be applied to the selection.
     #[classmethod]
     #[pyo3(signature = (_selection, _sketch = None))]
