@@ -334,6 +334,19 @@ Updates the internal state for a mirror transform; a no-op for mirror-invariant 
 | `_axis`   | `Any`  |             |
 | _Returns_ | `None` |             |
 
+### `remap_references()`
+
+```python
+remap_references(_id_map: Mapping[int, int]) -> None
+```
+
+Rewrites every id reference through *id_map*; concrete constraints override this.
+
+| Parameter | Type                | Description |
+| --------- | ------------------- | ----------- |
+| `_id_map` | `Mapping[int, int]` |             |
+| _Returns_ | `None`              |             |
+
 ### `targets_segment()`
 
 ```python

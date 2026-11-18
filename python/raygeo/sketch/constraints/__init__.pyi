@@ -141,6 +141,11 @@ class Constraint:
         `vars()` walk of the reference implementation sees exactly
         these attributes.
         """
+    def remap_references(self, _id_map: typing.Mapping[builtins.int, builtins.int]) -> None:
+        r"""
+        Rewrites every id reference through *id_map*; concrete
+        constraints override this.
+        """
     @classmethod
     def can_apply_to(cls, _selection: typing.Any, _sketch: typing.Optional[typing.Any] = None) -> builtins.bool:
         r"""
