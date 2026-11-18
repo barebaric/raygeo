@@ -11,7 +11,7 @@ use crate::geo::shape::rect::does_rect_contain_rect;
 use crate::geo::types::{Point, Rect};
 use crate::sketch::constraint::PointContext;
 
-use super::entity::{quantize, Entity, EntityBase};
+use super::entity::{quantize, remap_id, Entity, EntityBase};
 use super::mirror::MirrorAxis;
 
 /// A cubic bezier between two points, with the control points stored
@@ -377,6 +377,11 @@ impl Entity for Bezier {
                 && rect.min.y <= p.y
                 && p.y <= rect.max.y
         })
+    }
+
+    fn remap_references(&mut self, map: &dyn Fn(u64) -> u64) {
+        remap_id(&mut self.start, map);
+        remap_id(&mut self.end, map);
     }
 
     fn to_geometry(&self, model: &dyn PointContext) -> Geometry {

@@ -10,7 +10,7 @@ use crate::geo::shape::circle::{
 use crate::geo::types::{Point, Rect};
 use crate::sketch::constraint::PointContext;
 
-use super::entity::{Entity, EntityBase};
+use super::entity::{remap_id, Entity, EntityBase};
 
 /// A full circle defined by center and radius point.
 #[derive(Clone, Debug)]
@@ -213,6 +213,11 @@ impl Entity for Circle {
             return true;
         }
         does_circle_intersect_rect(Point::new(cx, cy), radius, rect)
+    }
+
+    fn remap_references(&mut self, map: &dyn Fn(u64) -> u64) {
+        remap_id(&mut self.center, map);
+        remap_id(&mut self.radius_point, map);
     }
 
     fn to_geometry(&self, model: &dyn PointContext) -> Geometry {

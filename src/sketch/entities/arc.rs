@@ -11,7 +11,7 @@ use crate::geo::shape::rect::does_rect_contain_rect;
 use crate::geo::types::{Point, Rect};
 use crate::sketch::constraint::PointContext;
 
-use super::entity::{base_from_json, Entity, EntityBase};
+use super::entity::{base_from_json, remap_id, Entity, EntityBase};
 
 /// A circular arc from start to end around a center.
 #[derive(Clone, Debug)]
@@ -293,6 +293,12 @@ impl Entity for Arc {
             self.clockwise,
             rect,
         )
+    }
+
+    fn remap_references(&mut self, map: &dyn Fn(u64) -> u64) {
+        remap_id(&mut self.start, map);
+        remap_id(&mut self.end, map);
+        remap_id(&mut self.center, map);
     }
 
     fn to_geometry(&self, model: &dyn PointContext) -> Geometry {

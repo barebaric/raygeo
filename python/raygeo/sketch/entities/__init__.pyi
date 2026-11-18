@@ -245,6 +245,10 @@ class Entity:
         Sets the fill color; returns whether the entity supports
         fills.
         """
+    def remap_references(self, id_map: typing.Mapping[builtins.int, builtins.int]) -> None:
+        r"""
+        Rewrites every point/entity id reference through *id_map*.
+        """
     def mirror(self, axis: typing.Any) -> None:
         r"""
         Mirrors the entity across the reference axis object.

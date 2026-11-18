@@ -60,6 +60,10 @@ class PointOnCurveConstraint(constraints.Constraint):
         r"""
         Creates the point-on-curve constraint.
         """
+    def remap_references(self, id_map: typing.Mapping[builtins.int, builtins.int]) -> None:
+        r"""
+        Rewrites every id reference through *id_map*.
+        """
     def error(self, reg: protocols.Registry, params: typing.Optional[typing.Any] = None) -> builtins.float:
         r"""
         Returns the constraint error at the registry's point

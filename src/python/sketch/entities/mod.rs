@@ -667,6 +667,22 @@ impl PyEntityBase {
         }; crate::python::sketch::entities::line::PyLine, crate::python::sketch::entities::arc::PyArc, crate::python::sketch::entities::circle::PyCircle, crate::python::sketch::entities::ellipse::PyEllipse, crate::python::sketch::entities::bezier::PyBezier, crate::python::sketch::entities::polygon::PyPolygon, crate::python::sketch::entities::text_box::PyTextBox)
     }
 
+    /// Rewrites every point/entity id reference through *id_map*.
+    fn remap_references(
+        slf: &Bound<'_, Self>,
+        id_map: HashMap<i64, i64>,
+    ) -> PyResult<()> {
+        let map = |value: u64| -> u64 {
+            id_map
+                .get(&(value as i64))
+                .map(|new| *new as u64)
+                .unwrap_or(value)
+        };
+        with_entity_mut!(slf, |entity| {
+            entity.remap_references(&map);
+        }; crate::python::sketch::entities::line::PyLine, crate::python::sketch::entities::arc::PyArc, crate::python::sketch::entities::circle::PyCircle, crate::python::sketch::entities::ellipse::PyEllipse, crate::python::sketch::entities::bezier::PyBezier, crate::python::sketch::entities::polygon::PyPolygon, crate::python::sketch::entities::text_box::PyTextBox)
+    }
+
     /// Mirrors the entity across the reference axis object.
     fn mirror(slf: &Bound<'_, Self>, axis: &Bound<'_, PyAny>) -> PyResult<()> {
         let direction: String = axis.getattr("direction")?.extract()?;

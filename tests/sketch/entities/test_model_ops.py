@@ -4,11 +4,19 @@ import math
 
 import pytest
 
+from raygeo.sketch.constraints import (
+    DistanceConstraint,
+    EqualLengthConstraint,
+    SymmetryConstraint,
+)
 from raygeo.sketch.entities import (
     Bezier,
+    Line,
     OffsetPlan,
+    Polygon,
     PolygonOutline,
     SketchPoint,
+    TextBox,
 )
 from raygeo.sketch.registry import EntityRegistry
 
@@ -275,3 +283,47 @@ class TestPointWaypoints:
         registry.get_point(p2).apply_constraint(registry, b1, 2)
 
         assert b2.cp1 is None
+
+
+class TestReferenceRemap:
+    def test_entity_remap_is_polymorphic(self):
+        line = Line(1, 2, 3)
+        line.remap_references({2: 20, 3: 30})
+        assert line.p1_idx == 20
+        assert line.p2_idx == 30
+
+        polygon = Polygon(2, 3, 4, [(0.0, 0.0), (1.0, 0.0)], True)
+        polygon.remap_references({3: 30, 4: 40})
+        assert polygon.center_idx == 30
+        assert polygon.handle_idx == 40
+
+        text_box = TextBox(
+            3,
+            4,
+            5,
+            6,
+            "x",
+            construction_line_ids=[7, 8],
+        )
+        text_box.remap_references({4: 40, 5: 50, 6: 60, 7: 70, 8: 80})
+        assert text_box.origin_id == 40
+        assert text_box.width_id == 50
+        assert text_box.height_id == 60
+        assert text_box.construction_line_ids == [70, 80]
+
+    def test_constraint_remap_is_polymorphic(self):
+        distance = DistanceConstraint(1, 2, 3.0)
+        distance.remap_references({1: 10, 2: 20})
+        assert distance.p1 == 10
+        assert distance.p2 == 20
+
+        equal = EqualLengthConstraint([1, 2])
+        equal.remap_references({1: 10, 2: 20})
+        assert equal.entity_ids == [10, 20]
+
+        symmetry = SymmetryConstraint(1, 2, center=3, axis=4)
+        symmetry.remap_references({1: 10, 2: 20, 3: 30, 4: 40})
+        assert symmetry.p1 == 10
+        assert symmetry.p2 == 20
+        assert symmetry.center == 30
+        assert symmetry.axis == 40
