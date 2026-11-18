@@ -14,7 +14,6 @@ use crate::python::sketch::constraints::dict_from_value;
 use crate::python::sketch::context::PointCtx;
 use crate::python::sketch::entities::signature_to_py;
 use crate::sketch::entities::line::Line as CoreLine;
-use crate::sketch::entities::mirror::{MirrorAxis, MirrorDirection};
 use crate::sketch::entities::Entity;
 
 /// A straight segment between two points.
@@ -244,25 +243,6 @@ impl PyLine {
         point_id: u64,
     ) -> Option<(f64, f64)> {
         self.inner.tangent_at(&registry, point_id)
-    }
-
-    /// Mirrors the entity across the axis.
-    #[pyo3(signature = (direction, position))]
-    fn mirror(&mut self, direction: &str, position: f64) -> PyResult<()> {
-        let axis_direction = match direction {
-            "vertical" => MirrorDirection::Vertical,
-            "horizontal" => MirrorDirection::Horizontal,
-            other => {
-                return Err(PyValueError::new_err(format!(
-                    "unknown mirror direction: {other}"
-                )))
-            }
-        };
-        self.inner.mirror(MirrorAxis {
-            direction: axis_direction,
-            position,
-        });
-        Ok(())
     }
 
     /// Sets the fill color; returns whether the entity supports

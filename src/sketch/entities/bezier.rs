@@ -117,7 +117,7 @@ impl Bezier {
         self.cp1.is_none() && self.cp2.is_none()
     }
 
-    fn bbox(&self, model: &dyn PointContext) -> Rect {
+    pub(crate) fn bbox(&self, model: &dyn PointContext) -> Rect {
         let Some((sx, sy)) = model.point_position(self.start) else {
             return Rect::new(0.0, 0.0, 0.0, 0.0);
         };

@@ -147,10 +147,6 @@ class Ellipse(entities.Entity):
         r"""
         Tangent direction at the point nearest the model-space point.
         """
-    def mirror(self, direction: builtins.str, position: builtins.float) -> None:
-        r"""
-        Mirrors the entity across the axis.
-        """
     def set_fill_color(self, color: typing.Optional[typing.Sequence[builtins.float]]) -> builtins.bool:
         r"""
         Sets the fill color; returns whether the entity supports
@@ -269,6 +265,11 @@ class Ellipse(entities.Entity):
         r"""
         Appends the entity's outline to the geometry.
         """
+    def get_rotation(self, registry: protocols.Registry) -> builtins.float:
+        r"""
+        Rotation angle of the x radius in radians.
+        """
+    def __repr__(self) -> builtins.str: ...
     def create_fill_geometry(self, registry: protocols.Registry) -> typing.Optional[geo.Geometry]:
         r"""
         The fill geometry of the entity, if it supports fills.

@@ -146,7 +146,7 @@ class TextBox(entities.Entity):
         r"""
         Returns the geometry signature used for change detection.
         """
-    def to_geometry(self, registry: protocols.Registry) -> geo.Geometry:
+    def to_geometry(self, registry: protocols.Registry, resolved_content: typing.Optional[builtins.str] = None) -> geo.Geometry:
         r"""
         Returns the entity's toolpath geometry in model coordinates.
         """
@@ -173,10 +173,6 @@ class TextBox(entities.Entity):
     def tangent_at(self, registry: protocols.Registry, point_id: builtins.int) -> tuple[builtins.float, builtins.float]:
         r"""
         Tangent direction at the point nearest the model-space point.
-        """
-    def mirror(self, direction: builtins.str, position: builtins.float) -> None:
-        r"""
-        Mirrors the entity across the axis.
         """
     def set_fill_color(self, color: typing.Optional[typing.Sequence[builtins.float]]) -> builtins.bool:
         r"""

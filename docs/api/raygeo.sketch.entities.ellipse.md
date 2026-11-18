@@ -344,6 +344,19 @@ Point ids that move rigidly with the given point.
 | `point_id` | `int`       |             |
 | _Returns_  | `list[int]` |             |
 
+### `get_rotation()`
+
+```python
+get_rotation(registry: protocols.Registry) -> float
+```
+
+Rotation angle of the x radius in radians.
+
+| Parameter  | Type                 | Description |
+| ---------- | -------------------- | ----------- |
+| `registry` | `protocols.Registry` |             |
+| _Returns_  | `float`              |             |
+
 ### `get_state()`
 
 ```python
@@ -446,20 +459,6 @@ Whether the entity has a radius (arc, circle).
 | Parameter | Type   | Description |
 | --------- | ------ | ----------- |
 | _Returns_ | `bool` |             |
-
-### `mirror()`
-
-```python
-mirror(direction: str, position: float) -> None
-```
-
-Mirrors the entity across the axis.
-
-| Parameter   | Type    | Description |
-| ----------- | ------- | ----------- |
-| `direction` | `str`   |             |
-| `position`  | `float` |             |
-| _Returns_   | `None`  |             |
 
 ### `restore_base_flags()`
 

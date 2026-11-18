@@ -15,7 +15,6 @@ use crate::python::sketch::context::PointCtx;
 use crate::python::sketch::entities::signature_to_py;
 use crate::sketch::constraint::PointContext;
 use crate::sketch::entities::ellipse::Ellipse as CoreEllipse;
-use crate::sketch::entities::mirror::{MirrorAxis, MirrorDirection};
 use crate::sketch::entities::Entity;
 
 /// An ellipse defined by a center and two radius points.
@@ -301,25 +300,6 @@ impl PyEllipse {
         })
     }
 
-    /// Mirrors the entity across the axis.
-    #[pyo3(signature = (direction, position))]
-    fn mirror(&mut self, direction: &str, position: f64) -> PyResult<()> {
-        let axis_direction = match direction {
-            "vertical" => MirrorDirection::Vertical,
-            "horizontal" => MirrorDirection::Horizontal,
-            other => {
-                return Err(PyValueError::new_err(format!(
-                    "unknown mirror direction: {other}"
-                )))
-            }
-        };
-        self.inner.mirror(MirrorAxis {
-            direction: axis_direction,
-            position,
-        });
-        Ok(())
-    }
-
     /// Sets the fill color; returns whether the entity supports
     /// fills.
     fn set_fill_color(&mut self, color: Option<[f64; 4]>) -> bool {
@@ -554,6 +534,22 @@ impl PyEllipse {
     ) {
         self.inner
             .append_to_geometry(&mut geo.inner, &registry, forward);
+    }
+
+    /// Rotation angle of the x radius in radians.
+    fn get_rotation(&self, registry: PointCtx<'_>) -> f64 {
+        self.inner.rotation(&registry)
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "Ellipse(id={}, center={}, radius_x_pt={}, radius_y_pt={}, construction={})",
+            self.inner.base.id,
+            self.inner.center,
+            self.inner.radius_x_point,
+            self.inner.radius_y_point,
+            self.inner.base.construction
+        )
     }
 
     /// The fill geometry of the entity, if it supports fills.
