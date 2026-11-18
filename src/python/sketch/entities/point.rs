@@ -40,7 +40,7 @@ impl PySketchPoint {
         }
     }
 
-    fn write_back(&self) {
+    pub(crate) fn write_back(&self) {
         if let Some(registry) = &self.registry {
             Python::attach(|py| {
                 let _ = registry.bind(py).call_method1(

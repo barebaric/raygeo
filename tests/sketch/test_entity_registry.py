@@ -522,3 +522,31 @@ def test_constrained_status_write_back():
     line.update_constrained_status(registry, [])
 
     assert registry.is_constrained(line_id) is True
+
+
+def test_reference_setters_write_back():
+    registry = EntityRegistry()
+    p1 = registry.add_point(0, 0)
+    p2 = registry.add_point(10, 0)
+    line_id = registry.add_line(p1, p2)
+
+    line = registry.get_entity(line_id)
+    line.p1_idx = p2
+    line.p2_idx = p1
+
+    data = registry.entity_to_dict(line_id)
+    assert data["p1_idx"] == p2
+    assert data["p2_idx"] == p1
+
+
+def test_remap_references_writes_back():
+    registry = EntityRegistry()
+    p1 = registry.add_point(0, 0)
+    p2 = registry.add_point(10, 0)
+    p3 = registry.add_point(20, 0)
+    line_id = registry.add_line(p1, p2)
+
+    line = registry.get_entity(line_id)
+    line.remap_references({p1: p3})
+
+    assert registry.entity_to_dict(line_id)["p1_idx"] == p3

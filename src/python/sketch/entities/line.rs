@@ -70,6 +70,7 @@ impl PyLine {
     #[setter]
     fn set_p1_idx(&mut self, value: i64) {
         self.inner.p1 = value as u64;
+        self.write_back();
     }
 
     /// Second endpoint point id.
@@ -81,6 +82,7 @@ impl PyLine {
     #[setter]
     fn set_p2_idx(&mut self, value: i64) {
         self.inner.p2 = value as u64;
+        self.write_back();
     }
 
     /// Whether the entity is construction geometry.
@@ -150,6 +152,7 @@ impl PyLine {
     fn set_fill_color_attr(&mut self, value: Option<(f64, f64, f64, f64)>) {
         self.inner.base_mut().fill_color =
             value.map(|(r, g, b, a)| [r, g, b, a]);
+        self.write_back();
     }
 
     /// The entity type name.
@@ -253,7 +256,7 @@ impl PyLine {
         supported
     }
     /// Persists in-place edits back to the owning registry, if any.
-    fn write_back(&self) {
+    pub(crate) fn write_back(&self) {
         if let Some(registry) = &self.registry {
             Python::attach(|py| {
                 if let Ok(dict) =

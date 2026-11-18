@@ -71,6 +71,7 @@ impl PyCircle {
     #[setter]
     fn set_center_idx(&mut self, value: i64) {
         self.inner.center = value as u64;
+        self.write_back();
     }
 
     /// Radius point id.
@@ -82,6 +83,7 @@ impl PyCircle {
     #[setter]
     fn set_radius_pt_idx(&mut self, value: i64) {
         self.inner.radius_point = value as u64;
+        self.write_back();
     }
 
     /// Whether the entity is construction geometry.
@@ -151,6 +153,7 @@ impl PyCircle {
     fn set_fill_color_attr(&mut self, value: Option<(f64, f64, f64, f64)>) {
         self.inner.base_mut().fill_color =
             value.map(|(r, g, b, a)| [r, g, b, a]);
+        self.write_back();
     }
 
     /// The entity type name.
@@ -258,7 +261,7 @@ impl PyCircle {
         supported
     }
     /// Persists in-place edits back to the owning registry, if any.
-    fn write_back(&self) {
+    pub(crate) fn write_back(&self) {
         if let Some(registry) = &self.registry {
             Python::attach(|py| {
                 if let Ok(dict) =
