@@ -13,7 +13,6 @@ use crate::python::geo::geometry::Geometry as PyGeometry;
 use crate::python::sketch::constraints::dict_from_value;
 use crate::python::sketch::context::PointCtx;
 use crate::python::sketch::entities::signature_to_py;
-use crate::sketch::entities::mirror::{MirrorAxis, MirrorDirection};
 use crate::sketch::entities::polygon::PolygonEntity as CorePolygon;
 use crate::sketch::entities::Entity;
 
@@ -296,25 +295,6 @@ impl PyPolygon {
         self.inner.tangent_at(&registry, point_id)
     }
 
-    /// Mirrors the entity across the axis.
-    #[pyo3(signature = (direction, position))]
-    fn mirror(&mut self, direction: &str, position: f64) -> PyResult<()> {
-        let axis_direction = match direction {
-            "vertical" => MirrorDirection::Vertical,
-            "horizontal" => MirrorDirection::Horizontal,
-            other => {
-                return Err(PyValueError::new_err(format!(
-                    "unknown mirror direction: {other}"
-                )))
-            }
-        };
-        self.inner.mirror(MirrorAxis {
-            direction: axis_direction,
-            position,
-        });
-        Ok(())
-    }
-
     /// Sets the fill color; returns whether the entity supports
     /// fills.
     fn set_fill_color(&mut self, color: Option<[f64; 4]>) -> bool {
@@ -390,7 +370,6 @@ impl PyPolygon {
         closed: bool,
         world_holes: Option<Vec<Vec<(f64, f64)>>>,
     ) -> PyResult<(Py<PyAny>, Py<PyAny>, Py<PyPolygon>)> {
-        let _ = id;
         let (cx, cy) = center_pos;
         let (dx, dy) = (handle_pos.0 - cx, handle_pos.1 - cy);
         let scale = dx.hypot(dy);
@@ -412,7 +391,7 @@ impl PyPolygon {
             .map(|ring| ring.iter().map(|&v| to_local(v)).collect())
             .collect();
         let inner = CorePolygon::new(
-            0,
+            id as u64,
             center,
             handle,
             local_vertices,
@@ -427,7 +406,27 @@ impl PyPolygon {
                 registry: None,
             }),
         )?;
-        Ok((py.None(), py.None(), polygon))
+        let make_point = |pid: u64, pos: (f64, f64)| -> PyResult<Py<PyAny>> {
+            Ok(Py::new(
+                py,
+                super::point::PySketchPoint {
+                    inner: crate::sketch::entities::point::SketchPoint {
+                        id: pid,
+                        x: pos.0,
+                        y: pos.1,
+                        fixed: false,
+                        waypoint_type:
+                            crate::sketch::entities::point::WaypointType::Sharp,
+                        constrained: false,
+                    },
+                    registry: None,
+                },
+            )?
+            .into_any())
+        };
+        let center_pt = make_point(center, center_pos)?;
+        let handle_pt = make_point(handle, handle_pos)?;
+        Ok((center_pt, handle_pt, polygon))
     }
     /// The polygon's rings in world coordinates.
     fn get_world_rings(&self, registry: PointCtx<'_>) -> Vec<Vec<(f64, f64)>> {

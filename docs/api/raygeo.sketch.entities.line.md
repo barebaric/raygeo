@@ -404,20 +404,6 @@ Whether the entity has a radius (arc, circle).
 | --------- | ------ | ----------- |
 | _Returns_ | `bool` |             |
 
-### `mirror()`
-
-```python
-mirror(direction: str, position: float) -> None
-```
-
-Mirrors the entity across the axis.
-
-| Parameter   | Type    | Description |
-| ----------- | ------- | ----------- |
-| `direction` | `str`   |             |
-| `position`  | `float` |             |
-| _Returns_   | `None`  |             |
-
 ### `restore_base_flags()`
 
 ```python

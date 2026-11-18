@@ -160,10 +160,6 @@ class Bezier(entities.Entity):
         r"""
         Tangent direction at the point nearest the model-space point.
         """
-    def mirror(self, direction: builtins.str, position: builtins.float) -> None:
-        r"""
-        Mirrors the entity across the axis.
-        """
     def set_fill_color(self, color: typing.Optional[typing.Sequence[builtins.float]]) -> builtins.bool:
         r"""
         Sets the fill color; returns whether the entity supports
@@ -273,6 +269,15 @@ class Bezier(entities.Entity):
     def append_to_geometry(self, geo: geo.Geometry, registry: protocols.Registry, forward: builtins.bool = True) -> None:
         r"""
         Appends the entity's outline to the geometry.
+        """
+    @staticmethod
+    def _sample_bezier(p0x: builtins.float, p0y: builtins.float, c1x: builtins.float, c1y: builtins.float, c2x: builtins.float, c2y: builtins.float, p3x: builtins.float, p3y: builtins.float, segments: builtins.int) -> builtins.list[tuple[builtins.float, builtins.float]]:
+        r"""
+        Samples the cubic curve at *segments* equal parameter steps.
+        """
+    def _get_bbox(self, registry: protocols.Registry) -> tuple[builtins.float, builtins.float, builtins.float, builtins.float]:
+        r"""
+        Bounding box as (min_x, min_y, max_x, max_y).
         """
     def create_fill_geometry(self, registry: protocols.Registry) -> typing.Optional[geo.Geometry]:
         r"""

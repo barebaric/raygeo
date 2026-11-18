@@ -16,7 +16,6 @@ use crate::python::sketch::constraints::dict_from_value;
 use crate::python::sketch::context::PointCtx;
 use crate::python::sketch::entities::signature_to_py;
 use crate::python::sketch::registry::PyEntityRegistry;
-use crate::sketch::entities::mirror::{MirrorAxis, MirrorDirection};
 use crate::sketch::entities::text_box::TextBoxEntity as CoreTextBox;
 use crate::sketch::entities::Entity;
 
@@ -343,8 +342,15 @@ impl PyTextBox {
     }
 
     /// Returns the entity's toolpath geometry in model coordinates.
-    fn to_geometry(&self, registry: PointCtx<'_>) -> PyGeometry {
-        let geometry = Entity::to_geometry(&self.inner, &registry);
+    #[pyo3(signature = (registry, resolved_content = None))]
+    fn to_geometry(
+        &self,
+        registry: PointCtx<'_>,
+        resolved_content: Option<String>,
+    ) -> PyGeometry {
+        let geometry = self
+            .inner
+            .to_geometry(&registry, resolved_content.as_deref());
         PyGeometry { inner: geometry }
     }
 
@@ -406,25 +412,6 @@ impl PyTextBox {
                 "tangent not defined for this entity",
             )
         })
-    }
-
-    /// Mirrors the entity across the axis.
-    #[pyo3(signature = (direction, position))]
-    fn mirror(&mut self, direction: &str, position: f64) -> PyResult<()> {
-        let axis_direction = match direction {
-            "vertical" => MirrorDirection::Vertical,
-            "horizontal" => MirrorDirection::Horizontal,
-            other => {
-                return Err(PyValueError::new_err(format!(
-                    "unknown mirror direction: {other}"
-                )))
-            }
-        };
-        self.inner.mirror(MirrorAxis {
-            direction: axis_direction,
-            position,
-        });
-        Ok(())
     }
 
     /// Sets the fill color; returns whether the entity supports

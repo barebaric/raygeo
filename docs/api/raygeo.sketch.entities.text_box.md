@@ -518,20 +518,6 @@ Whether the entity has a radius (arc, circle).
 | --------- | ------ | ----------- |
 | _Returns_ | `bool` |             |
 
-### `mirror()`
-
-```python
-mirror(direction: str, position: float) -> None
-```
-
-Mirrors the entity across the axis.
-
-| Parameter   | Type    | Description |
-| ----------- | ------- | ----------- |
-| `direction` | `str`   |             |
-| `position`  | `float` |             |
-| _Returns_   | `None`  |             |
-
 ### `restore_base_flags()`
 
 ```python
@@ -643,15 +629,19 @@ Serializes the entity to the reference dictionary shape.
 ### `to_geometry()`
 
 ```python
-to_geometry(registry: protocols.Registry) -> geo.Geometry
+to_geometry(
+    registry: protocols.Registry,
+    resolved_content: Optional[str] = None,
+) -> geo.Geometry
 ```
 
 Returns the entity's toolpath geometry in model coordinates.
 
-| Parameter  | Type                 | Description |
-| ---------- | -------------------- | ----------- |
-| `registry` | `protocols.Registry` |             |
-| _Returns_  | `geo.Geometry`       |             |
+| Parameter          | Type                   | Description |
+| ------------------ | ---------------------- | ----------- |
+| `registry`         | `protocols.Registry`   |             |
+| `resolved_content` | `Optional[str] = None` |             |
+| _Returns_          | `geo.Geometry`         |             |
 
 ### `to_polygon_vertices()`
 

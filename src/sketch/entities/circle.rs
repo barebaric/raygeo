@@ -220,6 +220,13 @@ impl Entity for Circle {
         remap_id(&mut self.radius_point, map);
     }
 
+    fn create_fill_geometry(
+        &self,
+        model: &dyn PointContext,
+    ) -> Option<Geometry> {
+        Some(self.to_geometry(model))
+    }
+
     fn to_geometry(&self, model: &dyn PointContext) -> Geometry {
         let mut geo = Geometry::new();
         let (Some((cx, cy)), Some((px, py))) = (

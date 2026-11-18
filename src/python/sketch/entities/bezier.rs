@@ -6,6 +6,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
+use crate::geo::types::Point;
 use crate::python::sketch::types::EntityId;
 
 use super::PyEntityBase;
@@ -15,7 +16,6 @@ use crate::python::sketch::context::PointCtx;
 use crate::python::sketch::entities::signature_to_py;
 use crate::sketch::constraint::PointContext;
 use crate::sketch::entities::bezier::Bezier as CoreBezier;
-use crate::sketch::entities::mirror::{MirrorAxis, MirrorDirection};
 use crate::sketch::entities::Entity;
 
 /// A cubic bezier segment with optional control point offsets.
@@ -286,25 +286,6 @@ impl PyBezier {
         })
     }
 
-    /// Mirrors the entity across the axis.
-    #[pyo3(signature = (direction, position))]
-    fn mirror(&mut self, direction: &str, position: f64) -> PyResult<()> {
-        let axis_direction = match direction {
-            "vertical" => MirrorDirection::Vertical,
-            "horizontal" => MirrorDirection::Horizontal,
-            other => {
-                return Err(PyValueError::new_err(format!(
-                    "unknown mirror direction: {other}"
-                )))
-            }
-        };
-        self.inner.mirror(MirrorAxis {
-            direction: axis_direction,
-            position,
-        });
-        Ok(())
-    }
-
     /// Sets the fill color; returns whether the entity supports
     /// fills.
     fn set_fill_color(&mut self, color: Option<[f64; 4]>) -> bool {
@@ -530,6 +511,38 @@ impl PyBezier {
     ) {
         self.inner
             .append_to_geometry(&mut geo.inner, &registry, forward);
+    }
+
+    /// Samples the cubic curve at *segments* equal parameter steps.
+    #[staticmethod]
+    #[allow(clippy::too_many_arguments)]
+    fn _sample_bezier(
+        p0x: f64,
+        p0y: f64,
+        c1x: f64,
+        c1y: f64,
+        c2x: f64,
+        c2y: f64,
+        p3x: f64,
+        p3y: f64,
+        segments: usize,
+    ) -> Vec<(f64, f64)> {
+        crate::geo::shape::bezier::get_bezier_samples(
+            Point::new(p0x, p0y),
+            Point::new(c1x, c1y),
+            Point::new(c2x, c2y),
+            Point::new(p3x, p3y),
+            segments,
+        )
+        .into_iter()
+        .map(|p| (p.x, p.y))
+        .collect()
+    }
+
+    /// Bounding box as (min_x, min_y, max_x, max_y).
+    fn _get_bbox(&self, registry: PointCtx<'_>) -> (f64, f64, f64, f64) {
+        let rect = self.inner.bbox(&registry);
+        (rect.min.x, rect.min.y, rect.max.x, rect.max.y)
     }
 
     /// The fill geometry of the entity, if it supports fills.
