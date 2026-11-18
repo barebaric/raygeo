@@ -1528,7 +1528,7 @@ class Ops:
         :param offset_mm: Offset in millimeters to apply to RTL passes.
         :complexity: O(n) time, O(n) space
         """
-    def mesh_correction(self, x0: builtins.float, y0: builtins.float, dx: builtins.float, dy: builtins.float, heights: numpy.typing.NDArray[numpy.float64], z_offset: builtins.float = 0.0) -> None:
+    def mesh_correction(self, x0: builtins.float, y0: builtins.float, dx: builtins.float, dy: builtins.float, heights: numpy.typing.NDArray[numpy.float64], z_offset: builtins.float = 0.0, subdivide: builtins.bool = False) -> None:
         r"""
         Warp every moving command's Z onto a probed bed height map.
         
@@ -1549,6 +1549,8 @@ class Ops:
             ``(x0 + i*dx, y0 + j*dy)``.
         :param z_offset: Constant Z added on top of every sampled
             height.
+        :param subdivide: Split straight cutting moves where they
+            cross a grid line, so Z follows the map between grid points.
         :complexity: O(n) time, O(n) extra space
         """
     def apply_multipass(self, passes: builtins.int, z_step_down: builtins.float) -> None:

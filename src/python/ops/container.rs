@@ -3300,8 +3300,11 @@ impl PyOps {
     ///     ``(x0 + i*dx, y0 + j*dy)``.
     /// :param z_offset: Constant Z added on top of every sampled
     ///     height.
+    /// :param subdivide: Split straight cutting moves where they
+    ///     cross a grid line, so Z follows the map between grid points.
     /// :complexity: O(n) time, O(n) extra space
-    #[pyo3(signature = (x0, y0, dx, dy, heights, z_offset=0.0))]
+    #[pyo3(signature = (x0, y0, dx, dy, heights, z_offset=0.0, subdivide=false))]
+    #[allow(clippy::too_many_arguments)]
     fn mesh_correction(
         &mut self,
         x0: f64,
@@ -3310,6 +3313,7 @@ impl PyOps {
         dy: f64,
         heights: PyReadonlyArray2<f64>,
         z_offset: f64,
+        subdivide: bool,
     ) -> PyResult<()> {
         let array = heights.as_array();
         let spec = crate::ops::transform::mesh_correction::MeshCorrectionSpec {
@@ -3321,6 +3325,7 @@ impl PyOps {
             nx: array.shape()[1],
             ny: array.shape()[0],
             z_offset,
+            subdivide,
         };
         let callbacks = PyCallableCallbacks::new(None);
         crate::ops::transform::mesh_correction::mesh_correction(

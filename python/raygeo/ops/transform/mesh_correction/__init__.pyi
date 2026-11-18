@@ -45,12 +45,17 @@ class MeshCorrectionSpec:
         Constant Z added on top of every sampled height.
         """
     @property
+    def subdivide(self) -> builtins.bool:
+        r"""
+        Whether straight cutting moves are split at grid lines.
+        """
+    @property
     def heights(self) -> numpy.typing.NDArray[numpy.float64]:
         r"""
         The probed heights as a ``(ny, nx)`` float64 array.
         """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __new__(cls, x0: builtins.float, y0: builtins.float, dx: builtins.float, dy: builtins.float, heights: numpy.typing.NDArray[numpy.float64], z_offset: builtins.float = 0.0) -> MeshCorrectionSpec:
+    def __new__(cls, x0: builtins.float, y0: builtins.float, dx: builtins.float, dy: builtins.float, heights: numpy.typing.NDArray[numpy.float64], z_offset: builtins.float = 0.0, subdivide: builtins.bool = False) -> MeshCorrectionSpec:
         r"""
         :param x0: X coordinate of the first grid column.
         :param y0: Y coordinate of the first grid row.
@@ -61,5 +66,7 @@ class MeshCorrectionSpec:
             ``(x0 + i*dx, y0 + j*dy)``.
         :param z_offset: Constant Z added on top of every sampled
             height.
+        :param subdivide: Split straight cutting moves where they
+            cross a grid line, so Z follows the map between grid points.
         """
 
