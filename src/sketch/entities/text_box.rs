@@ -267,7 +267,7 @@ impl Entity for TextBoxEntity {
     }
 
     fn get_junction_point_ids(&self) -> Vec<u64> {
-        Vec::new()
+        vec![self.origin, self.width, self.height]
     }
 
     fn get_helper_ids(&self) -> Vec<u64> {
