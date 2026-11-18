@@ -10,8 +10,6 @@ from raygeo.sketch.entities.bezier import Bezier
 from raygeo.sketch.entities.circle import Circle
 from raygeo.sketch.entities.ellipse import Ellipse
 from raygeo.sketch.entities.line import Line
-from raygeo.sketch.entities.offset import PolygonOutline
-from raygeo.sketch.entities.offset import OffsetPlan
 from raygeo.sketch.entities.point import SketchPoint
 from raygeo.sketch.entities.polygon import Polygon
 from raygeo.sketch.entities.text_box import TextBox

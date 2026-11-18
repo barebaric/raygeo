@@ -989,14 +989,6 @@ pyo3_stub_gen::reexport_module_members!(
     "raygeo.sketch.entities" from "raygeo.sketch.entities.text_box";
     "TextBox"
 );
-pyo3_stub_gen::reexport_module_members!(
-    "raygeo.sketch.entities" from "raygeo.sketch.entities.offset";
-    "OffsetPlan"
-);
-pyo3_stub_gen::reexport_module_members!(
-    "raygeo.sketch.entities" from "raygeo.sketch.entities.offset";
-    "PolygonOutline"
-);
 
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = m.py();
