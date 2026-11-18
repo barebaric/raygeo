@@ -51,6 +51,9 @@ pub struct MeshCorrectionSpec {
     /// Constant Z added on top of every sampled height.
     #[pyo3(get)]
     pub z_offset: f64,
+    /// Whether straight cutting moves are split at grid lines.
+    #[pyo3(get)]
+    pub subdivide: bool,
     pub(crate) heights: Vec<f64>,
     pub(crate) nx: usize,
     pub(crate) ny: usize,
@@ -68,6 +71,7 @@ impl MeshCorrectionSpec {
             nx: self.nx,
             ny: self.ny,
             z_offset: self.z_offset,
+            subdivide: self.subdivide,
         }
     }
 }
@@ -84,8 +88,10 @@ impl MeshCorrectionSpec {
     ///     ``(x0 + i*dx, y0 + j*dy)``.
     /// :param z_offset: Constant Z added on top of every sampled
     ///     height.
+    /// :param subdivide: Split straight cutting moves where they
+    ///     cross a grid line, so Z follows the map between grid points.
     #[new]
-    #[pyo3(signature = (x0, y0, dx, dy, heights, z_offset = 0.0))]
+    #[pyo3(signature = (x0, y0, dx, dy, heights, z_offset = 0.0, subdivide = false))]
     fn new(
         x0: f64,
         y0: f64,
@@ -93,6 +99,7 @@ impl MeshCorrectionSpec {
         dy: f64,
         heights: PyReadonlyArray2<f64>,
         z_offset: f64,
+        subdivide: bool,
     ) -> PyResult<Self> {
         let array = heights.as_array();
         let (ny, nx) = (array.shape()[0], array.shape()[1]);
@@ -105,6 +112,7 @@ impl MeshCorrectionSpec {
             nx,
             ny,
             z_offset,
+            subdivide,
         })
         .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
         Ok(MeshCorrectionSpec {
@@ -116,6 +124,7 @@ impl MeshCorrectionSpec {
             heights: spec.heights,
             nx: spec.nx,
             ny: spec.ny,
+            subdivide: spec.subdivide,
         })
     }
 

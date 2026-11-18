@@ -159,3 +159,108 @@ class TestMeshCorrection:
         ops.line_to(10, 10, 0)
         with pytest.raises(ValueError):
             ops.mesh_correction(0, 0, 10, 10, np.zeros((0, 2)))
+
+
+class TestMeshCorrectionSubdivide:
+    def test_off_by_default_keeps_command_count(self):
+        ops = Ops()
+        ops.move_to(0, 0, 0)
+        ops.line_to(100, 0, 0)
+        ops.mesh_correction(0, 0, 10, 10, np.zeros((2, 11)))
+        assert ops.len() == 2
+
+    def test_line_split_at_every_grid_line_it_crosses(self):
+        ops = Ops()
+        ops.move_to(5, 5, 0)
+        ops.line_to(35, 5, 0)
+        grid = np.array([[0.0, 1.0, 0.0, 1.0, 0.0]] * 2)
+        ops.mesh_correction(0, 0, 10, 10, grid, subdivide=True)
+        # Crosses x = 10, 20, 30: three extra points on the lines.
+        assert ops.len() == 5
+        xs = [ops.endpoint(i)[0] for i in range(ops.len())]
+        assert xs == pytest.approx([5, 10, 20, 30, 35])
+        zs = [ops.endpoint(i)[2] for i in range(ops.len())]
+        assert zs == pytest.approx([0.5, 1.0, 0.0, 1.0, 0.5])
+
+    def test_without_split_the_bump_between_ends_is_lost(self):
+        ops = Ops()
+        ops.move_to(0, 0, 0)
+        ops.line_to(20, 0, 0)
+        grid = np.array([[0.0, 3.0, 0.0]] * 2)
+        ops.mesh_correction(0, 0, 10, 10, grid)
+        assert ops.endpoint(1)[2] == pytest.approx(0.0)
+        ops = Ops()
+        ops.move_to(0, 0, 0)
+        ops.line_to(20, 0, 0)
+        ops.mesh_correction(0, 0, 10, 10, grid, subdivide=True)
+        assert ops.endpoint(1) == pytest.approx((10.0, 0.0, 3.0))
+
+    def test_diagonal_line_split_on_both_axes_in_order(self):
+        ops = Ops()
+        ops.move_to(0, 0, 0)
+        ops.line_to(25, 15, 0)
+        ops.mesh_correction(0, 0, 10, 10, np.zeros((3, 4)), subdivide=True)
+        pts = [ops.endpoint(i) for i in range(ops.len())]
+        ts = [p[0] / 25 for p in pts]
+        assert ts == sorted(ts)
+        # x = 10, 20 and y = 10 (t = 0.4, 0.8, 0.667).
+        assert ops.len() == 5
+        for x, y, _z in pts[1:]:
+            assert y == pytest.approx(x * 15 / 25)
+
+    def test_line_z_is_interpolated_before_correction(self):
+        ops = Ops()
+        ops.move_to(0, 0, 0)
+        ops.line_to(20, 0, 2)
+        ops.mesh_correction(0, 0, 10, 10, np.zeros((2, 3)), subdivide=True)
+        assert ops.endpoint(1) == pytest.approx((10.0, 0.0, 1.0))
+
+    def test_travel_moves_are_not_split(self):
+        ops = Ops()
+        ops.move_to(0, 0, 0)
+        ops.move_to(50, 0, 0)
+        ops.mesh_correction(0, 0, 10, 10, np.zeros((2, 6)), subdivide=True)
+        assert ops.len() == 2
+
+    def test_line_on_a_grid_line_is_not_split_along_it(self):
+        ops = Ops()
+        ops.move_to(10, 0, 0)
+        ops.line_to(10, 5, 0)
+        ops.mesh_correction(0, 0, 10, 10, np.zeros((2, 3)), subdivide=True)
+        assert ops.len() == 2
+
+    def test_outside_the_grid_nothing_to_split(self):
+        ops = Ops()
+        ops.move_to(-50, 0, 0)
+        ops.line_to(-10, 0, 0)
+        ops.mesh_correction(0, 0, 10, 10, np.zeros((2, 3)), subdivide=True)
+        assert ops.len() == 2
+
+    def test_scanline_split_keeps_every_power_value(self):
+        ops = Ops()
+        ops.move_to(0, 5, 0)
+        power = list(range(1, 41))
+        ops.scan_to(40, 5, 0, power_values=power)
+        ops.mesh_correction(0, 0, 10, 10, np.zeros((2, 5)), subdivide=True)
+        # Crosses x = 10, 20, 30: four pieces of ten values each.
+        assert ops.len() == 5
+        pieces = [list(ops.scanline_data(i)) for i in range(1, 5)]
+        assert [len(p) for p in pieces] == [10, 10, 10, 10]
+        assert sum(pieces, []) == power
+        xs = [ops.endpoint(i)[0] for i in range(1, 5)]
+        assert xs == pytest.approx([10, 20, 30, 40])
+
+    def test_spec_carries_subdivide(self):
+        from raygeo.ops.transform.mesh_correction import MeshCorrectionSpec
+
+        spec = MeshCorrectionSpec(0, 0, 10, 10, np.zeros((2, 3)))
+        assert spec.subdivide is False
+        spec = MeshCorrectionSpec(
+            0, 0, 10, 10, np.zeros((2, 3)), subdivide=True
+        )
+        assert spec.subdivide is True
+        ops = Ops()
+        ops.move_to(0, 0, 0)
+        ops.line_to(20, 0, 0)
+        Ops.apply_transformers(ops, [spec], progress_cb=None)
+        assert ops.len() == 3

@@ -34,6 +34,14 @@ heights: numpy.NDArray[numpy.float64]
 
 The probed heights as a `(ny, nx)` float64 array.
 
+### `subdivide`
+
+```python
+subdivide: bool
+```
+
+Whether straight cutting moves are split at grid lines.
+
 ### `x0`
 
 ```python

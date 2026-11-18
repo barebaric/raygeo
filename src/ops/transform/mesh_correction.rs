@@ -7,10 +7,13 @@
 //! Z, in place.
 
 use crate::error::RaygeoError;
+use crate::geo::types::Point3D;
 use crate::ops::callbacks::Callbacks;
 use crate::ops::container::Ops;
 use crate::ops::transform::{Phase, Transformer};
-use crate::ops::types::{MoveCmd, OpCategory};
+use crate::ops::types::{MoveCmd, OpCategory, OpNode};
+
+use std::sync::Arc;
 
 /// A probed bed height map and the parameters needed to sample it.
 #[derive(Clone, Debug, PartialEq)]
@@ -37,6 +40,12 @@ pub struct MeshCorrectionSpec {
     /// offset above the surface or the distance between the original
     /// Z reference plane and the height map datum.
     pub z_offset: f64,
+    /// Split straight cutting moves (``LineTo`` and scanlines) where
+    /// they cross a grid line, so Z follows the height map between
+    /// grid points instead of only at each move's ends. Travel moves,
+    /// arcs and beziers are not split, nor are moves that carry extra
+    /// axes.
+    pub subdivide: bool,
 }
 
 impl MeshCorrectionSpec {
@@ -151,11 +160,17 @@ impl Transformer for MeshCorrectionSpec {
         self.nx.hash(&mut h);
         self.ny.hash(&mut h);
         self.z_offset.to_bits().hash(&mut h);
+        self.subdivide.hash(&mut h);
         h.finish()
     }
 }
 
 /// Warp every moving command's Z onto the height map in *spec*.
+///
+/// With [`MeshCorrectionSpec::subdivide`] set, straight cutting moves
+/// are first split where they cross a grid line, so a long line follows
+/// the map between grid points instead of running straight from one
+/// corrected end to the other.
 ///
 /// The height at each command's XY position is sampled bilinearly from
 /// the grid and added to the command's Z together with
@@ -176,6 +191,10 @@ pub fn mesh_correction(
     spec.validate()?;
     if callbacks.is_cancelled() || ops.is_empty() {
         return Ok(());
+    }
+
+    if spec.subdivide {
+        subdivide_at_grid_lines(ops, spec);
     }
 
     let total = ops.len();
@@ -211,4 +230,124 @@ pub fn mesh_correction(
     callbacks.report_progress(1.0, "mesh_correction");
     ops.invalidate_time_cache();
     Ok(())
+}
+
+/// Parameters ``t`` in ``(0, 1)`` where the segment from *start* to
+/// *end* crosses a grid column or row line, sorted and without
+/// duplicates.
+fn grid_crossings(
+    spec: &MeshCorrectionSpec,
+    start: Point3D,
+    end: Point3D,
+) -> Vec<f64> {
+    const EPS: f64 = 1e-9;
+    let mut ts = Vec::new();
+    let mut axis = |a0: f64, a1: f64, origin: f64, step: f64, n: usize| {
+        if n < 2 || (a1 - a0).abs() < EPS {
+            return;
+        }
+        let (lo, hi) = if a0 < a1 { (a0, a1) } else { (a1, a0) };
+        let first = (((lo - origin) / step).ceil().max(0.0)) as usize;
+        let last = (((hi - origin) / step).floor()).min((n - 1) as f64);
+        if last < 0.0 {
+            return;
+        }
+        for k in first..=(last as usize) {
+            let line = origin + k as f64 * step;
+            let t = (line - a0) / (a1 - a0);
+            if t > EPS && t < 1.0 - EPS {
+                ts.push(t);
+            }
+        }
+    };
+    axis(start.x, end.x, spec.x0, spec.dx, spec.nx);
+    axis(start.y, end.y, spec.y0, spec.dy, spec.ny);
+    ts.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+    ts.dedup_by(|a, b| (*a - *b).abs() < EPS);
+    ts
+}
+
+fn with_end(node: &OpNode, end: Point3D, cmd: MoveCmd) -> OpNode {
+    OpNode {
+        category: OpCategory::Moving { end, cmd },
+        state: node.state.clone(),
+        extra_axes: None,
+    }
+}
+
+/// Replace each straight cutting move that crosses a grid line with
+/// pieces that end on the grid lines (see
+/// [`MeshCorrectionSpec::subdivide`]). Runs before Z is corrected, on
+/// the original coordinates.
+fn subdivide_at_grid_lines(ops: &mut Ops, spec: &MeshCorrectionSpec) {
+    let source = std::mem::take(ops.cmds_mut());
+    let mut out: Vec<OpNode> = Vec::with_capacity(source.len());
+    let mut prev: Option<Point3D> = None;
+    for node in source {
+        let OpCategory::Moving { end, cmd } = &node.category else {
+            out.push(node);
+            continue;
+        };
+        let end = *end;
+        let start = prev;
+        prev = if end.x.is_finite() && end.y.is_finite() {
+            Some(end)
+        } else {
+            None
+        };
+        let Some(start) = start else {
+            out.push(node);
+            continue;
+        };
+        if node.extra_axes.is_some() {
+            out.push(node);
+            continue;
+        }
+        match cmd {
+            MoveCmd::LineTo => {
+                for t in grid_crossings(spec, start, end) {
+                    out.push(with_end(
+                        &node,
+                        start.lerp(end, t),
+                        MoveCmd::LineTo,
+                    ));
+                }
+                out.push(node);
+            }
+            MoveCmd::ScanLine { power_values } => {
+                let n = power_values.len();
+                let mut cuts: Vec<usize> = grid_crossings(spec, start, end)
+                    .into_iter()
+                    .map(|t| (t * n as f64).round() as usize)
+                    .filter(|&k| k > 0 && k < n)
+                    .collect();
+                cuts.dedup();
+                if cuts.is_empty() {
+                    out.push(node);
+                    continue;
+                }
+                let mut from = 0;
+                for &k in &cuts {
+                    let piece = Arc::new(power_values[from..k].to_vec());
+                    let point = start.lerp(end, k as f64 / n as f64);
+                    out.push(with_end(
+                        &node,
+                        point,
+                        MoveCmd::ScanLine {
+                            power_values: piece,
+                        },
+                    ));
+                    from = k;
+                }
+                let rest = Arc::new(power_values[from..].to_vec());
+                out.push(with_end(
+                    &node,
+                    end,
+                    MoveCmd::ScanLine { power_values: rest },
+                ));
+            }
+            _ => out.push(node),
+        }
+    }
+    *ops.cmds_mut() = out;
 }
