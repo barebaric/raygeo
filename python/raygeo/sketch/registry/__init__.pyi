@@ -222,11 +222,12 @@ class EntityRegistry:
         r"""
         Waypoint type string of a point ("sharp"/"smooth"/"symmetric").
         """
-    def get_point(self, id: types.EntityID) -> typing.Optional[point.SketchPoint]:
+    def get_point(self, idx: types.EntityID) -> point.SketchPoint:
         r"""
-        Coordinates of a point as ``(x, y)``, or ``None``.
+        Coordinates of a point as ``(x, y)``; raises ``IndexError``
+        for an unknown id.
         """
-    def get_point_object(self, id: types.EntityID) -> typing.Optional[point.SketchPoint]:
+    def get_point_object(self, idx: types.EntityID) -> typing.Optional[point.SketchPoint]:
         r"""
         The point object for an id (with id/coords/flags), or None.
         """
@@ -363,12 +364,12 @@ class EntityRegistry:
         r"""
         All entities as their concrete classes.
         """
-    def get_entity(self, id: types.EntityID) -> typing.Optional[entities.Entity]:
+    def get_entity(self, idx: types.EntityID) -> typing.Optional[entities.Entity]:
         r"""
         The entity object for an id, or None.
         Alias for get_entity_object (reference naming).
         """
-    def get_entity_object(self, id: types.EntityID) -> typing.Optional[entities.Entity]: ...
+    def get_entity_object(self, idx: types.EntityID) -> typing.Optional[entities.Entity]: ...
     def add_entity(self, obj: typing.Any) -> builtins.int:
         r"""
         Adds an entity object to the registry and returns its id.

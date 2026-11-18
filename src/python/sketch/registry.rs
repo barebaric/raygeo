@@ -1,6 +1,6 @@
 //! Python bindings for the sketch data model.
 
-use pyo3::exceptions::PyValueError;
+use pyo3::exceptions::{PyIndexError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
@@ -605,21 +605,28 @@ impl PyEntityRegistry {
             .map(|p| p.waypoint_type.as_str().to_string())
     }
 
-    /// Coordinates of a point as ``(x, y)``, or ``None``.
-    fn get_point(slf: &Bound<'_, Self>, id: EntityId) -> Option<PySketchPoint> {
-        let id = id.0;
+    /// Coordinates of a point as ``(x, y)``; raises ``IndexError``
+    /// for an unknown id.
+    fn get_point(
+        slf: &Bound<'_, Self>,
+        idx: EntityId,
+    ) -> PyResult<PySketchPoint> {
+        let id = idx.0;
         let reg = slf.borrow();
         reg.inner
             .get_point(id)
             .map(|point| PySketchPoint::live(point, slf))
+            .ok_or_else(|| {
+                PyIndexError::new_err(format!("Point {id} not found"))
+            })
     }
 
     /// The point object for an id (with id/coords/flags), or None.
     fn get_point_object(
         slf: &Bound<'_, Self>,
-        id: EntityId,
+        idx: EntityId,
     ) -> Option<PySketchPoint> {
-        let id = id.0;
+        let id = idx.0;
         let reg = slf.borrow();
         reg.inner
             .get_point(id)
@@ -1025,17 +1032,17 @@ impl PyEntityRegistry {
     fn get_entity<'py>(
         slf: &Bound<'_, Self>,
         py: Python<'py>,
-        id: EntityId,
+        idx: EntityId,
     ) -> PyResult<Option<AnyEntity<'py>>> {
-        Self::get_entity_object(slf, py, id)
+        Self::get_entity_object(slf, py, idx)
     }
 
     fn get_entity_object<'py>(
         slf: &Bound<'_, Self>,
         py: Python<'py>,
-        id: EntityId,
+        idx: EntityId,
     ) -> PyResult<Option<AnyEntity<'py>>> {
-        let id = id.0;
+        let id = idx.0;
         let reg = slf.borrow();
         match reg.inner.get_entity(id) {
             Some(entity) => entity_to_py(py, entity, Some(slf))

@@ -92,11 +92,10 @@ def test_registry_indices(registry):
 
 
 def test_registry_lookup_failures(registry):
-    """Test behavior when looking up invalid IDs.
-
-    The Rust binding returns None instead of raising IndexError, and
-    has no get_entity; entity_type is the closest equivalent."""
-    assert registry.get_point(999) is None
+    """Test behavior when looking up invalid IDs."""
+    with pytest.raises(IndexError):
+        registry.get_point(999)
+    assert registry.get_point_object(999) is None
 
     # Unknown entity ids resolve to None, don't raise
     assert registry.entity_type(999) is None
@@ -376,8 +375,8 @@ def test_get_point_with_interleaved_entity_ids(registry):
     assert registry.point_ids() == [p1, p2]
     assert registry.get_point(p1) == (0, 0)
     assert registry.get_point(p2) == (10, 10)
-    assert registry.get_point(line_id) is None
-    assert registry.get_point(arc_id) is None
+    assert registry.get_point_object(line_id) is None
+    assert registry.get_point_object(arc_id) is None
 
 
 def test_remove_points_keeps_lookup_consistent(registry):
@@ -390,8 +389,8 @@ def test_remove_points_keeps_lookup_consistent(registry):
     registry.remove_points([p1, p3])
 
     assert registry.point_ids() == [p2]
-    assert registry.get_point(p1) is None
-    assert registry.get_point(p3) is None
+    assert registry.get_point_object(p1) is None
+    assert registry.get_point_object(p3) is None
     assert registry.get_point(p2) == (10.0, 0.0)
 
     registry.remove_points([p2])
@@ -421,7 +420,7 @@ def test_set_points_replaces_list_and_lookup(registry):
     registry.add_points([(old, 5.0, 5.0, False)])
 
     assert registry.get_point(old) == (5.0, 5.0)
-    assert registry.get_point(999) is None
+    assert registry.get_point_object(999) is None
     assert registry.point_count() == 1
 
 
@@ -437,7 +436,7 @@ def test_from_dict_rebuilds_lookup_with_interleaved_ids():
 
     assert new_reg.get_point(p1) == (1, 2)
     assert new_reg.get_point(p2) == (3, 4)
-    assert new_reg.get_point(reg.to_dict()["id_counter"]) is None
+    assert new_reg.get_point_object(reg.to_dict()["id_counter"]) is None
 
 
 def test_next_id_reports_without_consuming():
