@@ -23,41 +23,203 @@ p2: int
 
 Second point.
 
+### `status`
+
+```python
+status: int
+```
+
+Reference validation status ordinal.
+
+### `user_visible`
+
+```python
+user_visible: bool
+```
+
+Reference user-visibility flag.
+
+### `applies_to_entities()`
+
+```python
+@classmethod applies_to_entities(entities: Any) -> bool
+```
+
+Whether all operands are lines.
+
+| Parameter  | Type   | Description |
+| ---------- | ------ | ----------- |
+| `entities` | `Any`  |             |
+| _Returns_  | `bool` |             |
+
+### `can_apply_to()`
+
+```python
+@classmethod can_apply_to(selection: Any, sketch: Optional[Any] = None) -> bool
+```
+
+Whether this constraint can be applied to the selection.
+
+| Parameter   | Type                   | Description |
+| ----------- | ---------------------- | ----------- |
+| `selection` | `Any`                  |             |
+| `sketch`    | `Optional[Any] = None` |             |
+| _Returns_   | `bool`                 |             |
+
+### `draw()`
+
+```python
+draw(
+    ctx: protocols.Canvas,
+    registry: Any,
+    to_screen: Callable[[tuple[float, float]], tuple[float, float]],
+    is_selected: bool = False,
+    is_hovered: bool = False,
+    point_radius: float = 5.0,
+) -> None
+```
+
+Draws the constraint's symbol onto the cairo context.
+
+| Parameter      | Type                                                   | Description |
+| -------------- | ------------------------------------------------------ | ----------- |
+| `ctx`          | `protocols.Canvas`                                     |             |
+| `registry`     | `Any`                                                  |             |
+| `to_screen`    | `Callable[[tuple[float, float]], tuple[float, float]]` |             |
+| `is_selected`  | `bool = False`                                         |             |
+| `is_hovered`   | `bool = False`                                         |             |
+| `point_radius` | `float = 5.0`                                          |             |
+| _Returns_      | `None`                                                 |             |
+
 ### `error()`
 
 ```python
-error(registry: registry.EntityRegistry) -> list[float]
+error(reg: protocols.Registry, params: Optional[Any] = None) -> float
 ```
 
 Returns the constraint error at the registry's point positions.
 
-| Parameter  | Type                      | Description |
-| ---------- | ------------------------- | ----------- |
-| `registry` | `registry.EntityRegistry` |             |
-| _Returns_  | `list[float]`             |             |
+| Parameter | Type                   | Description |
+| --------- | ---------------------- | ----------- |
+| `reg`     | `protocols.Registry`   |             |
+| `params`  | `Optional[Any] = None` |             |
+| _Returns_ | `float`                |             |
+
+### `from_dict()`
+
+```python
+@classmethod from_dict(data: dict) -> Any
+```
+
+Rebuilds the constraint from its reference dictionary shape.
+
+| Parameter | Type   | Description |
+| --------- | ------ | ----------- |
+| `data`    | `dict` |             |
+| _Returns_ | `Any`  |             |
+
+### `get_edit_subtitle()`
+
+```python
+get_edit_subtitle() -> str
+```
+
+The user-facing hint for the constraint edit dialog.
+
+| Parameter | Type  | Description |
+| --------- | ----- | ----------- |
+| _Returns_ | `str` |             |
+
+### `get_subtitle()`
+
+```python
+get_subtitle(registry: protocols.Registry) -> str
+```
+
+The subtitle describing the constrained points.
+
+| Parameter  | Type                 | Description |
+| ---------- | -------------------- | ----------- |
+| `registry` | `protocols.Registry` |             |
+| _Returns_  | `str`                |             |
+
+### `get_title()`
+
+```python
+get_title() -> str
+```
+
+The human-readable title for this constraint.
+
+| Parameter | Type  | Description |
+| --------- | ----- | ----------- |
+| _Returns_ | `str` |             |
+
+### `get_type_key()`
+
+```python
+@classmethod get_type_key() -> str
+```
+
+The string key identifying this constraint type.
+
+| Parameter | Type  | Description |
+| --------- | ----- | ----------- |
+| _Returns_ | `str` |             |
+
+### `get_type_name()`
+
+```python
+get_type_name() -> str
+```
+
+The human-readable type name (translated).
+
+| Parameter | Type  | Description |
+| --------- | ----- | ----------- |
+| _Returns_ | `str` |             |
+
+### `gradient()`
+
+```python
+gradient(
+    reg: protocols.Registry,
+    params: Optional[Any] = None,
+) -> dict[int, list[tuple[float, float]]]
+```
+
+Partial derivatives of the error by point id.
+
+| Parameter | Type                                   | Description |
+| --------- | -------------------------------------- | ----------- |
+| `reg`     | `protocols.Registry`                   |             |
+| `params`  | `Optional[Any] = None`                 |             |
+| _Returns_ | `dict[int, list[tuple[float, float]]]` |             |
 
 ### `is_hit()`
 
 ```python
 is_hit(
-    mx: float,
-    my: float,
+    sx: float,
+    sy: float,
+    registry: protocols.Registry,
+    to_screen: Callable[[tuple[float, float]], tuple[float, float]],
+    element: Optional[Any],
     threshold: float,
-    registry: registry.EntityRegistry,
-    to_screen: Optional[Any] = None,
 ) -> bool
 ```
 
-Whether the constraint's rendered symbol is hit at (mx, my).
+Whether the constraint's rendered symbol is hit at (sx, sy).
 
-| Parameter   | Type                      | Description |
-| ----------- | ------------------------- | ----------- |
-| `mx`        | `float`                   |             |
-| `my`        | `float`                   |             |
-| `threshold` | `float`                   |             |
-| `registry`  | `registry.EntityRegistry` |             |
-| `to_screen` | `Optional[Any] = None`    |             |
-| _Returns_   | `bool`                    |             |
+| Parameter   | Type                                                   | Description |
+| ----------- | ------------------------------------------------------ | ----------- |
+| `sx`        | `float`                                                |             |
+| `sy`        | `float`                                                |             |
+| `registry`  | `protocols.Registry`                                   |             |
+| `to_screen` | `Callable[[tuple[float, float]], tuple[float, float]]` |             |
+| `element`   | `Optional[Any]`                                        |             |
+| `threshold` | `float`                                                |             |
+| _Returns_   | `bool`                                                 |             |
 
 ### `is_world_anchored()`
 
@@ -71,18 +233,31 @@ Whether this constraint pins geometry to global axes.
 | --------- | ------ | ----------- |
 | _Returns_ | `bool` |             |
 
-### `set_user_visible()`
+### `referenced_points()`
 
 ```python
-set_user_visible(value: bool) -> None
+referenced_points(registry: protocols.Registry) -> list[int]
 ```
 
-Sets the reference user-visibility flag.
+Point ids the constraint references.
 
-| Parameter | Type   | Description |
-| --------- | ------ | ----------- |
-| `value`   | `bool` |             |
-| _Returns_ | `None` |             |
+| Parameter  | Type                 | Description |
+| ---------- | -------------------- | ----------- |
+| `registry` | `protocols.Registry` |             |
+| _Returns_  | `list[int]`          |             |
+
+### `remap_references()`
+
+```python
+remap_references(id_map: Mapping[int, int]) -> None
+```
+
+Rewrites every id reference through *id_map*.
+
+| Parameter | Type                | Description |
+| --------- | ------------------- | ----------- |
+| `id_map`  | `Mapping[int, int]` |             |
+| _Returns_ | `None`              |             |
 
 ### `to_dict()`
 
@@ -95,15 +270,3 @@ Serializes to the reference constraint dictionary shape.
 | Parameter | Type   | Description |
 | --------- | ------ | ----------- |
 | _Returns_ | `dict` |             |
-
-### `user_visible()`
-
-```python
-user_visible() -> bool
-```
-
-Reference user-visibility flag.
-
-| Parameter | Type   | Description |
-| --------- | ------ | ----------- |
-| _Returns_ | `bool` |             |
