@@ -78,6 +78,21 @@ impl EntityRegistry {
         }
     }
 
+    /// Sets a point's waypoint role.
+    pub fn set_point_waypoint_type(
+        &mut self,
+        id: u64,
+        waypoint_type: crate::sketch::entities::point::WaypointType,
+    ) -> bool {
+        match self.point_index.get(&id) {
+            Some(&i) => {
+                self.points[i].waypoint_type = waypoint_type;
+                true
+            }
+            None => false,
+        }
+    }
+
     /// Sets a point's solver-constrained flag.
     pub fn set_point_constrained(
         &mut self,

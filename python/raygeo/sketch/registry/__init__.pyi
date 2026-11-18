@@ -189,6 +189,10 @@ class EntityRegistry:
         r"""
         The point object for an id (with id/coords/flags), or None.
         """
+    def set_point_waypoint_type(self, id: types.EntityID, value: builtins.str) -> builtins.bool:
+        r"""
+        Sets a point's waypoint role.
+        """
     def point_is_fixed(self, id: types.EntityID) -> builtins.bool:
         r"""
         Whether a point carries the fixed flag.

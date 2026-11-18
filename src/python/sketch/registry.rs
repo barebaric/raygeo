@@ -543,6 +543,14 @@ impl PyEntityRegistry {
             .map(|point| PySketchPoint::live(point, slf))
     }
 
+    /// Sets a point's waypoint role.
+    fn set_point_waypoint_type(&mut self, id: EntityId, value: String) -> bool {
+        let waypoint_type =
+            crate::sketch::entities::point::WaypointType::parse(&value)
+                .unwrap_or(crate::sketch::entities::point::WaypointType::Sharp);
+        self.inner.set_point_waypoint_type(id.0, waypoint_type)
+    }
+
     /// Whether a point carries the fixed flag.
     fn point_is_fixed(&self, id: EntityId) -> bool {
         let id = id.0;

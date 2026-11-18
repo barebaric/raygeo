@@ -570,6 +570,7 @@ impl PyBezier {
     #[setter]
     fn set_cp1(&mut self, value: Option<(f64, f64)>) {
         self.inner.cp1 = value.map(|cp| [cp.0, cp.1]);
+        self.write_back();
     }
 
     /// Second control point as a ``(dx, dy)`` offset from the end
@@ -582,6 +583,7 @@ impl PyBezier {
     #[setter]
     fn set_cp2(&mut self, value: Option<(f64, f64)>) {
         self.inner.cp2 = value.map(|cp| [cp.0, cp.1]);
+        self.write_back();
     }
 
     /// Absolute control point coordinates, ``None`` per absent

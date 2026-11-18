@@ -120,7 +120,7 @@ class TextBox(entities.Entity):
         r"""
         The entity type name (attribute alias).
         """
-    def __new__(cls, id: builtins.int, origin_id: builtins.int, width_id: builtins.int, height_id: builtins.int, content: builtins.str = '', font_config: typing.Optional[typing.Any] = None, construction: builtins.bool = False) -> TextBox:
+    def __new__(cls, id: builtins.int, origin_id: builtins.int, width_id: builtins.int, height_id: builtins.int, content: builtins.str = '', font_config: typing.Optional[typing.Any] = None, construction: builtins.bool = False, construction_line_ids: typing.Optional[typing.Sequence[builtins.int]] = None) -> TextBox:
         r"""
         Creates a text box with the given id and frame point ids.
         """
@@ -296,5 +296,17 @@ class TextBox(entities.Entity):
     def from_dict(data: dict) -> TextBox:
         r"""
         Builds an entity from its reference dictionary shape.
+        """
+    def get_frame_polygon(self, registry: protocols.Registry) -> typing.Optional[builtins.list[tuple[builtins.float, builtins.float]]]:
+        r"""
+        The four-corner frame polygon in world coordinates.
+        """
+    def get_natural_size(self, content: typing.Optional[builtins.str]) -> tuple[builtins.float, builtins.float]:
+        r"""
+        Natural (width, height) of the text content.
+        """
+    def get_font_metrics(self) -> tuple[builtins.float, builtins.float, builtins.float]:
+        r"""
+        Font metrics `(ascent, descent, height)` for the configured font.
         """
 
