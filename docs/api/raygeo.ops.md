@@ -1919,6 +1919,10 @@ helical arc), and bezier control points are corrected at their own XY positions.
 
 *A flat toolpath warped onto a bed height map so the focal point tracks the wavy surface*
 
+![Splitting long cuts at grid lines makes Z follow the hill that a straight cut misses](images/ops-transform-mesh-correction-mesh-correction-subdivide-example.png)
+
+*Splitting long cuts at grid lines makes Z follow the hill that a straight cut misses*
+
 ### `move_to()`
 
 ```python
