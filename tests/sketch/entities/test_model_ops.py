@@ -15,7 +15,6 @@ from raygeo.sketch.entities import (
     OffsetPlan,
     Polygon,
     PolygonOutline,
-    SketchPoint,
     TextBox,
 )
 from raygeo.sketch.registry import EntityRegistry
