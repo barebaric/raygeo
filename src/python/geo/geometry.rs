@@ -26,7 +26,7 @@ use crate::geo::algo::fitting::{
 use crate::geo::algo::intersect::{
     check_intersection_from_array, check_self_intersection_from_array,
 };
-use crate::geo::algo::offset::grow_geometry;
+use crate::geo::algo::offset::{grow_geometry, grow_geometry_xy};
 use crate::geo::algo::simplify::simplify_data;
 use crate::geo::algo::topology::{
     close_all_contours, filter_to_external_contours, get_valid_contours_data,
@@ -1648,6 +1648,29 @@ impl Geometry {
         let result = {
             let geo = slf.borrow();
             grow_geometry(&geo.inner, amount)
+        };
+        slf.borrow_mut().inner = result;
+        slf
+    }
+
+    /// Offset (grow/shrink) the geometry by direction-dependent
+    /// distances along the X and Y axes.
+    ///
+    /// :param offset_x: Displacement along X (positive to grow,
+    ///     negative to shrink).
+    /// :param offset_y: Displacement along Y (positive to grow,
+    ///     negative to shrink).
+    /// :returns: The geometry (for method chaining).
+    /// :complexity: O(n log n) average time, O(n) space
+    #[pyo3(signature = (offset_x, offset_y))]
+    fn grow_xy(
+        slf: Bound<'_, Self>,
+        offset_x: f64,
+        offset_y: f64,
+    ) -> Bound<'_, Self> {
+        let result = {
+            let geo = slf.borrow();
+            grow_geometry_xy(&geo.inner, offset_x, offset_y)
         };
         slf.borrow_mut().inner = result;
         slf
