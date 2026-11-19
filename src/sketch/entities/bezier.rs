@@ -10,6 +10,7 @@ use crate::geo::shape::line::{
 use crate::geo::shape::rect::does_rect_contain_rect;
 use crate::geo::types::{Point, Rect};
 use crate::sketch::constraint::PointContext;
+use crate::sketch::transform::PlacementTransform;
 
 use super::entity::{quantize, remap_id, Entity, EntityBase};
 use super::mirror::MirrorAxis;
@@ -187,6 +188,35 @@ impl Entity for Bezier {
         if state.get("cp2").is_some() {
             self.cp2 = read_cp("cp2");
         }
+    }
+
+    fn transform_offsets(&mut self, transform: &dyn PlacementTransform) {
+        if let Some([dx, dy]) = self.cp1 {
+            let (x, y) = transform.transform_offset(dx, dy);
+            self.cp1 = Some([x, y]);
+        }
+        if let Some([dx, dy]) = self.cp2 {
+            let (x, y) = transform.transform_offset(dx, dy);
+            self.cp2 = Some([x, y]);
+        }
+    }
+
+    fn rewrite_offsets_from(
+        &mut self,
+        template: &dyn Entity,
+        transform: &dyn PlacementTransform,
+    ) {
+        let Some(template) = template.as_any().downcast_ref::<Bezier>() else {
+            return;
+        };
+        self.cp1 = template.cp1.map(|[dx, dy]| {
+            let (x, y) = transform.transform_offset(dx, dy);
+            [x, y]
+        });
+        self.cp2 = template.cp2.map(|[dx, dy]| {
+            let (x, y) = transform.transform_offset(dx, dy);
+            [x, y]
+        });
     }
 
     fn mirror(&mut self, axis: MirrorAxis) {

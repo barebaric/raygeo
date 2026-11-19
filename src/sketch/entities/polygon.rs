@@ -11,6 +11,7 @@ use crate::geo::shape::polygon::{
 };
 use crate::geo::types::{Point, Rect};
 use crate::sketch::constraint::PointContext;
+use crate::sketch::transform::{flips_chirality, PlacementTransform};
 
 use super::entity::{quantize, remap_id, Entity, EntityBase};
 use super::mirror::MirrorAxis;
@@ -326,6 +327,40 @@ impl Entity for PolygonEntity {
 
     fn is_closed_loop(&self) -> bool {
         self.closed
+    }
+
+    fn transform_offsets(&mut self, transform: &dyn PlacementTransform) {
+        if !flips_chirality(transform) {
+            return;
+        }
+        for ring in self.rings.iter_mut() {
+            for vertex in ring.iter_mut() {
+                vertex.1 = -vertex.1;
+            }
+        }
+        self.normalize_ring_winding();
+    }
+
+    fn rewrite_offsets_from(
+        &mut self,
+        template: &dyn Entity,
+        transform: &dyn PlacementTransform,
+    ) {
+        let Some(template) = template.as_any().downcast_ref::<PolygonEntity>()
+        else {
+            return;
+        };
+        let flips = flips_chirality(transform);
+        self.rings = template
+            .rings
+            .iter()
+            .map(|ring| {
+                ring.iter()
+                    .map(|(u, v)| (*u, if flips { -v } else { *v }))
+                    .collect()
+            })
+            .collect();
+        self.normalize_ring_winding();
     }
 
     /// The frame points are mirrored centrally by the command, which

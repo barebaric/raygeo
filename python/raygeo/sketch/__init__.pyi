@@ -18,6 +18,7 @@ import typing
 from . import components
 from . import constraints
 from . import entities
+from . import entity_group
 from . import params
 from . import registry
 from . import topology
@@ -28,6 +29,7 @@ __all__ = [
     "conflicting_constraints",
     "constraints",
     "entities",
+    "entity_group",
     "params",
     "registry",
     "solve_registry",
