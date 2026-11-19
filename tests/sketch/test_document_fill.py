@@ -1,0 +1,98 @@
+from raygeo.sketch.document import (
+    DEFAULT_FILL_COLOR,
+    Fill,
+    FillStyle,
+)
+
+
+def test_fill_defaults():
+    fill = Fill("fill-1", [(3, True), (4, False)])
+    assert fill.uid == "fill-1"
+    assert fill.boundary == [(3, True), (4, False)]
+    assert fill.style is FillStyle.SOLID
+    assert fill.color == DEFAULT_FILL_COLOR
+    assert fill.gradient_stops == []
+    assert fill.gradient_angle == 0.0
+
+
+def test_fill_style_values():
+    assert FillStyle.SOLID.value == "solid"
+    assert FillStyle.LINEAR_GRADIENT.value == "linear_gradient"
+    assert FillStyle.RADIAL_GRADIENT.value == "radial_gradient"
+
+
+def test_fill_to_dict_defaults():
+    fill = Fill("fill-1", [(3, True)])
+    assert fill.to_dict() == {
+        "uid": "fill-1",
+        "boundary": [[3, True]],
+        "style": "solid",
+        "color": [0.85, 0.85, 0.85, 0.7],
+    }
+
+
+def test_fill_to_dict_gradient():
+    fill = Fill(
+        "fill-2",
+        [(1, True)],
+        style=FillStyle.LINEAR_GRADIENT,
+        color=(0.9, 0.8, 0.7, 1.0),
+        gradient_stops=[(0.0, (1.0, 0.0, 0.0, 1.0))],
+        gradient_angle=0.5,
+    )
+    assert fill.to_dict() == {
+        "uid": "fill-2",
+        "boundary": [[1, True]],
+        "style": "linear_gradient",
+        "color": [0.9, 0.8, 0.7, 1.0],
+        "gradient_stops": [
+            [0.0, [1.0, 0.0, 0.0, 1.0]],
+        ],
+        "gradient_angle": 0.5,
+    }
+
+
+def test_fill_from_dict_round_trip():
+    data = {
+        "uid": "fill-3",
+        "boundary": [[7, False]],
+        "style": "radial_gradient",
+        "color": [0.1, 0.2, 0.3, 0.4],
+        "gradient_stops": [[0.25, [1.0, 0.5, 0.0, 1.0]]],
+        "gradient_angle": 1.25,
+    }
+    fill = Fill.from_dict(data)
+    assert fill.uid == "fill-3"
+    assert fill.boundary == [(7, False)]
+    assert fill.style is FillStyle.RADIAL_GRADIENT
+    assert fill.color == (0.1, 0.2, 0.3, 0.4)
+    assert fill.gradient_stops == [(0.25, (1.0, 0.5, 0.0, 1.0))]
+    assert fill.gradient_angle == 1.25
+    assert fill.to_dict() == data
+
+
+def test_fill_from_dict_generates_missing_uid():
+    fill = Fill.from_dict(
+        {
+            "boundary": [[1, True]],
+            "style": "solid",
+            "color": [0.0, 0.0, 0.0, 1.0],
+        }
+    )
+    assert fill.uid
+    assert len(fill.uid) == 36
+
+
+def test_fill_fields_are_mutable():
+    fill = Fill("fill-4", [])
+    fill.boundary = [(9, True)]
+    fill.style = FillStyle.RADIAL_GRADIENT
+    fill.color = (0.5, 0.6, 0.7, 0.8)
+    fill.gradient_stops = [(1.0, (0.0, 1.0, 0.0, 1.0))]
+    fill.gradient_angle = 2.0
+
+    assert fill.boundary == [(9, True)]
+    assert fill.style is FillStyle.RADIAL_GRADIENT
+    assert fill.color == (0.5, 0.6, 0.7, 0.8)
+    assert fill.gradient_stops == [(1.0, (0.0, 1.0, 0.0, 1.0))]
+    assert fill.gradient_angle == 2.0

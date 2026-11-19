@@ -17,6 +17,7 @@ import builtins
 import typing
 from . import components
 from . import constraints
+from . import document
 from . import entities
 from . import entity_group
 from . import params
@@ -29,6 +30,7 @@ __all__ = [
     "components",
     "conflicting_constraints",
     "constraints",
+    "document",
     "entities",
     "entity_group",
     "params",
