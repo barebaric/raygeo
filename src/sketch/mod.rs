@@ -20,6 +20,7 @@ pub mod constraints;
 pub mod draw;
 pub mod entities;
 pub mod eval;
+pub mod params;
 pub mod registry;
 pub mod solver;
 pub mod topology;

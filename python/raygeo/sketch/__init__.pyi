@@ -17,6 +17,7 @@ import builtins
 import typing
 from . import constraints
 from . import entities
+from . import params
 from . import registry
 from . import topology
 __all__ = [
@@ -24,6 +25,7 @@ __all__ = [
     "Solver",
     "constraints",
     "entities",
+    "params",
     "registry",
     "topology",
 ]
