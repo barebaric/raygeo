@@ -77,6 +77,7 @@ impl PyBezier {
     #[setter]
     fn set_start_idx(&mut self, value: i64) {
         self.inner.start = value as u64;
+        self.write_back();
     }
 
     /// End point id.
@@ -88,6 +89,7 @@ impl PyBezier {
     #[setter]
     fn set_end_idx(&mut self, value: i64) {
         self.inner.end = value as u64;
+        self.write_back();
     }
 
     /// First control point offset, if any.
@@ -187,6 +189,7 @@ impl PyBezier {
     fn set_fill_color_attr(&mut self, value: Option<(f64, f64, f64, f64)>) {
         self.inner.base_mut().fill_color =
             value.map(|(r, g, b, a)| [r, g, b, a]);
+        self.write_back();
     }
 
     /// The entity type name.
@@ -294,7 +297,7 @@ impl PyBezier {
         supported
     }
     /// Persists in-place edits back to the owning registry, if any.
-    fn write_back(&self) {
+    pub(crate) fn write_back(&self) {
         if let Some(registry) = &self.registry {
             Python::attach(|py| {
                 if let Ok(dict) =
@@ -437,6 +440,13 @@ impl PyBezier {
     fn set_state(&mut self, state: &Bound<'_, PyDict>) -> PyResult<()> {
         let value = value_from_dict(state)?;
         self.inner.set_state(&value);
+        if let Some(registry) = &self.registry {
+            Python::attach(|py| {
+                let _ = registry
+                    .bind(py)
+                    .call_method1("set_state", (self.inner.base().id, state));
+            });
+        }
         Ok(())
     }
 
@@ -472,6 +482,14 @@ impl PyBezier {
                 })
             });
         self.inner.base_mut().constrained = constrained;
+        if let Some(registry) = &self.registry {
+            Python::attach(|py| {
+                let _ = registry.bind(py).call_method1(
+                    "set_entity_constrained",
+                    (self.inner.base().id, constrained),
+                );
+            });
+        }
         Ok(())
     }
 

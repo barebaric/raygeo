@@ -5,35 +5,13 @@ registry queries and the reference dict shapes."""
 
 import pytest
 
+from raygeo.sketch.entities import Line
 from raygeo.sketch.registry import EntityRegistry
 
 
 @pytest.fixture
 def registry():
     return EntityRegistry()
-
-
-def _connected_entity_ids(reg, entity_id):
-    """Reference EntityRegistry.get_connected_entity_ids: BFS over
-    entities that share a control point."""
-    point_to_entities = {}
-    for eid in reg.entity_ids():
-        for pid in reg.entity_point_ids(eid):
-            point_to_entities.setdefault(pid, []).append(eid)
-
-    if reg.entity_type(entity_id) is None:
-        return set()
-
-    connected = set()
-    queue = [entity_id]
-    while queue:
-        current = queue.pop()
-        if current in connected:
-            continue
-        connected.add(current)
-        for pid in reg.entity_point_ids(current):
-            queue.extend(point_to_entities.get(pid, []))
-    return connected
 
 
 def test_add_point(registry):
@@ -114,11 +92,10 @@ def test_registry_indices(registry):
 
 
 def test_registry_lookup_failures(registry):
-    """Test behavior when looking up invalid IDs.
-
-    The Rust binding returns None instead of raising IndexError, and
-    has no get_entity; entity_type is the closest equivalent."""
-    assert registry.get_point(999) is None
+    """Test behavior when looking up invalid IDs."""
+    with pytest.raises(IndexError):
+        registry.get_point(999)
+    assert registry.get_point_object(999) is None
 
     # Unknown entity ids resolve to None, don't raise
     assert registry.entity_type(999) is None
@@ -272,7 +249,7 @@ def test_single_entity_returns_self():
     p2 = registry.add_point(10, 0)
     l1 = registry.add_line(p1, p2)
 
-    connected = _connected_entity_ids(registry, l1)
+    connected = registry.connected_entity_ids(l1)
     assert connected == {l1}
 
 
@@ -285,10 +262,10 @@ def test_two_connected_lines():
     l1 = registry.add_line(p1, p2)
     l2 = registry.add_line(p2, p3)
 
-    connected_from_l1 = _connected_entity_ids(registry, l1)
+    connected_from_l1 = registry.connected_entity_ids(l1)
     assert connected_from_l1 == {l1, l2}
 
-    connected_from_l2 = _connected_entity_ids(registry, l2)
+    connected_from_l2 = registry.connected_entity_ids(l2)
     assert connected_from_l2 == {l1, l2}
 
 
@@ -303,7 +280,7 @@ def test_chain_of_connected_entities():
     l2 = registry.add_line(p2, p3)
     l3 = registry.add_line(p3, p4)
 
-    connected = _connected_entity_ids(registry, l1)
+    connected = registry.connected_entity_ids(l1)
     assert connected == {l1, l2, l3}
 
 
@@ -317,10 +294,10 @@ def test_disconnected_entities():
     l1 = registry.add_line(p1, p2)
     l2 = registry.add_line(p3, p4)
 
-    connected_l1 = _connected_entity_ids(registry, l1)
+    connected_l1 = registry.connected_entity_ids(l1)
     assert connected_l1 == {l1}
 
-    connected_l2 = _connected_entity_ids(registry, l2)
+    connected_l2 = registry.connected_entity_ids(l2)
     assert connected_l2 == {l2}
 
 
@@ -335,7 +312,7 @@ def test_star_topology():
     l2 = registry.add_line(center, p2)
     l3 = registry.add_line(center, p3)
 
-    connected = _connected_entity_ids(registry, l1)
+    connected = registry.connected_entity_ids(l1)
     assert connected == {l1, l2, l3}
 
 
@@ -351,7 +328,7 @@ def test_mixed_entity_types():
     l2 = registry.add_line(p2, p3)
     arc = registry.add_arc(p1, p3, center)
 
-    connected = _connected_entity_ids(registry, l1)
+    connected = registry.connected_entity_ids(l1)
     assert connected == {l1, l2, arc}
 
 
@@ -362,7 +339,7 @@ def test_circle_is_standalone():
     radius_pt = registry.add_point(10, 0)
     circle = registry.add_circle(center, radius_pt)
 
-    connected = _connected_entity_ids(registry, circle)
+    connected = registry.connected_entity_ids(circle)
     assert connected == {circle}
 
 
@@ -376,14 +353,14 @@ def test_circle_connected_via_shared_point():
     l1 = registry.add_line(p1, center)
     circle = registry.add_circle(center, radius_pt)
 
-    connected = _connected_entity_ids(registry, l1)
+    connected = registry.connected_entity_ids(l1)
     assert connected == {l1, circle}
 
 
 def test_invalid_entity_id_returns_empty():
     """Invalid entity ID should return empty set."""
     registry = EntityRegistry()
-    connected = _connected_entity_ids(registry, 999)
+    connected = registry.connected_entity_ids(999)
     assert connected == set()
 
 
@@ -398,8 +375,8 @@ def test_get_point_with_interleaved_entity_ids(registry):
     assert registry.point_ids() == [p1, p2]
     assert registry.get_point(p1) == (0, 0)
     assert registry.get_point(p2) == (10, 10)
-    assert registry.get_point(line_id) is None
-    assert registry.get_point(arc_id) is None
+    assert registry.get_point_object(line_id) is None
+    assert registry.get_point_object(arc_id) is None
 
 
 def test_remove_points_keeps_lookup_consistent(registry):
@@ -412,8 +389,8 @@ def test_remove_points_keeps_lookup_consistent(registry):
     registry.remove_points([p1, p3])
 
     assert registry.point_ids() == [p2]
-    assert registry.get_point(p1) is None
-    assert registry.get_point(p3) is None
+    assert registry.get_point_object(p1) is None
+    assert registry.get_point_object(p3) is None
     assert registry.get_point(p2) == (10.0, 0.0)
 
     registry.remove_points([p2])
@@ -443,7 +420,7 @@ def test_set_points_replaces_list_and_lookup(registry):
     registry.add_points([(old, 5.0, 5.0, False)])
 
     assert registry.get_point(old) == (5.0, 5.0)
-    assert registry.get_point(999) is None
+    assert registry.get_point_object(999) is None
     assert registry.point_count() == 1
 
 
@@ -459,4 +436,116 @@ def test_from_dict_rebuilds_lookup_with_interleaved_ids():
 
     assert new_reg.get_point(p1) == (1, 2)
     assert new_reg.get_point(p2) == (3, 4)
-    assert new_reg.get_point(reg.to_dict()["id_counter"]) is None
+    assert new_reg.get_point_object(reg.to_dict()["id_counter"]) is None
+
+
+def test_next_id_reports_without_consuming():
+    registry = EntityRegistry()
+    registry.add_point(0, 0)
+    registry.add_line(0, 0)
+
+    assert registry.next_id() == 2
+    assert registry.next_id() == 2
+    assert registry.allocate_id() == 2
+    assert registry.next_id() == 3
+
+
+def test_clone_is_independent():
+    registry = EntityRegistry()
+    p1 = registry.add_point(0, 0)
+    p2 = registry.add_point(10, 0)
+    line_id = registry.add_line(p1, p2)
+
+    clone = registry.clone()
+    registry.set_point_position(p1, 99, 99)
+    registry.remove_entities([line_id])
+
+    assert clone.get_point(p1) == (0, 0)
+    assert clone.entity_type(line_id) == "line"
+    assert registry.entity_type(line_id) is None
+
+
+def test_set_point_fixed_writes_back():
+    registry = EntityRegistry()
+    pid = registry.add_point(1, 2)
+    point = registry.get_point_object(pid)
+
+    point.fixed = True
+
+    assert registry.point_is_fixed(pid) is True
+    assert registry.to_dict()["points"][0]["fixed"] is True
+
+
+def test_entity_index_replace_and_insert():
+    registry = EntityRegistry()
+    p1 = registry.add_point(0, 0)
+    p2 = registry.add_point(10, 0)
+    p3 = registry.add_point(20, 0)
+    line1 = registry.add_line(p1, p2)
+    line2 = registry.add_line(p2, p3)
+
+    assert registry.entity_index(line2) == 1
+
+    replacement = Line(line2, p3, p2)
+    assert registry.replace_entity(line2, replacement) is True
+    assert registry.entity_ids() == [line1, line2]
+    assert registry.entity_to_dict(line2)["p1_idx"] == p3
+
+    inserted_id = registry.insert_entity(0, Line(100, p1, p3))
+    assert registry.entity_ids()[0] == inserted_id
+    assert registry.entity_index(inserted_id) == 0
+
+
+def test_entity_state_write_back():
+    registry = EntityRegistry()
+    p1 = registry.add_point(0, 0)
+    p2 = registry.add_point(10, 0)
+    bezier_id = registry.add_bezier(p1, p2)
+
+    bezier = registry.get_entity(bezier_id)
+    bezier.set_state({"cp1": [3.0, 4.0], "cp2": [5.0, 6.0]})
+
+    assert registry.get_entity(bezier_id).cp1 == (3.0, 4.0)
+    assert registry.get_entity(bezier_id).cp2 == (5.0, 6.0)
+
+
+def test_constrained_status_write_back():
+    registry = EntityRegistry()
+    p1 = registry.add_point(0, 0)
+    p2 = registry.add_point(10, 0)
+    line_id = registry.add_line(p1, p2)
+    registry.set_point_constrained(p1, True)
+    registry.set_point_constrained(p2, True)
+
+    line = registry.get_entity(line_id)
+    line.update_constrained_status(registry, [])
+
+    assert registry.is_constrained(line_id) is True
+
+
+def test_reference_setters_write_back():
+    registry = EntityRegistry()
+    p1 = registry.add_point(0, 0)
+    p2 = registry.add_point(10, 0)
+    line_id = registry.add_line(p1, p2)
+
+    line = registry.get_entity(line_id)
+    line.p1_idx = p2
+    line.p2_idx = p1
+
+    data = registry.entity_to_dict(line_id)
+    assert data["p1_idx"] == p2
+    assert data["p2_idx"] == p1
+
+
+def test_remap_references_writes_back():
+    registry = EntityRegistry()
+    p1 = registry.add_point(0, 0)
+    p2 = registry.add_point(10, 0)
+    p3 = registry.add_point(20, 0)
+    line_id = registry.add_line(p1, p2)
+
+    line = registry.get_entity(line_id)
+    line.remap_references({p1: p3})
+
+    assert registry.entity_to_dict(line_id)["p1_idx"] == p3

@@ -78,6 +78,7 @@ impl PyPolygon {
     #[setter]
     fn set_center_idx(&mut self, value: i64) {
         self.inner.center = value as u64;
+        self.write_back();
     }
 
     /// Handle point id.
@@ -89,6 +90,7 @@ impl PyPolygon {
     #[setter]
     fn set_handle_idx(&mut self, value: i64) {
         self.inner.handle = value as u64;
+        self.write_back();
     }
 
     /// Whether the polygon contour is closed.
@@ -100,6 +102,7 @@ impl PyPolygon {
     #[setter]
     fn set_closed(&mut self, value: bool) {
         self.inner.closed = value;
+        self.write_back();
     }
 
     /// The outer contour vertices in the local frame.
@@ -115,6 +118,7 @@ impl PyPolygon {
         } else {
             self.inner.rings.push(value);
         }
+        self.write_back();
     }
 
     /// All rings in the local frame (outer contour first, then holes).
@@ -126,6 +130,7 @@ impl PyPolygon {
     #[setter]
     fn set_rings(&mut self, value: Vec<Vec<(f64, f64)>>) {
         self.inner.rings = value;
+        self.write_back();
     }
 
     /// Whether the entity is construction geometry.
@@ -195,6 +200,7 @@ impl PyPolygon {
     fn set_fill_color_attr(&mut self, value: Option<(f64, f64, f64, f64)>) {
         self.inner.base_mut().fill_color =
             value.map(|(r, g, b, a)| [r, g, b, a]);
+        self.write_back();
     }
 
     /// The entity type name.
@@ -303,7 +309,7 @@ impl PyPolygon {
         supported
     }
     /// Persists in-place edits back to the owning registry, if any.
-    fn write_back(&self) {
+    pub(crate) fn write_back(&self) {
         if let Some(registry) = &self.registry {
             Python::attach(|py| {
                 if let Ok(dict) =
@@ -576,6 +582,13 @@ impl PyPolygon {
     fn set_state(&mut self, state: &Bound<'_, PyDict>) -> PyResult<()> {
         let value = value_from_dict(state)?;
         self.inner.set_state(&value);
+        if let Some(registry) = &self.registry {
+            Python::attach(|py| {
+                let _ = registry
+                    .bind(py)
+                    .call_method1("set_state", (self.inner.base().id, state));
+            });
+        }
         Ok(())
     }
 
@@ -611,6 +624,14 @@ impl PyPolygon {
                 })
             });
         self.inner.base_mut().constrained = constrained;
+        if let Some(registry) = &self.registry {
+            Python::attach(|py| {
+                let _ = registry.bind(py).call_method1(
+                    "set_entity_constrained",
+                    (self.inner.base().id, constrained),
+                );
+            });
+        }
         Ok(())
     }
 

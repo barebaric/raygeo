@@ -136,6 +136,7 @@ impl PyTextBox {
     #[setter]
     fn set_origin_id(&mut self, value: i64) {
         self.inner.origin = value as u64;
+        self.write_back();
     }
 
     /// Width point id.
@@ -147,6 +148,7 @@ impl PyTextBox {
     #[setter]
     fn set_width_id(&mut self, value: i64) {
         self.inner.width = value as u64;
+        self.write_back();
     }
 
     /// Height point id.
@@ -158,6 +160,7 @@ impl PyTextBox {
     #[setter]
     fn set_height_id(&mut self, value: i64) {
         self.inner.height = value as u64;
+        self.write_back();
     }
 
     /// The text content.
@@ -180,6 +183,7 @@ impl PyTextBox {
     fn set_construction_line_ids(&mut self, value: Vec<i64>) {
         self.inner.construction_line_ids =
             value.iter().map(|&id| id as u64).collect();
+        self.write_back();
     }
 
     #[getter]
@@ -308,6 +312,7 @@ impl PyTextBox {
     fn set_fill_color_attr(&mut self, value: Option<(f64, f64, f64, f64)>) {
         self.inner.base_mut().fill_color =
             value.map(|(r, g, b, a)| [r, g, b, a]);
+        self.write_back();
     }
 
     /// The entity type name.
@@ -422,7 +427,7 @@ impl PyTextBox {
         supported
     }
     /// Persists in-place edits back to the owning registry, if any.
-    fn write_back(&self) {
+    pub(crate) fn write_back(&self) {
         if let Some(registry) = &self.registry {
             Python::attach(|py| {
                 if let Ok(dict) =
@@ -564,6 +569,13 @@ impl PyTextBox {
     fn set_state(&mut self, state: &Bound<'_, PyDict>) -> PyResult<()> {
         let value = value_from_dict(state)?;
         self.inner.set_state(&value);
+        if let Some(registry) = &self.registry {
+            Python::attach(|py| {
+                let _ = registry
+                    .bind(py)
+                    .call_method1("set_state", (self.inner.base().id, state));
+            });
+        }
         Ok(())
     }
 
@@ -599,6 +611,14 @@ impl PyTextBox {
                 })
             });
         self.inner.base_mut().constrained = constrained;
+        if let Some(registry) = &self.registry {
+            Python::attach(|py| {
+                let _ = registry.bind(py).call_method1(
+                    "set_entity_constrained",
+                    (self.inner.base().id, constrained),
+                );
+            });
+        }
         Ok(())
     }
 

@@ -40,7 +40,7 @@ impl PySketchPoint {
         }
     }
 
-    fn write_back(&self) {
+    pub(crate) fn write_back(&self) {
         if let Some(registry) = &self.registry {
             Python::attach(|py| {
                 let _ = registry.bind(py).call_method1(
@@ -223,6 +223,13 @@ impl PySketchPoint {
     #[setter]
     fn set_fixed(&mut self, value: bool) {
         self.inner.fixed = value;
+        if let Some(registry) = &self.registry {
+            Python::attach(|py| {
+                let _ = registry
+                    .bind(py)
+                    .call_method1("set_point_fixed", (self.inner.id, value));
+            });
+        }
     }
 
     /// Whether the point is fully constrained, as computed by the

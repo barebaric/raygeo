@@ -232,6 +232,28 @@ macro_rules! with_entity_mut {
     }};
 }
 
+/// Like [`with_entity_mut`], but persists the edit to the owning
+/// registry when the binding is a live view.
+macro_rules! with_entity_mut_write {
+    ($slf:expr, |$entity:ident| $body:expr; $($py_ty:ty),+ $(,)?) => {{
+        let slf = $slf.as_any();
+        $(
+            if let Ok(mut binding) = slf.extract::<PyRefMut<'_, $py_ty>>() {
+                let result = {
+                    let $entity: &mut dyn $crate::sketch::entities::Entity =
+                        &mut binding.inner;
+                    $body
+                };
+                binding.write_back();
+                return Ok(result);
+            }
+        )+
+        Err(PyAttributeError::new_err(
+            "expected a raygeo.sketch.entities entity object",
+        ))
+    }};
+}
+
 use pyo3::exceptions::{PyAttributeError, PyNotImplementedError, PyValueError};
 use pyo3::types::{PyAny, PyDict};
 use pyo3_stub_gen::derive::gen_stub_pymethods;
@@ -391,7 +413,7 @@ impl PyEntityBase {
 
     /// Clears the entity's helper point references.
     fn clear_helper_references(slf: &Bound<'_, Self>) -> PyResult<()> {
-        with_entity_mut!(slf, |entity| {
+        with_entity_mut_write!(slf, |entity| {
             entity.clear_helper_references();
         }; crate::python::sketch::entities::line::PyLine, crate::python::sketch::entities::arc::PyArc, crate::python::sketch::entities::circle::PyCircle, crate::python::sketch::entities::ellipse::PyEllipse, crate::python::sketch::entities::bezier::PyBezier, crate::python::sketch::entities::polygon::PyPolygon, crate::python::sketch::entities::text_box::PyTextBox)
     }
@@ -699,7 +721,7 @@ impl PyEntityBase {
                 .map(|new| *new as u64)
                 .unwrap_or(value)
         };
-        with_entity_mut!(slf, |entity| {
+        with_entity_mut_write!(slf, |entity| {
             entity.remap_references(&map);
         }; crate::python::sketch::entities::line::PyLine, crate::python::sketch::entities::arc::PyArc, crate::python::sketch::entities::circle::PyCircle, crate::python::sketch::entities::ellipse::PyEllipse, crate::python::sketch::entities::bezier::PyBezier, crate::python::sketch::entities::polygon::PyPolygon, crate::python::sketch::entities::text_box::PyTextBox)
     }
@@ -719,7 +741,7 @@ impl PyEntityBase {
                 )))
             }
         };
-        with_entity_mut!(slf, |entity| {
+        with_entity_mut_write!(slf, |entity| {
             entity.mirror(crate::sketch::entities::MirrorAxis {
                 direction: axis_direction,
                 position,
@@ -737,19 +759,23 @@ impl PyEntityBase {
             '_,
             crate::python::sketch::entities::bezier::PyBezier,
         >>() {
-            return offset::bezier_transform_offsets(
+            let result = offset::bezier_transform_offsets(
                 &mut bezier.inner,
                 placement,
             );
+            bezier.write_back();
+            return result;
         }
         if let Ok(mut polygon) = any.extract::<PyRefMut<
             '_,
             crate::python::sketch::entities::polygon::PyPolygon,
         >>() {
-            return offset::polygon_transform_offsets(
+            let result = offset::polygon_transform_offsets(
                 &mut polygon.inner,
                 placement,
             );
+            polygon.write_back();
+            return result;
         }
         Ok(())
     }
@@ -770,11 +796,13 @@ impl PyEntityBase {
             if let Some(template) = template_any
                 .downcast_ref::<crate::sketch::entities::bezier::Bezier>()
             {
-                return offset::bezier_rewrite_offsets_from(
+                let result = offset::bezier_rewrite_offsets_from(
                     &mut bezier.inner,
                     template,
                     placement,
                 );
+                bezier.write_back();
+                return result;
             }
         }
         if let Ok(mut polygon) = any.extract::<PyRefMut<
@@ -784,11 +812,13 @@ impl PyEntityBase {
             if let Some(template) = template_any
                 .downcast_ref::<crate::sketch::entities::polygon::PolygonEntity>()
             {
-                return offset::polygon_rewrite_offsets_from(
+                let result = offset::polygon_rewrite_offsets_from(
                     &mut polygon.inner,
                     template,
                     placement,
                 );
+                polygon.write_back();
+                return result;
             }
         }
         if let Ok(mut text_box) =

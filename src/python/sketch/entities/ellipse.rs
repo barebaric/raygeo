@@ -86,6 +86,7 @@ impl PyEllipse {
     #[setter]
     fn set_center_idx(&mut self, value: i64) {
         self.inner.center = value as u64;
+        self.write_back();
     }
 
     /// Helper construction line ids.
@@ -110,6 +111,7 @@ impl PyEllipse {
     #[setter]
     fn set_radius_x_pt_idx(&mut self, value: i64) {
         self.inner.radius_x_point = value as u64;
+        self.write_back();
     }
 
     /// Alias for radius_y_point_idx.
@@ -121,6 +123,7 @@ impl PyEllipse {
     #[setter]
     fn set_radius_y_pt_idx(&mut self, value: i64) {
         self.inner.radius_y_point = value as u64;
+        self.write_back();
     }
 
     #[getter]
@@ -201,6 +204,7 @@ impl PyEllipse {
     fn set_fill_color_attr(&mut self, value: Option<(f64, f64, f64, f64)>) {
         self.inner.base_mut().fill_color =
             value.map(|(r, g, b, a)| [r, g, b, a]);
+        self.write_back();
     }
 
     /// The entity type name.
@@ -308,7 +312,7 @@ impl PyEllipse {
         supported
     }
     /// Persists in-place edits back to the owning registry, if any.
-    fn write_back(&self) {
+    pub(crate) fn write_back(&self) {
         if let Some(registry) = &self.registry {
             Python::attach(|py| {
                 if let Ok(dict) =
@@ -455,6 +459,13 @@ impl PyEllipse {
     fn set_state(&mut self, state: &Bound<'_, PyDict>) -> PyResult<()> {
         let value = value_from_dict(state)?;
         self.inner.set_state(&value);
+        if let Some(registry) = &self.registry {
+            Python::attach(|py| {
+                let _ = registry
+                    .bind(py)
+                    .call_method1("set_state", (self.inner.base().id, state));
+            });
+        }
         Ok(())
     }
 
@@ -495,6 +506,14 @@ impl PyEllipse {
                 })
             });
         self.inner.base_mut().constrained = constrained;
+        if let Some(registry) = &self.registry {
+            Python::attach(|py| {
+                let _ = registry.bind(py).call_method1(
+                    "set_entity_constrained",
+                    (self.inner.base().id, constrained),
+                );
+            });
+        }
         Ok(())
     }
 

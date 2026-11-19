@@ -44,6 +44,11 @@ impl EntityRegistry {
         self.entities.len()
     }
 
+    /// The next id that an added point or entity would receive.
+    pub fn next_id(&self) -> u64 {
+        self.id_counter
+    }
+
     /// All point ids in insertion order.
     pub fn point_ids(&self) -> Vec<u64> {
         self.points.iter().map(|p| p.id).collect()
@@ -108,6 +113,17 @@ impl EntityRegistry {
         }
     }
 
+    /// Sets a point's fixed (anchor) flag.
+    pub fn set_point_fixed(&mut self, id: u64, fixed: bool) -> bool {
+        match self.point_index.get(&id) {
+            Some(&i) => {
+                self.points[i].fixed = fixed;
+                true
+            }
+            None => false,
+        }
+    }
+
     /// Returns a shared reference to the entity with the given id.
     pub fn get_entity(&self, id: u64) -> Option<&dyn Entity> {
         self.entity_index
@@ -159,6 +175,45 @@ impl EntityRegistry {
             }
         }
         false
+    }
+
+    /// Entity ids transitively connected to `start_entity_id` through
+    /// shared control points.  The start entity is included; unknown
+    /// ids yield an empty set.
+    pub fn connected_entity_ids(
+        &self,
+        start_entity_id: u64,
+    ) -> std::collections::HashSet<u64> {
+        use std::collections::HashSet;
+
+        let Some(start) = self.get_entity(start_entity_id) else {
+            return HashSet::new();
+        };
+        let mut connected = HashSet::from([start_entity_id]);
+        let mut points_to_visit = start.get_point_ids();
+        let mut visited_points = HashSet::new();
+
+        while let Some(pid) = points_to_visit.pop() {
+            if !visited_points.insert(pid) {
+                continue;
+            }
+            for entity in self.entities.iter() {
+                let eid = entity.base().id;
+                if connected.contains(&eid) {
+                    continue;
+                }
+                let entity_points = entity.get_point_ids();
+                if entity_points.contains(&pid) {
+                    connected.insert(eid);
+                    for ep in entity_points {
+                        if !visited_points.contains(&ep) {
+                            points_to_visit.push(ep);
+                        }
+                    }
+                }
+            }
+        }
+        connected
     }
 
     /// Point ids that move rigidly with `point_id` during dragging.
@@ -219,10 +274,62 @@ impl EntityRegistry {
         self.push_entity(entity)
     }
 
+    /// Position of an entity in storage order.
+    pub fn entity_index(&self, id: u64) -> Option<usize> {
+        self.entity_index.get(&id).copied()
+    }
+
+    /// Replaces the entity at `id` in place, preserving its position
+    /// and id.  Returns false for an unknown id.
+    pub fn replace_entity(
+        &mut self,
+        id: u64,
+        mut entity: Box<dyn Entity>,
+    ) -> bool {
+        let Some(&index) = self.entity_index.get(&id) else {
+            return false;
+        };
+        for pid in self.entities[index].get_point_ids() {
+            let count = self.point_usage.entry(pid).or_insert(0);
+            *count = count.saturating_sub(1);
+            if *count == 0 {
+                self.point_usage.remove(&pid);
+            }
+        }
+        entity.base_mut().id = id;
+        for pid in entity.get_point_ids() {
+            *self.point_usage.entry(pid).or_insert(0) += 1;
+        }
+        self.entities[index] = entity;
+        self.entity_version += 1;
+        true
+    }
+
+    /// Inserts an entity at `index` in storage order.
+    pub fn insert_entity(
+        &mut self,
+        index: usize,
+        entity: Box<dyn Entity>,
+    ) -> u64 {
+        let id = entity.base().id;
+        self.id_counter = self.id_counter.max(id + 1);
+        let clamped = index.min(self.entities.len());
+        for pid in entity.get_point_ids() {
+            *self.point_usage.entry(pid).or_insert(0) += 1;
+        }
+        self.entities.insert(clamped, entity);
+        self.entity_index.clear();
+        for (i, e) in self.entities.iter().enumerate() {
+            self.entity_index.insert(e.base().id, i);
+        }
+        self.entity_version += 1;
+        id
+    }
+
     /// Appends a pre-built entity object, assigning the next free
     /// id, and returns it.
     pub fn add_entity_object(&mut self, mut entity: Box<dyn Entity>) -> u64 {
-        let id = self.next_id();
+        let id = self.allocate_next_id();
         entity.base_mut().id = id;
         self.push_entity(entity)
     }
@@ -233,7 +340,7 @@ impl EntityRegistry {
 
     // ── mutation ────────────────────────────────────────────────
 
-    fn next_id(&mut self) -> u64 {
+    fn allocate_next_id(&mut self) -> u64 {
         let id = self.id_counter;
         self.id_counter += 1;
         self.entity_version += 1;
@@ -253,7 +360,7 @@ impl EntityRegistry {
 
     /// Adds a point and returns its id.
     pub fn add_point(&mut self, x: f64, y: f64, fixed: bool) -> u64 {
-        let id = self.next_id();
+        let id = self.allocate_next_id();
         let point = SketchPoint {
             id,
             x,
@@ -299,7 +406,7 @@ impl EntityRegistry {
 
     /// Adds a line and returns its id.
     pub fn add_line(&mut self, p1: u64, p2: u64, construction: bool) -> u64 {
-        let id = self.next_id();
+        let id = self.allocate_next_id();
         self.push_entity(Box::new(crate::sketch::entities::line::Line::new(
             id,
             p1,
@@ -317,7 +424,7 @@ impl EntityRegistry {
         clockwise: bool,
         construction: bool,
     ) -> u64 {
-        let id = self.next_id();
+        let id = self.allocate_next_id();
         self.push_entity(Box::new(crate::sketch::entities::arc::Arc::new(
             id,
             start,
@@ -335,7 +442,7 @@ impl EntityRegistry {
         radius_point: u64,
         construction: bool,
     ) -> u64 {
-        let id = self.next_id();
+        let id = self.allocate_next_id();
         self.push_entity(Box::new(
             crate::sketch::entities::circle::Circle::new(
                 id,
@@ -354,7 +461,7 @@ impl EntityRegistry {
         radius_y_point: u64,
         construction: bool,
     ) -> u64 {
-        let id = self.next_id();
+        let id = self.allocate_next_id();
         self.push_entity(Box::new(
             crate::sketch::entities::ellipse::Ellipse::new(
                 id,
@@ -375,7 +482,7 @@ impl EntityRegistry {
         cp1: Option<[f64; 2]>,
         cp2: Option<[f64; 2]>,
     ) -> u64 {
-        let id = self.next_id();
+        let id = self.allocate_next_id();
         self.push_entity(Box::new(
             crate::sketch::entities::bezier::Bezier::new(
                 id,
@@ -399,7 +506,7 @@ impl EntityRegistry {
         construction: bool,
         holes: Vec<Vec<(f64, f64)>>,
     ) -> u64 {
-        let id = self.next_id();
+        let id = self.allocate_next_id();
         self.push_entity(Box::new(
             crate::sketch::entities::polygon::PolygonEntity::new(
                 id,
@@ -424,7 +531,7 @@ impl EntityRegistry {
         font: crate::sketch::entities::entity::FontConfig,
         construction_line_ids: Vec<u64>,
     ) -> u64 {
-        let id = self.next_id();
+        let id = self.allocate_next_id();
         let mut entity = crate::sketch::entities::text_box::TextBoxEntity::new(
             id, origin, width, height, content, false,
         );
