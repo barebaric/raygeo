@@ -30,7 +30,7 @@ class ParameterContext:
         r"""
         Returns the evaluated value of a parameter.
         """
-    def get_all_values(self) -> builtins.dict[builtins.str, builtins.float]:
+    def get_all_values(self) -> typing.Any:
         r"""
         Returns a copy of all evaluated parameter values.
         """
@@ -38,7 +38,7 @@ class ParameterContext:
         r"""
         Evaluates an expression using the current parameters.
         """
-    def evaluate_all(self, initial_values: typing.Optional[typing.Mapping[builtins.str, builtins.float]] = None) -> None:
+    def evaluate_all(self, initial_values: typing.Optional[dict] = None) -> None:
         r"""
         Resolves every expression, optionally seeded with initial values.
         """

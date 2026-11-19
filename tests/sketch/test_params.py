@@ -159,3 +159,19 @@ def test_invalidate_re_evaluates(params):
     params.set("a", "5 + 5")
     params.invalidate()
     assert params.get("a") == 10.0
+
+
+def test_string_initial_values_are_preserved(params):
+    params.set("width", 10)
+    params.evaluate_all({"label": "Widget", "width": 20.0})
+    values = params.get_all_values()
+    assert values["label"] == "Widget"
+    assert values["width"] == 20.0
+    assert params.get("label") == 0.0
+
+
+def test_string_values_do_not_break_math(params):
+    params.set("b", "a * 2")
+    params.evaluate_all({"a": 10.0, "name": "Widget"})
+    assert params.get("b") == 20.0
+    assert params.unresolved_errors() == {}

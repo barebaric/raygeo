@@ -8,7 +8,7 @@ use pyo3::types::PyDict;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::python::sketch::registry::{value_from_dict, value_to_py};
-use crate::sketch::params::ParameterContext;
+use crate::sketch::params::{ParameterContext, ParameterValue};
 
 #[gen_stub_pyclass]
 #[pyclass(
@@ -52,8 +52,12 @@ impl PyParameterContext {
     }
 
     /// Returns a copy of all evaluated parameter values.
-    fn get_all_values(&mut self) -> BTreeMap<String, f64> {
-        self.inner.get_all_values()
+    fn get_all_values(&mut self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        let dict = PyDict::new(py);
+        for (key, value) in self.inner.get_all_values() {
+            dict.set_item(key, parameter_value_to_py(py, &value)?)?;
+        }
+        Ok(dict.into_any().unbind())
     }
 
     /// Evaluates an expression using the current parameters.
@@ -74,8 +78,16 @@ impl PyParameterContext {
 
     /// Resolves every expression, optionally seeded with initial values.
     #[pyo3(signature = (initial_values = None))]
-    fn evaluate_all(&mut self, initial_values: Option<BTreeMap<String, f64>>) {
+    fn evaluate_all(
+        &mut self,
+        initial_values: Option<&Bound<'_, PyDict>>,
+    ) -> PyResult<()> {
+        let initial_values = match initial_values {
+            Some(dict) => Some(values_from_dict(dict)?),
+            None => None,
+        };
         self.inner.evaluate_all(initial_values);
+        Ok(())
     }
 
     /// Expressions that remained unresolved during the last evaluation.
@@ -111,6 +123,40 @@ impl PyParameterContext {
 
     fn __repr__(&self) -> String {
         format!("ParameterContext({})", self.inner.to_json())
+    }
+}
+
+fn values_from_dict(
+    dict: &Bound<'_, PyDict>,
+) -> PyResult<BTreeMap<String, ParameterValue>> {
+    let mut values = BTreeMap::new();
+    for (key, value) in dict.iter() {
+        let key: String = key.extract()?;
+        let value = if let Ok(number) = value.extract::<f64>() {
+            ParameterValue::Number(number)
+        } else if let Ok(text) = value.extract::<String>() {
+            ParameterValue::Text(text)
+        } else {
+            return Err(PyTypeError::new_err(
+                "parameter values must be numbers or strings",
+            ));
+        };
+        values.insert(key, value);
+    }
+    Ok(values)
+}
+
+fn parameter_value_to_py(
+    py: Python<'_>,
+    value: &ParameterValue,
+) -> PyResult<Py<PyAny>> {
+    match value {
+        ParameterValue::Number(number) => {
+            Ok(number.into_pyobject(py)?.into_any().unbind())
+        }
+        ParameterValue::Text(text) => {
+            Ok(text.into_pyobject(py)?.into_any().unbind())
+        }
     }
 }
 

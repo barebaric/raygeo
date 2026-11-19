@@ -41,11 +41,29 @@ impl std::fmt::Display for ExpressionError {
 
 impl std::error::Error for ExpressionError {}
 
+/// A resolved parameter value.
+#[derive(Clone, Debug, PartialEq)]
+pub enum ParameterValue {
+    /// Numeric value usable in expressions.
+    Number(f64),
+    /// Text value usable in templates but not in math expressions.
+    Text(String),
+}
+
+impl ParameterValue {
+    fn as_number(&self) -> Option<f64> {
+        match self {
+            ParameterValue::Number(value) => Some(*value),
+            ParameterValue::Text(_) => None,
+        }
+    }
+}
+
 /// Manages named parameters and evaluates string expressions.
 #[derive(Clone, Debug, Default)]
 pub struct ParameterContext {
     expressions: BTreeMap<String, String>,
-    cache: BTreeMap<String, f64>,
+    cache: BTreeMap<String, ParameterValue>,
     unresolved: BTreeMap<String, String>,
     dirty: bool,
 }
@@ -77,11 +95,14 @@ impl ParameterContext {
         if self.dirty {
             self.evaluate_all(None);
         }
-        self.cache.get(name).copied().unwrap_or(default)
+        self.cache
+            .get(name)
+            .and_then(ParameterValue::as_number)
+            .unwrap_or(default)
     }
 
     /// Returns all evaluated values.
-    pub fn get_all_values(&mut self) -> BTreeMap<String, f64> {
+    pub fn get_all_values(&mut self) -> BTreeMap<String, ParameterValue> {
         if self.dirty {
             self.evaluate_all(None);
         }
@@ -100,8 +121,12 @@ impl ParameterContext {
         if expression.is_empty() {
             return Ok(0.0);
         }
-        if let Some(value) = self.cache.get(expression) {
-            return Ok(*value);
+        if let Some(value) = self
+            .cache
+            .get(expression)
+            .and_then(ParameterValue::as_number)
+        {
+            return Ok(value);
         }
         evaluate_with_cache(expression, &self.cache)
     }
@@ -109,9 +134,10 @@ impl ParameterContext {
     /// Resolves every expression, optionally seeded with initial values.
     pub fn evaluate_all(
         &mut self,
-        initial_values: Option<BTreeMap<String, f64>>,
+        initial_values: Option<BTreeMap<String, ParameterValue>>,
     ) {
-        let mut cache = initial_values.unwrap_or_default();
+        let mut cache: BTreeMap<String, ParameterValue> =
+            initial_values.unwrap_or_default();
         let mut errors: BTreeMap<String, String> = BTreeMap::new();
         let max_passes = self.expressions.len() + 1;
 
@@ -123,7 +149,10 @@ impl ParameterContext {
                 }
                 match evaluate_with_cache(expression, &cache) {
                     Ok(value) => {
-                        cache.insert(name.clone(), value);
+                        cache.insert(
+                            name.clone(),
+                            ParameterValue::Number(value),
+                        );
                         errors.remove(name);
                         progress = true;
                     }
@@ -186,7 +215,7 @@ fn format_number(value: f64) -> String {
 
 fn evaluate_with_cache(
     expression: &str,
-    cache: &BTreeMap<String, f64>,
+    cache: &BTreeMap<String, ParameterValue>,
 ) -> Result<f64, ExpressionError> {
     let expression = expression.trim();
     if expression.is_empty() {
@@ -197,7 +226,9 @@ fn evaluate_with_cache(
     let mut context = Context::new();
     add_extra_functions(&mut context);
     for (name, value) in cache {
-        context.var(name, *value);
+        if let Some(number) = value.as_number() {
+            context.var(name, number);
+        }
     }
 
     meval::eval_str_with_context(&expression, &context)
