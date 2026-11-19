@@ -21,7 +21,7 @@ use super::point::PyPointDef;
 use crate::python::sketch::registry::PyEntityRegistry;
 
 /// Converts a Python constraint object into its core representation.
-fn constraint_from_py(
+pub(crate) fn constraint_from_py(
     obj: &Bound<'_, PyAny>,
 ) -> PyResult<Box<dyn SketchConstraint>> {
     macro_rules! try_extract {
