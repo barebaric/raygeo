@@ -673,6 +673,21 @@ Offset (grow/shrink) the geometry by the given amount.
 | _Returns_    | `Geometry` | The geometry (for method chaining).   |
 | _Complexity_ |            | O(n log n) average time, O(n) space   |
 
+### `grow_xy()`
+
+```python
+grow_xy(offset_x: float, offset_y: float) -> Geometry
+```
+
+Offset (grow/shrink) the geometry by direction-dependent distances along the X and Y axes.
+
+| Parameter    | Type       | Description                                                  |
+| ------------ | ---------- | ------------------------------------------------------------ |
+| `offset_x`   | `float`    | Displacement along X (positive to grow, negative to shrink). |
+| `offset_y`   | `float`    | Displacement along Y (positive to grow, negative to shrink). |
+| _Returns_    | `Geometry` | The geometry (for method chaining).                          |
+| _Complexity_ |            | O(n log n) average time, O(n) space                          |
+
 ### `has_self_intersections()`
 
 ```python
