@@ -262,6 +262,92 @@ def test_grow_circle():
     assert fresh.area() == pytest.approx(expected_shrunk_area, rel=1e-2)
 
 
+def test_grow_xy_uniform_matches_grow():
+    """Equal X/Y offsets match the isotropic grow result exactly."""
+    points = [(0, 0), (10, 0), (10, 10), (0, 10)]
+    expected = Geometry.from_points(points).grow(2.0)
+    result = Geometry.from_points(points).grow_xy(2.0, 2.0)
+    assert result == expected
+
+
+def test_grow_xy_expands_each_axis_independently():
+    """A rectangle grows by the requested amount on each axis."""
+    square = Geometry.from_points([(0, 0), (10, 0), (10, 10), (0, 10)])
+    square.grow_xy(2.0, 5.0)
+
+    # The X offset widens by 2 on each side, Y by 5 on each side.
+    assert square.area() == pytest.approx(14.0 * 20.0)
+    grown_points = square.segments()[0]
+    assert any(np.allclose(p, (-2.0, -5.0, 0.0)) for p in grown_points), (
+        "Expected anisotropically grown vertex not found"
+    )
+    assert any(np.allclose(p, (12.0, 15.0, 0.0)) for p in grown_points), (
+        "Expected anisotropically grown vertex not found"
+    )
+
+
+def test_grow_xy_shrinks_each_axis_independently():
+    """A rectangle shrinks by the requested amount on each axis."""
+    square = Geometry.from_points([(0, 0), (10, 0), (10, 10), (0, 10)])
+    square.grow_xy(-2.0, -1.0)
+
+    assert square.area() == pytest.approx(6.0 * 8.0)
+    shrunk_points = square.segments()[0]
+    assert any(np.allclose(p, (2.0, 1.0, 0.0)) for p in shrunk_points), (
+        "Expected anisotropically shrunk vertex not found"
+    )
+
+
+def test_grow_xy_shape_with_hole():
+    """Outer and inner contours are offset on both axes."""
+    outer = Geometry.from_points([(0, 0), (20, 0), (20, 20), (0, 20)])
+    inner = Geometry.from_points([(5, 5), (5, 15), (15, 15), (15, 5)])
+    shape = outer.copy()
+    shape.extend(inner)
+
+    shape.grow_xy(2.0, 4.0)
+
+    # Outer becomes 24 x 28, the hole becomes 6 x 2.
+    assert shape.area() == pytest.approx(24.0 * 28.0 - 6.0 * 2.0)
+
+
+def test_grow_xy_preserves_z():
+    """Z-coordinates must survive the anisotropic offset."""
+    points = [
+        (0.0, 0.0, 5.0),
+        (10.0, 0.0, 5.0),
+        (10.0, 10.0, 5.0),
+        (0.0, 10.0, 5.0),
+    ]
+    geo = Geometry.from_points(points)
+    geo.grow_xy(1.0, 2.0)
+    for seg in geo.segments():
+        for pt in seg:
+            assert pt[2] == pytest.approx(5.0), f"Z lost in grow_xy: {pt}"
+
+
+def test_grow_xy_zero_radius_falls_back_to_isotropic():
+    """A zero radius behaves like the non-zero isotropic offset."""
+    points = [(0, 0), (10, 0), (10, 10), (0, 10)]
+    expected = Geometry.from_points(points).grow(2.0)
+    result = Geometry.from_points(points).grow_xy(2.0, 0.0)
+    assert result == expected
+
+
+def test_grow_xy_mixed_sign_is_empty():
+    """Opposite signs do not describe a dilation or erosion."""
+    square = Geometry.from_points([(0, 0), (10, 0), (10, 10), (0, 10)])
+    square.grow_xy(2.0, -1.0)
+    assert square.is_empty()
+
+
+def test_grow_xy_open_path_is_ignored():
+    """Open paths are not offset."""
+    open_path = Geometry.from_points([(0, 0), (10, 10), (20, 0)], close=False)
+    result = open_path.grow_xy(1.0, 2.0)
+    assert result.is_empty()
+
+
 def test_shrink_to_nothing():
     """Tests that shrinking a shape by its half-width or more is handled."""
     square = Geometry.from_points([(0, 0), (10, 0), (10, 10), (0, 10)])

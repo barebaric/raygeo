@@ -181,6 +181,55 @@ pub fn grow_geometry(geometry: &Geometry, offset: f64) -> Geometry {
     new_geo
 }
 
+/// Offsets closed contours by a direction-dependent distance.
+///
+/// `offset_x` is the displacement along the X axis and `offset_y` the
+/// displacement along the Y axis. Positive values grow the enclosed
+/// area, negative values shrink it. Both values must have the same
+/// sign; mixed signs return an empty geometry.
+///
+/// Each edge is offset by the support distance of an ellipse with
+/// semi-axes `|offset_x|` and `|offset_y|`: an edge running along X
+/// moves by `|offset_y|`, and an edge running along Y moves by
+/// `|offset_x|`. Convex corners use the same miter-join behaviour as
+/// [`grow_geometry`].
+///
+/// The implementation normalises the XY plane so the elliptical
+/// distance becomes circular, reuses [`grow_geometry`], and scales the
+/// result back: an invertible affine map commutes with both Minkowski
+/// sums and erosions.
+///
+/// When `|offset_x|` equals `|offset_y|`, this is equivalent to
+/// [`grow_geometry`]. If exactly one radius is zero, the offset falls
+/// back to an isotropic offset by the non-zero radius.
+pub fn grow_geometry_xy(
+    geometry: &Geometry,
+    offset_x: f64,
+    offset_y: f64,
+) -> Geometry {
+    const EPS: f64 = 1e-9;
+    let radius_x = offset_x.abs();
+    let radius_y = offset_y.abs();
+    if radius_x < EPS && radius_y < EPS {
+        return geometry.copy();
+    }
+    if radius_x < EPS || radius_y < EPS {
+        return grow_geometry(geometry, offset_x + offset_y);
+    }
+    if offset_x.signum() != offset_y.signum() {
+        return Geometry::new();
+    }
+    if (radius_x - radius_y).abs() < EPS {
+        return grow_geometry(geometry, offset_x);
+    }
+
+    let mut scaled = geometry.copy();
+    scaled.transform_2d(1.0 / radius_x, 0.0, 0.0, 1.0 / radius_y, 0.0, 0.0);
+    let mut result = grow_geometry(&scaled, offset_x.signum());
+    result.transform_2d(radius_x, 0.0, 0.0, radius_y, 0.0, 0.0);
+    result
+}
+
 /// Offsets geometry on an arbitrary plane defined by a normal vector.
 ///
 /// The 3D geometry is rotated so that `plane_normal` aligns with the +Z

@@ -670,6 +670,18 @@ class Geometry:
         :returns: The geometry (for method chaining).
         :complexity: O(n log n) average time, O(n) space
         """
+    def grow_xy(self, offset_x: builtins.float, offset_y: builtins.float) -> Geometry:
+        r"""
+        Offset (grow/shrink) the geometry by direction-dependent
+        distances along the X and Y axes.
+        
+        :param offset_x: Displacement along X (positive to grow,
+            negative to shrink).
+        :param offset_y: Displacement along Y (positive to grow,
+            negative to shrink).
+        :returns: The geometry (for method chaining).
+        :complexity: O(n log n) average time, O(n) space
+        """
     def encloses(self, other: Geometry) -> builtins.bool:
         r"""
         Check if this geometry encloses another.
