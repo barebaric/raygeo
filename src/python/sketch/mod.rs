@@ -9,6 +9,7 @@ pub(crate) mod params;
 pub(crate) mod point;
 pub(crate) mod protocols;
 pub(crate) mod registry;
+pub(crate) mod selection;
 pub(crate) mod solver;
 pub(crate) mod topology;
 pub(crate) mod types;
@@ -47,6 +48,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     constraints::register(&sketch_mod)?;
     topology::register(&sketch_mod)?;
     registry::register(&sketch_mod)?;
+    selection::register(&sketch_mod)?;
     params::register(&sketch_mod)?;
     entities::register(&sketch_mod)?;
 

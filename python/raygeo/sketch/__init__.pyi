@@ -21,6 +21,7 @@ from . import entities
 from . import entity_group
 from . import params
 from . import registry
+from . import selection
 from . import topology
 __all__ = [
     "PointDef",
@@ -32,6 +33,7 @@ __all__ = [
     "entity_group",
     "params",
     "registry",
+    "selection",
     "solve_registry",
     "topology",
 ]

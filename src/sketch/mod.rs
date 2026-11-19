@@ -23,6 +23,7 @@ pub mod entity_group;
 pub mod eval;
 pub mod params;
 pub mod registry;
+pub mod selection;
 pub mod solver;
 pub mod topology;
 pub mod transform;
