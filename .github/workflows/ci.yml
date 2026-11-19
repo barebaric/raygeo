@@ -8,6 +8,12 @@ on:
     # open fix) get checks on their own diff, not just PRs to main.
     branches: ["**"]
 
+# A new push to a PR makes the previous run obsolete. Cancel it instead
+# of letting it occupy a runner and delay the result for the new commit.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   rust:
     name: Rust
@@ -18,6 +24,16 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
+          # Installed with the toolchain so the wasm check does not need
+          # a separate rustup invocation (and a second toolchain setup).
+          targets: wasm32-unknown-unknown
+
+      # Reuse dependency and incremental build artifacts between runs.
+      # Without this, clippy and the unit tests recompile the entire
+      # crate graph on every push.
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
 
       - name: Format
         run: cargo fmt --all -- --check
@@ -32,24 +48,52 @@ jobs:
       # The dependency tree is pure Rust, so no C/C++ cross-toolchain is
       # needed for this target.
       - name: Check wasm32
-        run: |
-          rustup target add wasm32-unknown-unknown
-          cargo check --lib --target wasm32-unknown-unknown --no-default-features
+        run: cargo check --lib --target wasm32-unknown-unknown --no-default-features
 
       - name: Rust unit tests
         run: cargo test --lib --no-default-features
 
-  lint-and-typecheck:
-    name: Lint and typecheck
+  # Build the Linux wheel once and hand it to the linting and Linux test
+  # jobs. This turns three identical manylinux builds into one.
+  linux-wheel:
+    name: Build Linux wheel
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
 
-      - name: Build wheel
-        uses: PyO3/maturin-action@v1
+      - uses: PyO3/maturin-action@v1
         with:
           command: build
           args: --release --out dist
+          # Compiler cache shared between runs and jobs, including the
+          # manylinux Docker build.
+          sccache: true
+
+      - name: Upload wheel
+        uses: actions/upload-artifact@v7
+        with:
+          name: wheel-linux-x86_64
+          path: dist/*.whl
+          if-no-files-found: error
+
+  lint-and-typecheck:
+    name: Lint and typecheck
+    needs: linux-wheel
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Download wheel
+        uses: actions/download-artifact@v8
+        with:
+          name: wheel-linux-x86_64
+          path: dist
 
       - name: Install wheel
         run: pip install dist/raygeo-*.whl
@@ -61,7 +105,7 @@ jobs:
         run: pip install matplotlib
 
       - name: Run pyright
-        run: npx --yes pyright --pythonpath $(which python) python/raygeo
+        run: npx --yes pyright --pythonpath "$(which python)" python/raygeo
 
       - name: Validate stubs in wheel
         run: |
@@ -70,7 +114,38 @@ jobs:
           g: Geometry
           o: Ops
           EOF
-          npx --yes pyright --pythonpath $(which python) /tmp/test_stubs.py
+          npx --yes pyright --pythonpath "$(which python)" /tmp/test_stubs.py
+
+  test-linux:
+    name: Tests (ubuntu-latest)
+    needs: linux-wheel
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Download wheel
+        uses: actions/download-artifact@v8
+        with:
+          name: wheel-linux-x86_64
+          path: dist
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libcairo2-dev
+
+      - name: Install wheel
+        run: pip install dist/raygeo-*.whl
+
+      - name: Install test dependencies
+        run: pip install pytest pycairo
+
+      - name: Run tests
+        run: pytest -v
 
   test:
     name: Tests (${{ matrix.os }})
@@ -78,17 +153,29 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # ubuntu-latest is covered by the test-linux job above so it can
+        # reuse the shared wheel instead of rebuilding it.
         os:
-          [ubuntu-latest, ubuntu-24.04-arm, windows-latest, macos-15-intel, macos-15]
+          [ubuntu-24.04-arm, windows-latest, macos-15-intel, macos-15]
     steps:
       - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
 
       - uses: PyO3/maturin-action@v1
         with:
           command: build
           args: --release --out dist
+          sccache: true
 
-      - name: Install system dependencies
+      # ubuntu-24.04-arm also lands in this matrix (only ubuntu-latest is
+      # served by the shared wheel), so it still needs cairo headers for
+      # building pycairo.
+      - name: Install system dependencies (Linux)
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libcairo2-dev
 
