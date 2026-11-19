@@ -172,6 +172,13 @@ jobs:
           args: --release --out dist
           cache: sccache
 
+      # ubuntu-24.04-arm also lands in this matrix (only ubuntu-latest is
+      # served by the shared wheel), so it still needs cairo headers for
+      # building pycairo.
+      - name: Install system dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libcairo2-dev
+
       - name: Install system dependencies (macOS)
         if: runner.os == 'macOS'
         run: brew install cairo
