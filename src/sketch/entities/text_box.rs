@@ -11,6 +11,7 @@ use crate::geo::shape::text::{
 };
 use crate::geo::types::{Point, Rect};
 use crate::sketch::constraint::PointContext;
+use crate::sketch::transform::PlacementTransform;
 
 use super::entity::{remap_id, remap_ids, Entity, EntityBase};
 
@@ -276,6 +277,21 @@ impl Entity for TextBoxEntity {
 
     fn clear_helper_references(&mut self) {
         self.construction_line_ids = Vec::new();
+    }
+
+    fn rewrite_offsets_from(
+        &mut self,
+        template: &dyn Entity,
+        _transform: &dyn PlacementTransform,
+    ) {
+        let Some(template) = template.as_any().downcast_ref::<TextBoxEntity>()
+        else {
+            return;
+        };
+        self.content = template.content.clone();
+        self.font_config = template.font_config.clone();
+        self.font_extra = template.font_extra.clone();
+        self.base.fill_color = template.base.fill_color;
     }
 
     fn supports_fill(&self) -> bool {

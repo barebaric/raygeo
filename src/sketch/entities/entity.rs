@@ -11,6 +11,7 @@
 use serde_json::{json, Value};
 
 use crate::sketch::constraint::PointContext;
+use crate::sketch::transform::PlacementTransform;
 
 /// Rounds to 6 decimals, matching the reference `quantize` used in
 /// geometry signatures.
@@ -394,6 +395,19 @@ pub trait Entity: Send + Sync {
     }
 
     // ── transforms ─────────────────────────────────────────────
+
+    /// Updates entity-internal state for a placement transform (bezier
+    /// control offsets, polygon ring winding). Point positions are
+    /// moved centrally by the caller.
+    fn transform_offsets(&mut self, _transform: &dyn PlacementTransform) {}
+
+    /// Re-derives copy state from a template entity.
+    fn rewrite_offsets_from(
+        &mut self,
+        _template: &dyn Entity,
+        _transform: &dyn PlacementTransform,
+    ) {
+    }
 
     /// Updates entity-internal state for a mirror transform (arc
     /// chirality, bezier control offsets, polygon ring winding).

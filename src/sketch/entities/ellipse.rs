@@ -137,6 +137,10 @@ impl Entity for Ellipse {
         vec![self.center, self.radius_x_point, self.radius_y_point]
     }
 
+    fn center_point_id(&self) -> Option<u64> {
+        Some(self.center)
+    }
+
     fn get_helper_ids(&self) -> Vec<u64> {
         self.helper_line_ids.clone()
     }
