@@ -303,6 +303,9 @@ fn draw_glyphs(
     {
         ctx.move_to(cx - width / 2.0 - ink_x, cy - height / 2.0 - ink_y);
         ctx.show_text(text, font_px);
+        // show_text leaves the current point set; clear it so the next
+        // constraint's arc does not connect back to this text position.
+        ctx.new_path();
         return;
     }
     let config = label_config(font_px, scale);
