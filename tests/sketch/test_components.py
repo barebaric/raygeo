@@ -24,7 +24,10 @@ def test_components_separate_disjoint_constraints():
         ],
     )
 
-    assert components == [{p1, p2}, {p3, p4}]
+    assert {frozenset(component) for component in components} == {
+        frozenset({p1, p2}),
+        frozenset({p3, p4}),
+    }
 
 
 def test_referenced_points_expands_entity_references():
