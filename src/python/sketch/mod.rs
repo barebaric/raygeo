@@ -14,7 +14,6 @@ pub(crate) mod types;
 use pyo3::prelude::*;
 
 use point::PyPointDef;
-use solver::PySketchSolver;
 
 pyo3_stub_gen::module_doc!("raygeo.sketch", "{}", MODULE_DOC);
 
@@ -40,7 +39,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     sketch_mod.setattr("__doc__", MODULE_DOC)?;
 
     sketch_mod.add_class::<PyPointDef>()?;
-    sketch_mod.add_class::<PySketchSolver>()?;
+    solver::register(&sketch_mod)?;
     constraints::register(&sketch_mod)?;
     topology::register(&sketch_mod)?;
     registry::register(&sketch_mod)?;

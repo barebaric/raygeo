@@ -164,3 +164,52 @@ both, 0 max_nfev).
 | Parameter | Type  | Description |
 | --------- | ----- | ----------- |
 | _Returns_ | `int` |             |
+
+## Functions
+
+### `conflicting_constraints()`
+
+```python
+conflicting_constraints(
+    registry: registry.EntityRegistry,
+    constraints: Sequence[Any],
+    threshold: float = 0.001,
+) -> list[int]
+```
+
+Indices of hard constraints whose residual exceeds `threshold` at the registry's current positions.
+
+| Parameter     | Type                      | Description |
+| ------------- | ------------------------- | ----------- |
+| `registry`    | `registry.EntityRegistry` |             |
+| `constraints` | `Sequence[Any]`           |             |
+| `threshold`   | `float = 0.001`           |             |
+| _Returns_     | `list[int]`               |             |
+
+### `solve_registry()`
+
+```python
+solve_registry(
+    registry: registry.EntityRegistry,
+    constraints: Sequence[Any],
+    auxiliary_constraints: Optional[Sequence[Any]] = None,
+    point_filter: Optional[Sequence[int]] = None,
+    tolerance: float = 1e-05,
+    update_dof: bool = True,
+) -> bool
+```
+
+Solves the registry's points in place and refreshes constrained flags.
+
+This is the coarse-grained binding the host calls once per solve: it snapshots the registry, runs
+the Rust solver, writes positions and DOF flags back, and refreshes entity constrained flags.
+
+| Parameter               | Type                             | Description |
+| ----------------------- | -------------------------------- | ----------- |
+| `registry`              | `registry.EntityRegistry`        |             |
+| `constraints`           | `Sequence[Any]`                  |             |
+| `auxiliary_constraints` | `Optional[Sequence[Any]] = None` |             |
+| `point_filter`          | `Optional[Sequence[int]] = None` |             |
+| `tolerance`             | `float = 1e-05`                  |             |
+| `update_dof`            | `bool = True`                    |             |
+| _Returns_               | `bool`                           |             |
