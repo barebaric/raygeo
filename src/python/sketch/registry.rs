@@ -73,7 +73,7 @@ fn any_to_value(value: &Bound<'_, PyAny>) -> PyResult<Value> {
     ))
 }
 
-fn value_to_py<'py>(
+pub(crate) fn value_to_py<'py>(
     py: Python<'py>,
     value: &Value,
 ) -> PyResult<Bound<'py, PyAny>> {

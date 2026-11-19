@@ -3,6 +3,7 @@
 pub(crate) mod constraints;
 pub(crate) mod context;
 pub(crate) mod entities;
+pub(crate) mod params;
 pub(crate) mod point;
 pub(crate) mod protocols;
 pub(crate) mod registry;
@@ -43,6 +44,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     constraints::register(&sketch_mod)?;
     topology::register(&sketch_mod)?;
     registry::register(&sketch_mod)?;
+    params::register(&sketch_mod)?;
     entities::register(&sketch_mod)?;
 
     m.add_submodule(&sketch_mod)?;
@@ -67,6 +69,8 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let sys_modules = py.import("sys")?.getattr("modules")?;
     sys_modules.set_item("raygeo.sketch", &sketch_mod)?;
     sys_modules.set_item("raygeo.sketch.types", &types_mod)?;
+    sys_modules
+        .set_item("raygeo.sketch.params", sketch_mod.getattr("params")?)?;
     sys_modules.set_item("raygeo.sketch.protocols", &protocols_mod)?;
 
     // The sketch package is created by the compiled module; giving it
