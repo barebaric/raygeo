@@ -67,7 +67,7 @@ jobs:
           args: --release --out dist
           # Compiler cache shared between runs and jobs, including the
           # manylinux Docker build.
-          cache: sccache
+          sccache: true
 
       - name: Upload wheel
         uses: actions/upload-artifact@v7
@@ -170,7 +170,7 @@ jobs:
         with:
           command: build
           args: --release --out dist
-          cache: sccache
+          sccache: true
 
       # ubuntu-24.04-arm also lands in this matrix (only ubuntu-latest is
       # served by the shared wheel), so it still needs cairo headers for
