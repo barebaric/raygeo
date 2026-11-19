@@ -23,10 +23,12 @@ from . import topology
 __all__ = [
     "PointDef",
     "Solver",
+    "conflicting_constraints",
     "constraints",
     "entities",
     "params",
     "registry",
+    "solve_registry",
     "topology",
 ]
 
@@ -118,4 +120,20 @@ class Solver:
         r"""
         Residual function evaluations of the last solve.
         """
+
+def conflicting_constraints(registry: registry.EntityRegistry, constraints: typing.Sequence[typing.Any], threshold: builtins.float = 0.001) -> builtins.list[builtins.int]:
+    r"""
+    Indices of hard constraints whose residual exceeds `threshold` at
+    the registry's current positions.
+    """
+
+def solve_registry(registry: registry.EntityRegistry, constraints: typing.Sequence[typing.Any], auxiliary_constraints: typing.Optional[typing.Sequence[typing.Any]] = None, point_filter: typing.Optional[typing.Sequence[builtins.int]] = None, tolerance: builtins.float = 1e-05, update_dof: builtins.bool = True) -> builtins.bool:
+    r"""
+    Solves the registry's points in place and refreshes constrained
+    flags.
+    
+    This is the coarse-grained binding the host calls once per solve:
+    it snapshots the registry, runs the Rust solver, writes positions
+    and DOF flags back, and refreshes entity constrained flags.
+    """
 

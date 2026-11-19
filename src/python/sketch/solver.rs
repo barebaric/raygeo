@@ -1,8 +1,12 @@
 //! Python bindings for the sketch constraint solver.
 
+use std::collections::HashSet;
+
 use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;
-use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
+use pyo3_stub_gen::derive::{
+    gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pymethods,
+};
 
 use crate::sketch::constraint::SketchConstraint;
 use crate::sketch::solver::SketchSolver;
@@ -52,9 +56,143 @@ fn constraint_from_py(
 }
 
 fn constraints_from_py(
-    list: Vec<Bound<'_, PyAny>>,
+    list: &[Bound<'_, PyAny>],
 ) -> PyResult<Vec<Box<dyn SketchConstraint>>> {
     list.iter().map(|obj| constraint_from_py(obj)).collect()
+}
+
+fn point_defs_from_registry(
+    registry: &PyEntityRegistry,
+) -> Vec<(u64, f64, f64, bool)> {
+    registry
+        .inner
+        .all_points()
+        .iter()
+        .map(|p| (p.id, p.x, p.y, p.fixed))
+        .collect()
+}
+
+fn apply_solver_result(
+    registry: &mut PyEntityRegistry,
+    point_defs: &[(u64, f64, f64, bool)],
+    solver: &SketchSolver,
+    update_dof: bool,
+) {
+    let positions = solver.positions();
+    let constrained = solver.constrained_flags();
+    for (point, ((x, y), flag)) in point_defs
+        .iter()
+        .zip(positions.into_iter().zip(constrained))
+    {
+        registry.inner.set_point_position(point.0, x, y);
+        if update_dof {
+            registry.inner.set_point_constrained(point.0, flag);
+        }
+    }
+}
+
+fn radius_constrained_entity_ids(
+    registry: &Bound<'_, PyEntityRegistry>,
+    constraints: &[Bound<'_, PyAny>],
+) -> PyResult<HashSet<u64>> {
+    let entity_ids = registry.borrow().inner.entity_ids();
+    let mut radius_ids = HashSet::new();
+    for entity_id in entity_ids {
+        for constraint in constraints {
+            let constrains_radius = constraint
+                .call_method1("constrains_radius", (registry, entity_id))
+                .and_then(|value| value.extract::<bool>())
+                .unwrap_or(false);
+            if constrains_radius {
+                radius_ids.insert(entity_id);
+                break;
+            }
+        }
+    }
+    Ok(radius_ids)
+}
+
+/// Solves the registry's points in place and refreshes constrained
+/// flags.
+///
+/// This is the coarse-grained binding the host calls once per solve:
+/// it snapshots the registry, runs the Rust solver, writes positions
+/// and DOF flags back, and refreshes entity constrained flags.
+#[gen_stub_pyfunction(module = "raygeo.sketch")]
+#[pyfunction]
+#[pyo3(signature = (registry, constraints, auxiliary_constraints = None,
+                    point_filter = None, tolerance = 1e-5,
+                    update_dof = true))]
+fn solve_registry(
+    registry: &Bound<'_, PyEntityRegistry>,
+    constraints: Vec<Bound<'_, PyAny>>,
+    auxiliary_constraints: Option<Vec<Bound<'_, PyAny>>>,
+    point_filter: Option<Vec<u64>>,
+    tolerance: f64,
+    update_dof: bool,
+) -> PyResult<bool> {
+    let (point_defs, snapshot) = {
+        let registry = registry.borrow();
+        (point_defs_from_registry(&registry), registry.inner.clone())
+    };
+    let hard = constraints_from_py(&constraints)?;
+    let auxiliary = match auxiliary_constraints.as_deref() {
+        Some(list) => constraints_from_py(list)?,
+        None => Vec::new(),
+    };
+    let mut solver = SketchSolver::new(
+        point_defs.clone(),
+        snapshot,
+        hard,
+        auxiliary,
+        point_filter.clone(),
+    );
+    let success = solver.solve(tolerance, update_dof);
+    apply_solver_result(
+        &mut registry.borrow_mut(),
+        &point_defs,
+        &solver,
+        update_dof,
+    );
+
+    if success && update_dof && point_filter.is_none() {
+        let radius_ids = radius_constrained_entity_ids(registry, &constraints)?;
+        registry
+            .borrow_mut()
+            .inner
+            .update_constrained_status(&|entity_id| {
+                radius_ids.contains(&entity_id)
+            });
+    }
+
+    Ok(success)
+}
+
+/// Indices of hard constraints whose residual exceeds `threshold` at
+/// the registry's current positions.
+#[gen_stub_pyfunction(module = "raygeo.sketch")]
+#[pyfunction]
+#[pyo3(signature = (registry, constraints, threshold = 1e-3))]
+fn conflicting_constraints(
+    registry: &Bound<'_, PyEntityRegistry>,
+    constraints: Vec<Bound<'_, PyAny>>,
+    threshold: f64,
+) -> PyResult<Vec<usize>> {
+    let (point_defs, snapshot) = {
+        let registry = registry.borrow();
+        (point_defs_from_registry(&registry), registry.inner.clone())
+    };
+    let hard = constraints_from_py(&constraints)?;
+    let solver =
+        SketchSolver::new(point_defs, snapshot, hard, Vec::new(), None);
+    Ok(solver.conflicting(threshold))
+}
+
+pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    m.add_class::<PySketchSolver>()?;
+    m.add_function(wrap_pyfunction!(solve_registry, m)?)?;
+    m.add_function(wrap_pyfunction!(conflicting_constraints, m)?)?;
+    Ok(())
 }
 
 /// Trust-region least-squares solver for sketch constraint systems.
@@ -82,8 +220,8 @@ impl PySketchSolver {
     ) -> PyResult<Self> {
         let point_defs =
             points.iter().map(|p| (p.id, p.x, p.y, p.fixed)).collect();
-        let hard_constraints = constraints_from_py(hard)?;
-        let aux_constraints = match auxiliary {
+        let hard_constraints = constraints_from_py(&hard)?;
+        let aux_constraints = match auxiliary.as_deref() {
             Some(list) => constraints_from_py(list)?,
             None => Vec::new(),
         };
