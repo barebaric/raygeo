@@ -15,6 +15,7 @@ conflict indices.
 
 import builtins
 import typing
+from . import components
 from . import constraints
 from . import entities
 from . import params
@@ -23,6 +24,7 @@ from . import topology
 __all__ = [
     "PointDef",
     "Solver",
+    "components",
     "conflicting_constraints",
     "constraints",
     "entities",
