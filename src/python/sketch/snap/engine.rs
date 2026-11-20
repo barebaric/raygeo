@@ -36,7 +36,7 @@ impl PySnapLineProducer {
         _drag_position: (f64, f64),
         _drag_context: &Bound<'_, PyAny>,
         _threshold: f64,
-    ) -> PyResult<()> {
+    ) -> PyResult<Vec<PySnapLine>> {
         Err(PyNotImplementedError::new_err("produce"))
     }
 
