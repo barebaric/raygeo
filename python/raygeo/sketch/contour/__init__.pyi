@@ -11,6 +11,8 @@ from raygeo import geo
 from raygeo.sketch import registry
 import typing
 __all__ = [
+    "build_offset_items",
+    "build_outline_item",
     "chain_vertices",
     "group_rings_into_solids",
     "offset_outline",
@@ -19,6 +21,16 @@ __all__ = [
     "rings_to_geometry",
     "walk_component",
 ]
+
+def build_offset_items(registry: registry.EntityRegistry, entity_ids: typing.Sequence[builtins.int], constraints: typing.Sequence[typing.Any], tolerance: builtins.float = 0.02) -> typing.Optional[builtins.list[typing.Any]]:
+    r"""
+    Partitions a selection into offsettable items.
+    
+    Chainable entities are joined through coincident constraints and
+    sampled into outlines; lone entities keep their own offset behavior.
+    """
+
+def build_outline_item(vertices: typing.Sequence[tuple[builtins.float, builtins.float]], closed: builtins.bool, allocate_id: typing.Any, holes: typing.Optional[typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]] = None) -> tuple[typing.Any, typing.Any, typing.Any]: ...
 
 def chain_vertices(registry: registry.EntityRegistry, edges: typing.Sequence[tuple[builtins.int, builtins.bool]], closed: builtins.bool, tolerance: builtins.float = 0.02) -> builtins.list[tuple[builtins.float, builtins.float]]: ...
 

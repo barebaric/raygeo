@@ -7,6 +7,14 @@ sidebar_label: raygeo.sketch.boolean
 
 Boolean operation kind.
 
+### `value`
+
+```python
+value: str
+```
+
+Reference operation value.
+
 ### DIFFERENCE
 
 ### EXCLUDE
@@ -90,3 +98,22 @@ build_boolean_regions(
 | `coincident_pairs` | `Sequence[tuple[int, int]] = []` |             |
 | `tolerance`        | `float = 0.02`                   |             |
 | _Returns_          | `Optional[list[BooleanRegion]]`  |             |
+
+### `build_boolean_regions_from_constraints()`
+
+```python
+build_boolean_regions_from_constraints(
+    registry: registry.EntityRegistry,
+    entity_ids: Sequence[int],
+    constraints: Sequence[Any],
+    tolerance: float = 0.02,
+) -> Optional[list[BooleanRegion]]
+```
+
+| Parameter     | Type                            | Description |
+| ------------- | ------------------------------- | ----------- |
+| `registry`    | `registry.EntityRegistry`       |             |
+| `entity_ids`  | `Sequence[int]`                 |             |
+| `constraints` | `Sequence[Any]`                 |             |
+| `tolerance`   | `float = 0.02`                  |             |
+| _Returns_     | `Optional[list[BooleanRegion]]` |             |

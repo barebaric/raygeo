@@ -1,5 +1,7 @@
 //! Coincident constraint: two points at the same location.
 
+use std::collections::{BTreeSet, HashMap, HashSet};
+
 use serde_json::{json, Value};
 
 use crate::sketch::constraint::{
@@ -8,6 +10,60 @@ use crate::sketch::constraint::{
 use crate::sketch::draw::{
     draw_point_marker, CairoLike, DrawContext, DrawStyle,
 };
+use crate::sketch::registry::EntityRegistry;
+
+/// Collects the coincident point pairs touched by a selection.
+///
+/// Only endpoints of the selected entities seed the search, matching
+/// how the offset and boolean tools treat shared junctions. Pairs are
+/// returned in sorted order so component partitioning is stable.
+pub fn pairs_for_entities(
+    registry: &EntityRegistry,
+    entity_ids: &[u64],
+    constraints: &[Box<dyn SketchConstraint>],
+) -> Vec<(u64, u64)> {
+    let mut adjacency: HashMap<u64, Vec<u64>> = HashMap::new();
+    for constraint in constraints {
+        let Some(coincident) =
+            constraint.as_any().downcast_ref::<CoincidentConstraint>()
+        else {
+            continue;
+        };
+        adjacency
+            .entry(coincident.p1)
+            .or_default()
+            .push(coincident.p2);
+        adjacency
+            .entry(coincident.p2)
+            .or_default()
+            .push(coincident.p1);
+    }
+
+    let mut pairs = BTreeSet::new();
+    for &entity_id in entity_ids {
+        let Some(entity) = registry.get_entity(entity_id) else {
+            continue;
+        };
+        for pid in entity.get_endpoint_ids().into_iter().take(2) {
+            let mut group = HashSet::new();
+            let mut stack = vec![pid];
+            while let Some(current) = stack.pop() {
+                if !group.insert(current) {
+                    continue;
+                }
+                if let Some(neighbors) = adjacency.get(&current) {
+                    stack.extend(neighbors.iter().copied());
+                }
+            }
+            for other in group {
+                if other > pid {
+                    pairs.insert((pid, other));
+                }
+            }
+        }
+    }
+    pairs.into_iter().collect()
+}
 
 /// Enforces two points are at the same location.
 #[derive(Clone, Debug, PartialEq)]

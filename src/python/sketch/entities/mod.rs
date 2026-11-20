@@ -846,31 +846,10 @@ impl PyEntityBase {
         py: Python<'py>,
         sketch: &Bound<'_, PyAny>,
     ) -> PyResult<Option<Bound<'py, PyAny>>> {
-        let entity = extract_entity(slf.as_any())?;
-        let any = entity.as_any();
-        if any
-            .downcast_ref::<crate::sketch::entities::circle::Circle>()
-            .is_some()
-            || any
-                .downcast_ref::<crate::sketch::entities::arc::Arc>()
-                .is_some()
-            || any
-                .downcast_ref::<crate::sketch::entities::ellipse::Ellipse>()
-                .is_some()
-        {
-            return Ok(Some(slf.clone().into_any()));
-        }
-        if let Some(polygon) = any
-            .downcast_ref::<crate::sketch::entities::polygon::PolygonEntity>(
-        ) {
-            if polygon.closed {
-                return Ok(Some(slf.clone().into_any()));
-            }
-            let registry = sketch.getattr("registry")?;
-            let ctx = crate::python::sketch::context::PointCtx(registry);
-            return Ok(offset::polygon_as_offset_item(py, polygon, &ctx));
-        }
-        Ok(None)
+        let registry = sketch
+            .getattr("registry")
+            .unwrap_or_else(|_| sketch.clone());
+        offset::offset_item_for_entity(py, slf.as_any(), &registry)
     }
 
     /// Returns a pure description of the offset changes; the

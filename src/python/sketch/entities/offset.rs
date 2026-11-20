@@ -582,7 +582,7 @@ pub(crate) fn normalize_vertices(
 
 // ── outline item construction ──────────────────────────────────────
 
-fn outline_item<'py>(
+pub(crate) fn outline_item<'py>(
     py: Python<'py>,
     vertices: &[(f64, f64)],
     closed: bool,
@@ -632,6 +632,42 @@ fn outline_item<'py>(
     );
     let entity_obj = super::entity_to_py(py, &entity, None)?;
     Ok((center_pt, handle_pt, entity_obj))
+}
+
+/// The offsettable item an entity forms on its own.
+///
+/// Circles, arcs and ellipses pass through as themselves; open
+/// polygons become a sampled outline. Other entity kinds return
+/// `None`.
+pub fn offset_item_for_entity<'py>(
+    py: Python<'py>,
+    entity_obj: &Bound<'py, PyAny>,
+    registry: &Bound<'_, PyAny>,
+) -> PyResult<Option<Bound<'py, PyAny>>> {
+    let entity = super::extract_entity(entity_obj)?;
+    let any = entity.as_any();
+    if any
+        .downcast_ref::<crate::sketch::entities::circle::Circle>()
+        .is_some()
+        || any
+            .downcast_ref::<crate::sketch::entities::arc::Arc>()
+            .is_some()
+        || any
+            .downcast_ref::<crate::sketch::entities::ellipse::Ellipse>()
+            .is_some()
+    {
+        return Ok(Some(entity_obj.clone()));
+    }
+    if let Some(polygon) =
+        any.downcast_ref::<crate::sketch::entities::polygon::PolygonEntity>()
+    {
+        if polygon.closed {
+            return Ok(Some(entity_obj.clone()));
+        }
+        let ctx = crate::python::sketch::context::PointCtx(registry.clone());
+        return Ok(polygon_as_offset_item(py, polygon, &ctx));
+    }
+    Ok(None)
 }
 
 impl PyPolygonOutline {

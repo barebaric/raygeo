@@ -8,6 +8,49 @@ and outline offsetting for offset and boolean tools.
 
 ## Functions
 
+### `build_offset_items()`
+
+```python
+build_offset_items(
+    registry: registry.EntityRegistry,
+    entity_ids: Sequence[int],
+    constraints: Sequence[Any],
+    tolerance: float = 0.02,
+) -> Optional[list[Any]]
+```
+
+Partitions a selection into offsettable items.
+
+Chainable entities are joined through coincident constraints and sampled into outlines; lone
+entities keep their own offset behavior.
+
+| Parameter     | Type                      | Description |
+| ------------- | ------------------------- | ----------- |
+| `registry`    | `registry.EntityRegistry` |             |
+| `entity_ids`  | `Sequence[int]`           |             |
+| `constraints` | `Sequence[Any]`           |             |
+| `tolerance`   | `float = 0.02`            |             |
+| _Returns_     | `Optional[list[Any]]`     |             |
+
+### `build_outline_item()`
+
+```python
+build_outline_item(
+    vertices: Sequence[tuple[float, float]],
+    closed: bool,
+    allocate_id: Any,
+    holes: Optional[Sequence[Sequence[tuple[float, float]]]] = None,
+) -> tuple[Any, Any, Any]
+```
+
+| Parameter     | Type                                                       | Description |
+| ------------- | ---------------------------------------------------------- | ----------- |
+| `vertices`    | `Sequence[tuple[float, float]]`                            |             |
+| `closed`      | `bool`                                                     |             |
+| `allocate_id` | `Any`                                                      |             |
+| `holes`       | `Optional[Sequence[Sequence[tuple[float, float]]]] = None` |             |
+| _Returns_     | `tuple[Any, Any, Any]`                                     |             |
+
 ### `chain_vertices()`
 
 ```python

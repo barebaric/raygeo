@@ -1,4 +1,7 @@
+from raygeo.sketch.constraints import CoincidentConstraint
 from raygeo.sketch.contour import (
+    build_offset_items,
+    build_outline_item,
     chain_vertices,
     group_rings_into_solids,
     offset_outline,
@@ -7,6 +10,7 @@ from raygeo.sketch.contour import (
     rings_to_geometry,
     walk_component,
 )
+from raygeo.sketch.entities import Polygon, PolygonOutline
 from raygeo.sketch.registry import EntityRegistry
 
 
@@ -57,3 +61,63 @@ def test_outline_frame_is_inside_and_unique():
     assert 0.0 < center[0] < 10.0
     assert 0.0 < center[1] < 10.0
     assert handle != center
+
+
+def test_build_offset_items_joins_chain():
+    registry = EntityRegistry()
+    a = registry.add_point(0.0, 0.0, False)
+    b = registry.add_point(10.0, 0.0, False)
+    c = registry.add_point(20.0, 10.0, False)
+    e1 = registry.add_line(a, b, False)
+    e2 = registry.add_line(b, c, False)
+
+    items = build_offset_items(registry, [e1, e2], [])
+
+    assert items is not None
+    assert len(items) == 1
+    assert isinstance(items[0], PolygonOutline)
+    assert items[0].closed is False
+
+
+def test_build_offset_items_joins_coincident_chain():
+    registry = EntityRegistry()
+    a = registry.add_point(0.0, 0.0, False)
+    b = registry.add_point(10.0, 0.0, False)
+    c = registry.add_point(20.0, 10.0, False)
+    d = registry.add_point(10.0, 0.0, False)
+    e1 = registry.add_line(a, b, False)
+    e2 = registry.add_line(c, d, False)
+    constraints = [CoincidentConstraint(b, d)]
+
+    items = build_offset_items(registry, [e1, e2], constraints)
+
+    assert items is not None
+    assert len(items) == 1
+    assert isinstance(items[0], PolygonOutline)
+    assert items[0].source_ids == [e1, e2]
+
+
+def test_build_offset_items_keeps_standalone_entity():
+    registry = EntityRegistry()
+    center = registry.add_point(10.0, 10.0, False)
+    radius = registry.add_point(15.0, 10.0, False)
+    circle = registry.add_circle(center, radius, False)
+
+    items = build_offset_items(registry, [circle], [])
+
+    assert items is not None
+    assert items[0].id == circle
+
+
+def test_build_outline_item():
+    ids = iter([100, 101, 102])
+    center, handle, polygon = build_outline_item(
+        [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0)],
+        True,
+        lambda: next(ids),
+    )
+
+    assert center.id == 100
+    assert handle.id == 101
+    assert isinstance(polygon, Polygon)
+    assert polygon.id == 102
