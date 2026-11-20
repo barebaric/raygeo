@@ -2,6 +2,12 @@
 
 use serde_json::{json, Value};
 
+use crate::sketch::entities::arc::Arc;
+use crate::sketch::entities::bezier::Bezier;
+use crate::sketch::entities::entity::Entity;
+use crate::sketch::entities::line::Line;
+use crate::sketch::registry::EntityRegistry;
+
 /// The array kind.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ArrayMode {
@@ -398,4 +404,475 @@ fn read_u64(value: &Value) -> Option<u64> {
     value
         .as_u64()
         .or_else(|| value.as_str()?.parse::<u64>().ok())
+}
+
+/// How one array instance is derived from the template.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PlacementKind {
+    Rotation,
+    Translation,
+    CurveAligned,
+}
+
+/// One rigid placement of an array instance.
+#[derive(Clone, Copy, Debug)]
+pub struct InstancePlacement {
+    pub kind: PlacementKind,
+    pub angle: f64,
+    pub center: (f64, f64),
+    pub delta: (f64, f64),
+    pub target_center: (f64, f64),
+}
+
+impl InstancePlacement {
+    pub fn translation(delta: (f64, f64)) -> Self {
+        InstancePlacement {
+            kind: PlacementKind::Translation,
+            angle: 0.0,
+            center: (0.0, 0.0),
+            delta,
+            target_center: (0.0, 0.0),
+        }
+    }
+
+    pub fn rotation(angle: f64, center: (f64, f64)) -> Self {
+        InstancePlacement {
+            kind: PlacementKind::Rotation,
+            angle,
+            center,
+            delta: (0.0, 0.0),
+            target_center: (0.0, 0.0),
+        }
+    }
+
+    pub fn curve_aligned(
+        angle: f64,
+        center: (f64, f64),
+        target_center: (f64, f64),
+    ) -> Self {
+        InstancePlacement {
+            kind: PlacementKind::CurveAligned,
+            angle,
+            center,
+            delta: (0.0, 0.0),
+            target_center,
+        }
+    }
+
+    pub fn transform_point(&self, x: f64, y: f64) -> (f64, f64) {
+        match self.kind {
+            PlacementKind::Rotation | PlacementKind::CurveAligned => {
+                let ca = self.angle.cos();
+                let sa = self.angle.sin();
+                let dx = x - self.center.0;
+                let dy = y - self.center.1;
+                let origin = if self.kind == PlacementKind::Rotation {
+                    self.center
+                } else {
+                    self.target_center
+                };
+                (origin.0 + ca * dx - sa * dy, origin.1 + sa * dx + ca * dy)
+            }
+            PlacementKind::Translation => (x + self.delta.0, y + self.delta.1),
+        }
+    }
+
+    pub fn transform_offset(&self, dx: f64, dy: f64) -> (f64, f64) {
+        match self.kind {
+            PlacementKind::Rotation | PlacementKind::CurveAligned => {
+                let ca = self.angle.cos();
+                let sa = self.angle.sin();
+                (ca * dx - sa * dy, sa * dx + ca * dy)
+            }
+            PlacementKind::Translation => (dx, dy),
+        }
+    }
+}
+
+/// Circular-array placement math.
+#[derive(Clone, Debug)]
+pub struct CircularArrayStrategy {
+    pub count: u32,
+    pub rotate_copies: bool,
+    pub total_angle_deg: f64,
+    pub center: (f64, f64),
+    pub radius: f64,
+}
+
+impl CircularArrayStrategy {
+    pub fn template_placement(
+        &self,
+        template_center: (f64, f64),
+    ) -> InstancePlacement {
+        let (cx, cy) = self.center;
+        let vx = template_center.0 - cx;
+        let vy = template_center.1 - cy;
+        let d = vx.hypot(vy);
+        if d < 1e-9 || self.radius <= 0.0 {
+            return InstancePlacement::translation((0.0, 0.0));
+        }
+        let k = self.radius / d;
+        InstancePlacement::translation((
+            cx + vx * k - template_center.0,
+            cy + vy * k - template_center.1,
+        ))
+    }
+
+    pub fn member_placements(
+        &self,
+        template_center: (f64, f64),
+    ) -> Vec<InstancePlacement> {
+        let count = self.count.max(1);
+        let total = self.total_angle_deg.to_radians();
+        let (cx, cy) = self.center;
+        let mut placements = Vec::new();
+        for j in 1..count {
+            let theta = total * j as f64 / count as f64;
+            if self.rotate_copies {
+                placements.push(InstancePlacement::rotation(theta, (cx, cy)));
+            } else {
+                let vx = template_center.0 - cx;
+                let vy = template_center.1 - cy;
+                let nx = cx + theta.cos() * vx - theta.sin() * vy;
+                let ny = cy + theta.sin() * vx + theta.cos() * vy;
+                placements.push(InstancePlacement::translation((
+                    nx - template_center.0,
+                    ny - template_center.1,
+                )));
+            }
+        }
+        placements
+    }
+}
+
+/// Curve-along placement math.
+#[derive(Clone, Debug)]
+pub struct CurveAlongArrayStrategy {
+    pub count: u32,
+    pub rotate_copies: bool,
+    pub path_entity_id: i64,
+    pub align_to_tangent: bool,
+    pub offset_to_start: f64,
+    pub spacing: f64,
+}
+
+impl CurveAlongArrayStrategy {
+    pub fn samples(&self, registry: &EntityRegistry) -> Vec<((f64, f64), f64)> {
+        if self.path_entity_id < 0 {
+            return Vec::new();
+        }
+        let count = self.resolve_count(registry);
+        if count <= 1 {
+            return Vec::new();
+        }
+        let samples = sample_path(
+            registry,
+            self.path_entity_id as u64,
+            count,
+            self.offset_to_start,
+        );
+        if samples.len() < 2 {
+            return Vec::new();
+        }
+        samples
+    }
+
+    fn slot_angle(&self, tangent_angle: f64) -> f64 {
+        if self.align_to_tangent {
+            tangent_angle
+        } else {
+            0.0
+        }
+    }
+
+    pub fn template_placement(
+        &self,
+        template_center: (f64, f64),
+        registry: &EntityRegistry,
+    ) -> InstancePlacement {
+        let samples = self.samples(registry);
+        let Some(&(point, tangent_angle)) = samples.first() else {
+            return InstancePlacement::translation((0.0, 0.0));
+        };
+        InstancePlacement::curve_aligned(
+            self.slot_angle(tangent_angle),
+            template_center,
+            point,
+        )
+    }
+
+    pub fn member_placements(
+        &self,
+        registry: &EntityRegistry,
+    ) -> Vec<InstancePlacement> {
+        let samples = self.samples(registry);
+        let Some(&(origin, origin_angle)) = samples.first() else {
+            return Vec::new();
+        };
+        let mut placements = Vec::new();
+        for &(point, tangent_angle) in samples.iter().skip(1) {
+            placements.push(InstancePlacement::curve_aligned(
+                self.slot_angle(tangent_angle) - self.slot_angle(origin_angle),
+                origin,
+                point,
+            ));
+        }
+        placements
+    }
+
+    pub fn resolve_count(&self, registry: &EntityRegistry) -> u32 {
+        if self.spacing > 1e-9 && self.path_entity_id >= 0 {
+            let total = path_length(registry, self.path_entity_id as u64);
+            let offset = self.offset_to_start.min(total);
+            let usable = (total - offset).max(0.0);
+            if usable <= 0.0 {
+                return 1;
+            }
+            return (usable / self.spacing).floor().max(0.0) as u32 + 1;
+        }
+        self.count.max(1)
+    }
+}
+
+/// Samples a guide path at equal arc-length intervals.
+pub fn sample_path(
+    registry: &EntityRegistry,
+    path_entity_id: u64,
+    count: u32,
+    offset_to_start: f64,
+) -> Vec<((f64, f64), f64)> {
+    let Some(entity) = registry.get_entity(path_entity_id) else {
+        return Vec::new();
+    };
+    let polyline = polyline_for(entity, registry);
+    if polyline.len() < 2 {
+        return Vec::new();
+    }
+    let cum = cumulative_lengths(&polyline);
+    let total = *cum.last().unwrap_or(&0.0);
+    if total <= 1e-9 {
+        return Vec::new();
+    }
+    let offset = offset_to_start.clamp(0.0, total * (1.0 - 1e-6));
+    let usable = total - offset;
+    if count <= 1 || usable <= 0.0 {
+        return vec![(polyline[0], 0.0)];
+    }
+    let mut samples = Vec::with_capacity(count as usize);
+    for j in 0..count {
+        let s = offset + usable * j as f64 / (count - 1) as f64;
+        let (point, tangent) = point_at_arclength(&polyline, &cum, s);
+        samples.push((point, tangent.1.atan2(tangent.0)));
+    }
+    samples
+}
+
+/// Total arc length of a guide path.
+pub fn path_length(registry: &EntityRegistry, path_entity_id: u64) -> f64 {
+    let Some(entity) = registry.get_entity(path_entity_id) else {
+        return 0.0;
+    };
+    let polyline = polyline_for(entity, registry);
+    if polyline.len() < 2 {
+        return 0.0;
+    }
+    *cumulative_lengths(&polyline).last().unwrap_or(&0.0)
+}
+
+fn polyline_for(
+    entity: &dyn Entity,
+    registry: &EntityRegistry,
+) -> Vec<(f64, f64)> {
+    let any = entity.as_any();
+    let point = |pid: u64| registry.point_position(pid).unwrap_or((0.0, 0.0));
+
+    if let Some(line) = any.downcast_ref::<Line>() {
+        return vec![point(line.p1), point(line.p2)];
+    }
+
+    if let Some(arc) = any.downcast_ref::<Arc>() {
+        let start = point(arc.start);
+        let end = point(arc.end);
+        let c = point(arc.center);
+        let radius = (start.0 - c.0).hypot(start.1 - c.1);
+        let start_a = (start.1 - c.1).atan2(start.0 - c.0);
+        let end_a = (end.1 - c.1).atan2(end.0 - c.0);
+        let mut sweep = end_a - start_a;
+        if arc.clockwise {
+            while sweep >= 0.0 {
+                sweep -= 2.0 * std::f64::consts::PI;
+            }
+        } else {
+            while sweep <= 0.0 {
+                sweep += 2.0 * std::f64::consts::PI;
+            }
+        }
+        let segments = (sweep.abs() / (2.0 * std::f64::consts::PI) * 48.0)
+            .max(8.0) as usize;
+        return (0..=segments)
+            .map(|i| {
+                let a = start_a + sweep * i as f64 / segments as f64;
+                (c.0 + radius * a.cos(), c.1 + radius * a.sin())
+            })
+            .collect();
+    }
+
+    if let Some(bezier) = any.downcast_ref::<Bezier>() {
+        let start = point(bezier.start);
+        let end = point(bezier.end);
+        let cp1 = bezier
+            .cp1
+            .map(|cp| (start.0 + cp[0], start.1 + cp[1]))
+            .unwrap_or(start);
+        let cp2 = bezier
+            .cp2
+            .map(|cp| (end.0 + cp[0], end.1 + cp[1]))
+            .unwrap_or(end);
+        let segments = 32;
+        return (0..=segments)
+            .map(|i| {
+                let t = i as f64 / segments as f64;
+                let u = 1.0 - t;
+                (
+                    u * u * u * start.0
+                        + 3.0 * u * u * t * cp1.0
+                        + 3.0 * u * t * t * cp2.0
+                        + t * t * t * end.0,
+                    u * u * u * start.1
+                        + 3.0 * u * u * t * cp1.1
+                        + 3.0 * u * t * t * cp2.1
+                        + t * t * t * end.1,
+                )
+            })
+            .collect();
+    }
+
+    Vec::new()
+}
+
+fn cumulative_lengths(polyline: &[(f64, f64)]) -> Vec<f64> {
+    let mut cum = Vec::with_capacity(polyline.len());
+    cum.push(0.0);
+    for pair in polyline.windows(2) {
+        let dx = pair[1].0 - pair[0].0;
+        let dy = pair[1].1 - pair[0].1;
+        cum.push(cum[cum.len() - 1] + dx.hypot(dy));
+    }
+    cum
+}
+
+fn point_at_arclength(
+    polyline: &[(f64, f64)],
+    cum: &[f64],
+    s: f64,
+) -> ((f64, f64), (f64, f64)) {
+    let tangent = |a: (f64, f64), b: (f64, f64)| {
+        let dx = b.0 - a.0;
+        let dy = b.1 - a.1;
+        let n = dx.hypot(dy);
+        if n == 0.0 {
+            (1.0, 0.0)
+        } else {
+            (dx / n, dy / n)
+        }
+    };
+    if s <= 0.0 {
+        return (polyline[0], tangent(polyline[0], polyline[1]));
+    }
+    if s >= *cum.last().unwrap_or(&0.0) {
+        let a = polyline[polyline.len() - 2];
+        let b = polyline[polyline.len() - 1];
+        return (b, tangent(a, b));
+    }
+    let mut lo = 0;
+    let mut hi = cum.len() - 1;
+    while lo < hi {
+        let mid = (lo + hi) / 2;
+        if cum[mid] < s {
+            lo = mid + 1;
+        } else {
+            hi = mid;
+        }
+    }
+    let seg = lo.max(1);
+    let a = polyline[seg - 1];
+    let b = polyline[seg];
+    let seg_len = cum[seg] - cum[seg - 1];
+    let t = if seg_len > 0.0 {
+        (s - cum[seg - 1]) / seg_len
+    } else {
+        0.0
+    };
+    (
+        (a.0 + (b.0 - a.0) * t, a.1 + (b.1 - a.1) * t),
+        tangent(a, b),
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rotation_placement_moves_points_around_center() {
+        let p = InstancePlacement::rotation(
+            std::f64::consts::FRAC_PI_2,
+            (0.0, 0.0),
+        );
+        let (x, y) = p.transform_point(1.0, 0.0);
+        assert!((x - 0.0).abs() < 1e-9);
+        assert!((y - 1.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn circular_strategy_places_copies() {
+        let s = CircularArrayStrategy {
+            count: 4,
+            rotate_copies: true,
+            total_angle_deg: 360.0,
+            center: (0.0, 0.0),
+            radius: 2.0,
+        };
+        let placements = s.member_placements((2.0, 0.0));
+        assert_eq!(placements.len(), 3);
+        let (x, y) = placements[0].transform_point(2.0, 0.0);
+        assert!((x - 0.0).abs() < 1e-9);
+        assert!((y - 2.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn line_path_samples_endpoints_and_midpoint() {
+        let mut registry = EntityRegistry::new();
+        let a = registry.add_point(0.0, 0.0, false);
+        let b = registry.add_point(10.0, 0.0, false);
+        let line = registry.add_line(a, b, false);
+        let samples = sample_path(&registry, line, 3, 0.0);
+        assert_eq!(samples.len(), 3);
+        assert_eq!(samples[0].0, (0.0, 0.0));
+        assert_eq!(samples[1].0, (5.0, 0.0));
+        assert_eq!(samples[2].0, (10.0, 0.0));
+        assert!((path_length(&registry, line) - 10.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn curve_strategy_uses_tangent_for_template() {
+        let mut registry = EntityRegistry::new();
+        let a = registry.add_point(0.0, 0.0, false);
+        let b = registry.add_point(10.0, 0.0, false);
+        let line = registry.add_line(a, b, false);
+        let s = CurveAlongArrayStrategy {
+            count: 3,
+            rotate_copies: true,
+            path_entity_id: line as i64,
+            align_to_tangent: true,
+            offset_to_start: 0.0,
+            spacing: 0.0,
+        };
+        let placement = s.template_placement((1.0, 2.0), &registry);
+        assert_eq!(placement.kind, PlacementKind::CurveAligned);
+        let (x, y) = placement.transform_point(1.0, 2.0);
+        assert!(x.abs() < 1e-9);
+        assert!(y.abs() < 1e-9);
+        assert_eq!(s.member_placements(&registry).len(), 2);
+    }
 }

@@ -2,10 +2,14 @@
 # ruff: noqa: E501, F401, F403, F405
 
 import builtins
+from raygeo.sketch import registry
 from raygeo.sketch import types
 import typing
 __all__ = [
     "ArrayDefinition",
+    "CircularArrayStrategy",
+    "CurveAlongArrayStrategy",
+    "InstancePlacement",
 ]
 
 @typing.final
@@ -128,4 +132,94 @@ class ArrayDefinition:
         Restores editable state from a snapshot.
         """
     def __copy__(self) -> ArrayDefinition: ...
+
+@typing.final
+class CircularArrayStrategy:
+    r"""
+    Circular-array placement strategy.
+    """
+    @property
+    def count(self) -> builtins.int: ...
+    @count.setter
+    def count(self, value: builtins.int) -> None: ...
+    @property
+    def rotate_copies(self) -> builtins.bool: ...
+    @rotate_copies.setter
+    def rotate_copies(self, value: builtins.bool) -> None: ...
+    @property
+    def total_angle_deg(self) -> builtins.float: ...
+    @total_angle_deg.setter
+    def total_angle_deg(self, value: builtins.float) -> None: ...
+    @property
+    def center(self) -> tuple[builtins.float, builtins.float]: ...
+    @center.setter
+    def center(self, value: tuple[builtins.float, builtins.float]) -> None: ...
+    @property
+    def radius(self) -> builtins.float: ...
+    @radius.setter
+    def radius(self, value: builtins.float) -> None: ...
+    def __new__(cls, count: builtins.int = 6, rotate_copies: builtins.bool = True, total_angle_deg: builtins.float = 360.0, center: tuple[builtins.float, builtins.float] = (0.0, 0.0), radius: builtins.float = 0.0) -> CircularArrayStrategy: ...
+    def template_placement(self, template_center: tuple[builtins.float, builtins.float]) -> InstancePlacement: ...
+    def member_placements(self, template_center: tuple[builtins.float, builtins.float]) -> builtins.list[InstancePlacement]: ...
+
+@typing.final
+class CurveAlongArrayStrategy:
+    r"""
+    Curve-along placement strategy.
+    """
+    @property
+    def count(self) -> builtins.int: ...
+    @count.setter
+    def count(self, value: builtins.int) -> None: ...
+    @property
+    def rotate_copies(self) -> builtins.bool: ...
+    @rotate_copies.setter
+    def rotate_copies(self, value: builtins.bool) -> None: ...
+    @property
+    def path_entity_id(self) -> builtins.int: ...
+    @path_entity_id.setter
+    def path_entity_id(self, value: builtins.int) -> None: ...
+    @property
+    def align_to_tangent(self) -> builtins.bool: ...
+    @align_to_tangent.setter
+    def align_to_tangent(self, value: builtins.bool) -> None: ...
+    @property
+    def offset_to_start(self) -> builtins.float: ...
+    @offset_to_start.setter
+    def offset_to_start(self, value: builtins.float) -> None: ...
+    @property
+    def spacing(self) -> builtins.float: ...
+    @spacing.setter
+    def spacing(self, value: builtins.float) -> None: ...
+    def __new__(cls, count: builtins.int = 6, rotate_copies: builtins.bool = True, path_entity_id: builtins.int = -1, align_to_tangent: builtins.bool = True, offset_to_start: builtins.float = 0.0, spacing: builtins.float = 0.0) -> CurveAlongArrayStrategy: ...
+    def template_placement(self, template_center: tuple[builtins.float, builtins.float], registry: registry.EntityRegistry) -> InstancePlacement: ...
+    def member_placements(self, registry: registry.EntityRegistry) -> builtins.list[InstancePlacement]: ...
+
+@typing.final
+class InstancePlacement:
+    r"""
+    A rigid placement of one array instance.
+    """
+    @property
+    def kind(self) -> builtins.str:
+        r"""
+        Placement kind: ``rotation``, ``translation`` or
+        ``curve_aligned``.
+        """
+    @property
+    def angle(self) -> builtins.float: ...
+    @property
+    def center(self) -> tuple[builtins.float, builtins.float]: ...
+    @property
+    def delta(self) -> tuple[builtins.float, builtins.float]: ...
+    @property
+    def target_center(self) -> tuple[builtins.float, builtins.float]: ...
+    def transform_point(self, x: builtins.float, y: builtins.float) -> tuple[builtins.float, builtins.float]:
+        r"""
+        Transforms an absolute point through the placement.
+        """
+    def transform_offset(self, dx: builtins.float, dy: builtins.float) -> tuple[builtins.float, builtins.float]:
+        r"""
+        Transforms a relative offset through the placement.
+        """
 

@@ -4,14 +4,315 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
-use crate::python::sketch::registry::{value_from_dict, value_to_py};
+use crate::python::sketch::registry::{
+    value_from_dict, value_to_py, PyEntityRegistry,
+};
 use crate::python::sketch::types::EntityId;
 use crate::sketch::arrays::{
-    ArrayDefinition as CoreDefinition, CircularArray, CurveAlongArray,
+    ArrayDefinition as CoreDefinition, CircularArray, CircularArrayStrategy,
+    CurveAlongArray, CurveAlongArrayStrategy, InstancePlacement, PlacementKind,
 };
 
 type Members = Vec<(i64, Vec<EntityId>)>;
 type Anchor = Option<((f64, f64), f64)>;
+
+/// A rigid placement of one array instance.
+#[gen_stub_pyclass]
+#[pyclass(
+    module = "raygeo.sketch.arrays",
+    name = "InstancePlacement",
+    frozen,
+    skip_from_py_object
+)]
+#[derive(Clone)]
+pub struct PyInstancePlacement {
+    inner: InstancePlacement,
+}
+
+#[gen_stub_pymethods]
+#[pymethods]
+impl PyInstancePlacement {
+    /// Placement kind: ``rotation``, ``translation`` or
+    /// ``curve_aligned``.
+    #[getter]
+    fn kind(&self) -> &'static str {
+        match self.inner.kind {
+            PlacementKind::Rotation => "rotation",
+            PlacementKind::Translation => "translation",
+            PlacementKind::CurveAligned => "curve_aligned",
+        }
+    }
+
+    #[getter]
+    fn angle(&self) -> f64 {
+        self.inner.angle
+    }
+
+    #[getter]
+    fn center(&self) -> (f64, f64) {
+        self.inner.center
+    }
+
+    #[getter]
+    fn delta(&self) -> (f64, f64) {
+        self.inner.delta
+    }
+
+    #[getter]
+    fn target_center(&self) -> (f64, f64) {
+        self.inner.target_center
+    }
+
+    /// Transforms an absolute point through the placement.
+    fn transform_point(&self, x: f64, y: f64) -> (f64, f64) {
+        self.inner.transform_point(x, y)
+    }
+
+    /// Transforms a relative offset through the placement.
+    fn transform_offset(&self, dx: f64, dy: f64) -> (f64, f64) {
+        self.inner.transform_offset(dx, dy)
+    }
+}
+
+/// Circular-array placement strategy.
+#[gen_stub_pyclass]
+#[pyclass(
+    module = "raygeo.sketch.arrays",
+    name = "CircularArrayStrategy",
+    skip_from_py_object
+)]
+#[derive(Clone)]
+pub struct PyCircularArrayStrategy {
+    inner: CircularArrayStrategy,
+}
+
+#[gen_stub_pymethods]
+#[pymethods]
+impl PyCircularArrayStrategy {
+    #[new]
+    #[pyo3(signature = (
+        count = 6,
+        rotate_copies = true,
+        total_angle_deg = 360.0,
+        center = (0.0, 0.0),
+        radius = 0.0
+    ))]
+    fn new(
+        count: u32,
+        rotate_copies: bool,
+        total_angle_deg: f64,
+        center: (f64, f64),
+        radius: f64,
+    ) -> Self {
+        PyCircularArrayStrategy {
+            inner: CircularArrayStrategy {
+                count,
+                rotate_copies,
+                total_angle_deg,
+                center,
+                radius,
+            },
+        }
+    }
+
+    #[getter]
+    fn count(&self) -> u32 {
+        self.inner.count
+    }
+
+    #[setter]
+    fn set_count(&mut self, value: u32) {
+        self.inner.count = value;
+    }
+
+    #[getter]
+    fn rotate_copies(&self) -> bool {
+        self.inner.rotate_copies
+    }
+
+    #[setter]
+    fn set_rotate_copies(&mut self, value: bool) {
+        self.inner.rotate_copies = value;
+    }
+
+    #[getter]
+    fn total_angle_deg(&self) -> f64 {
+        self.inner.total_angle_deg
+    }
+
+    #[setter]
+    fn set_total_angle_deg(&mut self, value: f64) {
+        self.inner.total_angle_deg = value;
+    }
+
+    #[getter]
+    fn center(&self) -> (f64, f64) {
+        self.inner.center
+    }
+
+    #[setter]
+    fn set_center(&mut self, value: (f64, f64)) {
+        self.inner.center = value;
+    }
+
+    #[getter]
+    fn radius(&self) -> f64 {
+        self.inner.radius
+    }
+
+    #[setter]
+    fn set_radius(&mut self, value: f64) {
+        self.inner.radius = value;
+    }
+
+    fn template_placement(
+        &self,
+        template_center: (f64, f64),
+    ) -> PyInstancePlacement {
+        PyInstancePlacement {
+            inner: self.inner.template_placement(template_center),
+        }
+    }
+
+    fn member_placements(
+        &self,
+        template_center: (f64, f64),
+    ) -> Vec<PyInstancePlacement> {
+        self.inner
+            .member_placements(template_center)
+            .into_iter()
+            .map(|inner| PyInstancePlacement { inner })
+            .collect()
+    }
+}
+
+/// Curve-along placement strategy.
+#[gen_stub_pyclass]
+#[pyclass(
+    module = "raygeo.sketch.arrays",
+    name = "CurveAlongArrayStrategy",
+    skip_from_py_object
+)]
+#[derive(Clone)]
+pub struct PyCurveAlongArrayStrategy {
+    inner: CurveAlongArrayStrategy,
+}
+
+#[gen_stub_pymethods]
+#[pymethods]
+impl PyCurveAlongArrayStrategy {
+    #[new]
+    #[pyo3(signature = (
+        count = 6,
+        rotate_copies = true,
+        path_entity_id = -1,
+        align_to_tangent = true,
+        offset_to_start = 0.0,
+        spacing = 0.0
+    ))]
+    fn new(
+        count: u32,
+        rotate_copies: bool,
+        path_entity_id: i64,
+        align_to_tangent: bool,
+        offset_to_start: f64,
+        spacing: f64,
+    ) -> Self {
+        PyCurveAlongArrayStrategy {
+            inner: CurveAlongArrayStrategy {
+                count,
+                rotate_copies,
+                path_entity_id,
+                align_to_tangent,
+                offset_to_start,
+                spacing,
+            },
+        }
+    }
+
+    #[getter]
+    fn count(&self) -> u32 {
+        self.inner.count
+    }
+
+    #[setter]
+    fn set_count(&mut self, value: u32) {
+        self.inner.count = value;
+    }
+
+    #[getter]
+    fn rotate_copies(&self) -> bool {
+        self.inner.rotate_copies
+    }
+
+    #[setter]
+    fn set_rotate_copies(&mut self, value: bool) {
+        self.inner.rotate_copies = value;
+    }
+
+    #[getter]
+    fn path_entity_id(&self) -> i64 {
+        self.inner.path_entity_id
+    }
+
+    #[setter]
+    fn set_path_entity_id(&mut self, value: i64) {
+        self.inner.path_entity_id = value;
+    }
+
+    #[getter]
+    fn align_to_tangent(&self) -> bool {
+        self.inner.align_to_tangent
+    }
+
+    #[setter]
+    fn set_align_to_tangent(&mut self, value: bool) {
+        self.inner.align_to_tangent = value;
+    }
+
+    #[getter]
+    fn offset_to_start(&self) -> f64 {
+        self.inner.offset_to_start
+    }
+
+    #[setter]
+    fn set_offset_to_start(&mut self, value: f64) {
+        self.inner.offset_to_start = value;
+    }
+
+    #[getter]
+    fn spacing(&self) -> f64 {
+        self.inner.spacing
+    }
+
+    #[setter]
+    fn set_spacing(&mut self, value: f64) {
+        self.inner.spacing = value;
+    }
+
+    fn template_placement(
+        &self,
+        template_center: (f64, f64),
+        registry: PyRef<'_, PyEntityRegistry>,
+    ) -> PyInstancePlacement {
+        PyInstancePlacement {
+            inner: self
+                .inner
+                .template_placement(template_center, &registry.inner),
+        }
+    }
+
+    fn member_placements(
+        &self,
+        registry: PyRef<'_, PyEntityRegistry>,
+    ) -> Vec<PyInstancePlacement> {
+        self.inner
+            .member_placements(&registry.inner)
+            .into_iter()
+            .map(|inner| PyInstancePlacement { inner })
+            .collect()
+    }
+}
 
 /// Persistent definition of a sketch array.
 #[gen_stub_pyclass]
@@ -359,6 +660,9 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     arrays_mod
         .setattr("__doc__", "Persistent definitions of sketch arrays.")?;
     arrays_mod.add_class::<PyArrayDefinition>()?;
+    arrays_mod.add_class::<PyInstancePlacement>()?;
+    arrays_mod.add_class::<PyCircularArrayStrategy>()?;
+    arrays_mod.add_class::<PyCurveAlongArrayStrategy>()?;
 
     m.add_submodule(&arrays_mod)?;
 
