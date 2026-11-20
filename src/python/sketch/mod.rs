@@ -10,6 +10,7 @@ pub(crate) mod document;
 pub(crate) mod entities;
 pub(crate) mod entity_group;
 pub(crate) mod geometry;
+pub(crate) mod model;
 pub(crate) mod params;
 pub(crate) mod point;
 pub(crate) mod protocols;
@@ -59,6 +60,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     contour::register(&sketch_mod)?;
     registry::register(&sketch_mod)?;
     selection::register(&sketch_mod)?;
+    model::register(&sketch_mod)?;
     params::register(&sketch_mod)?;
     entities::register(&sketch_mod)?;
 
