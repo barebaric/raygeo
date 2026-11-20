@@ -321,6 +321,31 @@ Drops the entity's references to its helper entities.
 | `id`      | `types.EntityID` |             |
 | _Returns_ | `None`           |             |
 
+### `clone()`
+
+```python
+clone() -> EntityRegistry
+```
+
+Returns a deep copy of the model.
+
+| Parameter | Type             | Description |
+| --------- | ---------------- | ----------- |
+| _Returns_ | `EntityRegistry` |             |
+
+### `connected_entity_ids()`
+
+```python
+connected_entity_ids(id: types.EntityID) -> set[types.EntityID]
+```
+
+Entity ids transitively connected through shared control points.
+
+| Parameter | Type                  | Description |
+| --------- | --------------------- | ----------- |
+| `id`      | `types.EntityID`      |             |
+| _Returns_ | `set[types.EntityID]` |             |
+
 ### `contains_point()`
 
 ```python
@@ -408,6 +433,19 @@ All entity ids in insertion order.
 | Parameter | Type                   | Description |
 | --------- | ---------------------- | ----------- |
 | _Returns_ | `list[types.EntityID]` |             |
+
+### `entity_index()`
+
+```python
+entity_index(id: types.EntityID) -> Optional[int]
+```
+
+Position of an entity in storage order, or `None`.
+
+| Parameter | Type             | Description |
+| --------- | ---------------- | ----------- |
+| `id`      | `types.EntityID` |             |
+| _Returns_ | `Optional[int]`  |             |
 
 ### `entity_point_ids()`
 
@@ -503,51 +541,51 @@ Points pinned while `point_id` is dragged. Alias for drag_anchor_points (referen
 ### `get_entity()`
 
 ```python
-get_entity(id: types.EntityID) -> Optional[entities.Entity]
+get_entity(idx: types.EntityID) -> Optional[entities.Entity]
 ```
 
 The entity object for an id, or None. Alias for get_entity_object (reference naming).
 
 | Parameter | Type                        | Description |
 | --------- | --------------------------- | ----------- |
-| `id`      | `types.EntityID`            |             |
+| `idx`     | `types.EntityID`            |             |
 | _Returns_ | `Optional[entities.Entity]` |             |
 
 ### `get_entity_object()`
 
 ```python
-get_entity_object(id: types.EntityID) -> Optional[entities.Entity]
+get_entity_object(idx: types.EntityID) -> Optional[entities.Entity]
 ```
 
 | Parameter | Type                        | Description |
 | --------- | --------------------------- | ----------- |
-| `id`      | `types.EntityID`            |             |
+| `idx`     | `types.EntityID`            |             |
 | _Returns_ | `Optional[entities.Entity]` |             |
 
 ### `get_point()`
 
 ```python
-get_point(id: types.EntityID) -> Optional[point.SketchPoint]
+get_point(idx: types.EntityID) -> point.SketchPoint
 ```
 
-Coordinates of a point as `(x, y)`, or `None`.
+Coordinates of a point as `(x, y)`; raises `IndexError` for an unknown id.
 
-| Parameter | Type                          | Description |
-| --------- | ----------------------------- | ----------- |
-| `id`      | `types.EntityID`              |             |
-| _Returns_ | `Optional[point.SketchPoint]` |             |
+| Parameter | Type                | Description |
+| --------- | ------------------- | ----------- |
+| `idx`     | `types.EntityID`    |             |
+| _Returns_ | `point.SketchPoint` |             |
 
 ### `get_point_object()`
 
 ```python
-get_point_object(id: types.EntityID) -> Optional[point.SketchPoint]
+get_point_object(idx: types.EntityID) -> Optional[point.SketchPoint]
 ```
 
 The point object for an id (with id/coords/flags), or None.
 
 | Parameter | Type                          | Description |
 | --------- | ----------------------------- | ----------- |
-| `id`      | `types.EntityID`              |             |
+| `idx`     | `types.EntityID`              |             |
 | _Returns_ | `Optional[point.SketchPoint]` |             |
 
 ### `get_state()`
@@ -604,6 +642,20 @@ Points that can stay unconstrained when the entity is constrained.
 | --------- | ---------------------- | ----------- |
 | `id`      | `types.EntityID`       |             |
 | _Returns_ | `list[types.EntityID]` |             |
+
+### `insert_entity()`
+
+```python
+insert_entity(index: int, obj: Any) -> int
+```
+
+Inserts an entity at `index` in storage order.
+
+| Parameter | Type  | Description |
+| --------- | ----- | ----------- |
+| `index`   | `int` |             |
+| `obj`     | `Any` |             |
+| _Returns_ | `int` |             |
 
 ### `intersects_rect()`
 
@@ -753,6 +805,18 @@ Mirrors entity-internal state across the axis (arc chirality, bezier offsets, po
 | `position`  | `float`          |             |
 | _Returns_   | `None`           |             |
 
+### `next_id()`
+
+```python
+next_id() -> types.EntityID
+```
+
+The next id that an added point or entity would receive.
+
+| Parameter | Type             | Description |
+| --------- | ---------------- | ----------- |
+| _Returns_ | `types.EntityID` |             |
+
 ### `point_constrained()`
 
 ```python
@@ -854,6 +918,20 @@ Removes the given points.
 | `point_ids` | `Sequence[types.EntityID]` |             |
 | _Returns_   | `None`                     |             |
 
+### `replace_entity()`
+
+```python
+replace_entity(id: types.EntityID, obj: Any) -> bool
+```
+
+Replaces an entity in place, preserving its id and position.
+
+| Parameter | Type             | Description |
+| --------- | ---------------- | ----------- |
+| `id`      | `types.EntityID` |             |
+| `obj`     | `Any`            |             |
+| _Returns_ | `bool`           |             |
+
 ### `replace_entity_from_dict()`
 
 ```python
@@ -922,6 +1000,20 @@ Sets a point's solver-constrained flag.
 | `id`          | `types.EntityID` |             |
 | `constrained` | `bool`           |             |
 | _Returns_     | `bool`           |             |
+
+### `set_point_fixed()`
+
+```python
+set_point_fixed(id: types.EntityID, fixed: bool) -> bool
+```
+
+Sets a point's fixed (anchor) flag.
+
+| Parameter | Type             | Description |
+| --------- | ---------------- | ----------- |
+| `id`      | `types.EntityID` |             |
+| `fixed`   | `bool`           |             |
+| _Returns_ | `bool`           |             |
 
 ### `set_point_position()`
 

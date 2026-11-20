@@ -2,6 +2,7 @@
 # ruff: noqa: E501, F401, F403, F405
 
 import builtins
+from raygeo.sketch import entities
 from raygeo.sketch import registry
 from raygeo.sketch import types
 import typing
@@ -72,6 +73,10 @@ class Selection:
     def select_entity(self, entity_id: types.EntityID, is_multi: builtins.bool) -> None:
         r"""
         Selects an entity by id.
+        """
+    def resolve_entities(self, registry: registry.EntityRegistry) -> typing.Optional[builtins.list[entities.Entity]]:
+        r"""
+        Resolves selected entity ids to entity objects.
         """
     def select_connected_entities(self, entity_id: types.EntityID, registry: registry.EntityRegistry) -> None:
         r"""

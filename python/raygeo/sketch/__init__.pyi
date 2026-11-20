@@ -16,6 +16,7 @@ conflict indices.
 import builtins
 import typing
 from . import arrays
+from . import boolean
 from . import components
 from . import constraints
 from . import contour
@@ -31,6 +32,7 @@ __all__ = [
     "PointDef",
     "Solver",
     "arrays",
+    "boolean",
     "components",
     "conflicting_constraints",
     "constraints",
