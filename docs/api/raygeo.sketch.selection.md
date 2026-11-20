@@ -126,6 +126,21 @@ Whether nothing is selected.
 | --------- | ------ | ----------- |
 | _Returns_ | `bool` |             |
 
+### `resolve_entities()`
+
+```python
+resolve_entities(
+    registry: registry.EntityRegistry,
+) -> Optional[list[entities.Entity]]
+```
+
+Resolves selected entity ids to entity objects.
+
+| Parameter  | Type                              | Description |
+| ---------- | --------------------------------- | ----------- |
+| `registry` | `registry.EntityRegistry`         |             |
+| _Returns_  | `Optional[list[entities.Entity]]` |             |
+
 ### `select_connected_entities()`
 
 ```python
