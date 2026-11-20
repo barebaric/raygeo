@@ -1,6 +1,7 @@
 //! Python bindings for the sketch module.
 
 pub(crate) mod arrays;
+pub(crate) mod boolean;
 pub(crate) mod components;
 pub(crate) mod constraints;
 pub(crate) mod context;
@@ -48,6 +49,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     sketch_mod.add_class::<PyPointDef>()?;
     solver::register(&sketch_mod)?;
     arrays::register(&sketch_mod)?;
+    boolean::register(&sketch_mod)?;
     components::register(&sketch_mod)?;
     document::register(&sketch_mod)?;
     geometry::register(&sketch_mod)?;

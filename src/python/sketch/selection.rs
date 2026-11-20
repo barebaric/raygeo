@@ -3,6 +3,7 @@
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
+use crate::python::sketch::entities::{entity_to_py, AnyEntity};
 use crate::python::sketch::registry::PyEntityRegistry;
 use crate::python::sketch::types::EntityId;
 use crate::sketch::selection::Selection;
@@ -118,6 +119,23 @@ impl PySelection {
     /// Selects an entity by id.
     fn select_entity(&mut self, entity_id: EntityId, is_multi: bool) {
         self.inner.select_entity(entity_id.0, is_multi);
+    }
+
+    /// Resolves selected entity ids to entity objects.
+    fn resolve_entities<'py>(
+        &self,
+        py: Python<'py>,
+        registry: &Bound<'_, PyEntityRegistry>,
+    ) -> PyResult<Option<Vec<AnyEntity<'py>>>> {
+        let mut entities = Vec::with_capacity(self.inner.entity_ids.len());
+        let reg = registry.borrow();
+        for &eid in &self.inner.entity_ids {
+            let Some(entity) = reg.inner.get_entity(eid) else {
+                return Ok(None);
+            };
+            entities.push(AnyEntity(entity_to_py(py, entity, Some(registry))?));
+        }
+        Ok(Some(entities))
     }
 
     /// Adds all entities connected through shared points.

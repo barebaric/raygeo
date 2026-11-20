@@ -15,6 +15,7 @@
 //! and faces.
 
 pub mod arrays;
+pub mod boolean;
 pub mod components;
 pub mod constraint;
 pub mod constraints;
