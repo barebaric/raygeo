@@ -3,6 +3,7 @@ from raygeo.sketch.boolean import (
     BooleanRegion,
     apply_boolean,
     build_boolean_regions,
+    build_boolean_regions_from_constraints,
 )
 from raygeo.sketch.registry import EntityRegistry
 
@@ -43,3 +44,12 @@ def test_apply_boolean_accepts_descriptors():
     solids = apply_boolean(BooleanOp.UNION, [region])
     assert solids is not None
     assert len(solids) >= 1
+
+
+def test_build_regions_from_constraints():
+    registry, ids = _two_squares()
+    regions = build_boolean_regions_from_constraints(registry, ids, [])
+    assert regions is not None
+    assert len(regions) == 2
+    solids = apply_boolean(BooleanOp.UNION, regions)
+    assert solids is not None

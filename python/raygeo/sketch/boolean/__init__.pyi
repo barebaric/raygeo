@@ -10,12 +10,19 @@ __all__ = [
     "BooleanSolid",
     "apply_boolean",
     "build_boolean_regions",
+    "build_boolean_regions_from_constraints",
 ]
 
 class BooleanOp:
     r"""
     Boolean operation kind.
     """
+    @property
+    def value(self) -> builtins.str:
+        r"""
+        Reference operation value.
+        """
+    def __hash__(self) -> builtins.int: ...
     @typing.final
     class UNION(BooleanOp):
         __match_args__ = ()
@@ -36,7 +43,6 @@ class BooleanOp:
         __match_args__ = ()
         def __new__(cls) -> BooleanOp.EXCLUDE: ...
     
-    ...
 
 @typing.final
 class BooleanRegion:
@@ -71,4 +77,6 @@ class BooleanSolid:
 def apply_boolean(op: BooleanOp, regions: typing.Sequence[BooleanRegion], tolerance: builtins.float = 0.02) -> typing.Optional[builtins.list[BooleanSolid]]: ...
 
 def build_boolean_regions(registry: registry.EntityRegistry, entity_ids: typing.Sequence[builtins.int], coincident_pairs: typing.Sequence[tuple[builtins.int, builtins.int]] = [], tolerance: builtins.float = 0.02) -> typing.Optional[builtins.list[BooleanRegion]]: ...
+
+def build_boolean_regions_from_constraints(registry: registry.EntityRegistry, entity_ids: typing.Sequence[builtins.int], constraints: typing.Sequence[typing.Any], tolerance: builtins.float = 0.02) -> typing.Optional[builtins.list[BooleanRegion]]: ...
 

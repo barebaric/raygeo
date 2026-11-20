@@ -5,10 +5,13 @@ use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::geo::types::Point;
 use crate::python::sketch::registry::PyEntityRegistry;
+use crate::python::sketch::solver::constraint_from_py;
 use crate::sketch::boolean::{
     BooleanOp as CoreBooleanOp, BooleanRegion as CoreBooleanRegion,
     BooleanSolid as CoreBooleanSolid,
 };
+use crate::sketch::constraint::SketchConstraint;
+use crate::sketch::constraints::coincident::pairs_for_entities;
 
 /// Boolean operation kind.
 #[pyo3_stub_gen::derive::gen_stub_pyclass_complex_enum]
@@ -29,6 +32,30 @@ pub enum PyBooleanOp {
     Intersection,
     #[pyo3(name = "EXCLUDE")]
     Exclude,
+}
+
+#[gen_stub_pymethods]
+#[pymethods]
+impl PyBooleanOp {
+    /// Reference operation value.
+    #[getter]
+    fn value(&self) -> &'static str {
+        match self {
+            PyBooleanOp::Union => "union",
+            PyBooleanOp::Difference => "difference",
+            PyBooleanOp::Intersection => "intersection",
+            PyBooleanOp::Exclude => "exclude",
+        }
+    }
+
+    fn __hash__(&self) -> u64 {
+        match self {
+            PyBooleanOp::Union => 0,
+            PyBooleanOp::Difference => 1,
+            PyBooleanOp::Intersection => 2,
+            PyBooleanOp::Exclude => 3,
+        }
+    }
 }
 
 /// One closed candidate region.
@@ -144,6 +171,33 @@ fn build_boolean_regions(
 
 #[pyo3_stub_gen::derive::gen_stub_pyfunction(module = "raygeo.sketch.boolean")]
 #[pyfunction]
+#[pyo3(signature = (registry, entity_ids, constraints, tolerance = 0.02))]
+fn build_boolean_regions_from_constraints(
+    registry: &Bound<'_, PyEntityRegistry>,
+    entity_ids: Vec<u64>,
+    constraints: Vec<Bound<'_, PyAny>>,
+    tolerance: f64,
+) -> PyResult<Option<Vec<PyBooleanRegion>>> {
+    let parsed: Vec<Box<dyn SketchConstraint>> = constraints
+        .iter()
+        .map(constraint_from_py)
+        .collect::<PyResult<_>>()?;
+    let regions = {
+        let reg = registry.borrow();
+        let pairs = pairs_for_entities(&reg.inner, &entity_ids, &parsed);
+        crate::sketch::boolean::build_boolean_regions(
+            &reg.inner,
+            &entity_ids,
+            &pairs,
+            tolerance,
+        )
+    };
+    Ok(regions
+        .map(|regions| regions.into_iter().map(from_core_region).collect()))
+}
+
+#[pyo3_stub_gen::derive::gen_stub_pyfunction(module = "raygeo.sketch.boolean")]
+#[pyfunction]
 #[pyo3(signature = (op, regions, tolerance = 0.02))]
 fn apply_boolean(
     op: PyBooleanOp,
@@ -188,6 +242,10 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     boolean_mod
         .add_function(wrap_pyfunction!(build_boolean_regions, &boolean_mod)?)?;
     boolean_mod.add_function(wrap_pyfunction!(apply_boolean, &boolean_mod)?)?;
+    boolean_mod.add_function(wrap_pyfunction!(
+        build_boolean_regions_from_constraints,
+        &boolean_mod
+    )?)?;
     m.add_submodule(&boolean_mod)?;
     let sys_modules = py.import("sys")?.getattr("modules")?;
     sys_modules.set_item("raygeo.sketch.boolean", &boolean_mod)?;
