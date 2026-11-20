@@ -34,4 +34,4 @@ def test_curve_strategy_samples_a_line():
     x, y = placement.transform_point(1.0, 2.0)
     assert math.isclose(x, 0.0, abs_tol=1e-9)
     assert math.isclose(y, 0.0, abs_tol=1e-9)
-    assert len(strategy.member_placements(registry)) == 2
+    assert len(strategy.member_placements((1.0, 2.0), registry)) == 2

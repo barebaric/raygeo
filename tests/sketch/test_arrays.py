@@ -10,7 +10,7 @@ def test_circular_to_dict_from_dict():
         total_angle_deg=180.0,
         rotate_copies=False,
     )
-    definition.standalone_pids = [(0, [20])]
+    definition.standalone_pids = {0: [20]}
     data = definition.to_dict()
     assert data == {
         "uid": "arr-1",
