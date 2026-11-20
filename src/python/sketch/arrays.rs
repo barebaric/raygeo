@@ -1,28 +1,542 @@
 //! Python bindings for sketch array definitions.
 
 use pyo3::prelude::*;
+use pyo3::types::PyAny;
 use pyo3::types::PyDict;
-use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
+use pyo3::PyClassInitializer;
+use pyo3_stub_gen::derive::{
+    gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pymethods,
+};
 
-use crate::python::sketch::registry::{value_from_dict, value_to_py};
+use crate::python::sketch::registry::{
+    value_from_dict, value_to_py, PyEntityRegistry,
+};
 use crate::python::sketch::types::EntityId;
 use crate::sketch::arrays::{
-    ArrayDefinition as CoreDefinition, CircularArray, CurveAlongArray,
+    ArrayDefinition as CoreDefinition, CircularArray, CircularArrayStrategy,
+    CurveAlongArray, CurveAlongArrayStrategy, InstancePlacement, PlacementKind,
 };
 
 type Members = Vec<(i64, Vec<EntityId>)>;
 type Anchor = Option<((f64, f64), f64)>;
+type MasterGeometry = (Vec<Py<PyAny>>, Vec<Py<PyAny>>, Vec<Py<PyAny>>);
+
+/// Placement kind constants.
+#[gen_stub_pyclass]
+#[pyclass(module = "raygeo.sketch.arrays", name = "PlacementKind", frozen)]
+pub struct PyPlacementKind;
+
+#[gen_stub_pymethods]
+#[pymethods]
+impl PyPlacementKind {
+    #[classattr]
+    const ROTATION: &'static str = "rotation";
+
+    #[classattr]
+    const TRANSLATION: &'static str = "translation";
+
+    #[classattr]
+    const CURVE_ALIGNED: &'static str = "curve_aligned";
+}
+
+/// A rigid placement of one array instance.
+#[gen_stub_pyclass]
+#[pyclass(
+    module = "raygeo.sketch.arrays",
+    name = "InstancePlacement",
+    frozen,
+    skip_from_py_object
+)]
+#[derive(Clone)]
+pub struct PyInstancePlacement {
+    inner: InstancePlacement,
+}
+
+#[gen_stub_pymethods]
+#[pymethods]
+impl PyInstancePlacement {
+    #[new]
+    #[pyo3(signature = (
+        kind = "translation",
+        angle = 0.0,
+        center = (0.0, 0.0),
+        delta = (0.0, 0.0),
+        target_center = (0.0, 0.0)
+    ))]
+    fn new(
+        kind: &str,
+        angle: f64,
+        center: (f64, f64),
+        delta: (f64, f64),
+        target_center: (f64, f64),
+    ) -> PyResult<Self> {
+        let kind = match kind {
+            "rotation" => PlacementKind::Rotation,
+            "translation" => PlacementKind::Translation,
+            "curve_aligned" => PlacementKind::CurveAligned,
+            _ => {
+                return Err(pyo3::exceptions::PyValueError::new_err(
+                    "unknown placement kind",
+                ))
+            }
+        };
+        Ok(PyInstancePlacement {
+            inner: InstancePlacement {
+                kind,
+                angle,
+                center,
+                delta,
+                target_center,
+            },
+        })
+    }
+
+    /// Placement kind: ``rotation``, ``translation`` or
+    /// ``curve_aligned``.
+    #[getter]
+    fn kind(&self) -> &'static str {
+        match self.inner.kind {
+            PlacementKind::Rotation => "rotation",
+            PlacementKind::Translation => "translation",
+            PlacementKind::CurveAligned => "curve_aligned",
+        }
+    }
+
+    #[getter]
+    fn angle(&self) -> f64 {
+        self.inner.angle
+    }
+
+    #[getter]
+    fn center(&self) -> (f64, f64) {
+        self.inner.center
+    }
+
+    #[getter]
+    fn delta(&self) -> (f64, f64) {
+        self.inner.delta
+    }
+
+    #[getter]
+    fn target_center(&self) -> (f64, f64) {
+        self.inner.target_center
+    }
+
+    /// Transforms an absolute point through the placement.
+    fn transform_point(&self, x: f64, y: f64) -> (f64, f64) {
+        self.inner.transform_point(x, y)
+    }
+
+    /// Transforms a relative offset through the placement.
+    fn transform_offset(&self, dx: f64, dy: f64) -> (f64, f64) {
+        self.inner.transform_offset(dx, dy)
+    }
+}
+
+/// Circular-array placement strategy.
+#[gen_stub_pyclass]
+#[pyclass(
+    module = "raygeo.sketch.arrays",
+    name = "CircularArrayStrategy",
+    skip_from_py_object
+)]
+#[derive(Clone)]
+pub struct PyCircularArrayStrategy {
+    inner: CircularArrayStrategy,
+}
+
+#[gen_stub_pymethods]
+#[pymethods]
+impl PyCircularArrayStrategy {
+    #[new]
+    #[pyo3(signature = (
+        count = 6,
+        rotate_copies = true,
+        total_angle_deg = 360.0,
+        center = (0.0, 0.0),
+        radius = 0.0
+    ))]
+    fn new(
+        count: u32,
+        rotate_copies: bool,
+        total_angle_deg: f64,
+        center: (f64, f64),
+        radius: f64,
+    ) -> Self {
+        PyCircularArrayStrategy {
+            inner: CircularArrayStrategy {
+                count,
+                rotate_copies,
+                total_angle_deg,
+                center,
+                radius,
+            },
+        }
+    }
+
+    #[getter]
+    fn count(&self) -> u32 {
+        self.inner.count
+    }
+
+    #[setter]
+    fn set_count(&mut self, value: u32) {
+        self.inner.count = value;
+    }
+
+    #[getter]
+    fn rotate_copies(&self) -> bool {
+        self.inner.rotate_copies
+    }
+
+    #[setter]
+    fn set_rotate_copies(&mut self, value: bool) {
+        self.inner.rotate_copies = value;
+    }
+
+    #[getter]
+    fn total_angle_deg(&self) -> f64 {
+        self.inner.total_angle_deg
+    }
+
+    #[setter]
+    fn set_total_angle_deg(&mut self, value: f64) {
+        self.inner.total_angle_deg = value;
+    }
+
+    #[getter]
+    fn center(&self) -> (f64, f64) {
+        self.inner.center
+    }
+
+    #[setter]
+    fn set_center(&mut self, value: (f64, f64)) {
+        self.inner.center = value;
+    }
+
+    #[getter]
+    fn radius(&self) -> f64 {
+        self.inner.radius
+    }
+
+    #[setter]
+    fn set_radius(&mut self, value: f64) {
+        self.inner.radius = value;
+    }
+
+    #[pyo3(signature = (template_center, registry = None))]
+    fn template_placement(
+        &self,
+        template_center: (f64, f64),
+        registry: Option<PyRef<'_, PyEntityRegistry>>,
+    ) -> PyInstancePlacement {
+        let _ = registry;
+        PyInstancePlacement {
+            inner: self.inner.template_placement(template_center),
+        }
+    }
+
+    #[pyo3(signature = (template_center, registry = None))]
+    fn member_placements(
+        &self,
+        template_center: (f64, f64),
+        registry: Option<PyRef<'_, PyEntityRegistry>>,
+    ) -> Vec<PyInstancePlacement> {
+        let _ = registry;
+        self.inner
+            .member_placements(template_center)
+            .into_iter()
+            .map(|inner| PyInstancePlacement { inner })
+            .collect()
+    }
+
+    fn capture_master_frame(
+        &self,
+        registry: PyRef<'_, PyEntityRegistry>,
+        array: PyRef<'_, PyArrayDefinition>,
+    ) -> Option<((f64, f64), f64)> {
+        self.inner.capture_master_frame(
+            &registry.inner,
+            array.inner.common().guide_circle_id,
+        )
+    }
+
+    fn apply_frame(
+        &self,
+        mut registry: PyRefMut<'_, PyEntityRegistry>,
+        array: PyRef<'_, PyArrayDefinition>,
+        old_frame: ((f64, f64), f64),
+    ) {
+        self.inner
+            .apply_frame(&mut registry.inner, &array.inner, old_frame);
+    }
+
+    fn existing_master_id(&self) -> Option<i64> {
+        None
+    }
+
+    fn create_master_geometry(
+        &self,
+        py: Python<'_>,
+        center_pid: Option<EntityId>,
+        radius_pt_pid: Option<EntityId>,
+    ) -> PyResult<MasterGeometry> {
+        if self.inner.radius <= 0.0 {
+            return Ok((Vec::new(), Vec::new(), Vec::new()));
+        }
+        let (Some(center_pid), Some(radius_pt_pid)) =
+            (center_pid, radius_pt_pid)
+        else {
+            return Ok((Vec::new(), Vec::new(), Vec::new()));
+        };
+        let entities = py.import("raygeo.sketch.entities")?;
+        let constraints = py.import("raygeo.sketch.constraints")?;
+        let circle_temp_id = -(radius_pt_pid.0 as i64 + 1);
+        let radius_point = entities.getattr("SketchPoint")?.call1((
+            radius_pt_pid.0,
+            self.inner.center.0 + self.inner.radius,
+            self.inner.center.1,
+        ))?;
+        let kwargs = PyDict::new(py);
+        kwargs.set_item("center_idx", center_pid.0)?;
+        kwargs.set_item("radius_pt_idx", radius_pt_pid.0)?;
+        kwargs.set_item("construction", true)?;
+        let circle = entities
+            .getattr("Circle")?
+            .call((circle_temp_id,), Some(&kwargs))?;
+        let radius_constraint = constraints.getattr("RadiusConstraint")?.call(
+            (circle_temp_id,),
+            Some(&{
+                let kw = PyDict::new(py);
+                kw.set_item("value", self.inner.radius)?;
+                kw
+            }),
+        )?;
+        Ok((
+            vec![radius_point.unbind()],
+            vec![circle.unbind()],
+            vec![radius_constraint.unbind()],
+        ))
+    }
+
+    #[classattr]
+    fn needs_center_point() -> bool {
+        true
+    }
+
+    #[classattr]
+    fn uses_template_anchor() -> bool {
+        false
+    }
+}
+
+/// Curve-along placement strategy.
+#[gen_stub_pyclass]
+#[pyclass(
+    module = "raygeo.sketch.arrays",
+    name = "CurveAlongArrayStrategy",
+    skip_from_py_object
+)]
+#[derive(Clone)]
+pub struct PyCurveAlongArrayStrategy {
+    inner: CurveAlongArrayStrategy,
+}
+
+#[gen_stub_pymethods]
+#[pymethods]
+impl PyCurveAlongArrayStrategy {
+    #[new]
+    #[pyo3(signature = (
+        count = 6,
+        rotate_copies = true,
+        path_entity_id = -1,
+        align_to_tangent = true,
+        offset_to_start = 0.0,
+        spacing = 0.0
+    ))]
+    fn new(
+        count: u32,
+        rotate_copies: bool,
+        path_entity_id: i64,
+        align_to_tangent: bool,
+        offset_to_start: f64,
+        spacing: f64,
+    ) -> Self {
+        PyCurveAlongArrayStrategy {
+            inner: CurveAlongArrayStrategy {
+                count,
+                rotate_copies,
+                path_entity_id,
+                align_to_tangent,
+                offset_to_start,
+                spacing,
+            },
+        }
+    }
+
+    #[getter]
+    fn count(&self) -> u32 {
+        self.inner.count
+    }
+
+    #[setter]
+    fn set_count(&mut self, value: u32) {
+        self.inner.count = value;
+    }
+
+    #[getter]
+    fn rotate_copies(&self) -> bool {
+        self.inner.rotate_copies
+    }
+
+    #[setter]
+    fn set_rotate_copies(&mut self, value: bool) {
+        self.inner.rotate_copies = value;
+    }
+
+    #[getter]
+    fn path_entity_id(&self) -> i64 {
+        self.inner.path_entity_id
+    }
+
+    #[setter]
+    fn set_path_entity_id(&mut self, value: i64) {
+        self.inner.path_entity_id = value;
+    }
+
+    #[getter]
+    fn align_to_tangent(&self) -> bool {
+        self.inner.align_to_tangent
+    }
+
+    #[setter]
+    fn set_align_to_tangent(&mut self, value: bool) {
+        self.inner.align_to_tangent = value;
+    }
+
+    #[getter]
+    fn offset_to_start(&self) -> f64 {
+        self.inner.offset_to_start
+    }
+
+    #[setter]
+    fn set_offset_to_start(&mut self, value: f64) {
+        self.inner.offset_to_start = value;
+    }
+
+    #[getter]
+    fn spacing(&self) -> f64 {
+        self.inner.spacing
+    }
+
+    #[setter]
+    fn set_spacing(&mut self, value: f64) {
+        self.inner.spacing = value;
+    }
+
+    #[pyo3(signature = (template_center, registry = None))]
+    fn template_placement(
+        &self,
+        template_center: (f64, f64),
+        registry: Option<PyRef<'_, PyEntityRegistry>>,
+    ) -> PyInstancePlacement {
+        let Some(registry) = registry else {
+            return PyInstancePlacement {
+                inner: InstancePlacement::translation((0.0, 0.0)),
+            };
+        };
+        PyInstancePlacement {
+            inner: self
+                .inner
+                .template_placement(template_center, &registry.inner),
+        }
+    }
+
+    #[pyo3(signature = (template_center, registry = None))]
+    fn member_placements(
+        &self,
+        template_center: (f64, f64),
+        registry: Option<PyRef<'_, PyEntityRegistry>>,
+    ) -> Vec<PyInstancePlacement> {
+        let _ = template_center;
+        let Some(registry) = registry else {
+            return Vec::new();
+        };
+        self.inner
+            .member_placements(&registry.inner)
+            .into_iter()
+            .map(|inner| PyInstancePlacement { inner })
+            .collect()
+    }
+
+    fn existing_master_id(&self) -> Option<i64> {
+        if self.inner.path_entity_id >= 0 {
+            Some(self.inner.path_entity_id)
+        } else {
+            None
+        }
+    }
+
+    fn create_master_geometry(
+        &self,
+        _py: Python<'_>,
+        _center_pid: Option<EntityId>,
+        _radius_pt_pid: Option<EntityId>,
+    ) -> MasterGeometry {
+        (Vec::new(), Vec::new(), Vec::new())
+    }
+
+    fn capture_master_frame(
+        &self,
+        _registry: PyRef<'_, PyEntityRegistry>,
+        _array: PyRef<'_, PyArrayDefinition>,
+    ) -> Option<((f64, f64), f64)> {
+        None
+    }
+
+    fn apply_frame(
+        &self,
+        _registry: PyRefMut<'_, PyEntityRegistry>,
+        _array: PyRef<'_, PyArrayDefinition>,
+        _old_frame: ((f64, f64), f64),
+    ) {
+    }
+
+    #[classattr]
+    fn needs_center_point() -> bool {
+        false
+    }
+
+    #[classattr]
+    fn uses_template_anchor() -> bool {
+        true
+    }
+}
 
 /// Persistent definition of a sketch array.
 #[gen_stub_pyclass]
 #[pyclass(
     module = "raygeo.sketch.arrays",
-    name = "ArrayDefinition",
+    name = "Array",
+    subclass,
     skip_from_py_object
 )]
-#[derive(Clone)]
 pub struct PyArrayDefinition {
-    inner: CoreDefinition,
+    pub(crate) inner: CoreDefinition,
+    pub(crate) cached_guide_sig: Option<Py<PyAny>>,
+    pub(crate) cached_template_sig: Option<Py<PyAny>>,
+    pub(crate) cached_guide_frame: Option<((f64, f64), f64)>,
+}
+
+impl PyArrayDefinition {
+    pub(crate) fn wrap(inner: CoreDefinition) -> Self {
+        PyArrayDefinition {
+            inner,
+            cached_guide_sig: None,
+            cached_template_sig: None,
+            cached_guide_frame: None,
+        }
+    }
 }
 
 #[gen_stub_pymethods]
@@ -45,22 +559,20 @@ impl PyArrayDefinition {
         total_angle_deg: f64,
         rotate_copies: bool,
     ) -> Self {
-        PyArrayDefinition {
-            inner: CoreDefinition::Circular(CircularArray::new(
-                uid,
-                guide_circle_id.0,
-                members
-                    .unwrap_or_default()
-                    .into_iter()
-                    .map(|(slot, eids)| {
-                        (slot, eids.into_iter().map(|id| id.0).collect())
-                    })
-                    .collect(),
-                count,
-                total_angle_deg,
-                rotate_copies,
-            )),
-        }
+        PyArrayDefinition::wrap(CoreDefinition::Circular(CircularArray::new(
+            uid,
+            guide_circle_id.0,
+            members
+                .unwrap_or_default()
+                .into_iter()
+                .map(|(slot, eids)| {
+                    (slot, eids.into_iter().map(|id| id.0).collect())
+                })
+                .collect(),
+            count,
+            total_angle_deg,
+            rotate_copies,
+        )))
     }
 
     #[staticmethod]
@@ -89,8 +601,8 @@ impl PyArrayDefinition {
         spacing: f64,
         template_anchor: Anchor,
     ) -> Self {
-        PyArrayDefinition {
-            inner: CoreDefinition::CurveAlong(CurveAlongArray::new(
+        PyArrayDefinition::wrap(CoreDefinition::CurveAlong(
+            CurveAlongArray::new(
                 uid,
                 guide_circle_id.0,
                 members
@@ -107,8 +619,8 @@ impl PyArrayDefinition {
                 offset_to_start,
                 spacing,
                 template_anchor,
-            )),
-        }
+            ),
+        ))
     }
 
     /// Array mode: ``circular`` or ``curve_along``.
@@ -162,27 +674,35 @@ impl PyArrayDefinition {
             .collect();
     }
 
-    /// Standalone member points as ``(slot, [point_id, ...])`` pairs.
+    /// Standalone member points as ``{slot: [point_id, ...]}``.
     #[getter]
-    fn standalone_pids(&self) -> Vec<(i64, Vec<EntityId>)> {
-        self.inner
-            .common()
-            .standalone_pids
-            .iter()
-            .map(|(slot, pids)| {
-                (*slot, pids.iter().copied().map(EntityId).collect())
-            })
-            .collect()
+    fn standalone_pids<'py>(
+        &self,
+        py: Python<'py>,
+    ) -> PyResult<Bound<'py, PyDict>> {
+        let dict = PyDict::new(py);
+        for (slot, pids) in &self.inner.common().standalone_pids {
+            dict.set_item(
+                *slot,
+                pids.iter().copied().map(EntityId).collect::<Vec<_>>(),
+            )?;
+        }
+        Ok(dict)
     }
 
     #[setter]
-    fn set_standalone_pids(&mut self, value: Members) {
-        self.inner.common_mut().standalone_pids = value
-            .into_iter()
-            .map(|(slot, pids)| {
-                (slot, pids.into_iter().map(|id| id.0).collect())
-            })
-            .collect();
+    fn set_standalone_pids(
+        &mut self,
+        value: &Bound<'_, PyDict>,
+    ) -> PyResult<()> {
+        let mut pairs = Vec::new();
+        for (key, pids) in value.iter() {
+            let slot: i64 = key.extract()?;
+            let ids: Vec<EntityId> = pids.extract()?;
+            pairs.push((slot, ids.into_iter().map(|id| id.0).collect()));
+        }
+        self.inner.common_mut().standalone_pids = pairs;
+        Ok(())
     }
 
     /// Number of members.
@@ -303,11 +823,288 @@ impl PyArrayDefinition {
         }
     }
 
+    /// Living members, pruned to surviving entities.
+    fn living_members(
+        &self,
+        registry: PyRef<'_, PyEntityRegistry>,
+    ) -> Vec<(i64, Vec<EntityId>)> {
+        self.inner
+            .living_members(&registry.inner)
+            .into_iter()
+            .map(|(slot, eids)| {
+                (slot, eids.into_iter().map(EntityId).collect())
+            })
+            .collect()
+    }
+
+    /// Flat list of surviving member entity ids.
+    fn living_entity_ids(
+        &self,
+        registry: PyRef<'_, PyEntityRegistry>,
+    ) -> Vec<EntityId> {
+        self.inner
+            .living_entity_ids(&registry.inner)
+            .into_iter()
+            .map(EntityId)
+            .collect()
+    }
+
+    /// Slot numbers of surviving members.
+    fn occupied_slots(
+        &self,
+        registry: PyRef<'_, PyEntityRegistry>,
+    ) -> Vec<i64> {
+        let mut slots: Vec<i64> = self
+            .inner
+            .occupied_slots(&registry.inner)
+            .into_iter()
+            .collect();
+        slots.sort_unstable();
+        slots
+    }
+
+    /// Quantized guide geometry signature.
+    fn guide_signature<'py>(
+        &self,
+        py: Python<'py>,
+        registry: PyRef<'_, PyEntityRegistry>,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        value_to_py(py, &self.inner.guide_signature(&registry.inner))
+    }
+
+    /// Quantized template geometry signature.
+    fn template_signature<'py>(
+        &self,
+        py: Python<'py>,
+        registry: PyRef<'_, PyEntityRegistry>,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        value_to_py(py, &self.inner.template_signature(&registry.inner))
+    }
+
+    /// Whether the point is this array's guide radius point.
+    fn is_guide_radius_point(
+        &self,
+        registry: PyRef<'_, PyEntityRegistry>,
+        pid: EntityId,
+    ) -> bool {
+        self.inner.is_guide_radius_point(&registry.inner, pid.0)
+    }
+
+    /// Drops deleted entities from member groups.
+    fn prune(&mut self, registry: PyRef<'_, PyEntityRegistry>) -> bool {
+        self.inner.prune(&registry.inner)
+    }
+
+    /// Guide entity id (circle or path).
+    #[getter]
+    fn guide_entity_id(&self) -> EntityId {
+        EntityId(self.inner.common().guide_circle_id)
+    }
+
+    #[getter]
+    fn _cached_guide_sig(&self, py: Python<'_>) -> Option<Py<PyAny>> {
+        self.cached_guide_sig.as_ref().map(|v| v.clone_ref(py))
+    }
+
+    #[setter]
+    #[allow(non_snake_case)]
+    fn set__cached_guide_sig(&mut self, value: Option<Py<PyAny>>) {
+        self.cached_guide_sig = value;
+    }
+
+    #[getter]
+    fn _cached_template_sig(&self, py: Python<'_>) -> Option<Py<PyAny>> {
+        self.cached_template_sig.as_ref().map(|v| v.clone_ref(py))
+    }
+
+    #[setter]
+    #[allow(non_snake_case)]
+    fn set__cached_template_sig(&mut self, value: Option<Py<PyAny>>) {
+        self.cached_template_sig = value;
+    }
+
+    #[getter]
+    fn _cached_guide_frame(&self) -> Option<((f64, f64), f64)> {
+        self.cached_guide_frame
+    }
+
+    #[setter]
+    #[allow(non_snake_case)]
+    fn set__cached_guide_frame(&mut self, value: Option<((f64, f64), f64)>) {
+        self.cached_guide_frame = value;
+    }
+
+    /// Builds the strategy for this definition.
+    fn make_strategy(
+        &self,
+        py: Python<'_>,
+        registry: PyRef<'_, PyEntityRegistry>,
+    ) -> PyResult<Py<PyAny>> {
+        match &self.inner {
+            CoreDefinition::Circular(_) => {
+                let inner = self
+                    .inner
+                    .make_circular_strategy(&registry.inner)
+                    .ok_or_else(|| {
+                        pyo3::exceptions::PyValueError::new_err(
+                            "guide circle is missing",
+                        )
+                    })?;
+                Ok(Py::new(py, PyCircularArrayStrategy { inner })?.into_any())
+            }
+            CoreDefinition::CurveAlong(_) => {
+                let inner =
+                    self.inner.make_curve_strategy().ok_or_else(|| {
+                        pyo3::exceptions::PyValueError::new_err(
+                            "invalid curve-along strategy",
+                        )
+                    })?;
+                Ok(Py::new(py, PyCurveAlongArrayStrategy { inner })?.into_any())
+            }
+        }
+    }
+
+    /// Writes a strategy's parameters onto the definition.
+    fn commit(&mut self, strategy: &Bound<'_, PyAny>) -> PyResult<()> {
+        if let Ok(s) = strategy.extract::<PyRef<PyCircularArrayStrategy>>() {
+            self.inner.commit_circular(&s.inner);
+        } else if let Ok(s) =
+            strategy.extract::<PyRef<PyCurveAlongArrayStrategy>>()
+        {
+            self.inner.commit_curve(&s.inner);
+        } else {
+            return Err(pyo3::exceptions::PyTypeError::new_err(
+                "unsupported array strategy",
+            ));
+        }
+        Ok(())
+    }
+
+    /// Whether a strategy requires full re-distribution.
+    fn params_changed(&self, strategy: &Bound<'_, PyAny>) -> PyResult<bool> {
+        if let Ok(s) = strategy.extract::<PyRef<PyCircularArrayStrategy>>() {
+            Ok(self.inner.params_changed_circular(&s.inner))
+        } else if let Ok(s) =
+            strategy.extract::<PyRef<PyCurveAlongArrayStrategy>>()
+        {
+            Ok(self.inner.params_changed_curve(&s.inner))
+        } else {
+            Err(pyo3::exceptions::PyTypeError::new_err(
+                "unsupported array strategy",
+            ))
+        }
+    }
+
+    /// Recomputes the sync caches from live geometry.
+    fn refresh_caches(
+        &mut self,
+        py: Python<'_>,
+        registry: PyRef<'_, PyEntityRegistry>,
+        strategy: &Bound<'_, PyAny>,
+    ) -> PyResult<()> {
+        if let Ok(s) = strategy.extract::<PyRef<PyCircularArrayStrategy>>() {
+            self.cached_guide_frame = s.inner.capture_master_frame(
+                &registry.inner,
+                self.inner.common().guide_circle_id,
+            );
+        } else {
+            self.cached_guide_frame = None;
+        }
+        self.cached_guide_sig = Some(
+            value_to_py(py, &self.inner.guide_signature(&registry.inner))?
+                .unbind(),
+        );
+        self.cached_template_sig = Some(
+            value_to_py(py, &self.inner.template_signature(&registry.inner))?
+                .unbind(),
+        );
+        Ok(())
+    }
+
+    /// Re-positions the template onto guide position 0.
+    fn reanchor_template(
+        &mut self,
+        strategy: &Bound<'_, PyAny>,
+        mut registry: PyRefMut<'_, PyEntityRegistry>,
+        template_eids: Vec<EntityId>,
+        standalone_pids: Vec<EntityId>,
+    ) -> PyResult<()> {
+        let Ok(s) = strategy.extract::<PyRef<PyCurveAlongArrayStrategy>>()
+        else {
+            return Ok(());
+        };
+        let template: Vec<u64> =
+            template_eids.into_iter().map(|id| id.0).collect();
+        let standalone: Vec<u64> =
+            standalone_pids.into_iter().map(|id| id.0).collect();
+        s.inner.reanchor_template(
+            &mut registry.inner,
+            &mut self.inner,
+            &template,
+            &standalone,
+        );
+        Ok(())
+    }
+
+    /// Creates an array from a strategy.
+    #[staticmethod]
+    fn from_strategy(
+        py: Python<'_>,
+        strategy: &Bound<'_, PyAny>,
+        uid: String,
+        guide_circle_id: EntityId,
+        members: Members,
+        count: u32,
+        template_anchor: Anchor,
+    ) -> PyResult<Py<PyAny>> {
+        let members = members
+            .into_iter()
+            .map(|(slot, eids)| {
+                (slot, eids.into_iter().map(|id| id.0).collect())
+            })
+            .collect();
+        if let Ok(s) = strategy.extract::<PyRef<PyCircularArrayStrategy>>() {
+            let inner = CoreDefinition::Circular(CircularArray::new(
+                uid,
+                guide_circle_id.0,
+                members,
+                count,
+                s.inner.total_angle_deg,
+                s.inner.rotate_copies,
+            ));
+            return Ok(Py::new(
+                py,
+                (PyCircularArray, PyArrayDefinition::wrap(inner)),
+            )?
+            .into_any());
+        }
+        if let Ok(s) = strategy.extract::<PyRef<PyCurveAlongArrayStrategy>>() {
+            let inner = CoreDefinition::CurveAlong(CurveAlongArray::new(
+                uid,
+                guide_circle_id.0,
+                members,
+                count,
+                s.inner.rotate_copies,
+                s.inner.path_entity_id,
+                s.inner.align_to_tangent,
+                s.inner.offset_to_start,
+                s.inner.spacing,
+                template_anchor,
+            ));
+            return Ok(Py::new(
+                py,
+                (PyCurveAlongArray, PyArrayDefinition::wrap(inner)),
+            )?
+            .into_any());
+        }
+        Err(pyo3::exceptions::PyTypeError::new_err(
+            "unsupported array strategy",
+        ))
+    }
+
     /// Creates a copy of the definition.
     fn copy(&self) -> PyArrayDefinition {
-        PyArrayDefinition {
-            inner: self.inner.clone(),
-        }
+        PyArrayDefinition::wrap(self.inner.clone())
     }
 
     /// Serializes the definition.
@@ -324,14 +1121,59 @@ impl PyArrayDefinition {
 
     /// Deserializes a definition.
     #[staticmethod]
-    fn from_dict(dict: &Bound<'_, PyDict>) -> PyResult<Self> {
+    fn from_dict(
+        py: Python<'_>,
+        dict: &Bound<'_, PyDict>,
+    ) -> PyResult<Py<PyAny>> {
         let value = value_from_dict(dict)?;
         let inner = CoreDefinition::from_json(&value).ok_or_else(|| {
             pyo3::exceptions::PyValueError::new_err(
                 "unsupported sketch array definition",
             )
         })?;
-        Ok(PyArrayDefinition { inner })
+        Ok(match &inner {
+            CoreDefinition::Circular(_) => {
+                Py::new(py, (PyCircularArray, PyArrayDefinition::wrap(inner)))?
+                    .into_any()
+            }
+            CoreDefinition::CurveAlong(_) => Py::new(
+                py,
+                (PyCurveAlongArray, PyArrayDefinition::wrap(inner)),
+            )?
+            .into_any(),
+        })
+    }
+
+    /// Stores the sync signatures after a cycle.
+    fn update_caches(
+        &mut self,
+        py: Python<'_>,
+        guide_sig: &Bound<'_, PyAny>,
+        template_sig: &Bound<'_, PyAny>,
+    ) {
+        self.cached_guide_sig = Some(guide_sig.clone().unbind());
+        self.cached_template_sig = Some(template_sig.clone().unbind());
+        let _ = py;
+    }
+
+    /// True if stored sync caches disagree with the given signatures.
+    fn signatures_changed(
+        &self,
+        py: Python<'_>,
+        guide_sig: &Bound<'_, PyAny>,
+        template_sig: &Bound<'_, PyAny>,
+    ) -> bool {
+        let guide_changed = self
+            .cached_guide_sig
+            .as_ref()
+            .map(|cached| !cached.bind(py).eq(guide_sig).unwrap_or(false))
+            .unwrap_or(false);
+        let template_changed = self
+            .cached_template_sig
+            .as_ref()
+            .map(|cached| !cached.bind(py).eq(template_sig).unwrap_or(false))
+            .unwrap_or(false);
+        guide_changed || template_changed
     }
 
     /// Captures editable state for undo.
@@ -352,6 +1194,191 @@ impl PyArrayDefinition {
     }
 }
 
+/// Concrete circular array.
+#[gen_stub_pyclass]
+#[pyclass(
+    module = "raygeo.sketch.arrays",
+    name = "CircularArray",
+    extends = PyArrayDefinition
+)]
+pub struct PyCircularArray;
+
+#[gen_stub_pymethods]
+#[pymethods]
+impl PyCircularArray {
+    #[new]
+    #[allow(deprecated)]
+    #[pyo3(signature = (
+        uid,
+        guide_circle_id,
+        members = None,
+        count = 6,
+        total_angle_deg = 360.0,
+        rotate_copies = true
+    ))]
+    fn new(
+        uid: String,
+        guide_circle_id: EntityId,
+        members: Option<Members>,
+        count: u32,
+        total_angle_deg: f64,
+        rotate_copies: bool,
+    ) -> PyClassInitializer<Self> {
+        let inner = CoreDefinition::Circular(CircularArray::new(
+            uid,
+            guide_circle_id.0,
+            members
+                .unwrap_or_default()
+                .into_iter()
+                .map(|(slot, eids)| {
+                    (slot, eids.into_iter().map(|id| id.0).collect())
+                })
+                .collect(),
+            count,
+            total_angle_deg,
+            rotate_copies,
+        ));
+        PyClassInitializer::from(PyArrayDefinition::wrap(inner))
+            .add_subclass(PyCircularArray)
+    }
+}
+
+/// Concrete curve-along array.
+#[gen_stub_pyclass]
+#[pyclass(
+    module = "raygeo.sketch.arrays",
+    name = "CurveAlongArray",
+    extends = PyArrayDefinition
+)]
+pub struct PyCurveAlongArray;
+
+#[gen_stub_pymethods]
+#[pymethods]
+impl PyCurveAlongArray {
+    #[new]
+    #[allow(deprecated)]
+    #[pyo3(signature = (
+        uid,
+        guide_circle_id,
+        members = None,
+        count = 6,
+        rotate_copies = true,
+        path_entity_id = -1,
+        align_to_tangent = true,
+        offset_to_start = 0.0,
+        spacing = 0.0,
+        template_anchor = None
+    ))]
+    #[allow(clippy::too_many_arguments)]
+    fn new(
+        uid: String,
+        guide_circle_id: EntityId,
+        members: Option<Members>,
+        count: u32,
+        rotate_copies: bool,
+        path_entity_id: i64,
+        align_to_tangent: bool,
+        offset_to_start: f64,
+        spacing: f64,
+        template_anchor: Anchor,
+    ) -> PyClassInitializer<Self> {
+        let inner = CoreDefinition::CurveAlong(CurveAlongArray::new(
+            uid,
+            guide_circle_id.0,
+            members
+                .unwrap_or_default()
+                .into_iter()
+                .map(|(slot, eids)| {
+                    (slot, eids.into_iter().map(|id| id.0).collect())
+                })
+                .collect(),
+            count,
+            rotate_copies,
+            path_entity_id,
+            align_to_tangent,
+            offset_to_start,
+            spacing,
+            template_anchor,
+        ));
+        PyClassInitializer::from(PyArrayDefinition::wrap(inner))
+            .add_subclass(PyCurveAlongArray)
+    }
+}
+
+/// Returns the logical center of the template entities.
+#[gen_stub_pyfunction(module = "raygeo.sketch.arrays")]
+#[pyfunction]
+fn resolve_template_center(
+    registry: PyRef<'_, PyEntityRegistry>,
+    template_entity_ids: Vec<EntityId>,
+    _template_points: &Bound<'_, PyAny>,
+) -> (f64, f64) {
+    let ids = template_entity_ids.into_iter().map(|id| id.0).collect();
+    crate::sketch::entity_group::EntityGroup::new(ids).center(&registry.inner)
+}
+
+/// Returns the array whose master entity is the given one.
+#[gen_stub_pyfunction(module = "raygeo.sketch.arrays")]
+#[pyfunction]
+fn find_array_for_entity(
+    py: Python<'_>,
+    arrays: Vec<Py<PyArrayDefinition>>,
+    entity_id: EntityId,
+) -> Option<Py<PyArrayDefinition>> {
+    for array in arrays {
+        if array.borrow(py).inner.common().guide_circle_id == entity_id.0 {
+            return Some(array.clone_ref(py));
+        }
+    }
+    None
+}
+
+/// Cumulative arc lengths of a polyline.
+#[gen_stub_pyfunction(module = "raygeo.sketch.arrays")]
+#[pyfunction(name = "_cumulative_lengths")]
+fn cumulative_lengths(polyline: Vec<(f64, f64)>) -> Vec<f64> {
+    crate::sketch::arrays::cumulative_lengths(&polyline)
+}
+
+/// Point and unit tangent at an arc length.
+#[gen_stub_pyfunction(module = "raygeo.sketch.arrays")]
+#[pyfunction(name = "_point_at_arclength")]
+fn point_at_arclength(
+    polyline: Vec<(f64, f64)>,
+    cum: Vec<f64>,
+    s: f64,
+) -> ((f64, f64), (f64, f64)) {
+    crate::sketch::arrays::point_at_arclength(&polyline, &cum, s)
+}
+
+/// Samples a guide path at equal arc-length intervals.
+#[gen_stub_pyfunction(module = "raygeo.sketch.arrays")]
+#[pyfunction]
+#[pyo3(signature = (registry, path_entity_id, count, offset_to_start = 0.0))]
+fn sample_path(
+    registry: PyRef<'_, PyEntityRegistry>,
+    path_entity_id: EntityId,
+    count: u32,
+    offset_to_start: f64,
+) -> Vec<((f64, f64), f64)> {
+    crate::sketch::arrays::sample_path(
+        &registry.inner,
+        path_entity_id.0,
+        count,
+        offset_to_start,
+    )
+}
+
+/// Total arc length of a guide path.
+#[gen_stub_pyfunction(module = "raygeo.sketch.arrays")]
+#[pyfunction]
+fn path_length(
+    registry: PyRef<'_, PyEntityRegistry>,
+    path_entity_id: EntityId,
+) -> f64 {
+    crate::sketch::arrays::path_length(&registry.inner, path_entity_id.0)
+}
+
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = m.py();
     let arrays_mod = PyModule::new(py, "arrays")?;
@@ -359,6 +1386,25 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     arrays_mod
         .setattr("__doc__", "Persistent definitions of sketch arrays.")?;
     arrays_mod.add_class::<PyArrayDefinition>()?;
+    arrays_mod.add_class::<PyCircularArray>()?;
+    arrays_mod.add_class::<PyCurveAlongArray>()?;
+    arrays_mod.add("ArrayDefinition", arrays_mod.getattr("Array")?)?;
+    arrays_mod
+        .add_function(wrap_pyfunction!(cumulative_lengths, &arrays_mod)?)?;
+    arrays_mod
+        .add_function(wrap_pyfunction!(point_at_arclength, &arrays_mod)?)?;
+    arrays_mod.add_function(wrap_pyfunction!(
+        resolve_template_center,
+        &arrays_mod
+    )?)?;
+    arrays_mod
+        .add_function(wrap_pyfunction!(find_array_for_entity, &arrays_mod)?)?;
+    arrays_mod.add_function(wrap_pyfunction!(sample_path, &arrays_mod)?)?;
+    arrays_mod.add_function(wrap_pyfunction!(path_length, &arrays_mod)?)?;
+    arrays_mod.add_class::<PyPlacementKind>()?;
+    arrays_mod.add_class::<PyInstancePlacement>()?;
+    arrays_mod.add_class::<PyCircularArrayStrategy>()?;
+    arrays_mod.add_class::<PyCurveAlongArrayStrategy>()?;
 
     m.add_submodule(&arrays_mod)?;
 

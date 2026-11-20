@@ -1,8 +1,8 @@
-from raygeo.sketch.arrays import ArrayDefinition
+from raygeo.sketch.arrays import Array
 
 
 def test_circular_to_dict_from_dict():
-    definition = ArrayDefinition.circular(
+    definition = Array.circular(
         "arr-1",
         3,
         members=[(0, [10, 11]), (1, [12])],
@@ -10,7 +10,7 @@ def test_circular_to_dict_from_dict():
         total_angle_deg=180.0,
         rotate_copies=False,
     )
-    definition.standalone_pids = [(0, [20])]
+    definition.standalone_pids = {0: [20]}
     data = definition.to_dict()
     assert data == {
         "uid": "arr-1",
@@ -22,12 +22,12 @@ def test_circular_to_dict_from_dict():
         "rotate_copies": False,
         "total_angle_deg": 180.0,
     }
-    restored = ArrayDefinition.from_dict(data)
+    restored = Array.from_dict(data)
     assert restored.to_dict() == data
 
 
 def test_curve_along_to_dict_from_dict():
-    definition = ArrayDefinition.curve_along(
+    definition = Array.curve_along(
         "arr-2",
         5,
         members=[(0, [1])],
@@ -54,12 +54,12 @@ def test_curve_along_to_dict_from_dict():
         "spacing": 2.5,
         "template_anchor": [[3.0, 4.0], 0.5],
     }
-    restored = ArrayDefinition.from_dict(data)
+    restored = Array.from_dict(data)
     assert restored.to_dict() == data
 
 
 def test_circular_snapshot_restore():
-    definition = ArrayDefinition.circular("arr-3", 1, count=2)
+    definition = Array.circular("arr-3", 1, count=2)
     state = definition.snapshot()
     assert state == {
         "members": [],
@@ -82,7 +82,7 @@ def test_circular_snapshot_restore():
 
 
 def test_curve_along_snapshot_restore():
-    definition = ArrayDefinition.curve_along(
+    definition = Array.curve_along(
         "arr-4",
         1,
         count=2,
@@ -101,7 +101,7 @@ def test_curve_along_snapshot_restore():
 
 def test_unsupported_mode_is_rejected():
     try:
-        ArrayDefinition.from_dict({"uid": "x", "mode": "spiral"})
+        Array.from_dict({"uid": "x", "mode": "spiral"})
     except ValueError:
         pass
     else:
