@@ -4,6 +4,7 @@ pub(crate) mod arrays;
 pub(crate) mod components;
 pub(crate) mod constraints;
 pub(crate) mod context;
+pub(crate) mod contour;
 pub(crate) mod document;
 pub(crate) mod entities;
 pub(crate) mod entity_group;
@@ -53,6 +54,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     entity_group::register(&sketch_mod)?;
     constraints::register(&sketch_mod)?;
     topology::register(&sketch_mod)?;
+    contour::register(&sketch_mod)?;
     registry::register(&sketch_mod)?;
     selection::register(&sketch_mod)?;
     params::register(&sketch_mod)?;

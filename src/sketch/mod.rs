@@ -18,6 +18,7 @@ pub mod arrays;
 pub mod components;
 pub mod constraint;
 pub mod constraints;
+pub mod contour;
 pub mod document;
 pub mod draw;
 pub mod entities;
