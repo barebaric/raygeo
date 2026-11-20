@@ -256,6 +256,9 @@ impl ArrayDefinition {
         registry: &EntityRegistry,
         pid: u64,
     ) -> bool {
+        if !matches!(self, ArrayDefinition::Circular(_)) {
+            return false;
+        }
         registry
             .get_entity(self.common().guide_circle_id)
             .and_then(|entity| entity.as_any().downcast_ref::<Circle>())
@@ -776,6 +779,18 @@ impl CircularArrayStrategy {
                 Some(center),
             );
         }
+        let circle_ids = registry
+            .get_entity(array.common().guide_circle_id)
+            .and_then(|entity| {
+                entity
+                    .as_any()
+                    .downcast_ref::<Circle>()
+                    .map(|c| (c.center, c.radius_point))
+            });
+        if let Some((center_id, radius_id)) = circle_ids {
+            registry.set_point_position(center_id, ncx, ncy);
+            registry.set_point_position(radius_id, ncx + self.radius, ncy);
+        }
     }
 }
 
@@ -1028,7 +1043,7 @@ fn polyline_for(
     Vec::new()
 }
 
-fn cumulative_lengths(polyline: &[(f64, f64)]) -> Vec<f64> {
+pub(crate) fn cumulative_lengths(polyline: &[(f64, f64)]) -> Vec<f64> {
     let mut cum = Vec::with_capacity(polyline.len());
     cum.push(0.0);
     for pair in polyline.windows(2) {
@@ -1039,7 +1054,7 @@ fn cumulative_lengths(polyline: &[(f64, f64)]) -> Vec<f64> {
     cum
 }
 
-fn point_at_arclength(
+pub(crate) fn point_at_arclength(
     polyline: &[(f64, f64)],
     cum: &[f64],
     s: f64,
