@@ -1,6 +1,7 @@
 import math
 
 from raygeo.sketch.arrays import (
+    ArrayStrategy,
     CircularArrayStrategy,
     CurveAlongArrayStrategy,
 )
@@ -35,3 +36,13 @@ def test_curve_strategy_samples_a_line():
     assert math.isclose(x, 0.0, abs_tol=1e-9)
     assert math.isclose(y, 0.0, abs_tol=1e-9)
     assert len(strategy.member_placements((1.0, 2.0), registry)) == 2
+
+
+def test_strategies_share_polymorphic_base():
+    circular = CircularArrayStrategy(count=3, center=(0.0, 0.0))
+    curve = CurveAlongArrayStrategy(count=3, path_entity_id=-1)
+    assert isinstance(circular, ArrayStrategy)
+    assert isinstance(curve, ArrayStrategy)
+    assert circular.needs_center_point is True
+    assert curve.uses_template_anchor is True
+    assert isinstance(circular.template_placement((1.0, 1.0)), object)

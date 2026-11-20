@@ -1102,6 +1102,180 @@ pub(crate) fn point_at_arclength(
     )
 }
 
+/// Shared behavior of every sketch array strategy.
+pub trait ArrayStrategy: Send + Sync {
+    fn count(&self) -> u32;
+    fn set_count(&mut self, value: u32);
+    fn rotate_copies(&self) -> bool;
+    fn set_rotate_copies(&mut self, value: bool);
+    fn needs_center_point(&self) -> bool {
+        false
+    }
+    fn uses_template_anchor(&self) -> bool {
+        false
+    }
+    fn existing_master_id(&self) -> Option<i64> {
+        None
+    }
+    fn template_placement(
+        &self,
+        template_center: (f64, f64),
+        registry: Option<&EntityRegistry>,
+    ) -> InstancePlacement;
+    fn member_placements(
+        &self,
+        template_center: (f64, f64),
+        registry: Option<&EntityRegistry>,
+    ) -> Vec<InstancePlacement>;
+    fn capture_master_frame(
+        &self,
+        _registry: &EntityRegistry,
+        _array: &ArrayDefinition,
+    ) -> Option<((f64, f64), f64)> {
+        None
+    }
+    fn apply_frame(
+        &self,
+        _registry: &mut EntityRegistry,
+        _array: &ArrayDefinition,
+        _old_frame: ((f64, f64), f64),
+    ) {
+    }
+    fn as_any(&self) -> &dyn std::any::Any;
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any;
+}
+
+impl ArrayStrategy for CircularArrayStrategy {
+    fn count(&self) -> u32 {
+        self.count
+    }
+
+    fn set_count(&mut self, value: u32) {
+        self.count = value;
+    }
+
+    fn rotate_copies(&self) -> bool {
+        self.rotate_copies
+    }
+
+    fn set_rotate_copies(&mut self, value: bool) {
+        self.rotate_copies = value;
+    }
+
+    fn needs_center_point(&self) -> bool {
+        true
+    }
+
+    fn template_placement(
+        &self,
+        template_center: (f64, f64),
+        _registry: Option<&EntityRegistry>,
+    ) -> InstancePlacement {
+        CircularArrayStrategy::template_placement(self, template_center)
+    }
+
+    fn member_placements(
+        &self,
+        template_center: (f64, f64),
+        _registry: Option<&EntityRegistry>,
+    ) -> Vec<InstancePlacement> {
+        CircularArrayStrategy::member_placements(self, template_center)
+    }
+
+    fn capture_master_frame(
+        &self,
+        registry: &EntityRegistry,
+        array: &ArrayDefinition,
+    ) -> Option<((f64, f64), f64)> {
+        CircularArrayStrategy::capture_master_frame(
+            self,
+            registry,
+            array.common().guide_circle_id,
+        )
+    }
+
+    fn apply_frame(
+        &self,
+        registry: &mut EntityRegistry,
+        array: &ArrayDefinition,
+        old_frame: ((f64, f64), f64),
+    ) {
+        CircularArrayStrategy::apply_frame(self, registry, array, old_frame)
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+}
+
+impl ArrayStrategy for CurveAlongArrayStrategy {
+    fn count(&self) -> u32 {
+        self.count
+    }
+
+    fn set_count(&mut self, value: u32) {
+        self.count = value;
+    }
+
+    fn rotate_copies(&self) -> bool {
+        self.rotate_copies
+    }
+
+    fn set_rotate_copies(&mut self, value: bool) {
+        self.rotate_copies = value;
+    }
+
+    fn uses_template_anchor(&self) -> bool {
+        true
+    }
+
+    fn existing_master_id(&self) -> Option<i64> {
+        if self.path_entity_id >= 0 {
+            Some(self.path_entity_id)
+        } else {
+            None
+        }
+    }
+
+    fn template_placement(
+        &self,
+        template_center: (f64, f64),
+        registry: Option<&EntityRegistry>,
+    ) -> InstancePlacement {
+        let Some(registry) = registry else {
+            return InstancePlacement::translation((0.0, 0.0));
+        };
+        CurveAlongArrayStrategy::template_placement(
+            self,
+            template_center,
+            registry,
+        )
+    }
+
+    fn member_placements(
+        &self,
+        _template_center: (f64, f64),
+        registry: Option<&EntityRegistry>,
+    ) -> Vec<InstancePlacement> {
+        let Some(registry) = registry else {
+            return Vec::new();
+        };
+        CurveAlongArrayStrategy::member_placements(self, registry)
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
