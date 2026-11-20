@@ -28,6 +28,7 @@ from . import params
 from . import registry
 from . import selection
 from . import topology
+from . import types
 __all__ = [
     "PointDef",
     "Sketch",
@@ -47,6 +48,7 @@ __all__ = [
     "selection",
     "solve_registry",
     "topology",
+    "types",
 ]
 
 @typing.final

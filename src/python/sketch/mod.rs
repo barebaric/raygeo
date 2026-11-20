@@ -66,10 +66,11 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     m.add_submodule(&sketch_mod)?;
 
-    let types_code =
-        CString::new(include_str!("../../../python/raygeo/sketch/types.py"))?;
-    let types_mod =
-        PyModule::from_code(py, &types_code, c"types.py", c"types")?;
+    let types_mod = PyModule::new(py, "types")?;
+    types_mod.setattr(
+        "EntityID",
+        py.get_type::<pyo3::types::PyInt>(),
+    )?;
     types::register_types(&types_mod)?;
     sketch_mod.add_submodule(&types_mod)?;
 
