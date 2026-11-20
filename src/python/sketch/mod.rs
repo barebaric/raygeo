@@ -70,6 +70,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
         CString::new(include_str!("../../../python/raygeo/sketch/types.py"))?;
     let types_mod =
         PyModule::from_code(py, &types_code, c"types.py", c"types")?;
+    types::register_types(&types_mod)?;
     sketch_mod.add_submodule(&types_mod)?;
 
     let protocols_code = CString::new(include_str!(
