@@ -102,15 +102,20 @@ pub fn walk_component(
         .map(|edge| (parent.find(edge.p1), parent.find(edge.p2)))
         .collect();
     let mut node_edges: HashMap<u64, Vec<usize>> = HashMap::new();
+    let mut node_order: Vec<u64> = Vec::new();
     for (index, (a, b)) in nodes.iter().enumerate() {
-        node_edges.entry(*a).or_default().push(index);
-        node_edges.entry(*b).or_default().push(index);
+        for node in [*a, *b] {
+            if !node_order.contains(&node) {
+                node_order.push(node);
+            }
+            node_edges.entry(node).or_default().push(index);
+        }
     }
 
-    let start = node_edges
+    let start = node_order
         .iter()
-        .find(|(_, edges)| edges.len() == 1)
-        .map(|(node, _)| *node)
+        .copied()
+        .find(|node| node_edges.get(node).is_some_and(|e| e.len() == 1))
         .unwrap_or(nodes[0].0);
     let closed = node_edges.get(&start).map(Vec::len) == Some(2);
 
@@ -473,6 +478,7 @@ mod tests {
         assert!(!closed);
         let vertices = chain_vertices(&registry, &ordered, false, 0.02);
         assert_eq!(vertices.len(), 3);
+        assert_eq!(vertices.first(), Some(&(0.0, 0.0)));
         assert!(vertices.contains(&(0.0, 0.0)));
         assert!(vertices.contains(&(10.0, 0.0)));
         assert!(vertices.contains(&(20.0, 0.0)));
