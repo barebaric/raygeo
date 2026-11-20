@@ -18,6 +18,7 @@ import typing
 from . import arrays
 from . import components
 from . import constraints
+from . import contour
 from . import document
 from . import entities
 from . import entity_group
@@ -33,6 +34,7 @@ __all__ = [
     "components",
     "conflicting_constraints",
     "constraints",
+    "contour",
     "document",
     "entities",
     "entity_group",
