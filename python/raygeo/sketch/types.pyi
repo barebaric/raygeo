@@ -19,8 +19,7 @@ class ConstraintStatus:
     ERROR: builtins.int = 3
     CONFLICTING: builtins.int = 4
 
-@typing.final
-class WaypointType:
-    SHARP: builtins.str = 'sharp'
-    SMOOTH: builtins.str = 'smooth'
-    SYMMETRIC: builtins.str = 'symmetric'
+class WaypointType(str):
+    SHARP: WaypointType = ...
+    SMOOTH: WaypointType = ...
+    SYMMETRIC: WaypointType = ...
