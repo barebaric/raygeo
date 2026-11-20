@@ -15,11 +15,13 @@ conflict indices.
 
 import builtins
 import typing
+from . import arrays
 from . import components
 from . import constraints
 from . import document
 from . import entities
 from . import entity_group
+from . import geometry
 from . import params
 from . import registry
 from . import selection
@@ -27,12 +29,14 @@ from . import topology
 __all__ = [
     "PointDef",
     "Solver",
+    "arrays",
     "components",
     "conflicting_constraints",
     "constraints",
     "document",
     "entities",
     "entity_group",
+    "geometry",
     "params",
     "registry",
     "selection",

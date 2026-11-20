@@ -14,6 +14,7 @@
 //! positions, per-point constrained flags, conflict indices, chains
 //! and faces.
 
+pub mod arrays;
 pub mod components;
 pub mod constraint;
 pub mod constraints;
@@ -22,6 +23,7 @@ pub mod draw;
 pub mod entities;
 pub mod entity_group;
 pub mod eval;
+pub mod geometry;
 pub mod params;
 pub mod registry;
 pub mod selection;
