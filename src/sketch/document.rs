@@ -150,3 +150,65 @@ fn read_color(value: Option<&Value>) -> Option<[f64; 4]> {
         array.get(3)?.as_f64()?,
     ])
 }
+
+/// Locating metadata of a sketch document.
+#[derive(Clone, Debug)]
+pub struct DocumentMeta {
+    pub format_version: u32,
+    pub uid: String,
+    pub name: String,
+    pub hidden: bool,
+    pub origin_id: u64,
+}
+
+impl DocumentMeta {
+    /// Creates metadata for a new document.
+    pub fn new(uid: String, name: String) -> Self {
+        DocumentMeta {
+            format_version: FORMAT_VERSION,
+            uid,
+            name,
+            hidden: false,
+            origin_id: 0,
+        }
+    }
+
+    /// Serializes the metadata to the reference dictionary shape.
+    pub fn to_json(&self) -> Value {
+        json!({
+            "version": self.format_version,
+            "uid": self.uid,
+            "name": self.name,
+            "hidden": self.hidden,
+            "origin_id": self.origin_id,
+        })
+    }
+
+    /// Deserializes metadata from a reference sketch dictionary.
+    pub fn from_json(data: &Value) -> DocumentMeta {
+        DocumentMeta {
+            format_version: data
+                .get("version")
+                .and_then(Value::as_u64)
+                .unwrap_or(1) as u32,
+            uid: data
+                .get("uid")
+                .and_then(Value::as_str)
+                .unwrap_or("")
+                .to_string(),
+            name: data
+                .get("name")
+                .and_then(Value::as_str)
+                .unwrap_or("")
+                .to_string(),
+            hidden: data
+                .get("hidden")
+                .and_then(Value::as_bool)
+                .unwrap_or(false),
+            origin_id: data
+                .get("origin_id")
+                .and_then(Value::as_u64)
+                .unwrap_or(0),
+        }
+    }
+}

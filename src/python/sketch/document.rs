@@ -9,8 +9,8 @@ use pyo3_stub_gen::derive::{
 use crate::python::sketch::registry::{value_from_dict, value_to_py};
 use crate::python::sketch::types::EntityId;
 use crate::sketch::document::{
-    Fill as CoreFill, FillStyle as CoreFillStyle, DEFAULT_FILL_COLOR,
-    FORMAT_VERSION,
+    DocumentMeta as CoreDocumentMeta, Fill as CoreFill,
+    FillStyle as CoreFillStyle, DEFAULT_FILL_COLOR, FORMAT_VERSION,
 };
 
 /// Fill rendering style.
@@ -250,6 +250,115 @@ impl PyFill {
     }
 }
 
+/// Locating metadata of a sketch document.
+#[gen_stub_pyclass]
+#[pyclass(
+    module = "raygeo.sketch.document",
+    name = "DocumentMeta",
+    skip_from_py_object
+)]
+#[derive(Clone)]
+pub struct PyDocumentMeta {
+    inner: CoreDocumentMeta,
+}
+
+#[gen_stub_pymethods]
+#[pymethods]
+impl PyDocumentMeta {
+    #[new]
+    fn new(uid: String, name: String) -> Self {
+        PyDocumentMeta {
+            inner: CoreDocumentMeta::new(uid, name),
+        }
+    }
+
+    /// Sketch file format version.
+    #[getter]
+    fn format_version(&self) -> u32 {
+        self.inner.format_version
+    }
+
+    #[setter]
+    fn set_format_version(&mut self, value: u32) {
+        self.inner.format_version = value;
+    }
+
+    /// Asset uid.
+    #[getter]
+    fn uid(&self) -> String {
+        self.inner.uid.clone()
+    }
+
+    #[setter]
+    fn set_uid(&mut self, value: String) {
+        self.inner.uid = value;
+    }
+
+    /// Display name.
+    #[getter]
+    fn name(&self) -> String {
+        self.inner.name.clone()
+    }
+
+    #[setter]
+    fn set_name(&mut self, value: String) {
+        self.inner.name = value;
+    }
+
+    /// Whether the sketch is hidden.
+    #[getter]
+    fn hidden(&self) -> bool {
+        self.inner.hidden
+    }
+
+    #[setter]
+    fn set_hidden(&mut self, value: bool) {
+        self.inner.hidden = value;
+    }
+
+    /// Id of the fixed origin point.
+    #[getter]
+    fn origin_id(&self) -> EntityId {
+        EntityId(self.inner.origin_id)
+    }
+
+    #[setter]
+    fn set_origin_id(&mut self, value: EntityId) {
+        self.inner.origin_id = value.0;
+    }
+
+    /// Creates a copy of the metadata.
+    fn copy(&self) -> PyDocumentMeta {
+        PyDocumentMeta {
+            inner: self.inner.clone(),
+        }
+    }
+
+    /// Serializes the metadata to dictionary fields.
+    fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
+        let value = self.inner.to_json();
+        let dict = PyDict::new(py);
+        if let serde_json::Value::Object(map) = value {
+            for (key, item) in map {
+                dict.set_item(key, value_to_py(py, &item)?)?;
+            }
+        }
+        Ok(dict)
+    }
+
+    /// Deserializes metadata from a sketch dictionary.
+    #[staticmethod]
+    fn from_dict(py: Python<'_>, dict: &Bound<'_, PyDict>) -> PyResult<Self> {
+        let value = value_from_dict(dict)?;
+        let mut inner = CoreDocumentMeta::from_json(&value);
+        if inner.uid.is_empty() {
+            let uuid = py.import("uuid")?;
+            inner.uid = uuid.call_method0("uuid4")?.str()?.to_string();
+        }
+        Ok(PyDocumentMeta { inner })
+    }
+}
+
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = m.py();
     let document_mod = PyModule::new(py, "document")?;
@@ -258,6 +367,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
         .setattr("__doc__", "Sketch document data shared with the host.")?;
     document_mod.add_class::<PyFillStyle>()?;
     document_mod.add_class::<PyFill>()?;
+    document_mod.add_class::<PyDocumentMeta>()?;
     document_mod.setattr("FORMAT_VERSION", FORMAT_VERSION)?;
     document_mod.setattr(
         "DEFAULT_FILL_COLOR",

@@ -96,3 +96,42 @@ def test_fill_fields_are_mutable():
     assert fill.color == (0.5, 0.6, 0.7, 0.8)
     assert fill.gradient_stops == [(1.0, (0.0, 1.0, 0.0, 1.0))]
     assert fill.gradient_angle == 2.0
+
+
+from raygeo.sketch.document import DocumentMeta  # noqa: E402
+
+
+def test_document_meta_defaults():
+    meta = DocumentMeta("uid-1", "Sketch")
+    assert meta.format_version == 1
+    assert meta.uid == "uid-1"
+    assert meta.name == "Sketch"
+    assert meta.hidden is False
+    assert meta.origin_id == 0
+
+
+def test_document_meta_round_trip():
+    meta = DocumentMeta("uid-2", "Name")
+    meta.hidden = True
+    meta.origin_id = 7
+    data = meta.to_dict()
+    restored = DocumentMeta.from_dict(data)
+    assert restored.format_version == 1
+    assert restored.uid == "uid-2"
+    assert restored.name == "Name"
+    assert restored.hidden is True
+    assert restored.origin_id == 7
+
+
+def test_document_meta_generates_missing_uid():
+    meta = DocumentMeta.from_dict({"name": "Old", "origin_id": 1})
+    assert len(meta.uid) == 36
+    assert meta.name == "Old"
+    assert meta.origin_id == 1
+
+
+def test_document_meta_copy_is_independent():
+    meta = DocumentMeta("uid-3", "Name")
+    copy = meta.copy()
+    copy.name = "Other"
+    assert meta.name == "Name"

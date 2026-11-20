@@ -6,9 +6,65 @@ import enum
 from raygeo.sketch import types
 import typing
 __all__ = [
+    "DocumentMeta",
     "Fill",
     "FillStyle",
 ]
+
+@typing.final
+class DocumentMeta:
+    r"""
+    Locating metadata of a sketch document.
+    """
+    @property
+    def format_version(self) -> builtins.int:
+        r"""
+        Sketch file format version.
+        """
+    @format_version.setter
+    def format_version(self, value: builtins.int) -> None: ...
+    @property
+    def uid(self) -> builtins.str:
+        r"""
+        Asset uid.
+        """
+    @uid.setter
+    def uid(self, value: builtins.str) -> None: ...
+    @property
+    def name(self) -> builtins.str:
+        r"""
+        Display name.
+        """
+    @name.setter
+    def name(self, value: builtins.str) -> None: ...
+    @property
+    def hidden(self) -> builtins.bool:
+        r"""
+        Whether the sketch is hidden.
+        """
+    @hidden.setter
+    def hidden(self, value: builtins.bool) -> None: ...
+    @property
+    def origin_id(self) -> types.EntityID:
+        r"""
+        Id of the fixed origin point.
+        """
+    @origin_id.setter
+    def origin_id(self, value: types.EntityID) -> None: ...
+    def __new__(cls, uid: builtins.str, name: builtins.str) -> DocumentMeta: ...
+    def copy(self) -> DocumentMeta:
+        r"""
+        Creates a copy of the metadata.
+        """
+    def to_dict(self) -> dict:
+        r"""
+        Serializes the metadata to dictionary fields.
+        """
+    @staticmethod
+    def from_dict(dict: dict) -> DocumentMeta:
+        r"""
+        Deserializes metadata from a sketch dictionary.
+        """
 
 @typing.final
 class Fill:
