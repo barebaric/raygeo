@@ -4,9 +4,12 @@ use serde_json::{json, Value};
 
 use crate::sketch::entities::arc::Arc;
 use crate::sketch::entities::bezier::Bezier;
+use crate::sketch::entities::circle::Circle;
 use crate::sketch::entities::entity::Entity;
 use crate::sketch::entities::line::Line;
+use crate::sketch::entity_group::EntityGroup;
 use crate::sketch::registry::EntityRegistry;
+use crate::sketch::transform::PlacementTransform;
 
 /// The array kind.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -191,6 +194,180 @@ pub enum ArrayDefinition {
 }
 
 impl ArrayDefinition {
+    /// Living members, pruned to surviving entities.
+    pub fn living_members(
+        &self,
+        registry: &EntityRegistry,
+    ) -> Vec<(i64, Vec<u64>)> {
+        let mut living = Vec::new();
+        for (slot, eids) in &self.common().members {
+            let alive: Vec<u64> = eids
+                .iter()
+                .copied()
+                .filter(|eid| registry.get_entity(*eid).is_some())
+                .collect();
+            if !alive.is_empty() {
+                living.push((*slot, alive));
+            }
+        }
+        living.sort_by_key(|(slot, _)| *slot);
+        living
+    }
+
+    pub fn living_entity_ids(&self, registry: &EntityRegistry) -> Vec<u64> {
+        self.living_members(registry)
+            .into_iter()
+            .flat_map(|(_, eids)| eids)
+            .collect()
+    }
+
+    pub fn occupied_slots(
+        &self,
+        registry: &EntityRegistry,
+    ) -> std::collections::HashSet<i64> {
+        self.living_members(registry)
+            .into_iter()
+            .map(|(slot, _)| slot)
+            .collect()
+    }
+
+    pub fn guide_signature(&self, registry: &EntityRegistry) -> Value {
+        registry
+            .get_entity(self.common().guide_circle_id)
+            .map(|entity| entity.geometry_signature(registry))
+            .unwrap_or(Value::Null)
+    }
+
+    pub fn template_signature(&self, registry: &EntityRegistry) -> Value {
+        let living = self.living_members(registry);
+        let Some((_, eids)) = living.first() else {
+            return Value::Array(Vec::new());
+        };
+        Value::Array(
+            eids.iter()
+                .filter_map(|eid| registry.get_entity(*eid))
+                .map(|entity| entity.geometry_signature(registry))
+                .collect(),
+        )
+    }
+
+    pub fn is_guide_radius_point(
+        &self,
+        registry: &EntityRegistry,
+        pid: u64,
+    ) -> bool {
+        registry
+            .get_entity(self.common().guide_circle_id)
+            .and_then(|entity| entity.as_any().downcast_ref::<Circle>())
+            .map(|circle| circle.radius_point == pid)
+            .unwrap_or(false)
+    }
+
+    /// Drops deleted entities from member groups.
+    pub fn prune(&mut self, registry: &EntityRegistry) -> bool {
+        if registry.get_entity(self.common().guide_circle_id).is_none() {
+            return false;
+        }
+        let living = self.living_members(registry);
+        let common = self.common_mut();
+        common.members = living;
+        common.standalone_pids.retain(|(_, pids)| {
+            for pid in pids {
+                if registry.get_point(*pid).is_none() {
+                    return false;
+                }
+            }
+            true
+        });
+        true
+    }
+
+    pub fn make_circular_strategy(
+        &self,
+        registry: &EntityRegistry,
+    ) -> Option<CircularArrayStrategy> {
+        let ArrayDefinition::Circular(array) = self else {
+            return None;
+        };
+        let circle = registry
+            .get_entity(array.common.guide_circle_id)?
+            .as_any()
+            .downcast_ref::<Circle>()?;
+        let center = registry.point_position(circle.center)?;
+        let radius_point = registry.point_position(circle.radius_point)?;
+        Some(CircularArrayStrategy {
+            count: array.common.count,
+            rotate_copies: array.common.rotate_copies,
+            total_angle_deg: array.total_angle_deg,
+            center,
+            radius: (radius_point.0 - center.0)
+                .hypot(radius_point.1 - center.1),
+        })
+    }
+
+    pub fn make_curve_strategy(&self) -> Option<CurveAlongArrayStrategy> {
+        let ArrayDefinition::CurveAlong(array) = self else {
+            return None;
+        };
+        Some(CurveAlongArrayStrategy {
+            count: array.common.count,
+            rotate_copies: array.common.rotate_copies,
+            path_entity_id: array.path_entity_id,
+            align_to_tangent: array.align_to_tangent,
+            offset_to_start: array.offset_to_start,
+            spacing: array.spacing,
+        })
+    }
+
+    pub fn commit_circular(&mut self, strategy: &CircularArrayStrategy) {
+        if let ArrayDefinition::Circular(array) = self {
+            array.common.count = strategy.count;
+            array.common.rotate_copies = strategy.rotate_copies;
+            array.total_angle_deg = strategy.total_angle_deg;
+        }
+    }
+
+    pub fn commit_curve(&mut self, strategy: &CurveAlongArrayStrategy) {
+        if let ArrayDefinition::CurveAlong(array) = self {
+            array.common.count = strategy.count;
+            array.common.rotate_copies = strategy.rotate_copies;
+            array.path_entity_id = strategy.path_entity_id;
+            array.align_to_tangent = strategy.align_to_tangent;
+            array.offset_to_start = strategy.offset_to_start;
+            array.spacing = strategy.spacing;
+        }
+    }
+
+    pub fn params_changed_circular(
+        &self,
+        strategy: &CircularArrayStrategy,
+    ) -> bool {
+        match self {
+            ArrayDefinition::Circular(array) => {
+                array.common.count != strategy.count
+                    || array.common.rotate_copies != strategy.rotate_copies
+                    || array.total_angle_deg != strategy.total_angle_deg
+            }
+            ArrayDefinition::CurveAlong(_) => true,
+        }
+    }
+
+    pub fn params_changed_curve(
+        &self,
+        strategy: &CurveAlongArrayStrategy,
+    ) -> bool {
+        match self {
+            ArrayDefinition::CurveAlong(array) => {
+                array.common.count != strategy.count
+                    || array.path_entity_id != strategy.path_entity_id
+                    || array.align_to_tangent != strategy.align_to_tangent
+                    || array.offset_to_start != strategy.offset_to_start
+                    || array.spacing != strategy.spacing
+            }
+            ArrayDefinition::Circular(_) => true,
+        }
+    }
+
     pub fn mode(&self) -> ArrayMode {
         match self {
             ArrayDefinition::Circular(_) => ArrayMode::Circular,
@@ -424,6 +601,16 @@ pub struct InstancePlacement {
     pub target_center: (f64, f64),
 }
 
+impl PlacementTransform for InstancePlacement {
+    fn transform_point(&self, x: f64, y: f64) -> (f64, f64) {
+        InstancePlacement::transform_point(self, x, y)
+    }
+
+    fn transform_offset(&self, dx: f64, dy: f64) -> (f64, f64) {
+        InstancePlacement::transform_offset(self, dx, dy)
+    }
+}
+
 impl InstancePlacement {
     pub fn translation(delta: (f64, f64)) -> Self {
         InstancePlacement {
@@ -543,6 +730,53 @@ impl CircularArrayStrategy {
         }
         placements
     }
+
+    pub fn capture_master_frame(
+        &self,
+        registry: &EntityRegistry,
+        guide_id: u64,
+    ) -> Option<((f64, f64), f64)> {
+        let circle = registry
+            .get_entity(guide_id)?
+            .as_any()
+            .downcast_ref::<Circle>()?;
+        let center = registry.point_position(circle.center)?;
+        let radius_point = registry.point_position(circle.radius_point)?;
+        Some((
+            center,
+            (radius_point.0 - center.0).hypot(radius_point.1 - center.1),
+        ))
+    }
+
+    pub fn apply_frame(
+        &self,
+        registry: &mut EntityRegistry,
+        array: &ArrayDefinition,
+        old_frame: ((f64, f64), f64),
+    ) {
+        let ((ocx, ocy), _old_radius) = old_frame;
+        let (ncx, ncy) = self.center;
+        let (dx, dy) = (ncx - ocx, ncy - ocy);
+        if dx.abs() > 1e-12 || dy.abs() > 1e-12 {
+            EntityGroup::new(array.living_entity_ids(registry))
+                .with_helpers(registry)
+                .translate(registry, dx, dy);
+        }
+        let members = array.living_members(registry);
+        for (_, eids) in members {
+            let group = EntityGroup::new(eids);
+            if group.points(registry).is_empty() {
+                continue;
+            }
+            let center = group.center(registry);
+            group.with_helpers(registry).radial_project(
+                registry,
+                (ncx, ncy),
+                self.radius,
+                Some(center),
+            );
+        }
+    }
 }
 
 /// Curve-along placement math.
@@ -618,6 +852,50 @@ impl CurveAlongArrayStrategy {
             ));
         }
         placements
+    }
+
+    pub fn reanchor_template(
+        &self,
+        registry: &mut EntityRegistry,
+        array: &mut ArrayDefinition,
+        template_eids: &[u64],
+        standalone_pids: &[u64],
+    ) {
+        let group = EntityGroup::new(template_eids.to_vec());
+        if group.points(registry).is_empty() {
+            return;
+        }
+        let ArrayDefinition::CurveAlong(array) = array else {
+            return;
+        };
+        let Some((_, anchor_angle)) = array.template_anchor else {
+            return;
+        };
+        let current_center = group.center(registry);
+        let placement = self.template_placement(current_center, registry);
+        if placement.kind != PlacementKind::CurveAligned {
+            return;
+        }
+        let target = placement.target_center;
+        let delta = placement.angle - anchor_angle;
+        if (target.0 - current_center.0).abs() < 1e-9
+            && (target.1 - current_center.1).abs() < 1e-9
+            && delta.abs() < 1e-12
+        {
+            return;
+        }
+        let motion =
+            InstancePlacement::curve_aligned(delta, current_center, target);
+        group
+            .with_helpers(registry)
+            .apply_placement(registry, &motion);
+        for pid in standalone_pids {
+            if let Some((x, y)) = registry.point_position(*pid) {
+                let (nx, ny) = motion.transform_point(x, y);
+                registry.set_point_position(*pid, nx, ny);
+            }
+        }
+        array.template_anchor = Some(((target.0, target.1), placement.angle));
     }
 
     pub fn resolve_count(&self, registry: &EntityRegistry) -> u32 {

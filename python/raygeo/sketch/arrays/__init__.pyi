@@ -110,6 +110,34 @@ class ArrayDefinition:
     def circular(uid: builtins.str, guide_circle_id: types.EntityID, members: typing.Optional[typing.Sequence[tuple[builtins.int, typing.Sequence[types.EntityID]]]] = None, count: builtins.int = 6, total_angle_deg: builtins.float = 360.0, rotate_copies: builtins.bool = True) -> ArrayDefinition: ...
     @staticmethod
     def curve_along(uid: builtins.str, guide_circle_id: types.EntityID, members: typing.Optional[typing.Sequence[tuple[builtins.int, typing.Sequence[types.EntityID]]]] = None, count: builtins.int = 6, rotate_copies: builtins.bool = True, path_entity_id: builtins.int = -1, align_to_tangent: builtins.bool = True, offset_to_start: builtins.float = 0.0, spacing: builtins.float = 0.0, template_anchor: typing.Optional[tuple[tuple[builtins.float, builtins.float], builtins.float]] = None) -> ArrayDefinition: ...
+    def living_members(self, registry: registry.EntityRegistry) -> builtins.list[tuple[builtins.int, builtins.list[types.EntityID]]]:
+        r"""
+        Living members, pruned to surviving entities.
+        """
+    def living_entity_ids(self, registry: registry.EntityRegistry) -> builtins.list[types.EntityID]:
+        r"""
+        Flat list of surviving member entity ids.
+        """
+    def occupied_slots(self, registry: registry.EntityRegistry) -> builtins.list[builtins.int]:
+        r"""
+        Slot numbers of surviving members.
+        """
+    def guide_signature(self, registry: registry.EntityRegistry) -> typing.Any:
+        r"""
+        Quantized guide geometry signature.
+        """
+    def template_signature(self, registry: registry.EntityRegistry) -> typing.Any:
+        r"""
+        Quantized template geometry signature.
+        """
+    def is_guide_radius_point(self, registry: registry.EntityRegistry, pid: types.EntityID) -> builtins.bool:
+        r"""
+        Whether the point is this array's guide radius point.
+        """
+    def prune(self, registry: registry.EntityRegistry) -> builtins.bool:
+        r"""
+        Drops deleted entities from member groups.
+        """
     def copy(self) -> ArrayDefinition:
         r"""
         Creates a copy of the definition.
@@ -138,6 +166,8 @@ class CircularArrayStrategy:
     r"""
     Circular-array placement strategy.
     """
+    needs_center_point: builtins.bool
+    uses_template_anchor: builtins.bool
     @property
     def count(self) -> builtins.int: ...
     @count.setter
@@ -161,12 +191,16 @@ class CircularArrayStrategy:
     def __new__(cls, count: builtins.int = 6, rotate_copies: builtins.bool = True, total_angle_deg: builtins.float = 360.0, center: tuple[builtins.float, builtins.float] = (0.0, 0.0), radius: builtins.float = 0.0) -> CircularArrayStrategy: ...
     def template_placement(self, template_center: tuple[builtins.float, builtins.float]) -> InstancePlacement: ...
     def member_placements(self, template_center: tuple[builtins.float, builtins.float]) -> builtins.list[InstancePlacement]: ...
+    def capture_master_frame(self, registry: registry.EntityRegistry, guide_id: types.EntityID) -> typing.Optional[tuple[tuple[builtins.float, builtins.float], builtins.float]]: ...
+    def apply_frame(self, registry: registry.EntityRegistry, array: ArrayDefinition, old_frame: tuple[tuple[builtins.float, builtins.float], builtins.float]) -> None: ...
 
 @typing.final
 class CurveAlongArrayStrategy:
     r"""
     Curve-along placement strategy.
     """
+    needs_center_point: builtins.bool
+    uses_template_anchor: builtins.bool
     @property
     def count(self) -> builtins.int: ...
     @count.setter
@@ -194,6 +228,9 @@ class CurveAlongArrayStrategy:
     def __new__(cls, count: builtins.int = 6, rotate_copies: builtins.bool = True, path_entity_id: builtins.int = -1, align_to_tangent: builtins.bool = True, offset_to_start: builtins.float = 0.0, spacing: builtins.float = 0.0) -> CurveAlongArrayStrategy: ...
     def template_placement(self, template_center: tuple[builtins.float, builtins.float], registry: registry.EntityRegistry) -> InstancePlacement: ...
     def member_placements(self, registry: registry.EntityRegistry) -> builtins.list[InstancePlacement]: ...
+    def existing_master_id(self) -> typing.Optional[builtins.int]: ...
+    def capture_master_frame(self, _registry: registry.EntityRegistry, _guide_id: types.EntityID) -> typing.Optional[tuple[tuple[builtins.float, builtins.float], builtins.float]]: ...
+    def apply_frame(self, _registry: registry.EntityRegistry, _array: ArrayDefinition, _old_frame: tuple[tuple[builtins.float, builtins.float], builtins.float]) -> None: ...
 
 @typing.final
 class InstancePlacement:

@@ -184,6 +184,34 @@ impl PyCircularArrayStrategy {
             .map(|inner| PyInstancePlacement { inner })
             .collect()
     }
+
+    fn capture_master_frame(
+        &self,
+        registry: PyRef<'_, PyEntityRegistry>,
+        guide_id: EntityId,
+    ) -> Option<((f64, f64), f64)> {
+        self.inner.capture_master_frame(&registry.inner, guide_id.0)
+    }
+
+    fn apply_frame(
+        &self,
+        mut registry: PyRefMut<'_, PyEntityRegistry>,
+        array: PyRef<'_, PyArrayDefinition>,
+        old_frame: ((f64, f64), f64),
+    ) {
+        self.inner
+            .apply_frame(&mut registry.inner, &array.inner, old_frame);
+    }
+
+    #[classattr]
+    fn needs_center_point() -> bool {
+        true
+    }
+
+    #[classattr]
+    fn uses_template_anchor() -> bool {
+        false
+    }
 }
 
 /// Curve-along placement strategy.
@@ -311,6 +339,40 @@ impl PyCurveAlongArrayStrategy {
             .into_iter()
             .map(|inner| PyInstancePlacement { inner })
             .collect()
+    }
+
+    fn existing_master_id(&self) -> Option<i64> {
+        if self.inner.path_entity_id >= 0 {
+            Some(self.inner.path_entity_id)
+        } else {
+            None
+        }
+    }
+
+    fn capture_master_frame(
+        &self,
+        _registry: PyRef<'_, PyEntityRegistry>,
+        _guide_id: EntityId,
+    ) -> Option<((f64, f64), f64)> {
+        None
+    }
+
+    fn apply_frame(
+        &self,
+        _registry: PyRefMut<'_, PyEntityRegistry>,
+        _array: PyRef<'_, PyArrayDefinition>,
+        _old_frame: ((f64, f64), f64),
+    ) {
+    }
+
+    #[classattr]
+    fn needs_center_point() -> bool {
+        false
+    }
+
+    #[classattr]
+    fn uses_template_anchor() -> bool {
+        true
     }
 }
 
@@ -602,6 +664,78 @@ impl PyArrayDefinition {
         if let CoreDefinition::CurveAlong(a) = &mut self.inner {
             a.template_anchor = value;
         }
+    }
+
+    /// Living members, pruned to surviving entities.
+    fn living_members(
+        &self,
+        registry: PyRef<'_, PyEntityRegistry>,
+    ) -> Vec<(i64, Vec<EntityId>)> {
+        self.inner
+            .living_members(&registry.inner)
+            .into_iter()
+            .map(|(slot, eids)| {
+                (slot, eids.into_iter().map(EntityId).collect())
+            })
+            .collect()
+    }
+
+    /// Flat list of surviving member entity ids.
+    fn living_entity_ids(
+        &self,
+        registry: PyRef<'_, PyEntityRegistry>,
+    ) -> Vec<EntityId> {
+        self.inner
+            .living_entity_ids(&registry.inner)
+            .into_iter()
+            .map(EntityId)
+            .collect()
+    }
+
+    /// Slot numbers of surviving members.
+    fn occupied_slots(
+        &self,
+        registry: PyRef<'_, PyEntityRegistry>,
+    ) -> Vec<i64> {
+        let mut slots: Vec<i64> = self
+            .inner
+            .occupied_slots(&registry.inner)
+            .into_iter()
+            .collect();
+        slots.sort_unstable();
+        slots
+    }
+
+    /// Quantized guide geometry signature.
+    fn guide_signature<'py>(
+        &self,
+        py: Python<'py>,
+        registry: PyRef<'_, PyEntityRegistry>,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        value_to_py(py, &self.inner.guide_signature(&registry.inner))
+    }
+
+    /// Quantized template geometry signature.
+    fn template_signature<'py>(
+        &self,
+        py: Python<'py>,
+        registry: PyRef<'_, PyEntityRegistry>,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        value_to_py(py, &self.inner.template_signature(&registry.inner))
+    }
+
+    /// Whether the point is this array's guide radius point.
+    fn is_guide_radius_point(
+        &self,
+        registry: PyRef<'_, PyEntityRegistry>,
+        pid: EntityId,
+    ) -> bool {
+        self.inner.is_guide_radius_point(&registry.inner, pid.0)
+    }
+
+    /// Drops deleted entities from member groups.
+    fn prune(&mut self, registry: PyRef<'_, PyEntityRegistry>) -> bool {
+        self.inner.prune(&registry.inner)
     }
 
     /// Creates a copy of the definition.
