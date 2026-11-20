@@ -1,7 +1,9 @@
 //! Python bindings for boolean region collection and operations.
 
 use pyo3::prelude::*;
-use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
+use pyo3_stub_gen::derive::{
+    gen_stub_pyclass, gen_stub_pyclass_enum, gen_stub_pymethods,
+};
 
 use crate::geo::types::Point;
 use crate::python::sketch::registry::PyEntityRegistry;
@@ -14,7 +16,7 @@ use crate::sketch::constraint::SketchConstraint;
 use crate::sketch::constraints::coincident::pairs_for_entities;
 
 /// Boolean operation kind.
-#[pyo3_stub_gen::derive::gen_stub_pyclass_complex_enum]
+#[gen_stub_pyclass_enum]
 #[pyclass(
     eq,
     eq_int,
