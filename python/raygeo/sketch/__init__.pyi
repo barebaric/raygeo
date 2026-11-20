@@ -27,6 +27,7 @@ from . import geometry
 from . import params
 from . import registry
 from . import selection
+from . import snap
 from . import topology
 __all__ = [
     "PointDef",
@@ -45,6 +46,7 @@ __all__ = [
     "params",
     "registry",
     "selection",
+    "snap",
     "solve_registry",
     "topology",
 ]
