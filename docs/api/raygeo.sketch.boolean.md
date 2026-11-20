@@ -7,6 +7,13 @@ sidebar_label: raygeo.sketch.boolean
 
 Boolean operation kind.
 
+**Values:**
+
+- `DIFFERENCE`
+- `EXCLUDE`
+- `INTERSECTION`
+- `UNION`
+
 ### `value`
 
 ```python
@@ -14,14 +21,6 @@ value: str
 ```
 
 Reference operation value.
-
-### DIFFERENCE
-
-### EXCLUDE
-
-### INTERSECTION
-
-### UNION
 
 ## BooleanRegion
 

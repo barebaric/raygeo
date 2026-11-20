@@ -2,6 +2,7 @@
 # ruff: noqa: E501, F401, F403, F405
 
 import builtins
+import enum
 from raygeo.sketch import registry
 import typing
 __all__ = [
@@ -12,37 +13,6 @@ __all__ = [
     "build_boolean_regions",
     "build_boolean_regions_from_constraints",
 ]
-
-class BooleanOp:
-    r"""
-    Boolean operation kind.
-    """
-    @property
-    def value(self) -> builtins.str:
-        r"""
-        Reference operation value.
-        """
-    def __hash__(self) -> builtins.int: ...
-    @typing.final
-    class UNION(BooleanOp):
-        __match_args__ = ()
-        def __new__(cls) -> BooleanOp.UNION: ...
-    
-    @typing.final
-    class DIFFERENCE(BooleanOp):
-        __match_args__ = ()
-        def __new__(cls) -> BooleanOp.DIFFERENCE: ...
-    
-    @typing.final
-    class INTERSECTION(BooleanOp):
-        __match_args__ = ()
-        def __new__(cls) -> BooleanOp.INTERSECTION: ...
-    
-    @typing.final
-    class EXCLUDE(BooleanOp):
-        __match_args__ = ()
-        def __new__(cls) -> BooleanOp.EXCLUDE: ...
-    
 
 @typing.final
 class BooleanRegion:
@@ -73,6 +43,23 @@ class BooleanSolid:
     @property
     def holes(self) -> builtins.list[builtins.list[tuple[builtins.float, builtins.float]]]: ...
     def __new__(cls, outer: typing.Sequence[tuple[builtins.float, builtins.float]], holes: typing.Optional[typing.Sequence[typing.Sequence[tuple[builtins.float, builtins.float]]]]) -> BooleanSolid: ...
+
+@typing.final
+class BooleanOp(enum.Enum):
+    r"""
+    Boolean operation kind.
+    """
+    UNION = ...
+    DIFFERENCE = ...
+    INTERSECTION = ...
+    EXCLUDE = ...
+
+    @property
+    def value(self) -> builtins.str:
+        r"""
+        Reference operation value.
+        """
+    def __hash__(self) -> builtins.int: ...
 
 def apply_boolean(op: BooleanOp, regions: typing.Sequence[BooleanRegion], tolerance: builtins.float = 0.02) -> typing.Optional[builtins.list[BooleanSolid]]: ...
 
