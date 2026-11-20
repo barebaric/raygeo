@@ -48,8 +48,8 @@ fn fill_class<'py>(py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
 
 /// A complete host-agnostic sketch document.
 #[gen_stub_pyclass]
-#[pyclass(module = "raygeo.sketch", name = "SketchDocument")]
-pub struct PySketchDocument {
+#[pyclass(module = "raygeo.sketch", name = "Sketch")]
+pub struct PySketch {
     meta: Py<PyAny>,
     params: Py<PyAny>,
     registry: Py<PyEntityRegistry>,
@@ -64,7 +64,7 @@ pub struct PySketchDocument {
 
 #[gen_stub_pymethods]
 #[pymethods]
-impl PySketchDocument {
+impl PySketch {
     #[new]
     #[pyo3(signature = (name = "New Sketch"))]
     fn new(py: Python<'_>, name: &str) -> PyResult<Self> {
@@ -79,7 +79,7 @@ impl PySketchDocument {
             .bind(py)
             .call_method1("add_point", (0.0, 0.0, true))?;
         meta.bind(py).setattr("origin_id", origin)?;
-        Ok(PySketchDocument {
+        Ok(PySketch {
             meta,
             params,
             registry,
@@ -240,7 +240,7 @@ impl PySketchDocument {
     fn from_dict(
         py: Python<'_>,
         data: &Bound<'_, PyDict>,
-    ) -> PyResult<PySketchDocument> {
+    ) -> PyResult<PySketch> {
         for key in ["params", "registry", "constraints", "origin_id"] {
             if !data.contains(key)? {
                 return Err(PyKeyError::new_err(format!(
@@ -282,7 +282,7 @@ impl PySketchDocument {
                 )?;
             }
         }
-        Ok(PySketchDocument {
+        Ok(PySketch {
             meta,
             params,
             registry,
@@ -296,7 +296,7 @@ impl PySketchDocument {
         })
     }
 
-    fn clone_for_geometry(&self, py: Python<'_>) -> PyResult<PySketchDocument> {
+    fn clone_for_geometry(&self, py: Python<'_>) -> PyResult<PySketch> {
         let meta = self.meta.bind(py).call_method0("copy")?.unbind();
         let registry: Py<PyEntityRegistry> = registry_class(py)?
             .call_method1(
@@ -318,7 +318,7 @@ impl PySketchDocument {
         for array in self.arrays.bind(py).iter() {
             arrays.append(array.call_method0("copy")?)?;
         }
-        Ok(PySketchDocument {
+        Ok(PySketch {
             meta,
             params,
             registry,
@@ -1599,7 +1599,7 @@ impl PySketchDocument {
     }
 }
 
-impl PySketchDocument {
+impl PySketch {
     fn apply_conflict_status(
         &self,
         py: Python<'_>,
@@ -1726,6 +1726,6 @@ fn loop_signed_area(
 }
 
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_class::<PySketchDocument>()?;
+    m.add_class::<PySketch>()?;
     Ok(())
 }

@@ -1,10 +1,10 @@
 import pytest
 
-from raygeo.sketch import SketchDocument
+from raygeo.sketch import Sketch
 
 
-def _line_document() -> SketchDocument:
-    doc = SketchDocument("test")
+def _line_document() -> Sketch:
+    doc = Sketch("test")
     p1 = doc.add_point(0.0, 0.0, fixed=True)
     p2 = doc.add_point(10.0, 2.0)
     doc.add_line(p1, p2)
@@ -14,7 +14,7 @@ def _line_document() -> SketchDocument:
 
 
 def test_document_starts_with_origin():
-    doc = SketchDocument("test")
+    doc = Sketch("test")
 
     assert doc.name == "test"
     assert len(doc.registry.points()) == 1
@@ -36,7 +36,7 @@ def test_document_serialization_round_trip():
     doc.solve()
 
     data = doc.to_dict()
-    restored = SketchDocument.from_dict(data)
+    restored = Sketch.from_dict(data)
 
     assert restored.uid == doc.uid
     assert restored.name == doc.name

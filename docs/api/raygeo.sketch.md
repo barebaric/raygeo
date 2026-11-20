@@ -48,7 +48,7 @@ y: float
 
 Current Y coordinate.
 
-## SketchDocument
+## Sketch
 
 A complete host-agnostic sketch document.
 
@@ -229,12 +229,12 @@ capture_undo_state() -> dict
 ### `clone_for_geometry()`
 
 ```python
-clone_for_geometry() -> SketchDocument
+clone_for_geometry() -> Sketch
 ```
 
-| Parameter | Type             | Description |
-| --------- | ---------------- | ----------- |
-| _Returns_ | `SketchDocument` |             |
+| Parameter | Type     | Description |
+| --------- | -------- | ----------- |
+| _Returns_ | `Sketch` |             |
 
 ### `conflicting_constraints()`
 
@@ -448,13 +448,13 @@ finish_solve() -> None
 ### `from_dict()`
 
 ```python
-from_dict(data: dict) -> SketchDocument
+from_dict(data: dict) -> Sketch
 ```
 
-| Parameter | Type             | Description |
-| --------- | ---------------- | ----------- |
-| `data`    | `dict`           |             |
-| _Returns_ | `SketchDocument` |             |
+| Parameter | Type     | Description |
+| --------- | -------- | ----------- |
+| `data`    | `dict`   |             |
+| _Returns_ | `Sketch` |             |
 
 ### `get_coincident_points()`
 
