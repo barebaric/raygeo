@@ -9,7 +9,12 @@ use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 use crate::python::sketch::registry::PyEntityRegistry;
 
 #[gen_stub_pyclass]
-#[pyclass(frozen, skip_from_py_object, module = "raygeo.sketch.snap.types", name = "SnapLineType")]
+#[pyclass(
+    frozen,
+    skip_from_py_object,
+    module = "raygeo.sketch.snap.types",
+    name = "SnapLineType"
+)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct PySnapLineType(pub u8);
 
@@ -71,7 +76,8 @@ impl PySnapLineType {
     pub const TANGENT: PySnapLineType =
         PySnapLineType(PySnapLineType::TANGENT_VALUE);
     #[classattr]
-    pub const CENTER: PySnapLineType = PySnapLineType(PySnapLineType::CENTER_VALUE);
+    pub const CENTER: PySnapLineType =
+        PySnapLineType(PySnapLineType::CENTER_VALUE);
 
     #[getter]
     fn priority(&self) -> i32 {
@@ -106,7 +112,12 @@ impl PySnapLineType {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(frozen, skip_from_py_object, module = "raygeo.sketch.snap.types", name = "SnapLineStyle")]
+#[pyclass(
+    frozen,
+    skip_from_py_object,
+    module = "raygeo.sketch.snap.types",
+    name = "SnapLineStyle"
+)]
 #[derive(Clone, PartialEq)]
 pub struct PySnapLineStyle {
     pub color: [f64; 4],
@@ -133,20 +144,15 @@ impl PySnapLineStyle {
 
     #[getter]
     fn color(&self) -> (f64, f64, f64, f64) {
-        (
-            self.color[0],
-            self.color[1],
-            self.color[2],
-            self.color[3],
-        )
+        (self.color[0], self.color[1], self.color[2], self.color[3])
     }
 
     #[getter]
     fn dash(&self, py: Python<'_>) -> PyResult<Option<Py<PyTuple>>> {
         match &self.dash {
-            Some(values) => Ok(Some(
-                PyTuple::new(py, values.iter().copied())?.unbind(),
-            )),
+            Some(values) => {
+                Ok(Some(PyTuple::new(py, values.iter().copied())?.unbind()))
+            }
             None => Ok(None),
         }
     }
@@ -176,9 +182,7 @@ fn style(
 }
 
 /// Builds the SNAP_LINE_STYLES dictionary.
-pub(crate) fn build_line_styles(
-    py: Python<'_>,
-) -> PyResult<Bound<'_, PyDict>> {
+pub(crate) fn build_line_styles(py: Python<'_>) -> PyResult<Bound<'_, PyDict>> {
     let styles = PyDict::new(py);
     let all = [
         (
@@ -220,7 +224,12 @@ pub(crate) fn build_line_styles(
 }
 
 #[gen_stub_pyclass]
-#[pyclass(frozen, skip_from_py_object, module = "raygeo.sketch.snap.types", name = "SnapPoint")]
+#[pyclass(
+    frozen,
+    skip_from_py_object,
+    module = "raygeo.sketch.snap.types",
+    name = "SnapPoint"
+)]
 #[derive(Clone)]
 pub struct PySnapPoint {
     pub x: f64,
@@ -288,9 +297,9 @@ impl PySnapPoint {
     #[getter]
     fn pattern_coords(&self, py: Python<'_>) -> PyResult<Option<Py<PyTuple>>> {
         match &self.pattern_coords {
-            Some(values) => Ok(Some(
-                PyTuple::new(py, values.iter().copied())?.unbind(),
-            )),
+            Some(values) => {
+                Ok(Some(PyTuple::new(py, values.iter().copied())?.unbind()))
+            }
             None => Ok(None),
         }
     }
@@ -314,7 +323,12 @@ impl PySnapPoint {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(frozen, skip_from_py_object, module = "raygeo.sketch.snap.types", name = "SnapLine")]
+#[pyclass(
+    frozen,
+    skip_from_py_object,
+    module = "raygeo.sketch.snap.types",
+    name = "SnapLine"
+)]
 #[derive(Clone)]
 pub struct PySnapLine {
     pub is_horizontal: bool,
@@ -391,7 +405,11 @@ impl PySnapLine {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(skip_from_py_object, module = "raygeo.sketch.snap.types", name = "SnapResult")]
+#[pyclass(
+    skip_from_py_object,
+    module = "raygeo.sketch.snap.types",
+    name = "SnapResult"
+)]
 #[derive(Clone)]
 pub struct PySnapResult {
     pub snapped: bool,
@@ -548,7 +566,11 @@ impl PySnapResult {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(skip_from_py_object, module = "raygeo.sketch.snap.types", name = "DragContext")]
+#[pyclass(
+    skip_from_py_object,
+    module = "raygeo.sketch.snap.types",
+    name = "DragContext"
+)]
 #[derive(Clone)]
 pub struct PyDragContext {
     pub dragged_point_ids: Py<PySet>,
@@ -745,4 +767,3 @@ pub(crate) fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add("SNAP_LINE_STYLES", build_line_styles(module.py())?)?;
     Ok(())
 }
-

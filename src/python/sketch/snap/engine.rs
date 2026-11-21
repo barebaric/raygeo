@@ -15,7 +15,12 @@ use super::types::{
 };
 
 #[gen_stub_pyclass]
-#[pyclass(subclass, skip_from_py_object, module = "raygeo.sketch.snap.engine", name = "SnapLineProducer")]
+#[pyclass(
+    subclass,
+    skip_from_py_object,
+    module = "raygeo.sketch.snap.engine",
+    name = "SnapLineProducer"
+)]
 pub struct PySnapLineProducer;
 
 #[gen_stub_pymethods]
@@ -81,7 +86,9 @@ pub(crate) fn geometry_key(
 ) -> PyResult<Py<PyAny>> {
     let registry = registry.extract::<PyRef<'_, PyEntityRegistry>>()?;
     let ctx = match drag_context {
-        Some(value) if !value.is_none() => Some(value.extract::<PyRef<'_, PyDragContext>>()?),
+        Some(value) if !value.is_none() => {
+            Some(value.extract::<PyRef<'_, PyDragContext>>()?)
+        }
         _ => None,
     };
     let empty = PyDragContext::default();
@@ -104,7 +111,11 @@ pub(crate) fn geometry_key(
         let Some(entity) = registry.inner.get_entity(entity_id) else {
             continue;
         };
-        if entity.get_point_ids().iter().any(|p| excluded_points.contains(p)) {
+        if entity
+            .get_point_ids()
+            .iter()
+            .any(|p| excluded_points.contains(p))
+        {
             continue;
         }
         if !include_construction && entity.base().construction {
@@ -132,9 +143,15 @@ pub(crate) fn geometry_key(
             .into_iter()
             .filter(|id| !excluded_points.contains(id))
             .filter_map(|id| registry.inner.get_point(id))
-            .map(|p| (p.id, (p.x * 1e6).round() / 1e6, (p.y * 1e6).round() / 1e6))
+            .map(|p| {
+                (p.id, (p.x * 1e6).round() / 1e6, (p.y * 1e6).round() / 1e6)
+            })
             .collect();
-        parts.push(PyTuple::new(py, points.iter().map(|p| format!("{p:?}")))?.into_any().unbind());
+        parts.push(
+            PyTuple::new(py, points.iter().map(|p| format!("{p:?}")))?
+                .into_any()
+                .unbind(),
+        );
     }
     Ok(PyTuple::new(py, parts)?.into_any().unbind())
 }
@@ -184,7 +201,11 @@ fn collect_points(
 }
 
 #[gen_stub_pyclass]
-#[pyclass(skip_from_py_object, module = "raygeo.sketch.snap.engine", name = "SnapEngine")]
+#[pyclass(
+    skip_from_py_object,
+    module = "raygeo.sketch.snap.engine",
+    name = "SnapEngine"
+)]
 pub struct PySnapEngine {
     pub producers: Vec<Py<PyAny>>,
     pub threshold: f64,
@@ -270,7 +291,11 @@ impl PySnapEngine {
         self.producers.push(producer);
     }
 
-    fn unregister_producer(&mut self, py: Python<'_>, producer: &Bound<'_, PyAny>) {
+    fn unregister_producer(
+        &mut self,
+        py: Python<'_>,
+        producer: &Bound<'_, PyAny>,
+    ) {
         self.producers.retain(|item| !item.bind(py).is(producer));
     }
 
@@ -286,13 +311,8 @@ impl PySnapEngine {
         drag_position: (f64, f64),
         drag_context: &Bound<'_, PyAny>,
     ) -> PyResult<()> {
-        let full_key = geometry_key(
-            py,
-            registry,
-            Some(drag_context),
-            true,
-            true,
-        )?;
+        let full_key =
+            geometry_key(py, registry, Some(drag_context), true, true)?;
         let full_str = full_key.bind(py).repr()?.to_string();
         let context = drag_context.extract::<PyRef<'_, PyDragContext>>()?;
         let drag_key = (context.point_ids(), context.entity_ids());
@@ -303,11 +323,8 @@ impl PySnapEngine {
         }
 
         self.index.clear();
-        let ps: Vec<Py<PyAny>> = self
-            .producers
-            .iter()
-            .map(|p| p.clone_ref(py))
-            .collect();
+        let ps: Vec<Py<PyAny>> =
+            self.producers.iter().map(|p| p.clone_ref(py)).collect();
         let lines = collect_lines(
             py,
             &ps,
@@ -363,11 +380,8 @@ impl PySnapEngine {
         };
         let context_ref = context_obj.extract::<PyRef<'_, PyDragContext>>()?;
         let _ = context_ref;
-        let ps: Vec<Py<PyAny>> = self
-            .producers
-            .iter()
-            .map(|p| p.clone_ref(py))
-            .collect();
+        let ps: Vec<Py<PyAny>> =
+            self.producers.iter().map(|p| p.clone_ref(py)).collect();
         let snap_points = collect_points(
             py,
             &ps,
@@ -381,7 +395,8 @@ impl PySnapEngine {
         if let Some((point, distance)) =
             self.find_nearest_snap_point(py, x, y, &snap_points)?
         {
-            let crossing = self.find_crossing_lines(py, &point, &dynamic_lines)?;
+            let crossing =
+                self.find_crossing_lines(py, &point, &dynamic_lines)?;
             self.last_primary = Some(point.clone_ref(py));
             let borrowed = point.borrow(py);
             let result = PySnapResult {
@@ -397,7 +412,8 @@ impl PySnapEngine {
         }
         self.last_primary = None;
 
-        let (best_h, best_v) = self.find_best_lines(py, x, y, &dynamic_lines)?;
+        let (best_h, best_v) =
+            self.find_best_lines(py, x, y, &dynamic_lines)?;
         if best_h.is_some() || best_v.is_some() {
             let snap_x = best_v
                 .as_ref()
@@ -459,7 +475,12 @@ impl PySnapEngine {
         };
         self.rebuild_index(py, registry, position, &context_obj)?;
         let mut lines = dynamic_lines(py, registry, &context_obj)?;
-        for indexed in self.index.horizontal.iter().chain(self.index.vertical.iter()) {
+        for indexed in self
+            .index
+            .horizontal
+            .iter()
+            .chain(self.index.vertical.iter())
+        {
             if let Some(line) = &indexed.snap_line {
                 lines.push(line.clone_ref(py));
             }
@@ -568,7 +589,9 @@ impl PySnapEngine {
             for point in points {
                 let p = point.borrow(py);
                 let last_ref = last.borrow(py);
-                if line_type_key(p.line_type) != line_type_key(last_ref.line_type) {
+                if line_type_key(p.line_type)
+                    != line_type_key(last_ref.line_type)
+                {
                     continue;
                 }
                 if source_key(py, p.source.as_ref())
@@ -597,7 +620,12 @@ impl PySnapEngine {
         for line in extra {
             push_crossing(py, &mut lines, line, point.x, point.y);
         }
-        for indexed in self.index.horizontal.iter().chain(self.index.vertical.iter()) {
+        for indexed in self
+            .index
+            .horizontal
+            .iter()
+            .chain(self.index.vertical.iter())
+        {
             if let Some(line) = &indexed.snap_line {
                 push_crossing(py, &mut lines, line, point.x, point.y);
             }
@@ -648,7 +676,9 @@ fn dynamic_lines(
                 PySnapLine {
                     is_horizontal: false,
                     coordinate: point.x,
-                    line_type: PySnapLineType(PySnapLineType::ENTITY_POINT_VALUE),
+                    line_type: PySnapLineType(
+                        PySnapLineType::ENTITY_POINT_VALUE,
+                    ),
                     source: None,
                 },
             )?);
@@ -657,7 +687,9 @@ fn dynamic_lines(
                 PySnapLine {
                     is_horizontal: true,
                     coordinate: point.y,
-                    line_type: PySnapLineType(PySnapLineType::ENTITY_POINT_VALUE),
+                    line_type: PySnapLineType(
+                        PySnapLineType::ENTITY_POINT_VALUE,
+                    ),
                     source: None,
                 },
             )?);

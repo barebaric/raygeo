@@ -28,9 +28,7 @@ pub(crate) fn register(sketch: &Bound<'_, PyModule>) -> PyResult<()> {
     producers::register(&producers_mod)?;
     producers::register(&snap)?;
 
-    let spec_cls = py
-        .import("importlib.machinery")?
-        .getattr("ModuleSpec")?;
+    let spec_cls = py.import("importlib.machinery")?.getattr("ModuleSpec")?;
     for (name, module) in [
         ("types", &types_mod),
         ("spatial", &spatial_mod),

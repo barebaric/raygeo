@@ -11,7 +11,11 @@ use crate::python::sketch::snap::types::{
 };
 
 #[gen_stub_pyclass]
-#[pyclass(skip_from_py_object, module = "raygeo.sketch.snap.producers", name = "EquidistantLinesProducer")]
+#[pyclass(
+    skip_from_py_object,
+    module = "raygeo.sketch.snap.producers",
+    name = "EquidistantLinesProducer"
+)]
 pub struct PyEquidistantLinesProducer {
     spacing_tolerance: f64,
     max_spacing: f64,
@@ -92,40 +96,46 @@ impl PyEquidistantLinesProducer {
         for (snap_coord, spacing, pattern) in
             self.find_snaps(&v_coords, y, threshold)
         {
-            points.push(Py::new(
-                py,
-                PySnapPoint {
-                    x: axis_x,
-                    y: snap_coord,
-                    line_type: PySnapLineType(
-                        PySnapLineType::EQUIDISTANT_VALUE,
-                    ),
-                    source: None,
-                    spacing: Some(spacing),
-                    is_horizontal: true,
-                    pattern_coords: Some(pattern),
-                    axis_coord: Some(axis_x),
-                },
-            ).unwrap());
+            points.push(
+                Py::new(
+                    py,
+                    PySnapPoint {
+                        x: axis_x,
+                        y: snap_coord,
+                        line_type: PySnapLineType(
+                            PySnapLineType::EQUIDISTANT_VALUE,
+                        ),
+                        source: None,
+                        spacing: Some(spacing),
+                        is_horizontal: true,
+                        pattern_coords: Some(pattern),
+                        axis_coord: Some(axis_x),
+                    },
+                )
+                .unwrap(),
+            );
         }
         for (snap_coord, spacing, pattern) in
             self.find_snaps(&h_coords, x, threshold)
         {
-            points.push(Py::new(
-                py,
-                PySnapPoint {
-                    x: snap_coord,
-                    y: axis_y,
-                    line_type: PySnapLineType(
-                        PySnapLineType::EQUIDISTANT_VALUE,
-                    ),
-                    source: None,
-                    spacing: Some(spacing),
-                    is_horizontal: false,
-                    pattern_coords: Some(pattern),
-                    axis_coord: Some(axis_y),
-                },
-            ).unwrap());
+            points.push(
+                Py::new(
+                    py,
+                    PySnapPoint {
+                        x: snap_coord,
+                        y: axis_y,
+                        line_type: PySnapLineType(
+                            PySnapLineType::EQUIDISTANT_VALUE,
+                        ),
+                        source: None,
+                        spacing: Some(spacing),
+                        is_horizontal: false,
+                        pattern_coords: Some(pattern),
+                        axis_coord: Some(axis_y),
+                    },
+                )
+                .unwrap(),
+            );
         }
         points
     }
@@ -219,10 +229,7 @@ impl PyEquidistantLinesProducer {
                 .any(|c| (coord - c).abs() < self.spacing_tolerance)
         };
         let min = all_coords.iter().copied().fold(f64::INFINITY, f64::min);
-        let max = all_coords
-            .iter()
-            .copied()
-            .fold(f64::NEG_INFINITY, f64::max);
+        let max = all_coords.iter().copied().fold(f64::NEG_INFINITY, f64::max);
         let mut coord = snap_coord;
         while near(coord) {
             pattern.push(coord);

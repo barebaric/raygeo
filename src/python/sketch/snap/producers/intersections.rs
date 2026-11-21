@@ -12,13 +12,16 @@ use crate::python::sketch::registry::PyEntityRegistry;
 use crate::python::sketch::snap::types::{
     PyDragContext, PySnapLine, PySnapLineType, PySnapPoint,
 };
-use crate::sketch::entities::{
-    arc::Arc, circle::Circle, line::Line, Entity,
-};
+use crate::sketch::entities::{arc::Arc, circle::Circle, line::Line, Entity};
 use crate::sketch::registry::EntityRegistry;
 
 #[gen_stub_pyclass]
-#[pyclass(dict, skip_from_py_object, module = "raygeo.sketch.snap.producers", name = "IntersectionsProducer")]
+#[pyclass(
+    dict,
+    skip_from_py_object,
+    module = "raygeo.sketch.snap.producers",
+    name = "IntersectionsProducer"
+)]
 pub struct PyIntersectionsProducer {
     include_construction: bool,
     cache_key: Option<String>,
@@ -59,11 +62,7 @@ impl PyIntersectionsProducer {
         drag_context: &PyDragContext,
     ) -> Vec<(f64, f64)> {
         let reg = registry.borrow();
-        all_intersections(
-            &reg.inner,
-            drag_context,
-            self.include_construction,
-        )
+        all_intersections(&reg.inner, drag_context, self.include_construction)
     }
 
     fn produce(
@@ -156,7 +155,9 @@ fn get_intersections(
     }
     let dict = slf.getattr("__dict__")?;
     let dict = dict.cast::<pyo3::types::PyDict>()?;
-    let computed: Vec<(f64, f64)> = match dict.get_item("_get_all_intersections")? {
+    let computed: Vec<(f64, f64)> = match dict
+        .get_item("_get_all_intersections")?
+    {
         Some(callback) => callback.call1((registry, context_obj))?.extract()?,
         None => {
             let this = slf.borrow();
@@ -302,7 +303,11 @@ fn pair_intersections(
     Vec::new()
 }
 
-fn line_line(l1: &Line, l2: &Line, registry: &EntityRegistry) -> Vec<(f64, f64)> {
+fn line_line(
+    l1: &Line,
+    l2: &Line,
+    registry: &EntityRegistry,
+) -> Vec<(f64, f64)> {
     let (Some(p1), Some(p2), Some(p3), Some(p4)) = (
         registry.get_point(l1.p1),
         registry.get_point(l1.p2),
@@ -331,10 +336,9 @@ fn line_curve(
     curve: Curve<'_>,
     registry: &EntityRegistry,
 ) -> Vec<(f64, f64)> {
-    let (Some(p1), Some(p2)) = (
-        registry.get_point(line.p1),
-        registry.get_point(line.p2),
-    ) else {
+    let (Some(p1), Some(p2)) =
+        (registry.get_point(line.p1), registry.get_point(line.p2))
+    else {
         return Vec::new();
     };
     let (center, radius) = match curve {
@@ -355,8 +359,8 @@ fn line_curve(
             ) else {
                 return Vec::new();
             };
-            let radius = (radius_point.x - center.x)
-                .hypot(radius_point.y - center.y);
+            let radius =
+                (radius_point.x - center.x).hypot(radius_point.y - center.y);
             (center, radius)
         }
     };

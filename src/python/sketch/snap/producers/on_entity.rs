@@ -10,7 +10,11 @@ use crate::python::sketch::snap::types::{
 use crate::sketch::entities::{arc::Arc, circle::Circle, line::Line};
 
 #[gen_stub_pyclass]
-#[pyclass(skip_from_py_object, module = "raygeo.sketch.snap.producers", name = "OnEntityProducer")]
+#[pyclass(
+    skip_from_py_object,
+    module = "raygeo.sketch.snap.producers",
+    name = "OnEntityProducer"
+)]
 #[derive(Default)]
 pub struct PyOnEntityProducer;
 
@@ -58,11 +62,15 @@ impl PyOnEntityProducer {
             {
                 continue;
             }
-            let nearest = if let Some(line) = entity.as_any().downcast_ref::<Line>() {
+            let nearest = if let Some(line) =
+                entity.as_any().downcast_ref::<Line>()
+            {
                 nearest_on_line(line, &reg.inner, x, y, threshold)
             } else if let Some(arc) = entity.as_any().downcast_ref::<Arc>() {
                 nearest_on_arc(arc, &reg.inner, x, y, threshold)
-            } else if let Some(circle) = entity.as_any().downcast_ref::<Circle>() {
+            } else if let Some(circle) =
+                entity.as_any().downcast_ref::<Circle>()
+            {
                 nearest_on_circle(circle, &reg.inner, x, y, threshold)
             } else {
                 None
@@ -76,7 +84,9 @@ impl PyOnEntityProducer {
                     PySnapPoint {
                         x: nx,
                         y: ny,
-                        line_type: PySnapLineType(PySnapLineType::ON_ENTITY_VALUE),
+                        line_type: PySnapLineType(
+                            PySnapLineType::ON_ENTITY_VALUE,
+                        ),
                         source,
                         spacing: None,
                         is_horizontal: false,
@@ -147,8 +157,7 @@ fn nearest_on_circle(
 ) -> Option<(f64, f64)> {
     let center = registry.get_point(circle.center)?;
     let radius_point = registry.get_point(circle.radius_point)?;
-    let radius =
-        (radius_point.x - center.x).hypot(radius_point.y - center.y);
+    let radius = (radius_point.x - center.x).hypot(radius_point.y - center.y);
     if radius < 1e-10 {
         return None;
     }

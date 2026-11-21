@@ -9,7 +9,11 @@ use crate::python::sketch::snap::types::{
 };
 
 #[gen_stub_pyclass]
-#[pyclass(skip_from_py_object, module = "raygeo.sketch.snap.producers", name = "EntityPointsProducer")]
+#[pyclass(
+    skip_from_py_object,
+    module = "raygeo.sketch.snap.producers",
+    name = "EntityPointsProducer"
+)]
 #[derive(Default)]
 pub struct PyEntityPointsProducer;
 
@@ -48,14 +52,17 @@ impl PyEntityPointsProducer {
             {
                 continue;
             }
-            let source =
-                registry.call_method1("get_point_object", (point_id,))?.extract::<Option<Py<PyAny>>>()?;
+            let source = registry
+                .call_method1("get_point_object", (point_id,))?
+                .extract::<Option<Py<PyAny>>>()?;
             lines.push(Py::new(
                 py,
                 PySnapLine {
                     is_horizontal: false,
                     coordinate: point.x,
-                    line_type: PySnapLineType(PySnapLineType::ENTITY_POINT_VALUE),
+                    line_type: PySnapLineType(
+                        PySnapLineType::ENTITY_POINT_VALUE,
+                    ),
                     source: source.clone(),
                 },
             )?);
@@ -64,7 +71,9 @@ impl PyEntityPointsProducer {
                 PySnapLine {
                     is_horizontal: true,
                     coordinate: point.y,
-                    line_type: PySnapLineType(PySnapLineType::ENTITY_POINT_VALUE),
+                    line_type: PySnapLineType(
+                        PySnapLineType::ENTITY_POINT_VALUE,
+                    ),
                     source,
                 },
             )?);
@@ -110,7 +119,9 @@ impl PyEntityPointsProducer {
                     PySnapPoint {
                         x: point.x,
                         y: point.y,
-                        line_type: PySnapLineType(PySnapLineType::ENTITY_POINT_VALUE),
+                        line_type: PySnapLineType(
+                            PySnapLineType::ENTITY_POINT_VALUE,
+                        ),
                         source,
                         spacing: None,
                         is_horizontal: false,

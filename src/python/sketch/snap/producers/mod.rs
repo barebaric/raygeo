@@ -19,22 +19,21 @@ pub(crate) fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     on_entity::register(module)?;
 
     let py = module.py();
-    let spec_cls = py
-        .import("importlib.machinery")?
-        .getattr("ModuleSpec")?;
+    let spec_cls = py.import("importlib.machinery")?.getattr("ModuleSpec")?;
     let kwargs = pyo3::types::PyDict::new(py);
     kwargs.set_item("is_package", true)?;
-    let package_spec = spec_cls.call(
-        ("raygeo.sketch.snap.producers", py.None()),
-        Some(&kwargs),
-    )?;
+    let package_spec = spec_cls
+        .call(("raygeo.sketch.snap.producers", py.None()), Some(&kwargs))?;
     module.setattr("__spec__", package_spec)?;
     module.setattr("__package__", "raygeo.sketch.snap")?;
     module.setattr("__path__", pyo3::types::PyList::empty(py))?;
 
     let sys_modules = py.import("sys")?.getattr("modules")?;
     for (name, register) in [
-        ("centers", centers::register as fn(&Bound<'_, PyModule>) -> PyResult<()>),
+        (
+            "centers",
+            centers::register as fn(&Bound<'_, PyModule>) -> PyResult<()>,
+        ),
         ("entity_points", entity_points::register),
         ("equidistant", equidistant::register),
         ("intersections", intersections::register),

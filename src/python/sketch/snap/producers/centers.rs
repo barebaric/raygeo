@@ -10,7 +10,11 @@ use crate::python::sketch::snap::types::{
 use crate::sketch::entities::{arc::Arc, circle::Circle, ellipse::Ellipse};
 
 #[gen_stub_pyclass]
-#[pyclass(skip_from_py_object, module = "raygeo.sketch.snap.producers", name = "CentersProducer")]
+#[pyclass(
+    skip_from_py_object,
+    module = "raygeo.sketch.snap.producers",
+    name = "CentersProducer"
+)]
 pub struct PyCentersProducer {
     include_construction: bool,
 }

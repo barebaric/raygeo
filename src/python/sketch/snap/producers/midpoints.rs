@@ -10,7 +10,11 @@ use crate::python::sketch::snap::types::{
 use crate::sketch::entities::{arc::Arc, line::Line};
 
 #[gen_stub_pyclass]
-#[pyclass(skip_from_py_object, module = "raygeo.sketch.snap.producers", name = "MidpointsProducer")]
+#[pyclass(
+    skip_from_py_object,
+    module = "raygeo.sketch.snap.producers",
+    name = "MidpointsProducer"
+)]
 #[derive(Default)]
 pub struct PyMidpointsProducer;
 
@@ -58,7 +62,9 @@ impl PyMidpointsProducer {
             {
                 continue;
             }
-            let midpoint = if let Some(line) = entity.as_any().downcast_ref::<Line>() {
+            let midpoint = if let Some(line) =
+                entity.as_any().downcast_ref::<Line>()
+            {
                 let p1 = reg.inner.get_point(line.p1);
                 let p2 = reg.inner.get_point(line.p2);
                 match (p1, p2) {
@@ -85,7 +91,9 @@ impl PyMidpointsProducer {
                     PySnapPoint {
                         x: mx,
                         y: my,
-                        line_type: PySnapLineType(PySnapLineType::MIDPOINT_VALUE),
+                        line_type: PySnapLineType(
+                            PySnapLineType::MIDPOINT_VALUE,
+                        ),
                         source,
                         spacing: None,
                         is_horizontal: false,

@@ -7,7 +7,11 @@ use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 use super::types::PySnapLine;
 
 #[gen_stub_pyclass]
-#[pyclass(skip_from_py_object, module = "raygeo.sketch.snap.spatial", name = "IndexedLine")]
+#[pyclass(
+    skip_from_py_object,
+    module = "raygeo.sketch.snap.spatial",
+    name = "IndexedLine"
+)]
 #[derive(Clone)]
 pub struct PyIndexedLine {
     pub snap_line: Option<Py<PySnapLine>>,
@@ -42,7 +46,11 @@ impl PyIndexedLine {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(skip_from_py_object, module = "raygeo.sketch.snap.spatial", name = "SnapLineIndex")]
+#[pyclass(
+    skip_from_py_object,
+    module = "raygeo.sketch.snap.spatial",
+    name = "SnapLineIndex"
+)]
 #[derive(Default, Clone)]
 pub struct PySnapLineIndex {
     pub horizontal: Vec<PyIndexedLine>,
@@ -72,10 +80,7 @@ impl PySnapLineIndex {
         self.dirty = true;
     }
 
-    fn insert(
-        entries: &mut Vec<PyIndexedLine>,
-        entry: PyIndexedLine,
-    ) {
+    fn insert(entries: &mut Vec<PyIndexedLine>, entry: PyIndexedLine) {
         let pos = entries
             .iter()
             .position(|item| item.coordinate > entry.coordinate)
