@@ -868,17 +868,17 @@ impl PyEntityBase {
         if let Some(circle) =
             any.downcast_ref::<crate::sketch::entities::circle::Circle>()
         {
-            return Ok(offset::circle_plan(py, circle, &registry, offset));
+            return offset::circle_plan(py, circle, &registry, offset);
         }
         if let Some(arc) =
             any.downcast_ref::<crate::sketch::entities::arc::Arc>()
         {
-            return Ok(offset::arc_plan(py, arc, &registry, offset));
+            return offset::arc_plan(py, arc, &registry, offset);
         }
         if let Some(ellipse) =
             any.downcast_ref::<crate::sketch::entities::ellipse::Ellipse>()
         {
-            return Ok(offset::ellipse_plan(py, ellipse, &registry, offset));
+            return offset::ellipse_plan(py, ellipse, &registry, offset);
         }
         if let Some(polygon) = any
             .downcast_ref::<crate::sketch::entities::polygon::PolygonEntity>(
