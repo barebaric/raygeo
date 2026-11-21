@@ -36,6 +36,23 @@ def test_power_forms(params):
     assert params.get("b") == 8.0
 
 
+def test_math_constants_and_extra_functions(params):
+    params.set("e_value", "e")
+    params.set("tau_value", "tau")
+    params.set("natural_log", "log(e)")
+    params.set("log2_value", "log2(8)")
+    params.set("log10_value", "log10(1000)")
+    params.set("signum_value", "signum(-3)")
+    params.set("degrees_value", "degrees(pi)")
+    assert params.get("e_value") == pytest.approx(math.e)
+    assert params.get("tau_value") == pytest.approx(math.tau)
+    assert params.get("natural_log") == pytest.approx(1.0)
+    assert params.get("log2_value") == pytest.approx(3.0)
+    assert params.get("log10_value") == pytest.approx(3.0)
+    assert params.get("signum_value") == pytest.approx(-1.0)
+    assert params.get("degrees_value") == pytest.approx(180.0)
+
+
 def test_dependency_resolution_order(params):
     params.set("b", "a * 2")
     params.set("a", 10)
@@ -79,6 +96,13 @@ def test_circular_dependency_protection(params):
 def test_parameter_syntax_error(params):
     params.set("bad", "sqrt(")
     assert params.get("bad") == 0.0
+    assert "bad" in params.unresolved_errors()
+
+
+def test_division_by_zero_is_reported(params):
+    params.set("bad", "1 / 0")
+    assert params.get("bad") == 0.0
+    assert "bad" in params.unresolved_errors()
 
 
 def test_parameter_overwrite(params):
