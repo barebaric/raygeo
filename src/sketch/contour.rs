@@ -1,6 +1,8 @@
 //! Contour preparation: connected components, chain orientation and
 //! sampled chain vertices for offset and boolean operations.
 
+use crate::sketch::union_find::UnionFind;
+
 use std::collections::HashMap;
 
 use crate::geo::algo::polylabel::find_largest_circle;
@@ -28,7 +30,8 @@ pub fn partition_components(
     coincident_pairs: &[(u64, u64)],
 ) -> Option<Vec<Vec<u64>>> {
     let edges = endpoint_edges(registry, entity_ids).ok()?;
-    let mut parent = UnionFind::new(edges.iter().flat_map(|e| [e.p1, e.p2]));
+    let mut parent =
+        UnionFind::with_ids(edges.iter().flat_map(|e| [e.p1, e.p2]));
     for &(a, b) in coincident_pairs {
         parent.union_if_present(a, b);
     }
@@ -93,7 +96,8 @@ pub fn walk_component(
         return (Vec::new(), false);
     }
 
-    let mut parent = UnionFind::new(edges.iter().flat_map(|e| [e.p1, e.p2]));
+    let mut parent =
+        UnionFind::with_ids(edges.iter().flat_map(|e| [e.p1, e.p2]));
     for &(a, b) in coincident_pairs {
         parent.union_if_present(a, b);
     }
@@ -409,46 +413,4 @@ fn endpoint_edges(
         });
     }
     Ok(edges)
-}
-
-struct UnionFind {
-    parent: HashMap<u64, u64>,
-}
-
-impl UnionFind {
-    fn new(points: impl IntoIterator<Item = u64>) -> Self {
-        UnionFind {
-            parent: points.into_iter().map(|id| (id, id)).collect(),
-        }
-    }
-
-    fn find(&mut self, id: u64) -> u64 {
-        let mut root = id;
-        while let Some(next) = self.parent.get(&root).copied() {
-            if next == root {
-                break;
-            }
-            root = next;
-        }
-        let mut current = id;
-        while let Some(next) = self.parent.get(&current).copied() {
-            if next == current {
-                break;
-            }
-            self.parent.insert(current, root);
-            current = next;
-        }
-        root
-    }
-
-    fn union_if_present(&mut self, a: u64, b: u64) {
-        if !self.parent.contains_key(&a) || !self.parent.contains_key(&b) {
-            return;
-        }
-        let root_a = self.find(a);
-        let root_b = self.find(b);
-        if root_a != root_b {
-            self.parent.insert(root_a, root_b);
-        }
-    }
 }

@@ -33,3 +33,4 @@ pub mod solver;
 pub mod topology;
 pub mod transform;
 pub mod trf;
+pub mod union_find;

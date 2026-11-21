@@ -8,6 +8,7 @@
 use std::collections::{BTreeSet, HashMap};
 
 use super::constraint::SketchConstraint;
+use crate::sketch::union_find::UnionFind;
 
 /// Partitions all points referenced by constraints into connected
 /// components of the constraint graph.  Two points share a component
@@ -17,26 +18,7 @@ pub fn compute_constraint_components(
     registry: &crate::sketch::registry::EntityRegistry,
     constraints: &[&dyn SketchConstraint],
 ) -> Vec<BTreeSet<u64>> {
-    let mut parent: HashMap<u64, u64> = HashMap::new();
-
-    fn find(parent: &mut HashMap<u64, u64>, pid: u64) -> u64 {
-        let mut root = pid;
-        while let Some(&next) = parent.get(&root) {
-            if next == root {
-                break;
-            }
-            root = next;
-        }
-        let mut current = pid;
-        while let Some(&next) = parent.get(&current) {
-            if next == current {
-                break;
-            }
-            parent.insert(current, root);
-            current = next;
-        }
-        root
-    }
+    let mut parent = UnionFind::new();
 
     for constraint in constraints {
         let pids = constraint.referenced_points(registry);
@@ -44,22 +26,18 @@ pub fn compute_constraint_components(
             Some(&id) => id,
             None => continue,
         };
-        parent.entry(first).or_insert(first);
+        parent.ensure(first);
         for pid in pids.iter().skip(1) {
-            parent.entry(*pid).or_insert(*pid);
-            let root_first = find(&mut parent, first);
-            let root_pid = find(&mut parent, *pid);
-            if root_first != root_pid {
-                parent.insert(root_pid, root_first);
-            }
+            parent.ensure(*pid);
+            parent.union(*pid, first);
         }
     }
 
     let mut components: HashMap<u64, BTreeSet<u64>> = HashMap::new();
     let mut roots: Vec<u64> = Vec::new();
-    let ids: Vec<u64> = parent.keys().copied().collect();
+    let ids: Vec<u64> = parent.ids().collect();
     for pid in ids {
-        let root = find(&mut parent, pid);
+        let root = parent.find(pid);
         components
             .entry(root)
             .or_insert_with(|| {

@@ -8,6 +8,7 @@ use crate::sketch::constraints::coincident::CoincidentConstraint;
 use crate::sketch::entities::entity::Entity;
 use crate::sketch::entities::text_box::TextBoxEntity;
 use crate::sketch::registry::EntityRegistry;
+use crate::sketch::union_find::UnionFind;
 
 /// Converts a sketch registry into geometry, linking chainable
 /// entities into continuous paths.
@@ -48,22 +49,14 @@ pub fn document_geometry(
         return geo;
     }
 
-    let mut parent: HashMap<u64, u64> = registry
-        .point_ids()
-        .into_iter()
-        .map(|id| (id, id))
-        .collect();
+    let mut parent = UnionFind::with_ids(registry.point_ids());
     for constraint in constraints {
         let Some(coincident) =
             constraint.as_any().downcast_ref::<CoincidentConstraint>()
         else {
             continue;
         };
-        if parent.contains_key(&coincident.p1)
-            && parent.contains_key(&coincident.p2)
-        {
-            union(&mut parent, coincident.p1, coincident.p2);
-        }
+        parent.union_if_present(coincident.p1, coincident.p2);
     }
 
     let endpoints: Vec<(u64, u64)> = chainable
@@ -71,7 +64,7 @@ pub fn document_geometry(
         .map(|entity| {
             let ids = entity.get_endpoint_ids();
             if ids.len() == 2 {
-                (find(&mut parent, ids[0]), find(&mut parent, ids[1]))
+                (parent.find(ids[0]), parent.find(ids[1]))
             } else {
                 (u64::MAX, u64::MAX)
             }
@@ -151,28 +144,6 @@ pub fn document_geometry(
     }
 
     geo
-}
-
-fn find(parent: &mut HashMap<u64, u64>, id: u64) -> u64 {
-    let mut root = id;
-    while parent.get(&root).copied().unwrap_or(root) != root {
-        root = parent.get(&root).copied().unwrap_or(root);
-    }
-    let mut current = id;
-    while current != root {
-        let next = parent.get(&current).copied().unwrap_or(root);
-        parent.insert(current, root);
-        current = next;
-    }
-    root
-}
-
-fn union(parent: &mut HashMap<u64, u64>, a: u64, b: u64) {
-    let root_a = find(parent, a);
-    let root_b = find(parent, b);
-    if root_a != root_b {
-        parent.insert(root_a, root_b);
-    }
 }
 
 fn next_unvisited(
