@@ -33,15 +33,18 @@ fn center_of(
     Some((id, (point.x, point.y)))
 }
 
-/// Whether a candidate at `(x, y)` coincides with a dragged point.
-fn coincides_with_drag(
+/// Whether a candidate at `(x, y)` must be suppressed because it
+/// coincides with a dragged point.  Suppression only applies when
+/// the context asks for it; creation-time snapping (suppress off)
+/// keeps every candidate.
+fn is_suppressed_by_drag(
     registry: &EntityRegistry,
     context: &SnapContext,
     x: f64,
     y: f64,
 ) -> bool {
-    !context.suppress_coincident_points
-        || context.dragged_point_ids.iter().any(|pid| {
+    context.suppress_coincident_points
+        && context.dragged_point_ids.iter().any(|pid| {
             registry.get_point(*pid).is_some_and(|dragged| {
                 (dragged.x - x).abs() <= 1e-6 && (dragged.y - y).abs() <= 1e-6
             })
@@ -76,7 +79,7 @@ pub mod centers {
             if context.is_point_dragged(center_id) {
                 continue;
             }
-            if coincides_with_drag(registry, context, center.0, center.1) {
+            if is_suppressed_by_drag(registry, context, center.0, center.1) {
                 continue;
             }
             out.push((entity_id, center));
@@ -153,7 +156,7 @@ pub mod entity_points {
             let Some(point) = registry.get_point(point_id) else {
                 continue;
             };
-            if coincides_with_drag(registry, context, point.x, point.y) {
+            if is_suppressed_by_drag(registry, context, point.x, point.y) {
                 continue;
             }
             out.push((point_id, (point.x, point.y)));
