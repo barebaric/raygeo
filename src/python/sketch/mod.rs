@@ -46,13 +46,9 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let sketch_mod = PyModule::new(py, "sketch")?;
 
     sketch_mod.setattr("__doc__", MODULE_DOC)?;
-    let spec_cls = py
-        .import("importlib.machinery")?
-        .getattr("ModuleSpec")?;
-    sketch_mod.setattr(
-        "__spec__",
-        spec_cls.call1(("raygeo.sketch", py.None()))?,
-    )?;
+    let spec_cls = py.import("importlib.machinery")?.getattr("ModuleSpec")?;
+    sketch_mod
+        .setattr("__spec__", spec_cls.call1(("raygeo.sketch", py.None()))?)?;
     sketch_mod.setattr("__package__", "raygeo")?;
 
     sketch_mod.add_class::<PyPointDef>()?;
@@ -80,10 +76,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
         spec_cls.call1(("raygeo.sketch.types", py.None()))?,
     )?;
     types_mod.setattr("__package__", "raygeo.sketch")?;
-    types_mod.setattr(
-        "EntityID",
-        py.get_type::<pyo3::types::PyInt>(),
-    )?;
+    types_mod.setattr("EntityID", py.get_type::<pyo3::types::PyInt>())?;
     types::register_types(&types_mod)?;
     sketch_mod.add_submodule(&types_mod)?;
 
