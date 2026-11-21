@@ -451,7 +451,7 @@ impl PyPolygon {
                 "Polygon frame handle coincides with center",
             ));
         }
-        Ok(super::offset::normalize_vertices(
+        Ok(crate::sketch::contour::normalize_vertices(
             center,
             handle,
             &world_vertices,

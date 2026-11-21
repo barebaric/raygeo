@@ -100,7 +100,7 @@ fn offset_outline(
     distance: f64,
     tolerance: f64,
 ) -> Vec<(Vec<(f64, f64)>, bool)> {
-    crate::python::sketch::entities::offset::offset_outline(
+    crate::sketch::contour::offset_outline(
         &vertices, closed, distance, tolerance,
     )
 }
