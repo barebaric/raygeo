@@ -4,6 +4,7 @@ use std::collections::HashSet;
 
 use serde_json::{json, Value};
 
+use crate::geo::math::unit_or_zero;
 use crate::geo::shape::line::get_line_segment_closest_point;
 use crate::geo::types::Point;
 use crate::sketch::constraint::{
@@ -11,7 +12,7 @@ use crate::sketch::constraint::{
 };
 use crate::sketch::draw::{
     draw_conflict_underlay, draw_label, draw_status_color, format_value,
-    screen_scale, CairoLike, DrawContext, DrawStyle,
+    screen_scale, CairoLike, DrawContext, DrawStyle, LABEL_HIT_SIZE, LABEL_PAD,
 };
 
 /// Enforces a fixed distance between two points.
@@ -71,12 +72,7 @@ impl SketchConstraint for DistanceConstraint {
         let (x2, y2) = reg.xy(self.p2);
         let dx = x2 - x1;
         let dy = y2 - y1;
-        let dist = dx.hypot(dy);
-        let (ux, uy) = if dist > 1e-9 {
-            (dx / dist, dy / dist)
-        } else {
-            (1.0, 0.0)
-        };
+        let (ux, uy) = unit_or_zero(dx, dy);
         vec![(self.p1, 0, -ux, -uy), (self.p2, 0, ux, uy)]
     }
 
@@ -127,15 +123,13 @@ impl SketchConstraint for DistanceConstraint {
         let label_sx = (s1.0 + s2.0) / 2.0;
         let label_sy = (s1.1 + s2.1) / 2.0;
 
-        let label_width = 20.0;
-        let label_height = 20.0;
-        let half_w = label_width / 2.0;
-        let half_h = label_height / 2.0;
+        let half_w = LABEL_HIT_SIZE / 2.0;
+        let half_h = half_w;
 
-        let x_min = label_sx - half_w - 4.0;
-        let x_max = label_sx + half_w + 4.0;
-        let y_min = label_sy - half_h - 4.0;
-        let y_max = label_sy + half_h + 4.0;
+        let x_min = label_sx - half_w - LABEL_PAD;
+        let x_max = label_sx + half_w + LABEL_PAD;
+        let y_min = label_sy - half_h - LABEL_PAD;
+        let y_max = label_sy + half_h + LABEL_PAD;
 
         x_min <= mx && mx <= x_max && y_min <= my && my <= y_max
     }

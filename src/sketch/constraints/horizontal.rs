@@ -73,11 +73,10 @@ impl SketchConstraint for HorizontalConstraint {
         let s1 = to_screen((p1.x, p1.y));
         let s2 = to_screen((p2.x, p2.y));
 
-        let t = 0.2;
-        let sym_x = s1.0 + (s2.0 - s1.0) * t;
-        let sym_y = s1.1 + (s2.1 - s1.1) * t;
+        let sym_x = s1.0 + (s2.0 - s1.0) * MARKER_T;
+        let sym_y = s1.1 + (s2.1 - s1.1) * MARKER_T;
         let cx = sym_x;
-        let cy = sym_y - 10.0;
+        let cy = sym_y - MARKER_OFFSET;
         (mx - cx).hypot(my - cy) < threshold
     }
 
