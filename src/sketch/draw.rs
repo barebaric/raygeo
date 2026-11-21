@@ -90,6 +90,13 @@ pub trait DrawContext {
 
     /// Whether the point is one of a text box frame's corner points.
     fn point_in_text_box_frame(&self, point_id: u64) -> bool;
+
+    /// The midpoint of an arc entity, for constraints whose symbol
+    /// anchors at the arc's midpoint.  `None` when unavailable; the
+    /// caller falls back to the entity's radius-point direction.
+    fn entity_arc_midpoint(&self, _id: u64) -> Option<(f64, f64)> {
+        None
+    }
 }
 
 /// The subset of the cairo context API the constraint symbols need.
@@ -188,7 +195,20 @@ const LABEL_FONT_PX: f64 = 12.0;
 const EQUAL_FONT_PX: f64 = 16.0;
 
 /// Padding around a constraint label box, in screen pixels.
-const LABEL_PAD: f64 = 4.0;
+pub(crate) const LABEL_PAD: f64 = 4.0;
+
+/// Approximate side of the radius/diameter/distance label hit box,
+/// in screen pixels (the drawn label width comes from text extents).
+pub(crate) const LABEL_HIT_SIZE: f64 = 20.0;
+
+/// Screen-space offset of the symmetry arrows from the marker center.
+pub(crate) const SYMMETRY_OFFSET: f64 = 12.0;
+
+/// Fill color of the selection glow around an icon.
+pub(crate) const SELECTION_GLOW: (f64, f64, f64, f64) = (0.2, 0.6, 1.0, 0.4);
+
+/// Fill color of the conflict glow around an icon.
+pub(crate) const CONFLICT_GLOW: (f64, f64, f64, f64) = (1.0, 0.2, 0.2, 0.5);
 
 /// Points per inch used by the text stack.
 const PT_TO_MM: f64 = 25.4 / 72.0;
@@ -247,7 +267,12 @@ pub fn draw_status_color(ctx: &dyn CairoLike, style: &DrawStyle) {
 /// highlight, mirroring the reference underlay.
 pub fn draw_selection_underlay(ctx: &dyn CairoLike) {
     ctx.save();
-    ctx.set_source_rgba(0.2, 0.6, 1.0, 0.4);
+    ctx.set_source_rgba(
+        SELECTION_GLOW.0,
+        SELECTION_GLOW.1,
+        SELECTION_GLOW.2,
+        SELECTION_GLOW.3,
+    );
     ctx.set_line_width(ctx.get_line_width() * 3.0);
     ctx.stroke_preserve();
     ctx.restore();
@@ -260,7 +285,12 @@ pub fn draw_conflict_underlay(ctx: &dyn CairoLike, style: &DrawStyle) {
         return;
     }
     ctx.save();
-    ctx.set_source_rgba(1.0, 0.2, 0.2, 0.5);
+    ctx.set_source_rgba(
+        CONFLICT_GLOW.0,
+        CONFLICT_GLOW.1,
+        CONFLICT_GLOW.2,
+        CONFLICT_GLOW.3,
+    );
     ctx.set_line_width(ctx.get_line_width() * 3.5);
     ctx.stroke_preserve();
     ctx.restore();
@@ -438,7 +468,7 @@ pub(crate) fn draw_symmetry_arrows(
     let mx = (s1.0 + s2.0) / 2.0;
     let my = (s1.1 + s2.1) / 2.0;
     let angle = (s2.1 - s1.1).atan2(s2.0 - s1.0);
-    let offset = 12.0;
+    let offset = SYMMETRY_OFFSET;
     let lx = mx - offset * angle.cos();
     let ly = my - offset * angle.sin();
 
