@@ -11,7 +11,7 @@ use crate::geo::shape::rect::does_rect_contain_rect;
 use crate::geo::types::{Point, Rect};
 use crate::sketch::constraint::PointContext;
 
-use super::entity::{base_from_json, remap_id, Entity, EntityBase};
+use super::entity::{base_from_json, remap_id, Entity, EntityBase, EntityKind};
 
 /// A circular arc from start to end around a center.
 #[derive(Clone, Debug)]
@@ -135,6 +135,10 @@ impl Entity for Arc {
     }
     fn clone_box(&self) -> Box<dyn Entity> {
         Box::new(self.clone())
+    }
+
+    fn kind(&self) -> EntityKind {
+        EntityKind::Arc
     }
 
     fn type_name(&self) -> &'static str {

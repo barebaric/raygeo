@@ -78,13 +78,7 @@ impl Evaluator {
         n_vars: usize,
         state_col_of: &HashMap<u64, usize>,
     ) -> Vec<f64> {
-        let mut rows = 0;
-        for constraint in constraints {
-            rows += constraint.residual_count(self);
-        }
-        if rows == 0 {
-            rows = 1;
-        }
+        let rows = padded_row_count(self, constraints);
         let mut jac = vec![0.0; rows * n_vars];
         let mut row_offset = 0;
         for constraint in constraints {
@@ -129,6 +123,20 @@ impl Evaluator {
             })
             .collect()
     }
+}
+
+/// Total residual row count of the given constraints; the TRF
+/// kernel needs at least one row, so an empty constraint set
+/// reports one (matching the zero residual `residuals` synthesizes).
+pub fn padded_row_count(
+    ctx: &dyn PointContext,
+    constraints: &[&dyn SketchConstraint],
+) -> usize {
+    constraints
+        .iter()
+        .map(|constraint| constraint.residual_count(ctx))
+        .sum::<usize>()
+        .max(1)
 }
 
 impl PointContext for Evaluator {

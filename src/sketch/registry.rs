@@ -652,6 +652,28 @@ impl Clone for EntityRegistry {
     }
 }
 
+impl EntityRegistry {
+    /// The point state of a point id, as a draw point.  Shared by
+    /// the `PointContext` and `DrawContext` implementations.
+    fn draw_point(&self, id: u64) -> Option<DrawPoint> {
+        self.get_point(id).map(|point| DrawPoint {
+            x: point.x,
+            y: point.y,
+            fixed: point.fixed,
+            constrained: point.constrained,
+        })
+    }
+
+    /// The reference type label of an entity id.  Shared by the
+    /// `PointContext` and `DrawContext` implementations.
+    fn entity_type_label(
+        &self,
+        id: u64,
+    ) -> Option<std::borrow::Cow<'static, str>> {
+        EntityRegistry::entity_type(self, id).map(std::borrow::Cow::Borrowed)
+    }
+}
+
 impl PointContext for EntityRegistry {
     fn get_entity(&self, id: u64) -> Option<Box<dyn Entity>> {
         EntityRegistry::get_entity(self, id).map(|e| e.clone_box())
@@ -662,12 +684,7 @@ impl PointContext for EntityRegistry {
     }
 
     fn get_point(&self, id: u64) -> Option<DrawPoint> {
-        self.get_point(id).map(|point| DrawPoint {
-            x: point.x,
-            y: point.y,
-            fixed: point.fixed,
-            constrained: point.constrained,
-        })
+        self.draw_point(id)
     }
 
     fn xy(&self, id: u64) -> (f64, f64) {
@@ -683,7 +700,7 @@ impl PointContext for EntityRegistry {
     }
 
     fn entity_type(&self, id: u64) -> Option<std::borrow::Cow<'static, str>> {
-        EntityRegistry::entity_type(self, id).map(std::borrow::Cow::Borrowed)
+        self.entity_type_label(id)
     }
 
     fn entity_point_ids(&self, id: u64) -> Option<Vec<u64>> {
@@ -692,14 +709,15 @@ impl PointContext for EntityRegistry {
 }
 
 impl crate::sketch::draw::DrawContext for EntityRegistry {
+    fn entity_arc_midpoint(&self, id: u64) -> Option<(f64, f64)> {
+        let arc = self
+            .get_entity(id)?
+            .as_any()
+            .downcast_ref::<crate::sketch::entities::arc::Arc>()?;
+        arc.get_midpoint(self)
+    }
     fn get_point(&self, id: u64) -> Option<crate::sketch::draw::DrawPoint> {
-        self.get_point(id)
-            .map(|point| crate::sketch::draw::DrawPoint {
-                x: point.x,
-                y: point.y,
-                fixed: point.fixed,
-                constrained: point.constrained,
-            })
+        self.draw_point(id)
     }
 
     fn entity_ids(&self) -> Vec<u64> {
@@ -707,7 +725,7 @@ impl crate::sketch::draw::DrawContext for EntityRegistry {
     }
 
     fn entity_type(&self, id: u64) -> Option<std::borrow::Cow<'static, str>> {
-        EntityRegistry::entity_type(self, id).map(std::borrow::Cow::Borrowed)
+        self.entity_type_label(id)
     }
 
     fn entity_point_ids(&self, id: u64) -> Option<Vec<u64>> {

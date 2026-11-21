@@ -13,7 +13,7 @@ use crate::geo::types::{Point, Rect};
 use crate::sketch::constraint::PointContext;
 use crate::sketch::transform::{flips_chirality, PlacementTransform};
 
-use super::entity::{quantize, remap_id, Entity, EntityBase};
+use super::entity::{quantize, remap_id, Entity, EntityBase, EntityKind};
 use super::mirror::MirrorAxis;
 
 /// A polygon (optionally multi-ring) defined in a local frame: the
@@ -213,6 +213,10 @@ impl Entity for PolygonEntity {
     }
     fn clone_box(&self) -> Box<dyn Entity> {
         Box::new(self.clone())
+    }
+
+    fn kind(&self) -> EntityKind {
+        EntityKind::Polygon
     }
 
     fn type_name(&self) -> &'static str {

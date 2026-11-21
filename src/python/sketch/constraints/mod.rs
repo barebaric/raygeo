@@ -320,6 +320,19 @@ impl DrawContextContract for PyDrawContext<'_> {
             None => false,
         }
     }
+
+    fn entity_arc_midpoint(&self, id: u64) -> Option<(f64, f64)> {
+        let registry = self
+            .registry
+            .extract::<PyRef<'_, super::registry::PyEntityRegistry>>()
+            .ok()?;
+        let arc = registry
+            .inner
+            .get_entity(id)?
+            .as_any()
+            .downcast_ref::<crate::sketch::entities::arc::Arc>()?;
+        arc.get_midpoint(&registry.inner)
+    }
 }
 
 /// Maps the [`CairoLike`] interface onto a Python cairo context,

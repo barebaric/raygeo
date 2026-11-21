@@ -9,7 +9,7 @@ use crate::geo::shape::line::{
 use crate::geo::types::{Point, Rect};
 use crate::sketch::constraint::PointContext;
 
-use super::entity::{base_from_json, remap_id, Entity, EntityBase};
+use super::entity::{base_from_json, remap_id, Entity, EntityBase, EntityKind};
 
 /// A straight segment between two points.
 #[derive(Clone, Debug)]
@@ -68,6 +68,10 @@ impl Entity for Line {
     }
     fn clone_box(&self) -> Box<dyn Entity> {
         Box::new(self.clone())
+    }
+
+    fn kind(&self) -> EntityKind {
+        EntityKind::Line
     }
 
     fn type_name(&self) -> &'static str {

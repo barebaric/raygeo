@@ -10,7 +10,9 @@
 //! (`_find_all_closed_loops`), including the circular-segment area
 //! correction for arcs and the positive-area filter.
 
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{HashMap, HashSet};
+
+use crate::sketch::union_find::UnionFind;
 
 /// An edge of the sketch graph: an entity with exactly two
 /// endpoints.
@@ -61,50 +63,6 @@ struct RootAdjacency {
     entries: HashMap<u64, Vec<(usize, u64)>>,
 }
 
-/// Union-find over point ids with the reference implementation's
-/// attachment rule (the first root attaches to the second) and path
-/// compression, so node identity matches the reference exactly.
-struct UnionFind {
-    parent: BTreeMap<u64, u64>,
-}
-
-impl UnionFind {
-    fn new(points: &[u64]) -> Self {
-        let parent = points
-            .iter()
-            .map(|&id| (id, id))
-            .collect::<BTreeMap<u64, u64>>();
-        UnionFind { parent }
-    }
-
-    fn find(&mut self, id: u64) -> u64 {
-        let mut root = id;
-        while let Some(&next) = self.parent.get(&root) {
-            if next == root {
-                break;
-            }
-            root = next;
-        }
-        let mut current = id;
-        while let Some(&next) = self.parent.get(&current) {
-            if next == current {
-                break;
-            }
-            self.parent.insert(current, root);
-            current = next;
-        }
-        root
-    }
-
-    fn union(&mut self, a: u64, b: u64) {
-        let root_a = self.find(a);
-        let root_b = self.find(b);
-        if root_a != root_b {
-            self.parent.insert(root_a, root_b);
-        }
-    }
-}
-
 /// Builds the node-rooted adjacency list.  Nodes are the union-find
 /// roots of the endpoints; each undirected edge appears as two
 /// directed entries appended in the same order as the reference.
@@ -150,11 +108,9 @@ pub fn plan_chains(
 ) -> Vec<Vec<(u64, bool)>> {
     let points: Vec<u64> =
         edges.iter().flat_map(|edge| [edge.p1, edge.p2]).collect();
-    let mut parent = UnionFind::new(&points);
+    let mut parent = UnionFind::with_ids(points);
     for &(a, b) in coincident_pairs {
-        if parent.parent.contains_key(&a) && parent.parent.contains_key(&b) {
-            parent.union(a, b);
-        }
+        parent.union_if_present(a, b);
     }
 
     let adjacency = build_root_adjacency(edges, &mut parent);

@@ -1,8 +1,10 @@
 //! Tangent constraint: a line tangent to a circle or arc.
 
+use crate::geo::math::unit_or_zero;
 use crate::geo::shape::line::{
     get_line_closest_point, get_point_line_signed_distance,
 };
+use crate::sketch::entities::entity::EntityKind;
 use serde_json::{json, Value};
 
 use crate::sketch::constraint::{
@@ -37,17 +39,16 @@ fn resolve_tangent_points(
     shape_id: u64,
 ) -> Option<(u64, u64, u64, u64)> {
     let line = ctx.get_entity(line_id)?;
-    if line.type_name() != "line" {
+    if line.kind() != EntityKind::Line {
         return None;
     }
     let line_ids = line.get_point_ids();
     let shape = ctx.get_entity(shape_id)?;
-    let shape_ids = shape.get_point_ids();
-    match shape.type_name() {
-        "circle" => {
-            Some((line_ids[0], line_ids[1], shape_ids[0], shape_ids[1]))
+    match shape.kind() {
+        EntityKind::Circle | EntityKind::Arc => {
+            let (center, radius_pt) = shape.center_radius_point_ids()?;
+            Some((line_ids[0], line_ids[1], center, radius_pt))
         }
-        "arc" => Some((line_ids[0], line_ids[1], shape_ids[2], shape_ids[0])),
         _ => None,
     }
 }
@@ -114,12 +115,7 @@ impl SketchConstraint for TangentConstraint {
         // Part 1: gradient of the radius term.
         let rad_dx = px - cx;
         let rad_dy = py - cy;
-        let radius = rad_dx.hypot(rad_dy);
-        let (rad_ux, rad_uy) = if radius > 1e-9 {
-            (rad_dx / radius, rad_dy / radius)
-        } else {
-            (0.0, 0.0)
-        };
+        let (rad_ux, rad_uy) = unit_or_zero(rad_dx, rad_dy);
         entries.push((radius_pt, 0, -rad_ux, -rad_uy));
 
         let (lx1, ly1) = reg.xy(l1);
@@ -210,9 +206,8 @@ impl SketchConstraint for TangentConstraint {
 
         let angle = (sy_tangent - sy_center).atan2(sx_tangent - sx_center);
 
-        let offset = 15.0;
-        let symbol_sx = sx_tangent + offset * angle.cos();
-        let symbol_sy = sy_tangent + offset * angle.sin();
+        let symbol_sx = sx_tangent + TANGENT_OFFSET * angle.cos();
+        let symbol_sy = sy_tangent + TANGENT_OFFSET * angle.sin();
 
         (mx - symbol_sx).hypot(my - symbol_sy) < threshold
     }
@@ -229,8 +224,9 @@ impl SketchConstraint for TangentConstraint {
         };
         if context
             .entity_type(self.line_id)
-            .map(|name| name.as_ref() != "line")
-            .unwrap_or(true)
+            .as_deref()
+            .and_then(EntityKind::from_type_name)
+            != Some(EntityKind::Line)
         {
             return;
         }
@@ -238,12 +234,13 @@ impl SketchConstraint for TangentConstraint {
             return;
         };
         let (l1, l2) = (line_ids[0], line_ids[1]);
-        let (center, _radius_pt) = match context
+        let shape_kind = context
             .entity_type(self.shape_id)
-            .map(|name| name.as_ref().to_owned())
-        {
-            Some(name) if name == "circle" => (shape_ids[0], shape_ids[1]),
-            Some(name) if name == "arc" => (shape_ids[2], shape_ids[0]),
+            .as_deref()
+            .and_then(EntityKind::from_type_name);
+        let (center, _radius_pt) = match shape_kind {
+            Some(EntityKind::Circle) => (shape_ids[0], shape_ids[1]),
+            Some(EntityKind::Arc) => (shape_ids[2], shape_ids[0]),
             _ => return,
         };
         let (Some(p1), Some(p2), Some(center)) = (

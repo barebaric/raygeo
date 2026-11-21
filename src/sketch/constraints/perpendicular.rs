@@ -12,6 +12,7 @@ use crate::sketch::draw::{
     draw_conflict_underlay, draw_selection_underlay, draw_status_color,
     status_color, CairoLike, DrawContext, DrawStyle,
 };
+use crate::sketch::entities::entity::EntityKind;
 
 /// Screen-space radius of the line-line marker arc, matching the
 /// reference renderer.
@@ -46,11 +47,26 @@ fn resolve_target(
 ) -> Option<PerpendicularTarget> {
     let e1 = ctx.get_entity(e1_id)?;
     let e2 = ctx.get_entity(e2_id)?;
-    let t1 = e1.type_name();
-    let t2 = e2.type_name();
-    let ids1 = e1.get_point_ids();
-    let ids2 = e2.get_point_ids();
-    if t1 == "line" && t2 == "line" {
+    resolve_target_of_kinds(
+        e1.kind(),
+        &e1.get_point_ids(),
+        e2.kind(),
+        &e2.get_point_ids(),
+    )
+}
+
+/// Resolves the operand pair from entity kinds and their point-id
+/// layout, shared by the solve path and the draw path.
+///
+/// Circles and arcs are the only radius-bearing operands the
+/// reference supports here.
+fn resolve_target_of_kinds(
+    k1: EntityKind,
+    ids1: &[u64],
+    k2: EntityKind,
+    ids2: &[u64],
+) -> Option<PerpendicularTarget> {
+    if k1 == EntityKind::Line && k2 == EntityKind::Line {
         return Some(PerpendicularTarget::LineLine {
             a1: ids1[0],
             a2: ids1[1],
@@ -58,31 +74,33 @@ fn resolve_target(
             b2: ids2[1],
         });
     }
-    if t1 == "line" || t2 == "line" {
-        let (line_ids, shape_ids) = if t1 == "line" {
-            (ids1.clone(), ids2.clone())
+    if k1 == EntityKind::Line || k2 == EntityKind::Line {
+        let (line_ids, shape_ids, shape_kind) = if k1 == EntityKind::Line {
+            (ids1, ids2, k2)
         } else {
-            (ids2.clone(), ids1.clone())
+            (ids2, ids1, k1)
         };
-        let shape_type = if t1 == "line" { t2 } else { t1 };
-        match shape_type {
-            "circle" | "arc" => {
-                let (center, _radius_pt) = if shape_type == "circle" {
-                    (shape_ids[0], shape_ids[1])
-                } else {
-                    (shape_ids[2], shape_ids[0])
-                };
+        match shape_kind {
+            EntityKind::Circle | EntityKind::Arc => {
+                let center = shape_ids[shape_kind.center_id_index()?];
                 return Some(PerpendicularTarget::LineCenter {
                     l1: line_ids[0],
                     l2: line_ids[1],
                     center,
                 });
             }
-            _ => {}
+            _ => return None,
         }
+    }
+    if !matches!(k1, EntityKind::Circle | EntityKind::Arc)
+        || !matches!(k2, EntityKind::Circle | EntityKind::Arc)
+    {
         return None;
     }
-    let (c1, r1, c2, r2) = radius_points(t1, &ids1, t2, &ids2)?;
+    let c1 = ids1[k1.center_id_index()?];
+    let r1 = ids1[k1.radius_point_id_index()?];
+    let c2 = ids2[k2.center_id_index()?];
+    let r2 = ids2[k2.radius_point_id_index()?];
     Some(PerpendicularTarget::Circles {
         c1,
         r1_point: r1,
@@ -98,70 +116,11 @@ fn resolve_target_of_context(
     e1_id: u64,
     e2_id: u64,
 ) -> Option<PerpendicularTarget> {
-    let t1 = context.entity_type(e1_id)?.as_ref().to_owned();
-    let t2 = context.entity_type(e2_id)?.as_ref().to_owned();
+    let k1 = EntityKind::from_type_name(context.entity_type(e1_id)?.as_ref())?;
+    let k2 = EntityKind::from_type_name(context.entity_type(e2_id)?.as_ref())?;
     let ids1 = context.entity_point_ids(e1_id)?;
     let ids2 = context.entity_point_ids(e2_id)?;
-    if t1 == "line" && t2 == "line" {
-        return Some(PerpendicularTarget::LineLine {
-            a1: ids1[0],
-            a2: ids1[1],
-            b1: ids2[0],
-            b2: ids2[1],
-        });
-    }
-    if t1 == "line" || t2 == "line" {
-        let (line_ids, shape_ids) = if t1 == "line" {
-            (ids1.clone(), ids2.clone())
-        } else {
-            (ids2.clone(), ids1.clone())
-        };
-        let shape_type = if t1 == "line" { t2.clone() } else { t1.clone() };
-        match shape_type.as_str() {
-            "circle" => {
-                return Some(PerpendicularTarget::LineCenter {
-                    l1: line_ids[0],
-                    l2: line_ids[1],
-                    center: shape_ids[0],
-                });
-            }
-            "arc" => {
-                return Some(PerpendicularTarget::LineCenter {
-                    l1: line_ids[0],
-                    l2: line_ids[1],
-                    center: shape_ids[2],
-                });
-            }
-            _ => {}
-        }
-        return None;
-    }
-    let (c1, r1, c2, r2) = radius_points(&t1, &ids1, &t2, &ids2)?;
-    Some(PerpendicularTarget::Circles {
-        c1,
-        r1_point: r1,
-        c2,
-        r2_point: r2,
-    })
-}
-
-/// Center and radius-bearing point ids of a circle/arc.
-fn radius_points(
-    t1: &str,
-    ids1: &[u64],
-    t2: &str,
-    ids2: &[u64],
-) -> Option<(u64, u64, u64, u64)> {
-    let shape_points = |t: &str, ids: &[u64]| -> Option<(u64, u64)> {
-        match t {
-            "circle" => Some((ids[0], ids[1])),
-            "arc" => Some((ids[2], ids[0])),
-            _ => None,
-        }
-    };
-    let (c1, r1) = shape_points(t1, ids1)?;
-    let (c2, r2) = shape_points(t2, ids2)?;
-    Some((c1, r1, c2, r2))
+    resolve_target_of_kinds(k1, &ids1, k2, &ids2)
 }
 
 /// Enforces perpendicularity between two entities.

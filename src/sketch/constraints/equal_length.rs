@@ -6,6 +6,7 @@
 
 use serde_json::{json, Value};
 
+use crate::geo::math::unit_or_zero;
 use crate::sketch::constraint::{
     JacobianEntry, PointContext, SketchConstraint,
 };
@@ -14,6 +15,7 @@ use crate::sketch::draw::{
     EQUAL_OFFSET_SCREEN,
 };
 use crate::sketch::entities::arc::Arc;
+use crate::sketch::entities::entity::EntityKind;
 
 use std::f64::consts::FRAC_PI_2;
 
@@ -28,16 +30,6 @@ pub struct EqualLengthConstraint {
     pub user_visible: bool,
 }
 
-/// Unit vector of a segment, zero for degenerate segments.
-fn unit_or_zero(dx: f64, dy: f64) -> (f64, f64) {
-    let dist = dx.hypot(dy);
-    if dist > 1e-9 {
-        (dx / dist, dy / dist)
-    } else {
-        (0.0, 0.0)
-    }
-}
-
 /// Anchor and normal direction of the equality symbol for one
 /// entity: lines anchor at the segment midpoint with a perpendicular
 /// normal, round shapes at a point on the shape with a radial
@@ -46,24 +38,24 @@ fn unit_or_zero(dx: f64, dy: f64) -> (f64, f64) {
 type SymbolAnchor = (f64, f64, f64);
 
 fn symbol_anchor(
-    entity_type: &str,
+    kind: EntityKind,
     ids: &[u64],
     points: &dyn Fn(u64) -> Option<(f64, f64)>,
     arc_mid: Option<(f64, f64)>,
 ) -> Option<SymbolAnchor> {
-    match entity_type {
-        "line" => {
+    match kind {
+        EntityKind::Line => {
             let (ax, ay) = points(ids[0])?;
             let (bx, by) = points(ids[1])?;
             let tangent_angle = (by - ay).atan2(bx - ax);
             Some(((ax + bx) / 2.0, (ay + by) / 2.0, tangent_angle - FRAC_PI_2))
         }
-        "arc" => {
+        EntityKind::Arc => {
             let (mx, my) = arc_mid.or_else(|| points(ids[0]))?;
             let (cx, cy) = points(ids[2])?;
             Some((mx, my, (my - cy).atan2(mx - cx)))
         }
-        "circle" | "ellipse" => {
+        EntityKind::Circle | EntityKind::Ellipse => {
             let (mx, my) = points(ids[1])?;
             let (cx, cy) = points(ids[0])?;
             Some((mx, my, (my - cy).atan2(mx - cx)))
@@ -75,7 +67,7 @@ fn symbol_anchor(
 /// Screen position of the equality symbol for one entity, mirroring
 /// the reference `_get_symbol_pos`.
 fn symbol_pos(
-    entity_type: &str,
+    kind: EntityKind,
     ids: &[u64],
     points: &dyn Fn(u64) -> Option<(f64, f64)>,
     arc_mid: Option<(f64, f64)>,
@@ -83,7 +75,7 @@ fn symbol_pos(
     to_screen: &dyn Fn((f64, f64)) -> (f64, f64),
 ) -> Option<(f64, f64)> {
     let (mid_x, mid_y, normal_angle) =
-        symbol_anchor(entity_type, ids, points, arc_mid)?;
+        symbol_anchor(kind, ids, points, arc_mid)?;
     let offset_dist_model = EQUAL_OFFSET_SCREEN / scale;
     let final_x = mid_x + offset_dist_model * normal_angle.cos();
     let final_y = mid_y + offset_dist_model * normal_angle.sin();
@@ -253,7 +245,7 @@ impl SketchConstraint for EqualLengthConstraint {
                     Some((mid.x, mid.y))
                 });
             let Some(pos) = symbol_pos(
-                entity.type_name(),
+                entity.kind(),
                 &entity.get_point_ids(),
                 &points,
                 arc_mid,
@@ -284,12 +276,16 @@ impl SketchConstraint for EqualLengthConstraint {
             let Some(ids) = context.entity_point_ids(*entity_id) else {
                 continue;
             };
-            let entity_type = match context.entity_type(*entity_id) {
-                Some(name) => name,
+            let kind = match context
+                .entity_type(*entity_id)
+                .as_deref()
+                .and_then(EntityKind::from_type_name)
+            {
+                Some(kind) => kind,
                 None => continue,
             };
             let Some(pos) =
-                symbol_pos(&entity_type, &ids, &points, None, scale, to_screen)
+                symbol_pos(kind, &ids, &points, None, scale, to_screen)
             else {
                 continue;
             };

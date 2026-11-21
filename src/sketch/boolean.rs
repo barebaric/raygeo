@@ -10,6 +10,7 @@ use crate::sketch::contour::{
     chain_vertices, group_rings_into_solids, partition_components,
     rings_to_geometry, walk_component,
 };
+use crate::sketch::entities::entity::EntityKind;
 use crate::sketch::entities::polygon::PolygonEntity;
 use crate::sketch::registry::EntityRegistry;
 
@@ -55,7 +56,7 @@ pub fn build_boolean_regions(
         if entity.base().construction || entity.base().array_copy {
             continue;
         }
-        if entity.type_name() == "text_box" {
+        if entity.kind() == EntityKind::TextBox {
             continue;
         }
         if entity.get_endpoint_ids().len() == 2 {

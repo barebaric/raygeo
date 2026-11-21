@@ -3,6 +3,7 @@
 use crate::geo::shape::arc::normalize_angle;
 use crate::geo::shape::line::get_line_line_intersection;
 use crate::geo::types::Point;
+use crate::sketch::entities::entity::EntityKind;
 use serde_json::{json, Value};
 
 use crate::sketch::constraint::{
@@ -54,22 +55,33 @@ pub struct AngleConstraint {
 
 /// Resolves the two line entities to their defining point ids
 /// `(p1, p2, p3, p4)`.
+/// The two lines' endpoint ids, shared by the solve path and the
+/// draw path.
+fn resolve_line_points_of_kinds(
+    k1: EntityKind,
+    ids1: &[u64],
+    k2: EntityKind,
+    ids2: &[u64],
+) -> Option<(u64, u64, u64, u64)> {
+    if k1 != EntityKind::Line || k2 != EntityKind::Line {
+        return None;
+    }
+    Some((ids1[0], ids1[1], ids2[0], ids2[1]))
+}
+
 fn resolve_line_points(
     ctx: &dyn PointContext,
     e1_id: u64,
     e2_id: u64,
 ) -> Option<(u64, u64, u64, u64)> {
     let e1 = ctx.get_entity(e1_id)?;
-    if e1.type_name() != "line" {
-        return None;
-    }
     let e2 = ctx.get_entity(e2_id)?;
-    if e2.type_name() != "line" {
-        return None;
-    }
-    let ids1 = e1.get_point_ids();
-    let ids2 = e2.get_point_ids();
-    Some((ids1[0], ids1[1], ids2[0], ids2[1]))
+    resolve_line_points_of_kinds(
+        e1.kind(),
+        &e1.get_point_ids(),
+        e2.kind(),
+        &e2.get_point_ids(),
+    )
 }
 
 impl AngleConstraint {
@@ -109,15 +121,7 @@ impl AngleConstraint {
                 return reg.xy(second);
             }
         }
-        let a = reg.xy(first);
-        let b = reg.xy(second);
-        let d1 = (a.0 - ix).powi(2) + (a.1 - iy).powi(2);
-        let d2 = (b.0 - ix).powi(2) + (b.1 - iy).powi(2);
-        if d1 > d2 {
-            a
-        } else {
-            b
-        }
+        farthest_of(reg.xy(first), reg.xy(second), ix, iy)
     }
 }
 
@@ -389,23 +393,29 @@ fn resolve_line_points_from_context(
     e1_id: u64,
     e2_id: u64,
 ) -> Option<(u64, u64, u64, u64)> {
-    if context
+    let k1 = context
         .entity_type(e1_id)
-        .map(|name| name.as_ref() != "line")
-        .unwrap_or(true)
-    {
-        return None;
-    }
-    if context
+        .as_deref()
+        .and_then(EntityKind::from_type_name)?;
+    let k2 = context
         .entity_type(e2_id)
-        .map(|name| name.as_ref() != "line")
-        .unwrap_or(true)
-    {
-        return None;
-    }
+        .as_deref()
+        .and_then(EntityKind::from_type_name)?;
     let ids1 = context.entity_point_ids(e1_id)?;
     let ids2 = context.entity_point_ids(e2_id)?;
-    Some((ids1[0], ids1[1], ids2[0], ids2[1]))
+    resolve_line_points_of_kinds(k1, &ids1, k2, &ids2)
+}
+
+/// The endpoint farther from `(ix, iy)`, shared by the solve-path
+/// and draw-path far-point selection.
+fn farthest_of(a: (f64, f64), b: (f64, f64), ix: f64, iy: f64) -> (f64, f64) {
+    let d1 = (a.0 - ix).powi(2) + (a.1 - iy).powi(2);
+    let d2 = (b.0 - ix).powi(2) + (b.1 - iy).powi(2);
+    if d1 > d2 {
+        a
+    } else {
+        b
+    }
 }
 
 /// Resolves the far endpoint for the drawn arc through the draw
@@ -430,11 +440,5 @@ fn draw_far_point(
     else {
         return (0.0, 0.0);
     };
-    let d1 = (a.x - ix).powi(2) + (a.y - iy).powi(2);
-    let d2 = (b.x - ix).powi(2) + (b.y - iy).powi(2);
-    if d1 > d2 {
-        (a.x, a.y)
-    } else {
-        (b.x, b.y)
-    }
+    farthest_of((a.x, a.y), (b.x, b.y), ix, iy)
 }

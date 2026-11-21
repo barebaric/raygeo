@@ -122,6 +122,72 @@ impl EntityBase {
     }
 }
 
+/// The concrete entity kind.
+///
+/// Replaces string comparisons against the reference type labels:
+/// entity-kind dispatch goes through [`Entity::kind`], and the
+/// draw-path resolvers convert the duck-typed context's
+/// `entity_type` label with [`EntityKind::from_type_name`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EntityKind {
+    Line,
+    Arc,
+    Circle,
+    Ellipse,
+    Bezier,
+    Polygon,
+    TextBox,
+}
+
+impl EntityKind {
+    /// The reference serialization type label (`"line"`, `"arc"`, ...).
+    pub fn type_name(self) -> &'static str {
+        match self {
+            EntityKind::Line => "line",
+            EntityKind::Arc => "arc",
+            EntityKind::Circle => "circle",
+            EntityKind::Ellipse => "ellipse",
+            EntityKind::Bezier => "bezier",
+            EntityKind::Polygon => "polygon",
+            EntityKind::TextBox => "text_box",
+        }
+    }
+
+    /// Resolves a reference type label.
+    pub fn from_type_name(name: &str) -> Option<Self> {
+        Some(match name {
+            "line" => EntityKind::Line,
+            "arc" => EntityKind::Arc,
+            "circle" => EntityKind::Circle,
+            "ellipse" => EntityKind::Ellipse,
+            "bezier" => EntityKind::Bezier,
+            "polygon" => EntityKind::Polygon,
+            "text_box" => EntityKind::TextBox,
+            _ => return None,
+        })
+    }
+
+    /// Index of the center point within `get_point_ids()` for the
+    /// radius-bearing kinds; `None` for the others.
+    pub fn center_id_index(self) -> Option<usize> {
+        match self {
+            EntityKind::Circle | EntityKind::Ellipse => Some(0),
+            EntityKind::Arc => Some(2),
+            _ => None,
+        }
+    }
+
+    /// Index of the radius-bearing point within `get_point_ids()`
+    /// for the radius-bearing kinds; `None` for the others.
+    pub fn radius_point_id_index(self) -> Option<usize> {
+        match self {
+            EntityKind::Circle | EntityKind::Ellipse => Some(1),
+            EntityKind::Arc => Some(0),
+            _ => None,
+        }
+    }
+}
+
 /// The polymorphic entity interface.  Default bodies mirror the
 /// reference base class defaults; per-entity files override exactly
 /// where the Python classes override.
@@ -140,6 +206,19 @@ pub trait Entity: Send + Sync {
 
     /// The reference serialization type string.
     fn type_name(&self) -> &'static str;
+
+    /// The concrete entity kind, without downcasting.
+    fn kind(&self) -> EntityKind;
+
+    /// The `(center, radius-bearing point)` id pair for the
+    /// radius-bearing kinds (circle, arc, ellipse); `None` for the
+    /// others.
+    fn center_radius_point_ids(&self) -> Option<(u64, u64)> {
+        let center = self.kind().center_id_index()?;
+        let radius_point = self.kind().radius_point_id_index()?;
+        let ids = self.get_point_ids();
+        Some((ids[center], ids[radius_point]))
+    }
 
     /// Serialization to the reference dictionary shape.
     fn to_json(&self) -> Value;

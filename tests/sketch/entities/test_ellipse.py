@@ -375,10 +375,12 @@ def test_ellipse_containment_respects_rotation(registry):
     a 45-degree tilted ellipse with rx=10/ry=5 fits a 9x9 box even
     though its unrotated (10, 5) extents would not."""
     center = registry.add_point(0.0, 0.0)
-    rx = registry.add_point(10.0 * math.cos(math.pi / 4),
-                            10.0 * math.sin(math.pi / 4))
-    ry = registry.add_point(-5.0 * math.sin(math.pi / 4),
-                            5.0 * math.cos(math.pi / 4))
+    rx = registry.add_point(
+        10.0 * math.cos(math.pi / 4), 10.0 * math.sin(math.pi / 4)
+    )
+    ry = registry.add_point(
+        -5.0 * math.sin(math.pi / 4), 5.0 * math.cos(math.pi / 4)
+    )
     eid = registry.add_ellipse(center, rx, ry)
     entity = registry.get_entity(eid)
 

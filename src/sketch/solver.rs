@@ -14,7 +14,7 @@ use nalgebra::{DMatrix, SVD};
 
 use super::components::compute_constraint_components;
 use super::constraint::SketchConstraint;
-use super::eval::Evaluator;
+use super::eval::{padded_row_count, Evaluator};
 use super::trf::{solve_trf_no_bounds, TrfProblem};
 
 /// Residual threshold above which a constraint is reported
@@ -31,6 +31,14 @@ const MOBILITY_THRESHOLD: f64 = 1e-4;
 /// Maximum residual function evaluations per solve, mirroring the
 /// reference sketch solver.
 const MAX_NFEV: usize = 5000;
+
+/// Step tolerance of the trust-region solver: terminate when the
+/// trust-region step falls below this bound.
+const DEFAULT_XTOL: f64 = 1e-8;
+
+/// Gradient tolerance of the trust-region solver: terminate when
+/// the gradient norm falls below this bound.
+const DEFAULT_GTOL: f64 = 1e-8;
 
 /// A sketch problem: points plus hard and auxiliary constraints.
 pub struct SketchSolver {
@@ -237,13 +245,7 @@ impl SketchSolver {
             .chain(aux_specs.iter().copied())
             .collect();
 
-        let mut residual_count = 0usize;
-        for constraint in &all_specs {
-            residual_count += constraint.residual_count(&self.registry);
-        }
-        if residual_count == 0 {
-            residual_count = 1;
-        }
+        let residual_count = padded_row_count(&self.registry, &all_specs);
 
         // Run the solve on a private copy of the coordinates, then
         // write the result back.  The evaluator sits in a RefCell so
@@ -273,8 +275,8 @@ impl SketchSolver {
             },
             &x0,
             tolerance,
-            1e-8,
-            1e-8,
+            DEFAULT_XTOL,
+            DEFAULT_GTOL,
             MAX_NFEV,
         );
 

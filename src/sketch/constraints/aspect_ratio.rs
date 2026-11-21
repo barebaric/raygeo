@@ -7,7 +7,7 @@ use crate::sketch::constraint::{
 };
 use crate::sketch::draw::{
     draw_status_color, CairoLike, ConstraintStatus, DrawContext, DrawStyle,
-    ICON_SIZE,
+    CONFLICT_GLOW, ICON_OFFSET, ICON_SIZE, SELECTION_GLOW,
 };
 
 /// Enforces `dist(p1, p2) == ratio * dist(p3, p4)`.
@@ -129,12 +129,14 @@ impl SketchConstraint for AspectRatioConstraint {
 
         ctx.save();
         if style.is_selected {
-            ctx.set_source_rgba(0.2, 0.6, 1.0, 0.4);
+            let (r, g, b, a) = SELECTION_GLOW;
+            ctx.set_source_rgba(r, g, b, a);
             ctx.arc(cx, cy, glow_radius, 0.0, 2.0 * std::f64::consts::PI);
             ctx.fill();
         }
         if style.status == ConstraintStatus::Conflicting {
-            ctx.set_source_rgba(1.0, 0.2, 0.2, 0.5);
+            let (r, g, b, a) = CONFLICT_GLOW;
+            ctx.set_source_rgba(r, g, b, a);
             ctx.arc(cx, cy, glow_radius, 0.0, 2.0 * std::f64::consts::PI);
             ctx.fill();
         }
@@ -245,10 +247,9 @@ fn icon_pos(
 
         let su_bisector = (s_bisector.0 / len_sb, s_bisector.1 / len_sb);
 
-        let offset = 18.0;
         return Some((
-            s_junc.0 + offset * su_bisector.0,
-            s_junc.1 + offset * su_bisector.1,
+            s_junc.0 + ICON_OFFSET * su_bisector.0,
+            s_junc.1 + ICON_OFFSET * su_bisector.1,
         ));
     }
 
