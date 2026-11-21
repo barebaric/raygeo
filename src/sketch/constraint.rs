@@ -29,6 +29,13 @@ pub trait PointContext {
 
     /// Returns the point state for a point id, or `None` when the
     /// id is unknown.
+    ///
+    /// Implementations must serve the *same* positions as
+    /// [`PointContext::point_position`]: constraints read geometry
+    /// through `point_position`/`xy` during solving, so a `get_point`
+    /// that reports stale snapshot positions silently desynchronizes
+    /// `error()` from `is_hit`/`draw`.  Use it for state flags and
+    /// display, and prefer `point_position` for coordinates.
     fn get_point(&self, id: u64) -> Option<DrawPoint> {
         self.point_position(id).map(|(x, y)| DrawPoint {
             x,
@@ -85,9 +92,24 @@ pub trait SketchConstraint: Send + Sync {
 
     /// Returns the number of scalar residuals.  Entity references
     /// resolve through the context.
+    ///
+    /// # Contract
+    ///
+    /// [`SketchConstraint::error`] must return exactly this many
+    /// rows, so the residual vector and the Jacobian row layout stay
+    /// in sync.  Static-count implementations return zero rows here
+    /// only for constraints that never contribute; dynamic-count
+    /// implementations (such as `EqualLengthConstraint`, which
+    /// depends on resolvable entity pairs) return `0` exactly when
+    /// their `error` returns an empty vector.  When referenced
+    /// entities cannot be resolved, a constraint imposes nothing:
+    /// static-count implementations return zero-valued rows.
     fn residual_count(&self, ctx: &dyn PointContext) -> usize;
 
     /// Calculates the error of the constraint.
+    ///
+    /// Must return exactly [`SketchConstraint::residual_count`] rows
+    /// (see its contract).
     fn error(&self, reg: &dyn PointContext) -> Vec<f64>;
 
     /// Calculates the partial derivatives of the error as
