@@ -65,3 +65,21 @@ def test_angle_entity_refs(setup_env):
     c = AngleConstraint(l2, l1, 90.0)
     assert c.e1_id == l2
     assert c.e2_id == l1
+
+
+def test_json_value_is_degrees(setup_env):
+    """The serialized "value" is degrees (reference .ryp parity);
+    RotationalConstraint serializes radians under the same key."""
+    reg = setup_env
+    l1, l2 = _perpendicular_lines(reg)
+
+    c = AngleConstraint(l2, l1, 45.0)
+    assert c.to_dict()["value"] == pytest.approx(45.0)
+
+
+def test_error_with_unresolved_entities_stays_row_consistent(setup_env):
+    """A constraint whose entities cannot be resolved imposes nothing:
+    its static row count still holds, with zero-valued residuals."""
+    reg = setup_env
+    c = AngleConstraint(999, 998, 30.0)
+    assert c.error(reg, None) == pytest.approx(0.0)

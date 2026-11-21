@@ -360,6 +360,11 @@ impl SketchConstraint for AngleConstraint {
 
 impl AngleConstraint {
     /// Serializes to the reference constraint dictionary shape.
+    ///
+    /// The `"value"` key carries **degrees** (reference `.ryp`
+    /// parity) even though some other angular constraints — notably
+    /// `RotationalConstraint` — serialize their `"value"` in
+    /// radians.
     pub fn to_json(&self) -> Value {
         let mut data = json!({
             "type": "AngleConstraint",
