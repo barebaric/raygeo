@@ -1106,11 +1106,12 @@ impl PySketch {
                 continue;
             }
             if let Some(scope_ref) = &scope {
-                let points: Vec<u64> = py
-                    .import("raygeo.sketch.components")?
-                    .getattr("get_referenced_points")?
-                    .call1((self.registry.clone_ref(py), &constraint))?
-                    .extract()?;
+                let registry = self.registry.bind(py).borrow();
+                let points =
+                    crate::python::sketch::components::referenced_points_of(
+                        &registry,
+                        &constraint,
+                    )?;
                 if points.iter().all(|pid| !scope_ref.contains(pid)) {
                     continue;
                 }
@@ -1120,14 +1121,9 @@ impl PySketch {
         if let Some(extra) = extra_constraints {
             for constraint in extra {
                 if let Some(scope_ref) = &scope {
-                    let points: Vec<u64> = py
-                        .import("raygeo.sketch.components")?
-                        .getattr("get_referenced_points")?
-                        .call1((
-                            self.registry.clone_ref(py),
-                            constraint.bind(py),
-                        ))?
-                        .extract()?;
+                    let registry = self.registry.bind(py).borrow();
+                    let points = crate::python::sketch::components::
+                        referenced_points_of(&registry, constraint.bind(py))?;
                     if points.iter().all(|pid| !scope_ref.contains(pid)) {
                         continue;
                     }
@@ -1144,13 +1140,16 @@ impl PySketch {
         }
 
         let mut touched = HashSet::new();
-        for constraint in &active {
-            let points: Vec<u64> = py
-                .import("raygeo.sketch.components")?
-                .getattr("get_referenced_points")?
-                .call1((self.registry.clone_ref(py), constraint.bind(py)))?
-                .extract()?;
-            touched.extend(points);
+        {
+            let reg_borrow = self.registry.bind(py).borrow();
+            for constraint in &active {
+                let points =
+                    crate::python::sketch::components::referenced_points_of(
+                        &reg_borrow,
+                        constraint.bind(py),
+                    )?;
+                touched.extend(points);
+            }
         }
         let stabilizers = PyList::empty(py);
         let drag_class = constraints_module(py)?.getattr("DragConstraint")?;
@@ -1173,20 +1172,16 @@ impl PySketch {
         }
 
         let update_status = update_constraint_status && scope.is_none();
-        let result: bool = py
-            .import("raygeo.sketch")?
-            .getattr("solve_registry")?
-            .call1((
-                self.registry.clone_ref(py),
-                PyList::new(py, &active)?,
-                stabilizers,
-                scope
-                    .as_ref()
-                    .map(|set| set.iter().copied().collect::<Vec<_>>()),
-                1e-5,
-                update_status,
-            ))?
-            .extract()?;
+        let result: bool = crate::python::sketch::solver::run_solve(
+            self.registry.bind(py),
+            active.iter().map(|c| c.bind(py).clone()).collect(),
+            Some(stabilizers.iter().map(|c| c.into_any()).collect::<Vec<_>>()),
+            scope
+                .as_ref()
+                .map(|set| set.iter().copied().collect::<Vec<_>>()),
+            1e-5,
+            update_status,
+        )?;
 
         self.pending_constraints = if update_status {
             Some(active.iter().map(|c| c.clone_ref(py)).collect())
@@ -1206,11 +1201,12 @@ impl PySketch {
         let Some(active) = self.pending_constraints.take() else {
             return Ok(());
         };
-        let conflicting: Vec<usize> = py
-            .import("raygeo.sketch")?
-            .getattr("conflicting_constraints")?
-            .call1((self.registry.clone_ref(py), PyList::new(py, &active)?))?
-            .extract()?;
+        let conflicting: Vec<usize> =
+            crate::python::sketch::solver::run_conflicting(
+                self.registry.bind(py),
+                active.iter().map(|c| c.bind(py).clone()).collect(),
+                1e-3,
+            )?;
         let index_of: HashMap<usize, usize> = self
             .constraints
             .bind(py)
@@ -1234,13 +1230,21 @@ impl PySketch {
         py: Python<'py>,
         resolved_text: Option<Py<PyDict>>,
     ) -> PyResult<Bound<'py, PyAny>> {
-        py.import("raygeo.sketch.geometry")?
-            .getattr("document_geometry")?
-            .call1((
-                self.registry.clone_ref(py),
-                self.constraints.clone_ref(py),
-                resolved_text,
-            ))
+        let resolved = resolved_text
+            .map(|dict| dict.bind(py).extract::<HashMap<u64, Option<String>>>())
+            .transpose()?;
+        crate::python::sketch::geometry::run_document_geometry(
+            self.registry.bind(py),
+            self.constraints
+                .bind(py)
+                .iter()
+                .map(|c| c.into_any())
+                .collect(),
+            resolved,
+        )
+        .map(|geometry| {
+            Py::new(py, geometry).map(|g| g.into_bound(py).into_any())
+        })?
     }
 
     fn create_fill_geometry<'py>(
