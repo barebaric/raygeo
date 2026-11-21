@@ -368,3 +368,30 @@ def test_ellipse_get_rotation(registry):
     rotation = math.atan2(rx_y - cy, rx_x - cx)
     expected = math.atan2(10, 10)
     assert abs(rotation - expected) < 1e-9
+
+
+def test_ellipse_containment_respects_rotation(registry):
+    """is_contained_by must compare against the rotated half-extents:
+    a 45-degree tilted ellipse with rx=10/ry=5 fits a 9x9 box even
+    though its unrotated (10, 5) extents would not."""
+    center = registry.add_point(0.0, 0.0)
+    rx = registry.add_point(10.0 * math.cos(math.pi / 4),
+                            10.0 * math.sin(math.pi / 4))
+    ry = registry.add_point(-5.0 * math.sin(math.pi / 4),
+                            5.0 * math.cos(math.pi / 4))
+    eid = registry.add_ellipse(center, rx, ry)
+    entity = registry.get_entity(eid)
+
+    # Rotated half-extents are sqrt(rx^2/2 + ry^2/2) ~= 7.906 on both
+    # axes, so the 9x9 rect contains the tilted ellipse...
+    assert entity.is_contained_by((-9.0, -9.0, 9.0, 9.0), registry) is True
+    # ...but a 7.5x7.5 one does not.
+    assert entity.is_contained_by((-7.5, -7.5, 7.5, 7.5), registry) is False
+
+    # An unrotated ellipse with rx=10 still sticks out of the 9x9 box.
+    rx0 = registry.add_point(10.0, 0.0)
+    ry0 = registry.add_point(0.0, 5.0)
+    eid0 = registry.add_ellipse(center, rx0, ry0)
+    entity0 = registry.get_entity(eid0)
+    assert entity0.is_contained_by((-9.0, -9.0, 9.0, 9.0), registry) is False
+    assert entity0.is_contained_by((-10.0, -5.0, 10.0, 5.0), registry) is True
