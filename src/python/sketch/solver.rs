@@ -131,6 +131,26 @@ fn solve_registry(
     tolerance: f64,
     update_dof: bool,
 ) -> PyResult<bool> {
+    run_solve(
+        registry,
+        constraints,
+        auxiliary_constraints,
+        point_filter,
+        tolerance,
+        update_dof,
+    )
+}
+
+/// The solve flow behind the `solve_registry` binding, callable from
+/// Rust so `PySketch::solve` needs no Python round-trip.
+pub(crate) fn run_solve(
+    registry: &Bound<'_, PyEntityRegistry>,
+    constraints: Vec<Bound<'_, PyAny>>,
+    auxiliary_constraints: Option<Vec<Bound<'_, PyAny>>>,
+    point_filter: Option<Vec<u64>>,
+    tolerance: f64,
+    update_dof: bool,
+) -> PyResult<bool> {
     let (point_defs, snapshot) = {
         let registry = registry.borrow();
         (point_defs_from_registry(&registry), registry.inner.clone())
@@ -174,6 +194,16 @@ fn solve_registry(
 #[pyfunction]
 #[pyo3(signature = (registry, constraints, threshold = 1e-3))]
 fn conflicting_constraints(
+    registry: &Bound<'_, PyEntityRegistry>,
+    constraints: Vec<Bound<'_, PyAny>>,
+    threshold: f64,
+) -> PyResult<Vec<usize>> {
+    run_conflicting(registry, constraints, threshold)
+}
+
+/// The conflict analysis behind the `conflicting_constraints`
+/// binding, callable from Rust.
+pub(crate) fn run_conflicting(
     registry: &Bound<'_, PyEntityRegistry>,
     constraints: Vec<Bound<'_, PyAny>>,
     threshold: f64,

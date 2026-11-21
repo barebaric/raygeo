@@ -19,6 +19,15 @@ fn get_referenced_points(
     registry: &PyEntityRegistry,
     constraint: &Bound<'_, PyAny>,
 ) -> PyResult<Vec<u64>> {
+    referenced_points_of(registry, constraint)
+}
+
+/// The point ids a constraint couples, callable from Rust so
+/// `PySketch::solve` needs no Python round-trip.
+pub(crate) fn referenced_points_of(
+    registry: &PyEntityRegistry,
+    constraint: &Bound<'_, PyAny>,
+) -> PyResult<Vec<u64>> {
     let constraint = constraint_from_py(constraint)?;
     Ok(constraint.referenced_points(&registry.inner))
 }
