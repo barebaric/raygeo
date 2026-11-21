@@ -4,8 +4,8 @@ raygeo bindings."""
 import math
 
 import pytest
+from conftest import _solver
 
-from raygeo.sketch import PointDef, Solver
 from raygeo.sketch.constraints.rotational import RotationalConstraint
 from raygeo.sketch.registry import EntityRegistry
 
@@ -13,15 +13,6 @@ from raygeo.sketch.registry import EntityRegistry
 @pytest.fixture
 def setup_env():
     return EntityRegistry()
-
-
-def _solver(reg, constraint, pids):
-    points = []
-    for pid in pids:
-        position = reg.get_point(pid)
-        assert position is not None
-        points.append(PointDef(pid, position[0], position[1], False))
-    return Solver(points, reg, [constraint], [])
 
 
 def test_error_zero_when_satisfied(setup_env):
