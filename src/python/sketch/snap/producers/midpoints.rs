@@ -5,9 +5,9 @@ use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::python::sketch::registry::PyEntityRegistry;
 use crate::python::sketch::snap::types::{
-    PyDragContext, PySnapLine, PySnapLineType, PySnapPoint,
+    PyDragContext, PySnapLine, PySnapPoint,
 };
-use crate::sketch::entities::{arc::Arc, line::Line};
+use crate::sketch::snap::producers as core;
 
 #[gen_stub_pyclass]
 #[pyclass(
@@ -46,62 +46,21 @@ impl PyMidpointsProducer {
         threshold: f64,
     ) -> PyResult<Vec<Py<PySnapPoint>>> {
         let reg = registry.borrow();
-        let (x, y) = drag_position;
+        let context = drag_context.to_context();
         let mut points = Vec::new();
-        for entity_id in reg.inner.entity_ids() {
-            if drag_context.is_entity_dragged(entity_id) {
-                continue;
-            }
-            let Some(entity) = reg.inner.get_entity(entity_id) else {
-                continue;
+        for point in core::midpoints::produce_points(
+            &reg.inner,
+            &context,
+            drag_position,
+            threshold,
+        ) {
+            let source = match point.source {
+                Some(id) => registry
+                    .call_method1("get_entity_object", (id,))?
+                    .extract::<Option<Py<PyAny>>>()?,
+                None => None,
             };
-            if entity
-                .get_point_ids()
-                .iter()
-                .any(|pid| drag_context.is_point_dragged(*pid))
-            {
-                continue;
-            }
-            let midpoint = if let Some(line) =
-                entity.as_any().downcast_ref::<Line>()
-            {
-                let p1 = reg.inner.get_point(line.p1);
-                let p2 = reg.inner.get_point(line.p2);
-                match (p1, p2) {
-                    (Some(p1), Some(p2)) => {
-                        Some(((p1.x + p2.x) / 2.0, (p1.y + p2.y) / 2.0))
-                    }
-                    _ => None,
-                }
-            } else if let Some(arc) = entity.as_any().downcast_ref::<Arc>() {
-                arc.get_midpoint(&reg.inner)
-            } else {
-                None
-            };
-            let Some((mx, my)) = midpoint else {
-                continue;
-            };
-            let dist = ((mx - x).powi(2) + (my - y).powi(2)).sqrt();
-            if dist <= threshold {
-                let source = registry
-                    .call_method1("get_entity_object", (entity_id,))?
-                    .extract::<Option<Py<PyAny>>>()?;
-                points.push(Py::new(
-                    py,
-                    PySnapPoint {
-                        x: mx,
-                        y: my,
-                        line_type: PySnapLineType(
-                            PySnapLineType::MIDPOINT_VALUE,
-                        ),
-                        source,
-                        spacing: None,
-                        is_horizontal: false,
-                        pattern_coords: None,
-                        axis_coord: None,
-                    },
-                )?);
-            }
+            points.push(PySnapPoint::from_core(py, point, source)?);
         }
         Ok(points)
     }

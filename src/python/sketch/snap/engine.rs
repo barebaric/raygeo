@@ -8,11 +8,12 @@ use pyo3::types::{PyModule, PyTuple};
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::python::sketch::registry::PyEntityRegistry;
+use crate::sketch::snap::fingerprint::geometry_fingerprint;
+use crate::sketch::snap::producers as core_snap;
+use crate::sketch::snap::types::SnapPoint as CoreSnapPoint;
 
 use super::spatial::PySnapLineIndex;
-use super::types::{
-    PyDragContext, PySnapLine, PySnapLineType, PySnapPoint, PySnapResult,
-};
+use super::types::{PyDragContext, PySnapLine, PySnapPoint, PySnapResult};
 
 #[gen_stub_pyclass]
 #[pyclass(
@@ -54,24 +55,6 @@ impl PySnapLineProducer {
     ) -> PyResult<Vec<PySnapPoint>> {
         Ok(Vec::new())
     }
-}
-
-fn source_key(py: Python<'_>, source: Option<&Py<PyAny>>) -> (u8, usize) {
-    match source {
-        Some(source) => {
-            if let Ok(id) = source.bind(py).getattr("id") {
-                if let Ok(value) = id.extract::<usize>() {
-                    return (0, value);
-                }
-            }
-            (1, source.as_ptr() as usize)
-        }
-        None => (2, 0),
-    }
-}
-
-fn line_type_key(kind: PySnapLineType) -> u8 {
-    kind.0
 }
 
 /// Stable identity of the geometry a snap index depends on.
@@ -216,6 +199,7 @@ pub struct PySnapEngine {
     pub cached_full_fingerprint: Option<String>,
     pub cached_drag_context_key: Option<(HashSet<u64>, HashSet<u64>)>,
     pub last_primary: Option<Py<PySnapPoint>>,
+    pub last_primary_core: Option<CoreSnapPoint>,
 }
 
 impl Default for PySnapEngine {
@@ -230,6 +214,7 @@ impl Default for PySnapEngine {
             cached_full_fingerprint: None,
             cached_drag_context_key: None,
             last_primary: None,
+            last_primary_core: None,
         }
     }
 }
@@ -311,10 +296,11 @@ impl PySnapEngine {
         drag_position: (f64, f64),
         drag_context: &Bound<'_, PyAny>,
     ) -> PyResult<()> {
-        let full_key =
-            geometry_key(py, registry, Some(drag_context), true, true)?;
-        let full_str = full_key.bind(py).repr()?.to_string();
         let context = drag_context.extract::<PyRef<'_, PyDragContext>>()?;
+        let core_context = context.to_context();
+        let reg = registry.extract::<PyRef<'_, PyEntityRegistry>>()?;
+        let full_str =
+            geometry_fingerprint(&reg.inner, Some(&core_context), true, true);
         let drag_key = (context.point_ids(), context.entity_ids());
         if self.cached_fingerprint.as_deref() == Some(full_str.as_str())
             && self.cached_drag_context_key.as_ref() == Some(&drag_key)
@@ -338,12 +324,9 @@ impl PySnapEngine {
         }
         self.last_query_pos = Some(drag_position);
         self.cached_fingerprint = Some(full_str);
-        self.cached_full_fingerprint = Some(
-            geometry_key(py, registry, None, true, true)?
-                .bind(py)
-                .repr()?
-                .to_string(),
-        );
+        let reg = registry.extract::<PyRef<'_, PyEntityRegistry>>()?;
+        self.cached_full_fingerprint =
+            Some(geometry_fingerprint(&reg.inner, None, true, true));
         self.cached_drag_context_key = Some(drag_key);
         Ok(())
     }
@@ -365,12 +348,9 @@ impl PySnapEngine {
             None => default_context.bind(py).clone().into_any(),
         };
         self.rebuild_index(py, registry, position, &context_obj)?;
-        self.cached_full_fingerprint = Some(
-            geometry_key(py, registry, None, true, true)?
-                .bind(py)
-                .repr()?
-                .to_string(),
-        );
+        let reg = registry.extract::<PyRef<'_, PyEntityRegistry>>()?;
+        self.cached_full_fingerprint =
+            Some(geometry_fingerprint(&reg.inner, None, true, true));
         let dynamic_lines = dynamic_lines(py, registry, &context_obj)?;
 
         let exit_radius = if self.last_primary.is_some() {
@@ -398,6 +378,7 @@ impl PySnapEngine {
             let crossing =
                 self.find_crossing_lines(py, &point, &dynamic_lines)?;
             self.last_primary = Some(point.clone_ref(py));
+            self.last_primary_core = Some(point.borrow(py).to_core(py));
             let borrowed = point.borrow(py);
             let result = PySnapResult {
                 snapped: true,
@@ -490,13 +471,10 @@ impl PySnapEngine {
 
     fn is_snap_result_current(
         &self,
-        py: Python<'_>,
         registry: &Bound<'_, PyAny>,
     ) -> PyResult<bool> {
-        let current = geometry_key(py, registry, None, true, true)?
-            .bind(py)
-            .repr()?
-            .to_string();
+        let reg = registry.extract::<PyRef<'_, PyEntityRegistry>>()?;
+        let current = geometry_fingerprint(&reg.inner, None, true, true);
         Ok(self.cached_full_fingerprint.as_deref() == Some(current.as_str()))
     }
 
@@ -563,50 +541,27 @@ impl PySnapEngine {
         y: f64,
         points: &[Py<PySnapPoint>],
     ) -> PyResult<Option<(Py<PySnapPoint>, f64)>> {
-        let mut best: Option<Py<PySnapPoint>> = None;
-        let mut best_dist = self.threshold;
-        let mut best_priority = -1;
-        for point in points {
-            let p = point.borrow(py);
-            let dist = ((x - p.x).powi(2) + (y - p.y).powi(2)).sqrt();
-            let priority = p.line_type.priority_value();
-            if dist > self.threshold {
-                continue;
+        let core_points: Vec<CoreSnapPoint> = points
+            .iter()
+            .map(|point| point.borrow(py).to_core(py))
+            .collect();
+        let selected = core_snap::select_snap_point(
+            &core_points,
+            x,
+            y,
+            self.threshold,
+            self.last_primary_core.as_ref(),
+        );
+        match selected {
+            Some((index, dist)) => {
+                Ok(Some((points[index].clone_ref(py), dist)))
             }
-            if priority > best_priority
-                || (priority == best_priority && dist < best_dist)
-            {
-                best_dist = dist;
-                best = Some(point.clone_ref(py));
-                best_priority = priority;
+            None => {
+                self.last_primary = None;
+                self.last_primary_core = None;
+                Ok(None)
             }
         }
-        if best.is_some() {
-            return Ok(best.map(|p| (p, best_dist)));
-        }
-        if let Some(last) = &self.last_primary {
-            let exit_radius = self.threshold * 1.5;
-            for point in points {
-                let p = point.borrow(py);
-                let last_ref = last.borrow(py);
-                if line_type_key(p.line_type)
-                    != line_type_key(last_ref.line_type)
-                {
-                    continue;
-                }
-                if source_key(py, p.source.as_ref())
-                    != source_key(py, last_ref.source.as_ref())
-                {
-                    continue;
-                }
-                let dist = ((x - p.x).powi(2) + (y - p.y).powi(2)).sqrt();
-                if dist <= exit_radius {
-                    return Ok(Some((point.clone_ref(py), dist)));
-                }
-            }
-            self.last_primary = None;
-        }
-        Ok(None)
     }
 
     fn find_crossing_lines(
@@ -659,43 +614,14 @@ fn dynamic_lines(
 ) -> PyResult<Vec<Py<PySnapLine>>> {
     let registry = registry.extract::<PyRef<'_, PyEntityRegistry>>()?;
     let context = context.extract::<PyRef<'_, PyDragContext>>()?;
-    let mut lines = Vec::new();
-    for entity_id in &context.preview_ids() {
-        let Some(entity) = registry.inner.get_entity(*entity_id) else {
-            continue;
-        };
-        for point_id in entity.get_point_ids() {
-            if context.is_point_dragged(point_id) {
-                continue;
-            }
-            let Some(point) = registry.inner.get_point(point_id) else {
-                continue;
-            };
-            lines.push(Py::new(
-                py,
-                PySnapLine {
-                    is_horizontal: false,
-                    coordinate: point.x,
-                    line_type: PySnapLineType(
-                        PySnapLineType::ENTITY_POINT_VALUE,
-                    ),
-                    source: None,
-                },
-            )?);
-            lines.push(Py::new(
-                py,
-                PySnapLine {
-                    is_horizontal: true,
-                    coordinate: point.y,
-                    line_type: PySnapLineType(
-                        PySnapLineType::ENTITY_POINT_VALUE,
-                    ),
-                    source: None,
-                },
-            )?);
-        }
-    }
-    Ok(lines)
+    let lines = core_snap::dynamic_preview_lines(
+        &registry.inner,
+        &context.to_context(),
+    );
+    lines
+        .into_iter()
+        .map(|line| PySnapLine::from_core(py, line, None))
+        .collect()
 }
 
 pub(crate) fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
