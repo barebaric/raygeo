@@ -275,10 +275,15 @@ impl Entity for Ellipse {
             return false;
         };
         let (rx, ry) = self.radii(model);
-        (cx - rx) >= rect.min.x
-            && (cy - ry) >= rect.min.y
-            && (cx + rx) <= rect.max.x
-            && (cy + ry) <= rect.max.y
+        // The AABB of a rotated ellipse grows with the tilt: compare
+        // against the rotated half-extents, not the bare radii.
+        let (sin, cos) = self.rotation(model).sin_cos();
+        let half_width = ((rx * cos).powi(2) + (ry * sin).powi(2)).sqrt();
+        let half_height = ((rx * sin).powi(2) + (ry * cos).powi(2)).sqrt();
+        (cx - half_width) >= rect.min.x
+            && (cy - half_height) >= rect.min.y
+            && (cx + half_width) <= rect.max.x
+            && (cy + half_height) <= rect.max.y
     }
 
     fn intersects_rect(&self, rect: Rect, model: &dyn PointContext) -> bool {

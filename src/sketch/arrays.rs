@@ -972,74 +972,24 @@ pub fn path_length(registry: &EntityRegistry, path_entity_id: u64) -> f64 {
     *cumulative_lengths(&polyline).last().unwrap_or(&0.0)
 }
 
+/// Sampling tolerance for array guide paths, matching the
+/// discretization used by contour assembly and geometry emission.
+const GUIDE_TOLERANCE: f64 = 0.02;
+
 fn polyline_for(
     entity: &dyn Entity,
     registry: &EntityRegistry,
 ) -> Vec<(f64, f64)> {
     let any = entity.as_any();
-    let point = |pid: u64| registry.point_position(pid).unwrap_or((0.0, 0.0));
-
-    if let Some(line) = any.downcast_ref::<Line>() {
-        return vec![point(line.p1), point(line.p2)];
+    // Guide paths support the curve kinds the reference supports.
+    // Sampling goes through the canonical entity discretization so a
+    // guide polyline matches the entity's contour/boolean geometry.
+    if any.downcast_ref::<Line>().is_some()
+        || any.downcast_ref::<Arc>().is_some()
+        || any.downcast_ref::<Bezier>().is_some()
+    {
+        return entity.to_polyline(registry, GUIDE_TOLERANCE);
     }
-
-    if let Some(arc) = any.downcast_ref::<Arc>() {
-        let start = point(arc.start);
-        let end = point(arc.end);
-        let c = point(arc.center);
-        let radius = (start.0 - c.0).hypot(start.1 - c.1);
-        let start_a = (start.1 - c.1).atan2(start.0 - c.0);
-        let end_a = (end.1 - c.1).atan2(end.0 - c.0);
-        let mut sweep = end_a - start_a;
-        if arc.clockwise {
-            while sweep >= 0.0 {
-                sweep -= 2.0 * std::f64::consts::PI;
-            }
-        } else {
-            while sweep <= 0.0 {
-                sweep += 2.0 * std::f64::consts::PI;
-            }
-        }
-        let segments = (sweep.abs() / (2.0 * std::f64::consts::PI) * 48.0)
-            .max(8.0) as usize;
-        return (0..=segments)
-            .map(|i| {
-                let a = start_a + sweep * i as f64 / segments as f64;
-                (c.0 + radius * a.cos(), c.1 + radius * a.sin())
-            })
-            .collect();
-    }
-
-    if let Some(bezier) = any.downcast_ref::<Bezier>() {
-        let start = point(bezier.start);
-        let end = point(bezier.end);
-        let cp1 = bezier
-            .cp1
-            .map(|cp| (start.0 + cp[0], start.1 + cp[1]))
-            .unwrap_or(start);
-        let cp2 = bezier
-            .cp2
-            .map(|cp| (end.0 + cp[0], end.1 + cp[1]))
-            .unwrap_or(end);
-        let segments = 32;
-        return (0..=segments)
-            .map(|i| {
-                let t = i as f64 / segments as f64;
-                let u = 1.0 - t;
-                (
-                    u * u * u * start.0
-                        + 3.0 * u * u * t * cp1.0
-                        + 3.0 * u * t * t * cp2.0
-                        + t * t * t * end.0,
-                    u * u * u * start.1
-                        + 3.0 * u * u * t * cp1.1
-                        + 3.0 * u * t * t * cp2.1
-                        + t * t * t * end.1,
-                )
-            })
-            .collect();
-    }
-
     Vec::new()
 }
 

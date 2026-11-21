@@ -86,6 +86,10 @@ impl RotationalConstraint {
     }
 
     /// Serializes to the reference constraint dictionary shape.
+    ///
+    /// The `"value"` key carries **radians** (reference `.ryp`
+    /// parity), unlike `AngleConstraint` whose `"value"` is in
+    /// degrees.
     pub fn to_json(&self) -> Value {
         let mut data = json!({
             "type": "RotationalConstraint",

@@ -4,6 +4,8 @@ from raygeo.sketch.arrays import (
     ArrayStrategy,
     CircularArrayStrategy,
     CurveAlongArrayStrategy,
+    path_length,
+    sample_path,
 )
 from raygeo.sketch.registry import EntityRegistry
 
@@ -46,3 +48,30 @@ def test_strategies_share_polymorphic_base():
     assert circular.needs_center_point is True
     assert curve.uses_template_anchor is True
     assert isinstance(circular.template_placement((1.0, 1.0)), object)
+
+
+def test_guide_sampling_matches_entity_discretization():
+    """The curve-along guide polyline uses the canonical entity
+    discretization, so its arc length matches the entity's own
+    polyline (array guides and contour edges agree)."""
+    registry = EntityRegistry()
+    center = registry.add_point(0.0, 0.0, False)
+    start = registry.add_point(10.0, 0.0, False)
+    end = registry.add_point(-10.0, 0.0, False)
+    arc = registry.add_arc(start, end, center, clockwise=False)
+
+    guide_length = path_length(registry, arc)
+    polyline = registry.get_entity(arc).to_polyline(registry, 0.02)
+    entity_length = sum(
+        math.dist(polyline[i], polyline[i + 1])
+        for i in range(len(polyline) - 1)
+    )
+    assert math.isclose(guide_length, entity_length, rel_tol=1e-9)
+
+    # Sampled placements sit on the arc's circumference within the
+    # chord sag of the 16-segment half-circle polyline
+    # (r * (1 - cos(theta/2)) ~= 0.048 here).
+    samples = sample_path(registry, arc, 5, 0.0)
+    assert len(samples) == 5
+    for (x, y), _tangent in samples:
+        assert math.isclose(math.hypot(x, y), 10.0, rel_tol=0.0, abs_tol=0.05)

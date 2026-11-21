@@ -48,10 +48,19 @@ impl Evaluator {
     pub fn residuals(&self, constraints: &[&dyn SketchConstraint]) -> Vec<f64> {
         let mut residuals = Vec::new();
         for constraint in constraints {
-            if constraint.residual_count(self) == 0 {
+            let count = constraint.residual_count(self);
+            if count == 0 {
                 continue;
             }
-            residuals.extend(constraint.error(self));
+            let error = constraint.error(self);
+            debug_assert_eq!(
+                error.len(),
+                count,
+                "constraint returned {} residuals, expected {}",
+                error.len(),
+                count
+            );
+            residuals.extend(error);
         }
         if residuals.is_empty() {
             residuals.push(0.0);
@@ -104,13 +113,19 @@ impl Evaluator {
         constraints
             .iter()
             .map(|constraint| {
-                if constraint.residual_count(self) == 0 {
+                let count = constraint.residual_count(self);
+                if count == 0 {
                     return 0.0;
                 }
-                constraint
-                    .error(self)
-                    .iter()
-                    .fold(0.0f64, |acc, v| acc.max(v.abs()))
+                let error = constraint.error(self);
+                debug_assert_eq!(
+                    error.len(),
+                    count,
+                    "constraint returned {} residuals, expected {}",
+                    error.len(),
+                    count
+                );
+                error.iter().fold(0.0f64, |acc, v| acc.max(v.abs()))
             })
             .collect()
     }
@@ -127,9 +142,14 @@ impl PointContext for Evaluator {
     }
 
     fn get_point(&self, id: u64) -> Option<DrawPoint> {
-        self.registry.get_point(id).map(|point| DrawPoint {
-            x: point.x,
-            y: point.y,
+        let point = self.registry.get_point(id)?;
+        // Positions must come from the live solver state, never from
+        // the registry snapshot (see the type's docs); only the
+        // fixed/constrained flags are snapshot data.
+        let (x, y) = self.point_position(id)?;
+        Some(DrawPoint {
+            x,
+            y,
             fixed: point.fixed,
             constrained: point.constrained,
         })

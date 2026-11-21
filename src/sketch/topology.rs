@@ -393,9 +393,10 @@ pub fn find_closed_loops(
     }
 
     // Sort each node's outgoing half-edges by leaving angle (stable,
-    // like the reference).
+    // like the reference).  `total_cmp` keeps degenerate NaN angles
+    // from panicking and orders them deterministically.
     for entries in adjacency.values_mut() {
-        entries.sort_by(|a, b| a.3.partial_cmp(&b.3).unwrap());
+        entries.sort_by(|a, b| a.3.total_cmp(&b.3));
     }
 
     let mut loops: Vec<Vec<(u64, bool)>> = Vec::new();

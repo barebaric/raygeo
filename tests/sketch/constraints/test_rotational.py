@@ -92,3 +92,15 @@ def test_serialization_round_trip(setup_env):
 # caller-side in the binding; there is no update_from_context.
 # deferred: depends_on_points — reference reporting is not bound on
 # the resolved constraint.
+
+
+def test_json_value_is_radians(setup_env):
+    """The serialized "value" is radians (reference .ryp parity);
+    AngleConstraint serializes degrees under the same key."""
+    reg = setup_env
+    center = reg.add_point(0.0, 0.0)
+    source = reg.add_point(10.0, 0.0)
+    target = reg.add_point(10.0 * math.cos(math.radians(30)), 0.0)
+
+    c = RotationalConstraint(center, source, target, math.radians(30))
+    assert c.to_dict()["value"] == pytest.approx(math.radians(30))
