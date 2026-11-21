@@ -5,9 +5,9 @@ use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::python::sketch::registry::PyEntityRegistry;
 use crate::python::sketch::snap::types::{
-    PyDragContext, PySnapLine, PySnapLineType, PySnapPoint,
+    PyDragContext, PySnapLine, PySnapPoint,
 };
-use crate::sketch::entities::{arc::Arc, circle::Circle, ellipse::Ellipse};
+use crate::sketch::snap::producers as core;
 
 #[gen_stub_pyclass]
 #[pyclass(
@@ -44,73 +44,20 @@ impl PyCentersProducer {
         _threshold: f64,
     ) -> PyResult<Vec<Py<PySnapLine>>> {
         let reg = registry.borrow();
+        let context = drag_context.to_context();
         let mut lines = Vec::new();
-        for entity_id in reg.inner.entity_ids() {
-            if drag_context.is_entity_dragged(entity_id) {
-                continue;
-            }
-            let Some(entity) = reg.inner.get_entity(entity_id) else {
-                continue;
+        for line in core::centers::produce_lines(
+            &reg.inner,
+            &context,
+            self.include_construction,
+        ) {
+            let source = match line.source {
+                Some(id) => registry
+                    .call_method1("get_entity_object", (id,))?
+                    .extract::<Option<Py<PyAny>>>()?,
+                None => None,
             };
-            if !self.include_construction && entity.base().construction {
-                continue;
-            }
-            let center_id = entity
-                .as_any()
-                .downcast_ref::<Arc>()
-                .map(|arc| arc.center)
-                .or_else(|| {
-                    entity
-                        .as_any()
-                        .downcast_ref::<Circle>()
-                        .map(|circle| circle.center)
-                })
-                .or_else(|| {
-                    entity
-                        .as_any()
-                        .downcast_ref::<Ellipse>()
-                        .map(|ellipse| ellipse.center)
-                });
-            let Some(center_id) = center_id else {
-                continue;
-            };
-            if drag_context.is_point_dragged(center_id) {
-                continue;
-            }
-            let Some(center) = reg.inner.get_point(center_id) else {
-                continue;
-            };
-            if drag_context.suppress_coincident_points
-                && drag_context.point_ids().iter().any(|pid| {
-                    reg.inner.get_point(*pid).is_some_and(|dragged| {
-                        (dragged.x - center.x).abs() <= 1e-6
-                            && (dragged.y - center.y).abs() <= 1e-6
-                    })
-                })
-            {
-                continue;
-            }
-            let source = registry
-                .call_method1("get_entity_object", (entity_id,))?
-                .extract::<Option<Py<PyAny>>>()?;
-            lines.push(Py::new(
-                py,
-                PySnapLine {
-                    is_horizontal: false,
-                    coordinate: center.x,
-                    line_type: PySnapLineType(PySnapLineType::CENTER_VALUE),
-                    source: source.clone(),
-                },
-            )?);
-            lines.push(Py::new(
-                py,
-                PySnapLine {
-                    is_horizontal: true,
-                    coordinate: center.y,
-                    line_type: PySnapLineType(PySnapLineType::CENTER_VALUE),
-                    source,
-                },
-            )?);
+            lines.push(PySnapLine::from_core(py, line, source)?);
         }
         Ok(lines)
     }
@@ -124,72 +71,22 @@ impl PyCentersProducer {
         threshold: f64,
     ) -> PyResult<Vec<Py<PySnapPoint>>> {
         let reg = registry.borrow();
-        let (x, y) = drag_position;
+        let context = drag_context.to_context();
         let mut points = Vec::new();
-        for entity_id in reg.inner.entity_ids() {
-            if drag_context.is_entity_dragged(entity_id) {
-                continue;
-            }
-            let Some(entity) = reg.inner.get_entity(entity_id) else {
-                continue;
+        for point in core::centers::produce_points(
+            &reg.inner,
+            &context,
+            drag_position,
+            threshold,
+            self.include_construction,
+        ) {
+            let source = match point.source {
+                Some(id) => registry
+                    .call_method1("get_entity_object", (id,))?
+                    .extract::<Option<Py<PyAny>>>()?,
+                None => None,
             };
-            if !self.include_construction && entity.base().construction {
-                continue;
-            }
-            let center_id = entity
-                .as_any()
-                .downcast_ref::<Arc>()
-                .map(|arc| arc.center)
-                .or_else(|| {
-                    entity
-                        .as_any()
-                        .downcast_ref::<Circle>()
-                        .map(|circle| circle.center)
-                })
-                .or_else(|| {
-                    entity
-                        .as_any()
-                        .downcast_ref::<Ellipse>()
-                        .map(|ellipse| ellipse.center)
-                });
-            let Some(center_id) = center_id else {
-                continue;
-            };
-            if drag_context.is_point_dragged(center_id) {
-                continue;
-            }
-            let Some(center) = reg.inner.get_point(center_id) else {
-                continue;
-            };
-            if drag_context.suppress_coincident_points
-                && drag_context.point_ids().iter().any(|pid| {
-                    reg.inner.get_point(*pid).is_some_and(|dragged| {
-                        (dragged.x - center.x).abs() <= 1e-6
-                            && (dragged.y - center.y).abs() <= 1e-6
-                    })
-                })
-            {
-                continue;
-            }
-            let dist = ((center.x - x).powi(2) + (center.y - y).powi(2)).sqrt();
-            if dist <= threshold {
-                let source = registry
-                    .call_method1("get_entity_object", (entity_id,))?
-                    .extract::<Option<Py<PyAny>>>()?;
-                points.push(Py::new(
-                    py,
-                    PySnapPoint {
-                        x: center.x,
-                        y: center.y,
-                        line_type: PySnapLineType(PySnapLineType::CENTER_VALUE),
-                        source,
-                        spacing: None,
-                        is_horizontal: false,
-                        pattern_coords: None,
-                        axis_coord: None,
-                    },
-                )?);
-            }
+            points.push(PySnapPoint::from_core(py, point, source)?);
         }
         Ok(points)
     }

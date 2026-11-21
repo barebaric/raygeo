@@ -7,6 +7,7 @@ use pyo3::types::{PyDict, PyModule, PySet, PyTuple};
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::python::sketch::registry::PyEntityRegistry;
+use crate::sketch::snap::types as core;
 
 #[gen_stub_pyclass]
 #[pyclass(
@@ -169,55 +170,22 @@ impl PySnapLineStyle {
     }
 }
 
-fn style(
-    color: [f64; 4],
-    dash: Option<Vec<f64>>,
-    line_width: f64,
-) -> PySnapLineStyle {
+fn style(value: core::SnapLineStyle) -> PySnapLineStyle {
     PySnapLineStyle {
-        color,
-        dash,
-        line_width,
+        color: value.color,
+        dash: value.dash,
+        line_width: value.line_width,
     }
 }
 
-/// Builds the SNAP_LINE_STYLES dictionary.
+/// Builds the SNAP_LINE_STYLES dictionary from the canonical core
+/// style table.
 pub(crate) fn build_line_styles(py: Python<'_>) -> PyResult<Bound<'_, PyDict>> {
     let styles = PyDict::new(py);
-    let all = [
-        (
-            PySnapLineType::ENTITY_POINT_VALUE,
-            style([0.2, 0.6, 1.0, 0.9], Some(vec![8.0, 4.0]), 2.0),
-        ),
-        (
-            PySnapLineType::ON_ENTITY_VALUE,
-            style([1.0, 0.4, 0.8, 0.9], Some(vec![8.0, 4.0]), 2.0),
-        ),
-        (
-            PySnapLineType::INTERSECTION_VALUE,
-            style([1.0, 0.2, 0.8, 0.9], Some(vec![8.0, 4.0]), 2.0),
-        ),
-        (
-            PySnapLineType::MIDPOINT_VALUE,
-            style([0.2, 0.9, 0.3, 0.9], Some(vec![8.0, 4.0]), 2.0),
-        ),
-        (
-            PySnapLineType::EQUIDISTANT_VALUE,
-            style([1.0, 0.6, 0.2, 0.9], Some(vec![8.0, 4.0]), 2.0),
-        ),
-        (
-            PySnapLineType::TANGENT_VALUE,
-            style([0.7, 0.3, 0.9, 0.9], Some(vec![8.0, 4.0]), 2.0),
-        ),
-        (
-            PySnapLineType::CENTER_VALUE,
-            style([1.0, 0.3, 0.3, 0.9], Some(vec![8.0, 4.0]), 2.0),
-        ),
-    ];
-    for (kind, value) in all {
+    for (kind, value) in core::style_table() {
         styles.set_item(
-            Py::new(py, PySnapLineType(kind))?,
-            Py::new(py, value)?,
+            Py::new(py, PySnapLineType(kind.0))?,
+            Py::new(py, style(value))?,
         )?;
     }
     Ok(styles)
@@ -240,6 +208,48 @@ pub struct PySnapPoint {
     pub is_horizontal: bool,
     pub pattern_coords: Option<Vec<f64>>,
     pub axis_coord: Option<f64>,
+}
+
+impl PySnapPoint {
+    /// The core snap point this object describes; the source id is
+    /// taken from the source object's `id` attribute when present.
+    pub(crate) fn to_core(&self, py: Python<'_>) -> core::SnapPoint {
+        let source = self
+            .source
+            .as_ref()
+            .and_then(|s| s.bind(py).getattr("id").ok()?.extract::<u64>().ok());
+        core::SnapPoint {
+            x: self.x,
+            y: self.y,
+            kind: core::SnapLineType(self.line_type.0),
+            source,
+            spacing: self.spacing,
+            is_horizontal: self.is_horizontal,
+            pattern_coords: self.pattern_coords.clone(),
+            axis_coord: self.axis_coord,
+        }
+    }
+
+    /// Materializes a core snap point with the given source object.
+    pub(crate) fn from_core(
+        py: Python<'_>,
+        point: core::SnapPoint,
+        source: Option<Py<PyAny>>,
+    ) -> PyResult<Py<PySnapPoint>> {
+        Py::new(
+            py,
+            PySnapPoint {
+                x: point.x,
+                y: point.y,
+                line_type: PySnapLineType(point.kind.0),
+                source,
+                spacing: point.spacing,
+                is_horizontal: point.is_horizontal,
+                pattern_coords: point.pattern_coords,
+                axis_coord: point.axis_coord,
+            },
+        )
+    }
 }
 
 #[gen_stub_pymethods]
@@ -335,6 +345,25 @@ pub struct PySnapLine {
     pub coordinate: f64,
     pub line_type: PySnapLineType,
     pub source: Option<Py<PyAny>>,
+}
+
+impl PySnapLine {
+    /// Materializes a core snap line with the given source object.
+    pub(crate) fn from_core(
+        py: Python<'_>,
+        line: core::SnapLine,
+        source: Option<Py<PyAny>>,
+    ) -> PyResult<Py<PySnapLine>> {
+        Py::new(
+            py,
+            PySnapLine {
+                is_horizontal: line.is_horizontal,
+                coordinate: line.coordinate,
+                line_type: PySnapLineType(line.kind.0),
+                source,
+            },
+        )
+    }
 }
 
 #[gen_stub_pymethods]
@@ -593,6 +622,16 @@ impl Default for PyDragContext {
 }
 
 impl PyDragContext {
+    /// The core snap context this drag context describes.
+    pub(crate) fn to_context(&self) -> core::SnapContext {
+        core::SnapContext {
+            dragged_point_ids: self.point_ids().into_iter().collect(),
+            dragged_entity_ids: self.entity_ids().into_iter().collect(),
+            preview_entity_ids: self.preview_ids().into_iter().collect(),
+            suppress_coincident_points: self.suppress_coincident_points,
+        }
+    }
+
     pub(crate) fn point_ids(&self) -> HashSet<u64> {
         Python::attach(|py| {
             self.dragged_point_ids
@@ -731,30 +770,7 @@ impl PySnapResult {
 }
 
 fn style_for(kind: PySnapLineType) -> PySnapLineStyle {
-    match kind.0 {
-        PySnapLineType::ENTITY_POINT_VALUE => {
-            style([0.2, 0.6, 1.0, 0.9], Some(vec![8.0, 4.0]), 2.0)
-        }
-        PySnapLineType::ON_ENTITY_VALUE => {
-            style([1.0, 0.4, 0.8, 0.9], Some(vec![8.0, 4.0]), 2.0)
-        }
-        PySnapLineType::INTERSECTION_VALUE => {
-            style([1.0, 0.2, 0.8, 0.9], Some(vec![8.0, 4.0]), 2.0)
-        }
-        PySnapLineType::MIDPOINT_VALUE => {
-            style([0.2, 0.9, 0.3, 0.9], Some(vec![8.0, 4.0]), 2.0)
-        }
-        PySnapLineType::EQUIDISTANT_VALUE => {
-            style([1.0, 0.6, 0.2, 0.9], Some(vec![8.0, 4.0]), 2.0)
-        }
-        PySnapLineType::TANGENT_VALUE => {
-            style([0.7, 0.3, 0.9, 0.9], Some(vec![8.0, 4.0]), 2.0)
-        }
-        PySnapLineType::CENTER_VALUE => {
-            style([1.0, 0.3, 0.3, 0.9], Some(vec![8.0, 4.0]), 2.0)
-        }
-        _ => style([0.0, 0.6, 1.0, 0.8], None, 1.0),
-    }
+    style(core::style_for(core::SnapLineType(kind.0)))
 }
 
 pub(crate) fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
