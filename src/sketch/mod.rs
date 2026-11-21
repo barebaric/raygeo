@@ -30,6 +30,7 @@ pub mod offset;
 pub mod params;
 pub mod registry;
 pub mod selection;
+pub mod snap;
 pub mod solver;
 pub mod topology;
 pub mod transform;
