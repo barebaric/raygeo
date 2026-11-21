@@ -218,3 +218,17 @@ pub fn map_geometry_to_frame(
     transformed_geo.transform(&final_matrix);
     transformed_geo
 }
+
+/// Unit vector of a segment, zero for degenerate segments.
+///
+/// A zero-length segment yields `(0.0, 0.0)` — a zero gradient, so
+/// degenerate geometry imposes no direction on the solver rather
+/// than a fabricated one.
+pub fn unit_or_zero(dx: f64, dy: f64) -> (f64, f64) {
+    let dist = dx.hypot(dy);
+    if dist > 1e-9 {
+        (dx / dist, dy / dist)
+    } else {
+        (0.0, 0.0)
+    }
+}
