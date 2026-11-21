@@ -4,6 +4,7 @@ raygeo bindings."""
 from unittest.mock import MagicMock
 
 import pytest
+from conftest import _solver
 
 from raygeo.sketch import PointDef, Solver
 from raygeo.sketch.constraints.collinear import CollinearConstraint
@@ -18,15 +19,6 @@ def sketch_with_points():
     p2 = reg.add_point(10, 10)
     p3 = reg.add_point(20, 0)
     return reg, p1, p2, p3
-
-
-def _solver(reg, constraint, pids):
-    points = []
-    for pid in pids:
-        position = reg.get_point(pid)
-        assert position is not None
-        points.append(PointDef(pid, position[0], position[1], False))
-    return Solver(points, reg, [constraint], [])
 
 
 def test_collinear_constraint_serialization():

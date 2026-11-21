@@ -205,26 +205,6 @@ impl SketchConstraint for DiameterConstraint {
 }
 
 impl DiameterConstraint {
-    /// Reference user-visibility flag.
-    pub fn user_visible(&self) -> bool {
-        self.user_visible
-    }
-
-    /// Sets the reference user-visibility flag.
-    pub fn set_user_visible(&mut self, value: bool) {
-        self.user_visible = value;
-    }
-
-    /// The stored expression string, if any (evaluated caller-side).
-    pub fn expression(&self) -> Option<&str> {
-        self.expression.as_deref()
-    }
-
-    /// Sets the expression string (evaluated caller-side).
-    pub fn set_expression(&mut self, expression: Option<String>) {
-        self.expression = expression;
-    }
-
     /// Serializes to the reference constraint dictionary shape.
     pub fn to_json(&self) -> Value {
         let mut data = json!({

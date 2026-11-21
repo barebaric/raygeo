@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use crate::sketch::constraint::{PointContext, SketchConstraint};
 use crate::sketch::draw::DrawPoint;
-use crate::sketch::entities::Entity;
+use crate::sketch::entities::entity::Entity;
 
 /// Read/write coordinate table over the sketch's points, addressed by
 /// point id.  Implements [`PointContext`] for the constraints and

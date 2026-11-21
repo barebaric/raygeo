@@ -53,3 +53,17 @@ def test_build_regions_from_constraints():
     assert len(regions) == 2
     solids = apply_boolean(BooleanOp.UNION, regions)
     assert solids is not None
+
+
+def test_union_of_touching_squares_yields_one_solid():
+    """Two squares sharing the full edge x=10 union into one solid
+    (port of the boolean core's raw-ring union case)."""
+    a = BooleanRegion(
+        [[(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)]], [1]
+    )
+    b = BooleanRegion(
+        [[(10.0, 0.0), (20.0, 0.0), (20.0, 10.0), (10.0, 10.0)]], [2]
+    )
+    solids = apply_boolean(BooleanOp.UNION, [a, b])
+    assert solids is not None
+    assert len(solids) == 1

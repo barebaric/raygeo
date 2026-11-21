@@ -33,14 +33,15 @@
 
 # Layering Rules Specification
 
-The crate is split into four layers. Three are domain layers that
-depend only downward (`geo` → `ops` → `cnc`); `pipeline` is a generic,
-domain-free runtime that `cnc` depends on (it sits below `cnc`,
-alongside `ops`). Total dependency order:
+The crate is split into five layers. Four are domain layers that
+depend only downward (`geo` → `ops` → `cnc`, and `geo` → `sketch`);
+`pipeline` is a generic, domain-free runtime that `cnc` depends on
+(it sits below `cnc`, alongside `ops`). Total dependency order:
 
 ```
 geo → ops \
             → cnc
+geo → sketch
 pipeline -/
 ```
 
@@ -49,6 +50,7 @@ Never import upward.
 | Layer      | Owns                                                                                                                      | Does NOT know                                 |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
 | `geo`      | Primitives & pure geometric algorithms. No "what-to-cut" decisions, no motion verbs, no machining terminology, no `Ops`.  | machining, motion, tools, `Ops`, `pipeline`   |
+| `sketch`   | Sketch constraint solving, entity model and topology; depends only on `geo` primitives.                                   | machining, motion, tools, `Ops`, `pipeline`   |
 | `ops`      | CNC and laser building blocks: clearing strategies, linking, classification, and Ops emission.                            | plans, intents, `pipeline` runtime            |
 | `pipeline` | Generic runtime to execute machining agnostic intents in a rayon thread pool.                                             | geometry, machining, `Ops`, tools, any domain |
 | `cnc`      | Plan-time orchestration: build descriptive `Plan`s (sequences of `PlanStep`s) and convert them into executable `Intent`s. | geometry algorithms                           |

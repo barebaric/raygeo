@@ -5,8 +5,8 @@ use std::collections::{HashMap, HashSet};
 use crate::geo::geometry::Geometry;
 use crate::sketch::constraint::SketchConstraint;
 use crate::sketch::constraints::coincident::CoincidentConstraint;
+use crate::sketch::entities::entity::Entity;
 use crate::sketch::entities::text_box::TextBoxEntity;
-use crate::sketch::entities::Entity;
 use crate::sketch::registry::EntityRegistry;
 
 /// Converts a sketch registry into geometry, linking chainable

@@ -305,16 +305,6 @@ impl SketchConstraint for EqualLengthConstraint {
 }
 
 impl EqualLengthConstraint {
-    /// Reference user-visibility flag.
-    pub fn user_visible(&self) -> bool {
-        self.user_visible
-    }
-
-    /// Sets the reference user-visibility flag.
-    pub fn set_user_visible(&mut self, value: bool) {
-        self.user_visible = value;
-    }
-
     /// Serializes to the reference constraint dictionary shape.
     pub fn to_json(&self) -> Value {
         json!({

@@ -243,7 +243,7 @@ impl PyPerpendicularConstraint {
 /// The reference `applies_to_entities` body: exactly two operands,
 /// both lines or radius-bearing entities.
 fn applies_check(
-    entities: &[Option<Box<dyn crate::sketch::entities::Entity>>],
+    entities: &[Option<Box<dyn crate::sketch::entities::entity::Entity>>],
 ) -> bool {
     entities.len() == 2
         && entities.iter().all(|entity| {

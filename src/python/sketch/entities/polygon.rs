@@ -13,8 +13,8 @@ use crate::python::geo::geometry::Geometry as PyGeometry;
 use crate::python::sketch::constraints::dict_from_value;
 use crate::python::sketch::context::PointCtx;
 use crate::python::sketch::entities::signature_to_py;
+use crate::sketch::entities::entity::Entity;
 use crate::sketch::entities::polygon::PolygonEntity as CorePolygon;
-use crate::sketch::entities::Entity;
 
 /// A polygon defined in the local frame of center and handle
 /// points.

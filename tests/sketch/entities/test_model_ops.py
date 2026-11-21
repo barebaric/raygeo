@@ -265,9 +265,7 @@ class TestPointWaypoints:
 
         b2 = registry.get_entity(b2.id)
         assert b2.cp1 is not None
-        assert math.hypot(*b2.cp1) == pytest.approx(
-            math.hypot(2.0, 4.0)
-        )
+        assert math.hypot(*b2.cp1) == pytest.approx(math.hypot(2.0, 4.0))
         assert b2.cp1[0] < 0
         assert b2.cp1[1] < 0
 

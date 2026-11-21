@@ -247,7 +247,7 @@ impl PyTangentConstraint {
 /// The reference `applies_to_entities` body: exactly two operands;
 /// one must be a line, the other radius-bearing.
 fn applies_check(
-    entities: &[Option<Box<dyn crate::sketch::entities::Entity>>],
+    entities: &[Option<Box<dyn crate::sketch::entities::entity::Entity>>],
 ) -> bool {
     if entities.len() != 2 {
         return false;
@@ -257,7 +257,7 @@ fn applies_check(
     else {
         return false;
     };
-    let is_line = |entity: &dyn crate::sketch::entities::Entity| {
+    let is_line = |entity: &dyn crate::sketch::entities::entity::Entity| {
         entity.type_name() == "line"
     };
     if is_line(first) {

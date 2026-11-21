@@ -13,8 +13,8 @@ use crate::python::geo::geometry::Geometry as PyGeometry;
 use crate::python::sketch::constraints::dict_from_value;
 use crate::python::sketch::context::PointCtx;
 use crate::python::sketch::entities::signature_to_py;
+use crate::sketch::entities::entity::Entity;
 use crate::sketch::entities::line::Line as CoreLine;
-use crate::sketch::entities::Entity;
 
 /// A straight segment between two points.
 #[gen_stub_pyclass]

@@ -6,9 +6,8 @@ use std::collections::HashMap;
 
 use serde_json::Value;
 
+use crate::sketch::entities::entity::entity_from_json;
 use crate::sketch::entities::entity::Entity;
-pub use crate::sketch::entities::entity::FontConfig;
-use crate::sketch::entities::entity_from_json;
 use crate::sketch::entities::point::SketchPoint;
 
 use crate::sketch::constraint::PointContext;
