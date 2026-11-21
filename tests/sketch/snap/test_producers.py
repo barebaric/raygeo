@@ -31,7 +31,7 @@ def _two_crossing_lines(registry):
 
 
 def test_entity_points_lines_cover_both_axes(registry):
-    p1 = registry.add_point(3.0, 4.0, False)
+    registry.add_point(3.0, 4.0, False)
     registry.add_point(1.0, 2.0, False)
     lines = EntityPointsProducer().produce(
         registry, (0.0, 0.0), DragContext(), 5.0
@@ -65,7 +65,7 @@ def test_entity_points_suppress_coincident_candidates(registry):
 def test_centers_from_circle_and_arc(registry):
     center = registry.add_point(0.0, 0.0, False)
     rx = registry.add_point(5.0, 0.0, False)
-    circle = registry.add_circle(center, rx, False)
+    registry.add_circle(center, rx, False)
     start = registry.add_point(10.0, 0.0, False)
     end = registry.add_point(0.0, 10.0, False)
     arc_center = registry.add_point(0.0, 0.0, False)
