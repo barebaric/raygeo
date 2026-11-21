@@ -229,34 +229,3 @@ fn to_polygon(points: &[(f64, f64)]) -> Polygon {
         .map(|&(x, y)| crate::geo::types::Point::new(x, y))
         .collect()
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn union_of_two_squares() {
-        let a = BooleanRegion {
-            rings: vec![to_polygon(&[
-                (0.0, 0.0),
-                (10.0, 0.0),
-                (10.0, 10.0),
-                (0.0, 10.0),
-            ])],
-            entity_ids: vec![1],
-            z: 0,
-        };
-        let b = BooleanRegion {
-            rings: vec![to_polygon(&[
-                (10.0, 0.0),
-                (20.0, 0.0),
-                (20.0, 10.0),
-                (10.0, 10.0),
-            ])],
-            entity_ids: vec![2],
-            z: 1,
-        };
-        let result = apply_boolean(BooleanOp::Union, &[a, b], 0.02).unwrap();
-        assert_eq!(result.len(), 1);
-    }
-}

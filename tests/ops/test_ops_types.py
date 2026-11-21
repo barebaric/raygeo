@@ -1,4 +1,7 @@
-from raygeo.ops.state import AirAssistMode, CoolantMode, HeadCoolantMode
+import pytest
+
+from raygeo.ops.axis import Axis
+from raygeo.ops.state import AirAssistMode, CoolantMode, HeadCoolantMode, State
 from raygeo.ops.types import (
     CommandCategory,
     CommandType,
@@ -179,3 +182,79 @@ def test_raster_mode_repr():
     assert repr(RasterMode.CONSTANT_POWER) == "RasterMode.CONSTANT_POWER"
     assert repr(RasterMode.DEPTH_MAP) == "RasterMode.DEPTH_MAP"
     assert repr(RasterMode.DITHER) == "RasterMode.DITHER"
+
+
+def test_axis_bit_values():
+    assert Axis.X.value == 0x01
+    assert Axis.Y.value == 0x02
+    assert Axis.Z.value == 0x04
+    assert Axis.A.value == 0x08
+    assert Axis.B.value == 0x10
+    assert Axis.C.value == 0x20
+    assert Axis.U.value == 0x40
+
+
+def test_axis_from_name_roundtrip():
+    for letter in ("X", "Y", "Z", "A", "B", "C", "U"):
+        axis = Axis.from_name(letter)
+        assert axis.value == getattr(Axis, letter).value
+        assert axis.label == letter
+
+
+def test_axis_from_name_unknown_rejected():
+    with pytest.raises(ValueError):
+        Axis.from_name("Q")
+
+
+def test_axis_label_and_name():
+    assert Axis.X.label == "X"
+    assert Axis.X.name == "X"
+    assert Axis.U.label == "U"
+
+
+def test_axis_combined_masks():
+    assert (Axis.X | Axis.Y).value == 0x03
+    assert (Axis.X | Axis.Y | Axis.Z).value == 0x07
+    assert ((Axis.X | Axis.Y) & Axis.X).value == Axis.X.value
+    assert ((Axis.X | Axis.Y) ^ Axis.X).value == Axis.Y.value
+
+
+def test_axis_bool_and_equality():
+    assert Axis.X
+    assert not (Axis.X & Axis.Y)
+    assert Axis.X == Axis.from_name("X")
+    assert Axis.X != Axis.Y
+
+
+def test_state_defaults():
+    state = State()
+    assert state.power == 0.0
+    assert state.feed_rate is None
+    assert state.rapid_rate is None
+    assert state.active_head_uid is None
+    assert state.frequency is None
+    assert state.pulse_width is None
+
+
+def test_state_allow_rapid_change_same_coolant():
+    a = State(coolant=CoolantMode.OFF, air_assist=AirAssistMode.ON)
+    b = State(coolant=CoolantMode.OFF, air_assist=AirAssistMode.ON, power=50.0)
+    assert a.allow_rapid_change(b)
+
+
+def test_state_allow_rapid_change_different_coolant():
+    a = State(coolant=CoolantMode.OFF)
+    b = State(coolant=CoolantMode.FLOOD)
+    assert not a.allow_rapid_change(b)
+
+
+def test_state_allow_rapid_change_different_air_assist():
+    a = State(air_assist=AirAssistMode.OFF)
+    b = State(air_assist=AirAssistMode.ON)
+    assert not a.allow_rapid_change(b)
+
+
+def test_state_allow_rapid_change_different_head_coolant():
+    a = State(head_coolant=HeadCoolantMode.OFF)
+    b = State(head_coolant=HeadCoolantMode.ON)
+    assert not a.allow_rapid_change(b)
