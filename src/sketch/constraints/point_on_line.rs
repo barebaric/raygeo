@@ -1,7 +1,9 @@
 //! Point-on-line constraint: a point on a line or circle circumference.
 
+use crate::geo::math::unit_or_zero;
 use crate::geo::shape::line::get_point_line_signed_distance;
 use crate::geo::types::Point;
+use crate::sketch::entities::entity::EntityKind;
 use serde_json::{json, Value};
 
 use crate::sketch::constraint::{
@@ -28,20 +30,21 @@ fn resolve_target(
     shape_id: u64,
 ) -> Option<PointOnTarget> {
     let entity = ctx.get_entity(shape_id)?;
-    let ids = entity.get_point_ids();
-    match entity.type_name() {
-        "line" => Some(PointOnTarget::Line {
-            l1: ids[0],
-            l2: ids[1],
-        }),
-        "circle" => Some(PointOnTarget::RadiusCurve {
-            center: ids[0],
-            radius_point: ids[1],
-        }),
-        "arc" => Some(PointOnTarget::RadiusCurve {
-            center: ids[2],
-            radius_point: ids[0],
-        }),
+    match entity.kind() {
+        EntityKind::Line => {
+            let ids = entity.get_point_ids();
+            Some(PointOnTarget::Line {
+                l1: ids[0],
+                l2: ids[1],
+            })
+        }
+        EntityKind::Circle | EntityKind::Arc => {
+            let (center, radius_point) = entity.center_radius_point_ids()?;
+            Some(PointOnTarget::RadiusCurve {
+                center,
+                radius_point,
+            })
+        }
         _ => None,
     }
 }
@@ -180,21 +183,11 @@ impl SketchConstraint for PointOnLineConstraint {
                 radius_point,
             } => {
                 let (cx, cy) = reg.xy(*center);
-                let dist_pc = (px - cx).hypot(py - cy);
-                let (ux, uy) = if dist_pc > 1e-9 {
-                    ((px - cx) / dist_pc, (py - cy) / dist_pc)
-                } else {
-                    (0.0, 0.0)
-                };
+                let (ux, uy) = unit_or_zero(px - cx, py - cy);
                 entries.push((self.point_id, 0, ux, uy));
 
                 let (rx, ry) = reg.xy(*radius_point);
-                let radius = (rx - cx).hypot(ry - cy);
-                let (rux, ruy) = if radius > 1e-9 {
-                    ((rx - cx) / radius, (ry - cy) / radius)
-                } else {
-                    (0.0, 0.0)
-                };
+                let (rux, ruy) = unit_or_zero(rx - cx, ry - cy);
                 entries.push((*center, 0, rux - ux, ruy - uy));
                 entries.push((*radius_point, 0, -rux, -ruy));
             }

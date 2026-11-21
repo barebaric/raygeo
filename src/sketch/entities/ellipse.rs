@@ -9,7 +9,7 @@ use crate::geo::shape::ellipse::{
 use crate::geo::types::{Point, Rect};
 use crate::sketch::constraint::PointContext;
 
-use super::entity::{remap_id, remap_ids, Entity, EntityBase};
+use super::entity::{remap_id, remap_ids, Entity, EntityBase, EntityKind};
 
 /// An ellipse defined by center and the two radius points.
 #[derive(Clone, Debug)]
@@ -123,6 +123,10 @@ impl Entity for Ellipse {
     }
     fn clone_box(&self) -> Box<dyn Entity> {
         Box::new(self.clone())
+    }
+
+    fn kind(&self) -> EntityKind {
+        EntityKind::Ellipse
     }
 
     fn type_name(&self) -> &'static str {

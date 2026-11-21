@@ -3,6 +3,7 @@
 use crate::geo::shape::bezier::get_bezier_closest_point;
 use crate::geo::shape::line::get_line_segment_closest_point;
 use crate::geo::types::{Point, Point3D};
+use crate::sketch::entities::entity::EntityKind;
 use serde_json::{json, Value};
 
 use crate::sketch::constraint::{
@@ -40,7 +41,7 @@ fn resolve_bezier(
     shape_id: u64,
 ) -> Option<(u64, u64, Option<[f64; 2]>, Option<[f64; 2]>)> {
     let entity = ctx.get_entity(shape_id)?;
-    if entity.type_name() != "bezier" {
+    if entity.kind() != EntityKind::Bezier {
         return None;
     }
     let bezier = entity.as_any().downcast_ref::<Bezier>()?;

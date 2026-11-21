@@ -12,7 +12,7 @@ use crate::geo::types::{Point, Rect};
 use crate::sketch::constraint::PointContext;
 use crate::sketch::transform::PlacementTransform;
 
-use super::entity::{quantize, remap_id, Entity, EntityBase};
+use super::entity::{quantize, remap_id, Entity, EntityBase, EntityKind};
 use super::mirror::MirrorAxis;
 
 /// A cubic bezier between two points, with the control points stored
@@ -154,6 +154,10 @@ impl Entity for Bezier {
     }
     fn clone_box(&self) -> Box<dyn Entity> {
         Box::new(self.clone())
+    }
+
+    fn kind(&self) -> EntityKind {
+        EntityKind::Bezier
     }
 
     fn type_name(&self) -> &'static str {

@@ -6,13 +6,16 @@
 
 use serde_json::{json, Value};
 
+use crate::geo::math::unit_or_zero;
 use crate::sketch::constraint::{
     JacobianEntry, PointContext, SketchConstraint,
 };
 use crate::sketch::draw::{
     draw_conflict_underlay, draw_label, draw_status_color, format_value,
     screen_scale, CairoLike, DrawContext, DrawStyle, LABEL_DIST_SCREEN,
+    LABEL_HIT_SIZE, LABEL_PAD,
 };
+use crate::sketch::entities::entity::EntityKind;
 
 /// Enforces the diameter of a circle.
 #[derive(Clone, Debug, PartialEq)]
@@ -33,7 +36,7 @@ fn resolve_circle_points(
     circle_id: u64,
 ) -> Option<(u64, u64)> {
     let entity = ctx.get_entity(circle_id)?;
-    if entity.type_name() != "circle" {
+    if entity.kind() != EntityKind::Circle {
         return None;
     }
     let ids = entity.get_point_ids();
@@ -90,12 +93,7 @@ impl SketchConstraint for DiameterConstraint {
                 let (px, py) = reg.xy(radius_pt);
                 let dx = px - cx;
                 let dy = py - cy;
-                let dist = dx.hypot(dy);
-                let (ux, uy) = if dist > 1e-9 {
-                    (dx / dist, dy / dist)
-                } else {
-                    (1.0, 0.0)
-                };
+                let (ux, uy) = unit_or_zero(dx, dy);
                 vec![
                     (radius_pt, 0, 2.0 * ux, 2.0 * uy),
                     (center, 0, -2.0 * ux, -2.0 * uy),
@@ -136,21 +134,19 @@ impl SketchConstraint for DiameterConstraint {
             scale = 1.0;
         }
 
-        let label_dist = radius + 20.0 / scale;
+        let label_dist = radius + LABEL_DIST_SCREEN / scale;
         let (label_sx, label_sy) = to_screen((
             center.x + label_dist * mid_angle.cos(),
             center.y + label_dist * mid_angle.sin(),
         ));
 
-        let label_width = 20.0;
-        let label_height = 20.0;
-        let half_w = label_width / 2.0;
-        let half_h = label_height / 2.0;
+        let half_w = LABEL_HIT_SIZE / 2.0;
+        let half_h = half_w;
 
-        let x_min = label_sx - half_w - 4.0;
-        let x_max = label_sx + half_w + 4.0;
-        let y_min = label_sy - half_h - 4.0;
-        let y_max = label_sy + half_h + 4.0;
+        let x_min = label_sx - half_w - LABEL_PAD;
+        let x_max = label_sx + half_w + LABEL_PAD;
+        let y_min = label_sy - half_h - LABEL_PAD;
+        let y_max = label_sy + half_h + LABEL_PAD;
 
         x_min <= mx && mx <= x_max && y_min <= my && my <= y_max
     }

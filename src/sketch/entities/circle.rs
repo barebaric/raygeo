@@ -10,7 +10,7 @@ use crate::geo::shape::circle::{
 use crate::geo::types::{Point, Rect};
 use crate::sketch::constraint::PointContext;
 
-use super::entity::{remap_id, Entity, EntityBase};
+use super::entity::{remap_id, Entity, EntityBase, EntityKind};
 
 /// A full circle defined by center and radius point.
 #[derive(Clone, Debug)]
@@ -84,6 +84,10 @@ impl Entity for Circle {
     }
     fn clone_box(&self) -> Box<dyn Entity> {
         Box::new(self.clone())
+    }
+
+    fn kind(&self) -> EntityKind {
+        EntityKind::Circle
     }
 
     fn type_name(&self) -> &'static str {

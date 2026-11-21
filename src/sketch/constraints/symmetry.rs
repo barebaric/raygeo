@@ -7,8 +7,9 @@ use crate::sketch::constraint::{
 };
 use crate::sketch::draw::{
     draw_conflict_underlay, draw_selection_underlay, draw_status_color,
-    draw_symmetry_arrows, CairoLike, DrawContext, DrawStyle,
+    draw_symmetry_arrows, CairoLike, DrawContext, DrawStyle, SYMMETRY_OFFSET,
 };
+use crate::sketch::entities::entity::EntityKind;
 
 /// Enforces two points are symmetric about a center point or about
 /// an axis line (referenced by entity id, resolved to its defining
@@ -31,7 +32,7 @@ pub struct SymmetryConstraint {
 /// Resolves the axis entity to its defining line points.
 fn resolve_axis(ctx: &dyn PointContext, axis: u64) -> Option<(u64, u64)> {
     let entity = ctx.get_entity(axis)?;
-    if entity.type_name() != "line" {
+    if entity.kind() != EntityKind::Line {
         return None;
     }
     let ids = entity.get_point_ids();
@@ -164,7 +165,7 @@ impl SketchConstraint for SymmetryConstraint {
         let mid_x = (s1.0 + s2.0) / 2.0;
         let mid_y = (s1.1 + s2.1) / 2.0;
         let angle = (s2.1 - s1.1).atan2(s2.0 - s1.0);
-        let offset = 12.0;
+        let offset = SYMMETRY_OFFSET;
         let lx = mid_x - offset * angle.cos();
         let ly = mid_y - offset * angle.sin();
         let rx = mid_x + offset * angle.cos();

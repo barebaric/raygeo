@@ -7,6 +7,7 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::sketch::entities::entity::Entity;
+use crate::sketch::entities::entity::EntityKind;
 use crate::sketch::entities::point::SketchPoint;
 use crate::sketch::registry::EntityRegistry;
 use crate::sketch::transform::PlacementTransform;
@@ -80,7 +81,12 @@ impl EntityGroup {
         let shapes: Vec<&dyn Entity> = self
             .entities(registry)
             .into_iter()
-            .filter(|entity| matches!(entity.type_name(), "circle" | "ellipse"))
+            .filter(|entity| {
+                matches!(
+                    entity.kind(),
+                    EntityKind::Circle | EntityKind::Ellipse
+                )
+            })
             .collect();
         if let [shape] = shapes.as_slice() {
             if let Some(point_id) = shape.center_point_id() {

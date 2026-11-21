@@ -13,7 +13,7 @@ use crate::geo::types::{Point, Rect};
 use crate::sketch::constraint::PointContext;
 use crate::sketch::transform::PlacementTransform;
 
-use super::entity::{remap_id, remap_ids, Entity, EntityBase};
+use super::entity::{remap_id, remap_ids, Entity, EntityBase, EntityKind};
 
 /// A text box: content rendered through raygeo into glyph geometry,
 /// framed by origin/width/height points.
@@ -160,7 +160,7 @@ impl TextBoxEntity {
     ) -> Option<u64> {
         for eid in &self.construction_line_ids {
             if let Some(entity) = model.get_entity(*eid) {
-                if entity.type_name() == "line" {
+                if entity.kind() == EntityKind::Line {
                     let endpoints = entity.get_endpoint_ids();
                     let (a, b) = (
                         endpoints.first().copied().unwrap_or(0),
@@ -249,6 +249,10 @@ impl Entity for TextBoxEntity {
     }
     fn clone_box(&self) -> Box<dyn Entity> {
         Box::new(self.clone())
+    }
+
+    fn kind(&self) -> EntityKind {
+        EntityKind::TextBox
     }
 
     fn type_name(&self) -> &'static str {
