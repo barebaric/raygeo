@@ -51,3 +51,34 @@ impl PyStubType for EntityId {
         }
     }
 }
+
+#[pyo3_stub_gen::derive::gen_stub_pyclass]
+#[pyclass(frozen, module = "raygeo.sketch.types", name = "WaypointType")]
+pub struct PyWaypointType;
+
+#[pyo3_stub_gen::derive::gen_stub_pymethods]
+#[pymethods]
+impl PyWaypointType {
+    #[classattr]
+    pub const SHARP: &'static str = "sharp";
+    #[classattr]
+    pub const SMOOTH: &'static str = "smooth";
+    #[classattr]
+    pub const SYMMETRIC: &'static str = "symmetric";
+}
+
+pub(crate) fn register_types(module: &Bound<'_, PyModule>) -> PyResult<()> {
+    let py = module.py();
+    let members = pyo3::types::PyDict::new(py);
+    members.set_item("VALID", 1)?;
+    members.set_item("EXPRESSION_BASED", 2)?;
+    members.set_item("ERROR", 3)?;
+    members.set_item("CONFLICTING", 4)?;
+    let status = py
+        .import("enum")?
+        .getattr("IntEnum")?
+        .call1(("ConstraintStatus", members))?;
+    module.setattr("ConstraintStatus", status)?;
+    module.add_class::<PyWaypointType>()?;
+    Ok(())
+}
