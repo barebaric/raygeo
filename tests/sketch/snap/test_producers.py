@@ -168,3 +168,57 @@ def test_equidistant_ignores_far_off_axis(registry):
         registry, (50.0, 2.0), DragContext(), 1.5
     )
     assert points == []
+
+
+def test_suppression_off_keeps_coinciding_candidate(registry):
+    """Creation-time snapping disables coincident-point suppression:
+    a candidate that merely *coincides spatially* with an excluded
+    preview point (different id) must still be offered.
+
+    Regression: the suppression check was ported inverted, so with
+    suppression off every candidate was filtered and the path tool
+    could no longer close onto its start point."""
+    target = registry.add_point(3.0, 4.0, False)
+    registry.add_point(30.0, 30.0, False)
+    # A preview temp point sitting on the target's position, under a
+    # different id — the path tool's shape at the closing click.
+    temp = registry.add_point(3.0, 4.0, False)
+    context = DragContext(
+        dragged_point_ids={temp}, suppress_coincident_points=False
+    )
+
+    points = EntityPointsProducer().produce_points(
+        registry, (3.0, 4.0), context, 100.0
+    )
+    coords = {(point.x, point.y) for point in points}
+    assert (3.0, 4.0) in coords
+    assert (30.0, 30.0) in coords
+
+    lines = EntityPointsProducer().produce(registry, (3.0, 4.0), context, 5.0)
+    coords = {line.coordinate for line in lines}
+    assert {3.0, 4.0, 30.0} <= coords
+    assert target is not None
+
+
+def test_suppression_on_filters_coinciding_candidate(registry):
+    """With suppression enabled (the drag default), a candidate that
+    coincides with an excluded point is filtered; the untouched
+    candidate is still offered."""
+    registry.add_point(3.0, 4.0, False)
+    registry.add_point(30.0, 30.0, False)
+    temp = registry.add_point(3.0, 4.0, False)
+    context = DragContext(
+        dragged_point_ids={temp}, suppress_coincident_points=True
+    )
+
+    points = EntityPointsProducer().produce_points(
+        registry, (3.0, 4.0), context, 100.0
+    )
+    coords = {(point.x, point.y) for point in points}
+    assert (3.0, 4.0) not in coords
+    assert (30.0, 30.0) in coords
+
+    lines = EntityPointsProducer().produce(registry, (3.0, 4.0), context, 5.0)
+    coords = {line.coordinate for line in lines}
+    assert 3.0 not in coords and 4.0 not in coords
+    assert 30.0 in coords
