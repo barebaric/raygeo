@@ -26,6 +26,7 @@ pub mod entities;
 pub mod entity_group;
 pub mod eval;
 pub mod geometry;
+pub mod offset;
 pub mod params;
 pub mod registry;
 pub mod selection;

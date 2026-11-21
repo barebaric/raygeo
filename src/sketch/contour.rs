@@ -414,3 +414,123 @@ fn endpoint_edges(
     }
     Ok(edges)
 }
+
+/// Offsets a single connected outline. Closed outlines grow/shrink
+/// through the geometry offsetter; open outlines become a closed
+/// slot-like outline with round caps.
+pub fn offset_outline(
+    vertices: &[(f64, f64)],
+    closed: bool,
+    distance: f64,
+    tolerance: f64,
+) -> Vec<(Vec<(f64, f64)>, bool)> {
+    use crate::geo::algo::offset::grow_geometry;
+    use crate::geo::shape::polygon::{offset_polyline, EndStyle, JoinStyle};
+
+    if vertices.len() < 2 || distance.abs() < 1e-9 {
+        return Vec::new();
+    }
+    if closed {
+        let mut geo = Geometry::new();
+        geo.move_to(vertices[0].0, vertices[0].1, 0.0);
+        for (x, y) in &vertices[1..] {
+            geo.line_to(*x, *y, 0.0);
+        }
+        geo.close_path();
+        let grown = grow_geometry(&geo, distance);
+        return grown
+            .to_polygons(tolerance)
+            .into_iter()
+            .map(|p| (p.iter().map(|v| (v.x, v.y)).collect(), true))
+            .collect();
+    }
+    offset_polyline(
+        &vertices.iter().map(|&(x, y)| Point::new(x, y)).collect(),
+        distance,
+        JoinStyle::Miter,
+        EndStyle::Round,
+    )
+    .into_iter()
+    .map(|p| (p.iter().map(|v| (v.x, v.y)).collect(), true))
+    .collect()
+}
+
+/// The `(center, handle)` frame of an outline: the largest inscribed
+/// circle's center for closed outlines, and the outline point
+/// farthest from it along the flattest hull edges as the handle.
+pub fn frame_for_outline(
+    vertices: &[(f64, f64)],
+    closed: bool,
+) -> ((f64, f64), (f64, f64)) {
+    use crate::geo::algo::polylabel::find_largest_circle;
+
+    let xs: Vec<f64> = vertices.iter().map(|v| v.0).collect();
+    let ys: Vec<f64> = vertices.iter().map(|v| v.1).collect();
+    let (min_x, max_x) = (
+        xs.iter().cloned().fold(f64::MAX, f64::min),
+        xs.iter().cloned().fold(f64::MIN, f64::max),
+    );
+    let (min_y, max_y) = (
+        ys.iter().cloned().fold(f64::MAX, f64::min),
+        ys.iter().cloned().fold(f64::MIN, f64::max),
+    );
+    let mut cx = (min_x + max_x) / 2.0;
+    let mut cy = (min_y + max_y) / 2.0;
+    if closed {
+        let polygon: Polygon =
+            vertices.iter().map(|&(x, y)| Point::new(x, y)).collect();
+        if let Some((center, _)) = find_largest_circle(&polygon, &[], 0.5) {
+            cx = center.x;
+            cy = center.y;
+        }
+    }
+    let mut handle: Option<(f64, f64)> = None;
+    let mut best_dist_sq = 1e-12;
+    for reference in short_edge_midpoints(vertices) {
+        let Some((point, _)) =
+            closest_outline_point(vertices, closed, reference.0, reference.1)
+        else {
+            continue;
+        };
+        let dx = point.0 - cx;
+        let dy = point.1 - cy;
+        let frame_dist_sq = dx * dx + dy * dy;
+        if frame_dist_sq > best_dist_sq {
+            best_dist_sq = frame_dist_sq;
+            handle = Some(point);
+        }
+    }
+    if let Some(handle) = handle {
+        return ((cx, cy), handle);
+    }
+    let mut scale = (max_x - min_x) / 2.0;
+    if scale <= 1e-9 {
+        scale = ((max_y - min_y) / 2.0).max(1.0);
+    }
+    ((cx, cy), (cx + scale, cy))
+}
+
+/// Maps world vertices into the outline's local frame: the handle
+/// becomes `(1, 0)` relative to the center, distances normalized.
+pub fn normalize_vertices(
+    center: (f64, f64),
+    handle: (f64, f64),
+    world_vertices: &[(f64, f64)],
+) -> Vec<(f64, f64)> {
+    let dx = handle.0 - center.0;
+    let dy = handle.1 - center.1;
+    let scale = dx.hypot(dy);
+    if scale < 1e-9 {
+        return Vec::new();
+    }
+    let (ux, uy) = (dx / scale, dy / scale);
+    world_vertices
+        .iter()
+        .map(|(x, y)| {
+            (
+                ((x - center.0) * ux + (y - center.1) * uy) / scale,
+                (-(x - center.0) * uy + (y - center.1) * ux) / scale,
+            )
+        })
+        .collect()
+}
