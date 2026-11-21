@@ -15,7 +15,7 @@ use crate::python::sketch::context::PointCtx;
 use crate::python::sketch::entities::signature_to_py;
 use crate::sketch::constraint::PointContext;
 use crate::sketch::entities::ellipse::Ellipse as CoreEllipse;
-use crate::sketch::entities::Entity;
+use crate::sketch::entities::entity::Entity;
 
 /// An ellipse defined by a center and two radius points.
 #[gen_stub_pyclass]

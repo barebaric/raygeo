@@ -16,7 +16,7 @@ use crate::python::sketch::context::PointCtx;
 use crate::python::sketch::entities::signature_to_py;
 use crate::sketch::constraint::PointContext;
 use crate::sketch::entities::bezier::Bezier as CoreBezier;
-use crate::sketch::entities::Entity;
+use crate::sketch::entities::entity::Entity;
 
 /// A cubic bezier segment with optional control point offsets.
 #[gen_stub_pyclass]

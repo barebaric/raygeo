@@ -6,8 +6,8 @@
 
 use std::collections::{HashMap, HashSet};
 
+use crate::sketch::entities::entity::Entity;
 use crate::sketch::entities::point::SketchPoint;
-use crate::sketch::entities::Entity;
 use crate::sketch::registry::EntityRegistry;
 use crate::sketch::transform::PlacementTransform;
 

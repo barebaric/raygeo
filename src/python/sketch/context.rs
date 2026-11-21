@@ -14,7 +14,7 @@ use pyo3_stub_gen::{ImportRef, ModuleRef, PyStubType, TypeInfo};
 
 use crate::sketch::constraint::PointContext;
 use crate::sketch::draw::DrawPoint;
-use crate::sketch::entities::Entity;
+use crate::sketch::entities::entity::Entity;
 
 use super::entities::extract_entity;
 

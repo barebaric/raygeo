@@ -15,7 +15,7 @@ use crate::python::sketch::context::PointCtx;
 use crate::python::sketch::entities::signature_to_py;
 use crate::sketch::constraint::PointContext;
 use crate::sketch::entities::circle::Circle as CoreCircle;
-use crate::sketch::entities::Entity;
+use crate::sketch::entities::entity::Entity;
 
 /// A circle defined by a center and a radius point.
 #[gen_stub_pyclass]

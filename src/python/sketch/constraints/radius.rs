@@ -319,7 +319,7 @@ impl PyRadiusConstraint {
 /// The reference `applies_to_entities` body: exactly one operand,
 /// and it must be a radius-bearing entity.
 fn applies_check(
-    entities: &[Option<Box<dyn crate::sketch::entities::Entity>>],
+    entities: &[Option<Box<dyn crate::sketch::entities::entity::Entity>>],
 ) -> bool {
     entities.len() == 1
         && entities[0]

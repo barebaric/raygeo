@@ -12,10 +12,10 @@ use crate::python::geo::geometry::Geometry as PyGeometry;
 use crate::python::sketch::entities::{
     entity_to_py, extract_entity, point::PySketchPoint, AnyEntity,
 };
+use crate::sketch::entities::entity::FontConfig;
 use crate::sketch::entities::mirror::{MirrorAxis, MirrorDirection};
 use crate::sketch::entities::point::{SketchPoint, WaypointType};
 use crate::sketch::registry::EntityRegistry;
-use crate::sketch::registry::FontConfig;
 
 /// Converts a Python dictionary to a serde_json value.
 fn extract_sketch_point(obj: &Bound<'_, PyAny>) -> PyResult<SketchPoint> {

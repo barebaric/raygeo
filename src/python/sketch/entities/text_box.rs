@@ -16,8 +16,8 @@ use crate::python::sketch::constraints::dict_from_value;
 use crate::python::sketch::context::PointCtx;
 use crate::python::sketch::entities::signature_to_py;
 use crate::python::sketch::registry::PyEntityRegistry;
+use crate::sketch::entities::entity::Entity;
 use crate::sketch::entities::text_box::TextBoxEntity as CoreTextBox;
-use crate::sketch::entities::Entity;
 
 /// A text box framed by origin, width and height points.
 #[gen_stub_pyclass]

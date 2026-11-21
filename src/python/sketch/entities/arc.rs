@@ -14,7 +14,7 @@ use crate::python::sketch::constraints::dict_from_value;
 use crate::python::sketch::context::PointCtx;
 use crate::python::sketch::entities::signature_to_py;
 use crate::sketch::entities::arc::Arc as CoreArc;
-use crate::sketch::entities::Entity;
+use crate::sketch::entities::entity::Entity;
 
 /// A circular arc from start to end around a center.
 #[gen_stub_pyclass]

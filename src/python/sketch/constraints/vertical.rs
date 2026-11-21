@@ -245,7 +245,7 @@ impl PyVerticalConstraint {
 /// The reference `applies_to_entities` body: at least one operand,
 /// and all must be lines.
 fn applies_check(
-    entities: &[Option<Box<dyn crate::sketch::entities::Entity>>],
+    entities: &[Option<Box<dyn crate::sketch::entities::entity::Entity>>],
 ) -> bool {
     !entities.is_empty()
         && entities.iter().all(|entity| {

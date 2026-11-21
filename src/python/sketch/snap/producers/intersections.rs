@@ -12,7 +12,9 @@ use crate::python::sketch::registry::PyEntityRegistry;
 use crate::python::sketch::snap::types::{
     PyDragContext, PySnapLine, PySnapLineType, PySnapPoint,
 };
-use crate::sketch::entities::{arc::Arc, circle::Circle, line::Line, Entity};
+use crate::sketch::entities::{
+    arc::Arc, circle::Circle, entity::Entity, line::Line,
+};
 use crate::sketch::registry::EntityRegistry;
 
 #[gen_stub_pyclass]

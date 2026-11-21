@@ -64,7 +64,7 @@ pub trait PointContext {
 
 /// One Jacobian entry: derivative of residual `row` w.r.t. the two
 /// coordinates of `point_id`.
-use crate::sketch::entities::Entity;
+use crate::sketch::entities::entity::Entity;
 
 /// One Jacobian entry: derivative of residual `row` w.r.t. the two
 /// coordinates of `point_id`.

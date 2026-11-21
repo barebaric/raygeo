@@ -265,7 +265,7 @@ impl PyPointOnLineConstraint {
 /// The reference `applies_to_entities` body: exactly one operand,
 /// and it must be a line or radius-bearing entity.
 fn applies_check(
-    entities: &[Option<Box<dyn crate::sketch::entities::Entity>>],
+    entities: &[Option<Box<dyn crate::sketch::entities::entity::Entity>>],
 ) -> bool {
     entities.len() == 1
         && entities[0].as_deref().is_some_and(|entity| {

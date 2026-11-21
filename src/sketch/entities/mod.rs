@@ -16,9 +16,3 @@ pub mod mirror;
 pub mod point;
 pub mod polygon;
 pub mod text_box;
-
-pub use entity::{
-    entity_from_json, quantize, ColorRgba, Entity, EntityBase, FontConfig,
-};
-pub use mirror::{MirrorAxis, MirrorDirection};
-pub use point::SketchPoint;

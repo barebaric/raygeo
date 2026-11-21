@@ -18,7 +18,7 @@ use pyo3_stub_gen::{ImportKind, ImportRef, ModuleRef, PyStubType, TypeInfo};
 use std::collections::{HashMap, HashSet};
 
 use crate::python::sketch::registry::PyEntityRegistry;
-use crate::sketch::entities::Entity;
+use crate::sketch::entities::entity::Entity;
 
 /// Rounds a coordinate to the model's six-decimal precision.
 #[gen_stub_pyfunction(module = "raygeo.sketch.entities")]
@@ -220,7 +220,7 @@ macro_rules! with_entity_mut {
         let slf = $slf.as_any();
         $(
             if let Ok(mut binding) = slf.extract::<PyRefMut<'_, $py_ty>>() {
-                let $entity: &mut dyn $crate::sketch::entities::Entity =
+                let $entity: &mut dyn $crate::sketch::entities::entity::Entity =
                     &mut binding.inner;
                 let result = $body;
                 return Ok(result);
@@ -240,7 +240,7 @@ macro_rules! with_entity_mut_write {
         $(
             if let Ok(mut binding) = slf.extract::<PyRefMut<'_, $py_ty>>() {
                 let result = {
-                    let $entity: &mut dyn $crate::sketch::entities::Entity =
+                    let $entity: &mut dyn $crate::sketch::entities::entity::Entity =
                         &mut binding.inner;
                     $body
                 };
@@ -731,9 +731,11 @@ impl PyEntityBase {
         let direction: String = axis.getattr("direction")?.extract()?;
         let position: f64 = axis.getattr("position")?.extract()?;
         let axis_direction = match direction.as_str() {
-            "vertical" => crate::sketch::entities::MirrorDirection::Vertical,
+            "vertical" => {
+                crate::sketch::entities::mirror::MirrorDirection::Vertical
+            }
             "horizontal" => {
-                crate::sketch::entities::MirrorDirection::Horizontal
+                crate::sketch::entities::mirror::MirrorDirection::Horizontal
             }
             other => {
                 return Err(PyValueError::new_err(format!(
@@ -742,7 +744,7 @@ impl PyEntityBase {
             }
         };
         with_entity_mut_write!(slf, |entity| {
-            entity.mirror(crate::sketch::entities::MirrorAxis {
+            entity.mirror(crate::sketch::entities::mirror::MirrorAxis {
                 direction: axis_direction,
                 position,
             });
