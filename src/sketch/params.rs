@@ -5,13 +5,13 @@
 //! multiple passes, and unresolved expressions fall back to their
 //! default value instead of aborting a solve.
 //!
-//! Expressions are evaluated with [`meval`], a small, wasm-friendly
-//! math-expression parser. Python-style `**` is accepted as power in
-//! addition to `^`.
+//! Expressions are evaluated with [`nanoexpr`], a small, wasm-friendly
+//! math-expression parser. Both `^` and Python-style `**` are accepted as
+//! power operators.
 
 use std::collections::BTreeMap;
 
-use meval::Context;
+use nanoexpr::{Context, ErrorKind, Functions, Math};
 use serde_json::{Map, Value};
 
 /// Error produced by an invalid or unresolved expression.
@@ -213,6 +213,16 @@ fn format_number(value: f64) -> String {
     }
 }
 
+struct CachedValues<'a> {
+    values: &'a BTreeMap<String, ParameterValue>,
+}
+
+impl Context<f64> for CachedValues<'_> {
+    fn variable(&self, name: &str) -> Option<f64> {
+        self.values.get(name).and_then(ParameterValue::as_number)
+    }
+}
+
 fn evaluate_with_cache(
     expression: &str,
     cache: &BTreeMap<String, ParameterValue>,
@@ -222,36 +232,49 @@ fn evaluate_with_cache(
         return Ok(0.0);
     }
 
-    let expression = expression.replace("**", "^");
-    let mut context = Context::new();
-    add_extra_functions(&mut context);
-    for (name, value) in cache {
-        if let Some(number) = value.as_number() {
-            context.var(name, number);
-        }
-    }
+    let variables = CachedValues { values: cache };
+    let context = (&variables, (Functions(extra_functions), Math));
 
-    meval::eval_str_with_context(&expression, &context)
+    nanoexpr::evaluate_with(expression, &context)
         .map_err(|error| ExpressionError::new(error.to_string()))
 }
 
-fn add_extra_functions(context: &mut Context) {
-    context.func("log", f64::ln);
-    context.func("log2", f64::log2);
-    context.func("log10", f64::log10);
-    context.func("exp2", f64::exp2);
-    context.func("cbrt", f64::cbrt);
-    context.func("trunc", f64::trunc);
-    context.func("fract", f64::fract);
-    context.func("fabs", f64::abs);
-    context.func("degrees", f64::to_degrees);
-    context.func("radians", f64::to_radians);
-    context.func2("pow", |a: f64, b: f64| a.powf(b));
-    context.func2("hypot", |a: f64, b: f64| a.hypot(b));
-    context.func2("fmod", |a: f64, b: f64| a % b);
-    context.func2("copysign", |a: f64, b: f64| a.copysign(b));
-    context.func("isfinite", |x: f64| x.is_finite() as i32 as f64);
-    context.func("isinf", |x: f64| x.is_infinite() as i32 as f64);
-    context.func("isnan", |x: f64| x.is_nan() as i32 as f64);
-    context.var("tau", std::f64::consts::TAU);
+fn extra_functions(
+    name: &str,
+    arguments: &[f64],
+) -> Option<Result<f64, ErrorKind>> {
+    if !matches!(
+        name,
+        "log"
+            | "exp2"
+            | "fract"
+            | "fabs"
+            | "degrees"
+            | "radians"
+            | "fmod"
+            | "copysign"
+            | "signum"
+            | "isfinite"
+            | "isinf"
+            | "isnan"
+    ) {
+        return None;
+    }
+
+    let value = match (name, arguments) {
+        ("log", [value]) => value.ln(),
+        ("exp2", [value]) => value.exp2(),
+        ("fract", [value]) => value.fract(),
+        ("fabs", [value]) => value.abs(),
+        ("degrees", [value]) => value.to_degrees(),
+        ("radians", [value]) => value.to_radians(),
+        ("fmod", [left, right]) => left % right,
+        ("copysign", [left, right]) => left.copysign(*right),
+        ("signum", [value]) => value.signum(),
+        ("isfinite", [value]) => value.is_finite() as i32 as f64,
+        ("isinf", [value]) => value.is_infinite() as i32 as f64,
+        ("isnan", [value]) => value.is_nan() as i32 as f64,
+        _ => return Some(Err(ErrorKind::ArgumentCount)),
+    };
+    Some(Ok(value))
 }
