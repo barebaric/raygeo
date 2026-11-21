@@ -17,7 +17,17 @@ use crate::sketch::geometry::document_geometry as core_document_geometry;
 #[pyfunction]
 #[pyo3(signature = (registry, constraints, resolved_text = None))]
 fn document_geometry(
-    registry: &PyEntityRegistry,
+    registry: &Bound<'_, PyEntityRegistry>,
+    constraints: Vec<Bound<'_, PyAny>>,
+    resolved_text: Option<HashMap<u64, Option<String>>>,
+) -> PyResult<PyGeometry> {
+    run_document_geometry(registry, constraints, resolved_text)
+}
+
+/// The geometry emission behind the `document_geometry` binding,
+/// callable from Rust.
+pub(crate) fn run_document_geometry(
+    registry: &Bound<'_, PyEntityRegistry>,
     constraints: Vec<Bound<'_, PyAny>>,
     resolved_text: Option<HashMap<u64, Option<String>>>,
 ) -> PyResult<PyGeometry> {
@@ -26,7 +36,7 @@ fn document_geometry(
         .map(constraint_from_py)
         .collect::<PyResult<_>>()?;
     let inner = core_document_geometry(
-        &registry.inner,
+        &registry.borrow().inner,
         &parsed,
         &resolved_text.unwrap_or_default(),
     );
