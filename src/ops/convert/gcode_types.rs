@@ -199,6 +199,11 @@ pub struct EncodeContext {
     /// `true` so existing configs stay 3D.
     #[serde(default = "default_true")]
     pub has_z_axis: bool,
+    /// Optional Z position (mm) to rapid to before the job-end
+    /// postscript, so a return-to-origin travel does not run at the
+    /// last cut height. `None` leaves the job end unchanged.
+    #[serde(default)]
+    pub job_end_retract_z_mm: Option<f64>,
     /// Optional upper bound for laser power as a fraction of maximum
     /// power (0.0–1.0). When set, every power value the encoder emits
     /// is clamped to it — vector `SetPower` commands and per-dot

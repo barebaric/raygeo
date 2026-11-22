@@ -687,6 +687,25 @@ impl<'a> GcodeEncoder<'a> {
         }
     }
 
+    /// Lift to the configured job-end Z before the postscript runs.
+    ///
+    /// The postscript typically returns to the origin; without this
+    /// lift the controller keeps the last cut height for that travel.
+    /// The configured value is in the same work-coordinate frame the
+    /// postscript executes in and is unit-scaled at emission.
+    fn handle_final_retract(&mut self) {
+        let Some(z) = self.ctx.job_end_retract_z_mm else {
+            return;
+        };
+        if !self.ctx.has_z_axis || !self.position_established {
+            return;
+        }
+        let x = self.current_pos.get(Axis::X);
+        let y = self.current_pos.get(Axis::Y);
+        self.handle_move_to(x, y, z, None);
+        self.current_pos.set(Axis::Z, z);
+    }
+
     fn handle_move_to(
         &mut self,
         x: f64,
@@ -934,6 +953,7 @@ impl<'a> GcodeEncoder<'a> {
                         self.handle_coolant(CoolantMode::Off);
                     }
                 }
+                self.handle_final_retract();
                 let lines = self.format_script_lines(&self.dialect.postscript);
                 for line in lines {
                     self.push_line(&line);

@@ -178,6 +178,65 @@ def test_laser_off_at_job_end():
     assert lines[-1] == "M30"
 
 
+def test_job_end_retract_before_postscript():
+    ops = Ops()
+    ops.job_start()
+    ops.set_power(1.0)
+    ops.set_feed_rate(1000)
+    ops.move_to(0.0, 0.0, 0.0)
+    ops.line_to(10.0, 0.0, 0.0)
+    ops.job_end()
+    text = _encode(ops, ctx=_ctx(job_end_retract_z_mm=5.0))["text"]
+    lines = text.splitlines()
+    assert lines[-3:] == ["M5", "G0 Z5", "M30"]
+
+
+def test_job_end_retract_omitted_when_unset():
+    ops = Ops()
+    ops.job_start()
+    ops.move_to(0.0, 0.0, 0.0)
+    ops.line_to(10.0, 0.0, 0.0)
+    ops.job_end()
+    assert (
+        _encode(ops)["text"]
+        == _encode(ops, ctx=_ctx(job_end_retract_z_mm=None))["text"]
+    )
+
+
+def test_job_end_retract_requires_z_axis():
+    ops = Ops()
+    ops.job_start()
+    ops.move_to(0.0, 0.0, 0.0)
+    ops.line_to(10.0, 0.0, 0.0)
+    ops.job_end()
+    text = _encode(
+        ops,
+        ctx=_ctx(job_end_retract_z_mm=5.0, has_z_axis=False),
+    )["text"]
+    assert "G0 Z" not in text
+
+
+def test_job_end_retract_scales_imperial():
+    ops = Ops()
+    ops.job_start()
+    ops.move_to(0.0, 0.0, 0.0)
+    ops.line_to(10.0, 0.0, 0.0)
+    ops.job_end()
+    text = _encode(
+        ops,
+        ctx=_ctx(job_end_retract_z_mm=5.0, unit_scale=1.0 / 25.4),
+    )["text"]
+    assert "G0 Z0.197" in text
+
+
+def test_job_end_retract_skipped_for_empty_job():
+    ops = Ops()
+    ops.job_start()
+    ops.job_end()
+    text = _encode(ops, ctx=_ctx(job_end_retract_z_mm=5.0))["text"]
+    assert "G0 Z" not in text
+
+
 # ── Power tracking ──────────────────────────────────────────────
 
 
