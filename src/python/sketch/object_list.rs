@@ -10,6 +10,7 @@ use pyo3::types::PySliceMethods;
 use pyo3::types::{PyAny, PyList, PySlice};
 use pyo3::PyClass;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
+use pyo3_stub_gen::{PyStubType, TypeInfo};
 
 use crate::python::sketch::arrays::PyArrayDefinition;
 use crate::python::sketch::constraints::PyConstraintBase;
@@ -38,9 +39,33 @@ where
     Ok(items)
 }
 
+/// Stub base that makes the typed list visible as a Python list.
+#[pyclass(subclass)]
+pub struct ConstraintListBase;
+
+impl PyStubType for ConstraintListBase {
+    fn type_output() -> TypeInfo {
+        <PyList as PyStubType>::type_output()
+    }
+}
+
+/// Stub base that makes the typed list visible as a Python list.
+#[pyclass(subclass)]
+pub struct ArrayListBase;
+
+impl PyStubType for ArrayListBase {
+    fn type_output() -> TypeInfo {
+        <PyList as PyStubType>::type_output()
+    }
+}
+
 /// A list-like collection of sketch constraints backed by the core store.
 #[gen_stub_pyclass]
-#[pyclass(module = "raygeo.sketch", name = "ConstraintList")]
+#[pyclass(
+    module = "raygeo.sketch",
+    name = "ConstraintList",
+    extends = ConstraintListBase
+)]
 pub struct PyConstraintList {
     inner: SharedList<Py<PyConstraintBase>>,
 }
@@ -94,6 +119,14 @@ impl PyConstraintList {
             .collect()
     }
 
+    /// Builds the Python object for this adapter.
+    pub fn create(self, py: Python<'_>) -> PyResult<Py<Self>> {
+        Py::new(
+            py,
+            PyClassInitializer::from(ConstraintListBase).add_subclass(self),
+        )
+    }
+
     /// Appends an object.
     pub fn push(&mut self, item: Py<PyConstraintBase>) {
         self.write().push(item);
@@ -113,11 +146,12 @@ impl PyConstraintList {
     fn new(
         _py: Python<'_>,
         items: Option<&Bound<'_, PyAny>>,
-    ) -> PyResult<Self> {
-        match items {
-            Some(value) => Self::from_iterable(value),
-            None => Ok(Self::empty()),
-        }
+    ) -> PyResult<PyClassInitializer<Self>> {
+        let list = match items {
+            Some(value) => Self::from_iterable(value)?,
+            None => Self::empty(),
+        };
+        Ok(PyClassInitializer::from(ConstraintListBase).add_subclass(list))
     }
 
     fn __len__(&self) -> usize {
@@ -382,14 +416,18 @@ impl PyConstraintList {
         self.write().items_mut().reverse();
     }
 
-    fn copy(&self, py: Python<'_>) -> Self {
-        Self::from_vec(self.items(py))
+    fn copy(&self, py: Python<'_>) -> PyResult<Py<Self>> {
+        Self::from_vec(self.items(py)).create(py)
     }
 }
 
 /// A list-like collection of sketch arrays backed by the core store.
 #[gen_stub_pyclass]
-#[pyclass(module = "raygeo.sketch", name = "ArrayList")]
+#[pyclass(
+    module = "raygeo.sketch",
+    name = "ArrayList",
+    extends = ArrayListBase
+)]
 pub struct PyArrayList {
     inner: SharedList<Py<PyArrayDefinition>>,
 }
@@ -444,6 +482,14 @@ impl PyArrayList {
             .collect()
     }
 
+    /// Builds the Python object for this adapter.
+    pub fn create(self, py: Python<'_>) -> PyResult<Py<Self>> {
+        Py::new(
+            py,
+            PyClassInitializer::from(ArrayListBase).add_subclass(self),
+        )
+    }
+
     /// Appends an object.
     pub fn push(&mut self, item: Py<PyArrayDefinition>) {
         self.write().push(item);
@@ -463,11 +509,12 @@ impl PyArrayList {
     fn new(
         _py: Python<'_>,
         items: Option<&Bound<'_, PyAny>>,
-    ) -> PyResult<Self> {
-        match items {
-            Some(value) => Self::from_iterable(value),
-            None => Ok(Self::empty()),
-        }
+    ) -> PyResult<PyClassInitializer<Self>> {
+        let list = match items {
+            Some(value) => Self::from_iterable(value)?,
+            None => Self::empty(),
+        };
+        Ok(PyClassInitializer::from(ArrayListBase).add_subclass(list))
     }
 
     fn __len__(&self) -> usize {
@@ -732,8 +779,8 @@ impl PyArrayList {
         self.write().items_mut().reverse();
     }
 
-    fn copy(&self, py: Python<'_>) -> Self {
-        Self::from_vec(self.items(py))
+    fn copy(&self, py: Python<'_>) -> PyResult<Py<Self>> {
+        Self::from_vec(self.items(py)).create(py)
     }
 }
 

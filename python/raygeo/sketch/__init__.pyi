@@ -56,7 +56,7 @@ __all__ = [
 ]
 
 @typing.final
-class ArrayList:
+class ArrayList(list):
     r"""
     A list-like collection of sketch arrays backed by the core store.
     """
@@ -82,7 +82,7 @@ class ArrayList:
     def copy(self) -> ArrayList: ...
 
 @typing.final
-class ConstraintList:
+class ConstraintList(list):
     r"""
     A list-like collection of sketch constraints backed by the core store.
     """
