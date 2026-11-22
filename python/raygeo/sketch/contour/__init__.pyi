@@ -22,7 +22,7 @@ __all__ = [
     "walk_component",
 ]
 
-def build_offset_items(registry: registry.EntityRegistry, entity_ids: typing.Sequence[builtins.int], constraints: typing.Sequence[typing.Any], tolerance: builtins.float = 0.02) -> typing.Optional[builtins.list[typing.Any]]:
+def build_offset_items(registry: registry.EntityRegistry, entity_ids: typing.Sequence[builtins.int], constraints: typing.Any, tolerance: builtins.float = 0.02) -> typing.Optional[builtins.list[typing.Any]]:
     r"""
     Partitions a selection into offsettable items.
     

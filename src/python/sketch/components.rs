@@ -38,11 +38,11 @@ pub(crate) fn referenced_points_of(
 #[pyfunction]
 fn compute_constraint_components(
     registry: &PyEntityRegistry,
-    constraints: Vec<Bound<'_, PyAny>>,
+    constraints: &Bound<'_, PyAny>,
 ) -> PyResult<Vec<BTreeSet<u64>>> {
     let parsed: Vec<Box<dyn SketchConstraint>> = constraints
-        .iter()
-        .map(constraint_from_py)
+        .try_iter()?
+        .map(|constraint| constraint_from_py(&constraint?))
         .collect::<PyResult<_>>()?;
     let refs: Vec<&dyn SketchConstraint> = parsed
         .iter()

@@ -177,12 +177,12 @@ fn build_boolean_regions(
 fn build_boolean_regions_from_constraints(
     registry: &Bound<'_, PyEntityRegistry>,
     entity_ids: Vec<u64>,
-    constraints: Vec<Bound<'_, PyAny>>,
+    constraints: &Bound<'_, PyAny>,
     tolerance: f64,
 ) -> PyResult<Option<Vec<PyBooleanRegion>>> {
     let parsed: Vec<Box<dyn SketchConstraint>> = constraints
-        .iter()
-        .map(constraint_from_py)
+        .try_iter()?
+        .map(|constraint| constraint_from_py(&constraint?))
         .collect::<PyResult<_>>()?;
     let regions = {
         let reg = registry.borrow();

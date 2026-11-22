@@ -1332,15 +1332,16 @@ fn resolve_template_center(
 #[pyfunction]
 fn find_array_for_entity(
     py: Python<'_>,
-    arrays: Vec<Py<PyArrayDefinition>>,
+    arrays: &Bound<'_, PyAny>,
     entity_id: EntityId,
-) -> Option<Py<PyArrayDefinition>> {
-    for array in arrays {
+) -> PyResult<Option<Py<PyArrayDefinition>>> {
+    for item in arrays.try_iter()? {
+        let array = item?.extract::<Py<PyArrayDefinition>>()?;
         if array.borrow(py).inner.common().guide_circle_id == entity_id.0 {
-            return Some(array.clone_ref(py));
+            return Ok(Some(array));
         }
     }
-    None
+    Ok(None)
 }
 
 /// Cumulative arc lengths of a polyline.

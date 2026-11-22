@@ -345,7 +345,7 @@ def _point_at_arclength(polyline: typing.Sequence[tuple[builtins.float, builtins
     Point and unit tangent at an arc length.
     """
 
-def find_array_for_entity(arrays: typing.Sequence[Array], entity_id: types.EntityID) -> typing.Optional[Array]:
+def find_array_for_entity(arrays: typing.Any, entity_id: types.EntityID) -> typing.Optional[Array]:
     r"""
     Returns the array whose master entity is the given one.
     """

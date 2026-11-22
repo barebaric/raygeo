@@ -9,7 +9,7 @@ __all__ = [
     "get_referenced_points",
 ]
 
-def compute_constraint_components(registry: registry.EntityRegistry, constraints: typing.Sequence[typing.Any]) -> builtins.list[builtins.set[builtins.int]]:
+def compute_constraint_components(registry: registry.EntityRegistry, constraints: typing.Any) -> builtins.list[builtins.set[builtins.int]]:
     r"""
     Partitions all points referenced by constraints into connected
     components of the constraint graph.

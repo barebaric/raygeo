@@ -135,12 +135,12 @@ fn build_offset_items<'py>(
     py: Python<'py>,
     registry: &Bound<'py, PyEntityRegistry>,
     entity_ids: Vec<u64>,
-    constraints: Vec<Bound<'py, PyAny>>,
+    constraints: &Bound<'py, PyAny>,
     tolerance: f64,
 ) -> PyResult<Option<Vec<Py<PyAny>>>> {
     let parsed: Vec<Box<dyn SketchConstraint>> = constraints
-        .iter()
-        .map(constraint_from_py)
+        .try_iter()?
+        .map(|constraint| constraint_from_py(&constraint?))
         .collect::<PyResult<_>>()?;
 
     let mut standalone = Vec::new();
