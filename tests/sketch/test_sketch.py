@@ -1,6 +1,7 @@
 import pytest
 
 from raygeo.sketch import Sketch
+from raygeo.sketch.constraints import DistanceConstraint
 
 
 def _line_document() -> Sketch:
@@ -65,3 +66,32 @@ def test_undo_state_restores_points_and_entities():
     restored = doc.registry.get_point(2)
     assert restored.x == pytest.approx(10.0)
     assert restored.y == pytest.approx(2.0)
+
+
+def test_constraints_are_a_rust_owned_list():
+    doc = Sketch("test")
+    p1 = doc.add_point(0.0, 0.0)
+    p2 = doc.add_point(10.0, 0.0)
+    constraint = DistanceConstraint(p1, p2, 10.0)
+
+    doc.constraints.append(constraint)
+
+    assert doc.constraints[0] is constraint
+    assert doc.constraints[-1] is constraint
+    assert doc.constraints[:] == [constraint]
+    assert constraint in doc.constraints
+    assert doc.constraints.index(constraint) == 0
+    assert doc.constraints.count(constraint) == 1
+    assert list(doc.constraints) == [constraint]
+    assert doc.constraints == [constraint]
+    assert len(doc.constraints) == 1
+
+    doc.constraints.remove(constraint)
+    assert doc.constraints == []
+
+    doc.constraints = [constraint]
+    assert doc.constraints == [constraint]
+
+    doc.constraints.clear()
+    assert not doc.constraints
+
