@@ -128,10 +128,7 @@ impl PySketch {
 
     #[getter]
     fn constraints(&self, py: Python<'_>) -> PyResult<Py<PyConstraintList>> {
-        Py::new(
-            py,
-            PyConstraintList::from_shared(self.model.constraints.clone()),
-        )
+        PyConstraintList::from_shared(self.model.constraints.clone()).create(py)
     }
 
     #[setter]
@@ -153,7 +150,7 @@ impl PySketch {
 
     #[getter]
     fn arrays(&self, py: Python<'_>) -> PyResult<Py<PyArrayList>> {
-        Py::new(py, PyArrayList::from_shared(self.model.arrays.clone()))
+        PyArrayList::from_shared(self.model.arrays.clone()).create(py)
     }
 
     #[setter]
