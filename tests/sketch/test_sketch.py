@@ -1,6 +1,7 @@
 import pytest
 
 from raygeo.sketch import Sketch
+from raygeo.sketch.arrays import Array
 from raygeo.sketch.constraints import DistanceConstraint
 
 
@@ -95,3 +96,17 @@ def test_constraints_are_a_rust_owned_list():
     doc.constraints.clear()
     assert not doc.constraints
 
+
+def test_arrays_are_a_rust_owned_list():
+    doc = Sketch("test")
+    array = Array.circular("arr-1", 3)
+
+    doc.arrays.append(array)
+
+    assert doc.arrays[0] is array
+    assert doc.arrays == [array]
+    assert list(doc.arrays) == [array]
+    assert array in doc.arrays
+
+    doc.arrays = []
+    assert doc.arrays == []
