@@ -10,11 +10,16 @@ use pyo3::types::{PyAny, PyDict, PyList, PyTuple};
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::geo::types::Point;
+use crate::python::sketch::arrays::PyArrayDefinition;
+use crate::python::sketch::constraints::PyConstraintBase;
+use crate::python::sketch::object_list::{PyArrayList, PyConstraintList};
 use crate::python::sketch::registry::PyEntityRegistry;
 use crate::python::sketch::solver::constraint_from_py;
 use crate::sketch::constraint::SketchConstraint;
 use crate::sketch::constraints::coincident::CoincidentConstraint;
+use crate::sketch::document::Sketch as CoreSketch;
 use crate::sketch::entities::arc::Arc;
+use crate::sketch::object_list::ObjectList;
 
 fn new_uid(py: Python<'_>) -> PyResult<String> {
     Ok(py.import("uuid")?.call_method0("uuid4")?.str()?.to_string())
@@ -53,9 +58,8 @@ pub struct PySketch {
     meta: Py<PyAny>,
     params: Py<PyAny>,
     registry: Py<PyEntityRegistry>,
-    constraints: Py<PyList>,
+    model: CoreSketch<Py<PyConstraintBase>, Py<PyArrayDefinition>>,
     fills: Py<PyList>,
-    arrays: Py<PyList>,
     last_solve_values: Py<PyDict>,
     solved_ctx: Option<Py<PyDict>>,
     pending_constraints: Option<Vec<Py<PyAny>>>,
@@ -72,9 +76,9 @@ impl PySketch {
         let params = params_class(py)?.call0()?.unbind();
         let registry: Py<PyEntityRegistry> =
             registry_class(py)?.call0()?.extract()?;
-        let constraints = PyList::empty(py).unbind();
+        let model =
+            CoreSketch::<Py<PyConstraintBase>, Py<PyArrayDefinition>>::new();
         let fills = PyList::empty(py).unbind();
-        let arrays = PyList::empty(py).unbind();
         let origin = registry
             .bind(py)
             .call_method1("add_point", (0.0, 0.0, true))?;
@@ -83,9 +87,8 @@ impl PySketch {
             meta,
             params,
             registry,
-            constraints,
+            model,
             fills,
-            arrays,
             last_solve_values: PyDict::new(py).unbind(),
             solved_ctx: None,
             pending_constraints: None,
@@ -124,13 +127,18 @@ impl PySketch {
     }
 
     #[getter]
-    fn constraints(&self, py: Python<'_>) -> Py<PyList> {
-        self.constraints.clone_ref(py)
+    fn constraints(&self, py: Python<'_>) -> PyResult<Py<PyConstraintList>> {
+        Py::new(
+            py,
+            PyConstraintList::from_shared(self.model.constraints.clone()),
+        )
     }
 
     #[setter]
-    fn set_constraints(&mut self, value: Py<PyList>) {
-        self.constraints = value;
+    fn set_constraints(&mut self, value: &Bound<'_, PyAny>) -> PyResult<()> {
+        self.model.constraints =
+            PyConstraintList::from_iterable(value)?.shared();
+        Ok(())
     }
 
     #[getter]
@@ -144,13 +152,14 @@ impl PySketch {
     }
 
     #[getter]
-    fn arrays(&self, py: Python<'_>) -> Py<PyList> {
-        self.arrays.clone_ref(py)
+    fn arrays(&self, py: Python<'_>) -> PyResult<Py<PyArrayList>> {
+        Py::new(py, PyArrayList::from_shared(self.model.arrays.clone()))
     }
 
     #[setter]
-    fn set_arrays(&mut self, value: Py<PyList>) {
-        self.arrays = value;
+    fn set_arrays(&mut self, value: &Bound<'_, PyAny>) -> PyResult<()> {
+        self.model.arrays = PyArrayList::from_iterable(value)?.shared();
+        Ok(())
     }
 
     #[getter]
@@ -217,7 +226,7 @@ impl PySketch {
             self.registry.bind(py).call_method0("to_dict")?,
         )?;
         let constraints = PyList::empty(py);
-        for constraint in self.constraints.bind(py).iter() {
+        for constraint in self.constraint_items(py) {
             constraints.append(constraint.call_method0("to_dict")?)?;
         }
         data.set_item("constraints", constraints)?;
@@ -227,7 +236,7 @@ impl PySketch {
         }
         data.set_item("fills", fills)?;
         let arrays = PyList::empty(py);
-        for array in self.arrays.bind(py).iter() {
+        for array in self.array_items(py) {
             arrays.append(array.call_method0("to_dict")?)?;
         }
         data.set_item("arrays", arrays)?;
@@ -257,13 +266,18 @@ impl PySketch {
         let registry: Py<PyEntityRegistry> = registry_class(py)?
             .call_method1("from_dict", (data.get_item("registry")?.unwrap(),))?
             .extract()?;
-        let constraints = PyList::empty(py);
+        let mut constraints = Vec::new();
         if let Some(items) = data.get_item("constraints")? {
             for item in items.try_iter()? {
                 let item = item?;
                 let type_name: String = item.get_item("type")?.extract()?;
                 let cls = constraints_module(py)?.getattr(&type_name)?;
-                constraints.append(cls.call_method1("from_dict", (&item,))?)?;
+                constraints.push(
+                    cls.call_method1("from_dict", (&item,))?.extract::<Py<
+                        crate::python::sketch::constraints::PyConstraintBase,
+                    >>(
+                    )?,
+                );
             }
         }
         let fills = PyList::empty(py);
@@ -274,21 +288,29 @@ impl PySketch {
                 )?;
             }
         }
-        let arrays = PyList::empty(py);
+        let mut arrays = Vec::new();
         if let Some(items) = data.get_item("arrays")? {
             for item in items.try_iter()? {
-                arrays.append(
-                    arrays_class(py)?.call_method1("from_dict", (item?,))?,
-                )?;
+                arrays.push(
+                    arrays_class(py)?
+                        .call_method1("from_dict", (item?,))?
+                        .extract::<Py<PyArrayDefinition>>()?,
+                );
             }
         }
         Ok(PySketch {
             meta,
             params,
             registry,
-            constraints: constraints.unbind(),
+            model: CoreSketch {
+                constraints: std::sync::Arc::new(std::sync::RwLock::new(
+                    ObjectList::from_vec(constraints),
+                )),
+                arrays: std::sync::Arc::new(std::sync::RwLock::new(
+                    ObjectList::from_vec(arrays),
+                )),
+            },
             fills: fills.unbind(),
-            arrays: arrays.unbind(),
             last_solve_values: PyDict::new(py).unbind(),
             solved_ctx: None,
             pending_constraints: None,
@@ -310,21 +332,24 @@ impl PySketch {
                 (self.params.bind(py).call_method0("to_dict")?,),
             )?
             .unbind();
-        let constraints = PyList::empty(py);
-        for constraint in self.constraints.bind(py).iter() {
-            constraints.append(constraint)?;
-        }
-        let arrays = PyList::empty(py);
-        for array in self.arrays.bind(py).iter() {
-            arrays.append(array.call_method0("copy")?)?;
+        let constraints = self.constraint_handles(py);
+        let mut arrays = Vec::new();
+        for array in self.array_handles(py) {
+            arrays.push(array.bind(py).call_method0("copy")?.extract()?);
         }
         Ok(PySketch {
             meta,
             params,
             registry,
-            constraints: constraints.unbind(),
+            model: CoreSketch {
+                constraints: std::sync::Arc::new(std::sync::RwLock::new(
+                    ObjectList::from_vec(constraints),
+                )),
+                arrays: std::sync::Arc::new(std::sync::RwLock::new(
+                    ObjectList::from_vec(arrays),
+                )),
+            },
             fills: self.fills.clone_ref(py),
-            arrays: arrays.unbind(),
             last_solve_values: PyDict::new(py).unbind(),
             solved_ctx: None,
             pending_constraints: None,
@@ -474,7 +499,7 @@ impl PySketch {
         }
         state.set_item("entities", entities)?;
         let arrays = PyList::empty(py);
-        for array in self.arrays.bind(py).iter() {
+        for array in self.array_items(py) {
             arrays.append(PyTuple::new(
                 py,
                 [array.getattr("uid")?, array.call_method0("snapshot")?],
@@ -509,13 +534,13 @@ impl PySketch {
             }
         }
         let by_uid: HashMap<String, Py<PyAny>> = self
-            .arrays
-            .bind(py)
-            .iter()
+            .array_handles(py)
+            .into_iter()
             .map(|array| {
+                let bound = array.bind(py);
                 Ok::<_, PyErr>((
-                    array.getattr("uid")?.extract::<String>()?,
-                    array.unbind(),
+                    bound.getattr("uid")?.extract::<String>()?,
+                    array.clone_ref(py).into_any(),
                 ))
             })
             .collect::<PyResult<_>>()?;
@@ -552,7 +577,11 @@ impl PySketch {
         let constraint = constraints_module(py)?
             .getattr("DistanceConstraint")?
             .call1((p1, p2, dist))?;
-        self.constraints.bind(py).append(&constraint)?;
+        self.model
+            .constraints
+            .write()
+            .unwrap()
+            .push(constraint.extract()?);
         Ok(constraint.unbind())
     }
 
@@ -567,7 +596,11 @@ impl PySketch {
         let constraint = constraints_module(py)?
             .getattr("EqualDistanceConstraint")?
             .call1((p1, p2, p3, p4))?;
-        self.constraints.bind(py).append(constraint)?;
+        self.model
+            .constraints
+            .write()
+            .unwrap()
+            .push(constraint.extract()?);
         Ok(())
     }
 
@@ -580,7 +613,11 @@ impl PySketch {
         let constraint = constraints_module(py)?
             .getattr("HorizontalConstraint")?
             .call1((p1, p2))?;
-        self.constraints.bind(py).append(constraint)?;
+        self.model
+            .constraints
+            .write()
+            .unwrap()
+            .push(constraint.extract()?);
         Ok(())
     }
 
@@ -593,7 +630,11 @@ impl PySketch {
         let constraint = constraints_module(py)?
             .getattr("VerticalConstraint")?
             .call1((p1, p2))?;
-        self.constraints.bind(py).append(constraint)?;
+        self.model
+            .constraints
+            .write()
+            .unwrap()
+            .push(constraint.extract()?);
         Ok(())
     }
 
@@ -606,7 +647,11 @@ impl PySketch {
         let constraint = constraints_module(py)?
             .getattr("CoincidentConstraint")?
             .call1((p1, p2))?;
-        self.constraints.bind(py).append(constraint)?;
+        self.model
+            .constraints
+            .write()
+            .unwrap()
+            .push(constraint.extract()?);
         Ok(())
     }
 
@@ -619,7 +664,11 @@ impl PySketch {
         let constraint = constraints_module(py)?
             .getattr("PointOnLineConstraint")?
             .call1((point_id, shape_id))?;
-        self.constraints.bind(py).append(constraint)?;
+        self.model
+            .constraints
+            .write()
+            .unwrap()
+            .push(constraint.extract()?);
         Ok(())
     }
 
@@ -632,7 +681,11 @@ impl PySketch {
         let constraint = constraints_module(py)?
             .getattr("RadiusConstraint")?
             .call1((entity_id, radius))?;
-        self.constraints.bind(py).append(&constraint)?;
+        self.model
+            .constraints
+            .write()
+            .unwrap()
+            .push(constraint.extract()?);
         Ok(constraint.unbind())
     }
 
@@ -645,7 +698,11 @@ impl PySketch {
         let constraint = constraints_module(py)?
             .getattr("DiameterConstraint")?
             .call1((circle_id, diameter))?;
-        self.constraints.bind(py).append(&constraint)?;
+        self.model
+            .constraints
+            .write()
+            .unwrap()
+            .push(constraint.extract()?);
         Ok(constraint.unbind())
     }
 
@@ -658,7 +715,11 @@ impl PySketch {
         let constraint = constraints_module(py)?
             .getattr("PerpendicularConstraint")?
             .call1((l1, l2))?;
-        self.constraints.bind(py).append(constraint)?;
+        self.model
+            .constraints
+            .write()
+            .unwrap()
+            .push(constraint.extract()?);
         Ok(())
     }
 
@@ -671,7 +732,11 @@ impl PySketch {
         let constraint = constraints_module(py)?
             .getattr("TangentConstraint")?
             .call1((line, shape))?;
-        self.constraints.bind(py).append(constraint)?;
+        self.model
+            .constraints
+            .write()
+            .unwrap()
+            .push(constraint.extract()?);
         Ok(())
     }
 
@@ -686,7 +751,11 @@ impl PySketch {
         let constraint = constraints_module(py)?
             .getattr("EqualLengthConstraint")?
             .call1((entity_ids,))?;
-        self.constraints.bind(py).append(constraint)?;
+        self.model
+            .constraints
+            .write()
+            .unwrap()
+            .push(constraint.extract()?);
         Ok(())
     }
 
@@ -706,7 +775,11 @@ impl PySketch {
         } else {
             return Ok(());
         };
-        self.constraints.bind(py).append(constraint)?;
+        self.model
+            .constraints
+            .write()
+            .unwrap()
+            .push(constraint.extract()?);
         Ok(())
     }
 
@@ -800,7 +873,7 @@ impl PySketch {
         py: Python<'py>,
     ) -> PyResult<Bound<'py, PyList>> {
         let result = PyList::empty(py);
-        for constraint in self.constraints.bind(py).iter() {
+        for constraint in self.constraint_items(py) {
             if constraint.getattr("status")?.extract::<i32>()? == 4 {
                 result.append(constraint)?;
             }
@@ -809,7 +882,7 @@ impl PySketch {
     }
 
     fn has_conflicts(&self, py: Python<'_>) -> PyResult<bool> {
-        for constraint in self.constraints.bind(py).iter() {
+        for constraint in self.constraint_items(py) {
             if constraint.getattr("status")?.extract::<i32>()? == 4 {
                 return Ok(true);
             }
@@ -822,7 +895,7 @@ impl PySketch {
         py: Python<'_>,
         pid: u64,
     ) -> PyResult<bool> {
-        for array in self.arrays.bind(py).iter() {
+        for array in self.array_items(py) {
             if array
                 .call_method1(
                     "is_guide_radius_point",
@@ -839,7 +912,7 @@ impl PySketch {
     fn get_derived_point_ids(&self, py: Python<'_>) -> PyResult<HashSet<u64>> {
         let mut result = HashSet::new();
         let registry = self.registry.bind(py);
-        for array in self.arrays.bind(py).iter() {
+        for array in self.array_items(py) {
             for slot in array.getattr("members")?.try_iter()? {
                 for eid in slot?.get_item(1)?.try_iter()? {
                     let eid: u64 = eid?.extract()?;
@@ -893,7 +966,7 @@ impl PySketch {
         let mut changed = true;
         while changed {
             changed = false;
-            for constraint in self.constraints.bind(py).iter() {
+            for constraint in self.constraint_items(py) {
                 let eids: HashSet<u64> = constraint
                     .call_method0("get_referenced_entity_ids")?
                     .extract()?;
@@ -947,7 +1020,7 @@ impl PySketch {
         let paired = self.find_axis_coincidence_pairs(py)?;
         let result = PyList::empty(py);
         let origin = self.origin_id(py)?;
-        for constraint in self.constraints.bind(py).iter() {
+        for constraint in self.constraint_items(py) {
             let pids: HashSet<u64> = constraint
                 .call_method0("get_referenced_point_ids")?
                 .extract()?;
@@ -979,7 +1052,7 @@ impl PySketch {
         py: Python<'_>,
     ) -> PyResult<HashSet<usize>> {
         let mut verticals: HashMap<(u64, u64), usize> = HashMap::new();
-        for constraint in self.constraints.bind(py).iter() {
+        for constraint in self.constraint_items(py) {
             if constraint.get_type().name()? == "VerticalConstraint" {
                 let p1: u64 = constraint.getattr("p1")?.extract()?;
                 let p2: u64 = constraint.getattr("p2")?.extract()?;
@@ -988,7 +1061,7 @@ impl PySketch {
             }
         }
         let mut paired = HashSet::new();
-        for constraint in self.constraints.bind(py).iter() {
+        for constraint in self.constraint_items(py) {
             if constraint.get_type().name()? == "HorizontalConstraint" {
                 let p1: u64 = constraint.getattr("p1")?.extract()?;
                 let p2: u64 = constraint.getattr("p2")?.extract()?;
@@ -1003,19 +1076,18 @@ impl PySketch {
     }
 
     fn prune_arrays(&self, py: Python<'_>) -> PyResult<()> {
-        let arrays = self.arrays.bind(py);
-        let mut index = 0;
-        while index < arrays.len() {
-            let keep: bool = arrays
-                .get_item(index)?
+        let arrays = self.array_handles(py);
+        let mut kept = Vec::new();
+        for array in arrays {
+            let keep: bool = array
+                .bind(py)
                 .call_method1("prune", (self.registry.clone_ref(py),))?
                 .extract()?;
             if keep {
-                index += 1;
-            } else {
-                arrays.del_item(index)?;
+                kept.push(array);
             }
         }
+        self.model.arrays.write().unwrap().replace(kept);
         Ok(())
     }
 
@@ -1100,7 +1172,8 @@ impl PySketch {
 
         let excluded = excluded_constraints.unwrap_or_default();
         let mut active: Vec<Py<PyAny>> = Vec::new();
-        for (index, constraint) in self.constraints.bind(py).iter().enumerate()
+        for (index, constraint) in
+            self.constraint_items(py).into_iter().enumerate()
         {
             if excluded.contains(&index) {
                 continue;
@@ -1116,7 +1189,7 @@ impl PySketch {
                     continue;
                 }
             }
-            active.push(constraint.unbind());
+            active.push(constraint.extract()?);
         }
         if let Some(extra) = extra_constraints {
             for constraint in extra {
@@ -1208,11 +1281,10 @@ impl PySketch {
                 1e-3,
             )?;
         let index_of: HashMap<usize, usize> = self
-            .constraints
-            .bind(py)
+            .constraint_items(py)
             .iter()
             .enumerate()
-            .map(|(index, constraint)| (ptr_key(&constraint), index))
+            .map(|(index, constraint)| (ptr_key(constraint), index))
             .collect();
         let mapped: HashSet<usize> = conflicting
             .into_iter()
@@ -1235,11 +1307,7 @@ impl PySketch {
             .transpose()?;
         crate::python::sketch::geometry::run_document_geometry(
             self.registry.bind(py),
-            self.constraints
-                .bind(py)
-                .iter()
-                .map(|c| c.into_any())
-                .collect(),
+            self.constraint_items(py),
             resolved,
         )
         .map(|geometry| {
@@ -1604,12 +1672,53 @@ impl PySketch {
 }
 
 impl PySketch {
+    /// Snapshot of the owned constraint handles.
+    fn constraint_handles(&self, py: Python<'_>) -> Vec<Py<PyConstraintBase>> {
+        self.model
+            .constraints
+            .read()
+            .unwrap()
+            .items()
+            .iter()
+            .map(|item| item.clone_ref(py))
+            .collect()
+    }
+
+    /// Snapshot of the owned constraints, bound to the GIL.
+    fn constraint_items<'py>(&self, py: Python<'py>) -> Vec<Bound<'py, PyAny>> {
+        self.constraint_handles(py)
+            .into_iter()
+            .map(|item| item.into_bound(py).into_any())
+            .collect()
+    }
+
+    /// Snapshot of the owned array handles.
+    fn array_handles(&self, py: Python<'_>) -> Vec<Py<PyArrayDefinition>> {
+        self.model
+            .arrays
+            .read()
+            .unwrap()
+            .items()
+            .iter()
+            .map(|item| item.clone_ref(py))
+            .collect()
+    }
+
+    /// Snapshot of the owned arrays, bound to the GIL.
+    fn array_items<'py>(&self, py: Python<'py>) -> Vec<Bound<'py, PyAny>> {
+        self.array_handles(py)
+            .into_iter()
+            .map(|item| item.into_bound(py).into_any())
+            .collect()
+    }
+
     fn apply_conflict_status(
         &self,
         py: Python<'_>,
         conflicting: &HashSet<usize>,
     ) -> PyResult<()> {
-        for (index, constraint) in self.constraints.bind(py).iter().enumerate()
+        for (index, constraint) in
+            self.constraint_items(py).into_iter().enumerate()
         {
             let status: i32 = constraint.getattr("status")?.extract()?;
             if conflicting.contains(&index) {
@@ -1627,10 +1736,9 @@ impl PySketch {
         &self,
         py: Python<'_>,
     ) -> PyResult<Vec<Box<dyn SketchConstraint>>> {
-        self.constraints
-            .bind(py)
+        self.constraint_items(py)
             .iter()
-            .map(|c| constraint_from_py(&c))
+            .map(|c| constraint_from_py(c))
             .collect()
     }
 }

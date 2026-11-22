@@ -2,6 +2,8 @@
 
 use serde_json::{json, Value};
 
+use crate::sketch::object_list::{shared_list, SharedList};
+
 /// Current sketch file format version.
 pub const FORMAT_VERSION: u32 = 1;
 
@@ -210,5 +212,35 @@ impl DocumentMeta {
                 .and_then(Value::as_u64)
                 .unwrap_or(0),
         }
+    }
+}
+
+/// The host-agnostic sketch document core.
+///
+/// The document owns its constraint and array collections. The type
+/// parameters are host handles; the Python binding instantiates them
+/// with its constraint and array wrapper classes. A pure Rust host can
+/// use the same document with core constraint and array values.
+#[derive(Clone)]
+pub struct Sketch<TConstraint, TArray> {
+    /// Constraints in document order.
+    pub constraints: SharedList<TConstraint>,
+    /// Array definitions in document order.
+    pub arrays: SharedList<TArray>,
+}
+
+impl<TConstraint, TArray> Sketch<TConstraint, TArray> {
+    /// Creates an empty document.
+    pub fn new() -> Self {
+        Sketch {
+            constraints: shared_list(),
+            arrays: shared_list(),
+        }
+    }
+}
+
+impl<TConstraint, TArray> Default for Sketch<TConstraint, TArray> {
+    fn default() -> Self {
+        Sketch::new()
     }
 }

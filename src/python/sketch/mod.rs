@@ -11,6 +11,7 @@ pub(crate) mod entities;
 pub(crate) mod entity_group;
 pub(crate) mod geometry;
 pub(crate) mod model;
+pub(crate) mod object_list;
 pub(crate) mod params;
 pub(crate) mod point;
 pub(crate) mod protocols;
@@ -67,6 +68,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     selection::register(&sketch_mod)?;
     snap::register(&sketch_mod)?;
     model::register(&sketch_mod)?;
+    object_list::register(&sketch_mod)?;
     params::register(&sketch_mod)?;
     entities::register(&sketch_mod)?;
 

@@ -26,6 +26,7 @@ pub mod entities;
 pub mod entity_group;
 pub mod eval;
 pub mod geometry;
+pub mod object_list;
 pub mod offset;
 pub mod params;
 pub mod registry;
