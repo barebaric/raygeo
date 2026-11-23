@@ -20,8 +20,7 @@ from raygeo.ops.assembly.contour import ContourSpec
 from raygeo.ops.assembly.raster import RasterSpec
 from raygeo.ops.convert import EncodeOutput, Encoder, EpilogSpec
 from raygeo.ops.part import Part
-from raygeo.ops.state import AirAssistMode
-from raygeo.ops.state import PowerMode
+from raygeo.ops.state import AirAssistMode, PowerMode
 from raygeo.pipeline.execute import clear_cache
 from raygeo.pipeline.request import NodeRequest
 from raygeo.pipeline.stage import StageSpec
@@ -422,7 +421,8 @@ def test_speed_above_reference_clamps_to_full_speed():
         stage=StageSpec.Compute(
             part=_square_part(),
             params=ComputePayload(
-                assembler=Assembler(ContourSpec()), power=0.5,
+                assembler=Assembler(ContourSpec()),
+                power=0.5,
                 cut_speed=12000,
             ),
         ),

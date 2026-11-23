@@ -40,6 +40,15 @@ Returned as a **bytearray** of interleaved `i32` pairs `(start, count)` (8 bytes
 the per-element Python tuple/int overhead of a list-of-tuples. Decode with
 `np.frombuffer(ba, dtype=np.int32).reshape(-1, 2)`.
 
+### `payload`
+
+```python
+payload: Optional[bytearray]
+```
+
+The device byte stream for binary machine languages (empty for text-only languages such as G-code).
+Returns `None` unless this is the `MachineCode` variant.
+
 ### `power_texture`
 
 ```python
@@ -89,15 +98,17 @@ MachineCode(
     text: str,
     op_to_machine_code: Any,
     machine_code_to_op: Any,
+    payload: Optional[Any] = None,
 ) -> EncodeOutput
 ```
 
-| Parameter            | Type           | Description |
-| -------------------- | -------------- | ----------- |
-| `text`               | `str`          |             |
-| `op_to_machine_code` | `Any`          |             |
-| `machine_code_to_op` | `Any`          |             |
-| _Returns_            | `EncodeOutput` |             |
+| Parameter            | Type                   | Description |
+| -------------------- | ---------------------- | ----------- |
+| `text`               | `str`                  |             |
+| `op_to_machine_code` | `Any`                  |             |
+| `machine_code_to_op` | `Any`                  |             |
+| `payload`            | `Optional[Any] = None` |             |
+| _Returns_            | `EncodeOutput`         |             |
 
 ## Encoder
 
@@ -115,6 +126,19 @@ spec: Any
 
 The wrapped Python-side spec object. Type-erased here; dispatched to a concrete `Box<dyn Encoder>`
 by \[`PyEncoder::into_core`\].
+
+## EpilogSpec
+
+Parameters for the Epilog print-job encoder.
+
+`context_json` is a JSON-serialised [`EpilogContext`](crate::ops::convert::epilog::EpilogContext):
+job title, resolution, frequency, bed size, speed reference, origin layout and the rotary flag.
+
+### `context_json`
+
+```python
+context_json: str
+```
 
 ## GcodeDialectSpec
 
