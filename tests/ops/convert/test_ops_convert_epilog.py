@@ -20,6 +20,7 @@ from raygeo.ops.assembly.contour import ContourSpec
 from raygeo.ops.assembly.raster import RasterSpec
 from raygeo.ops.convert import EncodeOutput, Encoder, EpilogSpec
 from raygeo.ops.part import Part
+from raygeo.ops.state import AirAssistMode
 from raygeo.ops.state import PowerMode
 from raygeo.pipeline.execute import clear_cache
 from raygeo.pipeline.request import NodeRequest
@@ -36,7 +37,7 @@ def _ctx(**overrides) -> str:
         resolution=500,
         frequency=1000,
         bed_mm=[609.6, 304.8],
-        max_cut_speed=6000.0,
+        speed_reference_mm_min=6000.0,
         origin_top_left=True,
         rotary=False,
     )
@@ -158,7 +159,9 @@ def test_op_map_covers_every_op():
     assert spans[3][1] >= 1
 
 
-def test_zero_power_job_has_no_powered_paths():
+def test_zero_power_job_is_rejected():
+    """A cut at 0 % would travel as a pen-up move, silently dropping
+    the line, so it is refused instead."""
     clear_cache()
     src = NodeRequest(
         key="src",
@@ -179,7 +182,7 @@ def test_zero_power_job_has_no_powered_paths():
     )
     node = _collect([src, enc])["enc"]
     assert node.error is not None
-    assert "no powered paths" in node.error
+    assert "0 % power" in node.error
 
 
 def test_power_mode_op_is_accepted():
@@ -222,14 +225,17 @@ def test_dither_raster_uses_packbits_one_bit_rows():
     assert b"\x1b*rC" in payload
 
 
-def test_power_modulated_raster_uses_8_bit_rows():
+def test_power_modulated_raster_uses_3d_mode_rows():
+    """The reference selects 3D mode with *b7MLT, so a row is one byte
+    per dot and must not be run-length encoded."""
     spec = RasterSpec(
         mode="power_modulated", line_interval_mm=1.0, step_power=0.5
     )
     out = _encode_part(_raster_part(128), spec)
-    assert "\\e*b1M\\e*b7W" in out.text
+    assert "\\e*b7MLT" in out.text
+    assert "\\e*b1M" not in out.text
     payload = bytes(out.payload)
-    assert b"\x1b*b1M" in payload
+    assert b"\x1b*b7MLT" in payload
 
 
 def test_raster_rows_are_inside_the_raster_part():
@@ -330,3 +336,112 @@ def test_rejects_bottom_origin_as_an_invariant_violation():
     node = _collect([src, enc])["enc"]
     assert node.error is not None
     assert "internal error" in node.error
+
+
+def test_raster_part_sets_its_own_start_after_compression():
+    """The reference emits the raster setup per part, with *r1A after
+    the compression selector; a single *r1A in the header would start
+    the part before its mode is set."""
+    spec = RasterSpec(mode="dither", line_interval_mm=1.0, step_power=0.5)
+    payload = bytes(_encode_part(_raster_part(255), spec).payload)
+    setup = payload.find(b"\x1b*b2M")
+    start = payload.find(b"\x1b*r1A")
+    assert 0 < setup < start
+    assert payload.find(b"\x1b*r1A", setup) == start
+
+
+def test_raster_row_length_is_padded_to_eight_bytes():
+    """*b#W is the transfer length rounded up to a multiple of 8, and
+    the row is padded with 0x80 fill bytes."""
+    spec = RasterSpec(mode="dither", line_interval_mm=1.0, step_power=0.5)
+    out = _encode_part(_raster_part(255), spec)
+    payload = bytes(out.payload)
+    after_start = payload.find(b"\x1b*r1A")
+    marker = payload.find(b"\x1b*b", after_start)
+    # Skip the direction (*b#A) parameter and read the count (*b#W).
+    marker = payload.find(b"\x1b*b", marker + len(b"\x1b*b"))
+    end = payload.index(b"W", marker)
+    count = int(payload[marker + len(b"\x1b*b") : end])
+    assert count % 8 == 0
+    data = payload[end + 1 : end + 1 + count]
+    # A 100-dot row is 13 packed bytes, padded to 16 with 0x80 fills.
+    assert data[13:] == b"\x80" * 3
+
+
+def test_3d_rows_scale_dots_by_power():
+    """3D mode writes x * power / 100 per dot, one byte per dot."""
+    spec = RasterSpec(
+        mode="power_modulated", line_interval_mm=1.0, step_power=0.5
+    )
+    part = Part(size_mm=(10.0, 10.0), pixels_per_mm=(10.0, 10.0))
+    part.image = np.full((100, 100), 128, dtype=np.uint8)
+    payload = bytes(_encode_part(part, spec).payload)
+    start = payload.index(b"\x1b*r1A")
+    data_start = payload.index(b"W", payload.index(b"\x1b*b", start)) + 1
+    dot = payload[data_start]
+    # 128-grey scaled by the 50 % step power.
+    assert 0 < dot < 128
+
+
+def test_air_assist_request_is_rejected():
+    """The protocol cannot switch air assist, so asking for it fails
+    loudly instead of being dropped."""
+    clear_cache()
+    src = NodeRequest(
+        key="src",
+        generation_id=1,
+        stage=StageSpec.Compute(
+            part=_square_part(),
+            params=ComputePayload(
+                assembler=Assembler(ContourSpec()),
+                power=0.5,
+                cut_speed=600,
+                air_assist=AirAssistMode.ON,
+            ),
+        ),
+    )
+    enc = NodeRequest(
+        key="enc",
+        generation_id=1,
+        stage=EncodeSpec(
+            source_key="src", encoder=Encoder(EpilogSpec(_ctx()))
+        ),
+    )
+    node = _collect([src, enc])["enc"]
+    assert node.error is not None
+    assert "air assist" in node.error
+
+
+def test_speed_above_reference_clamps_to_full_speed():
+    """The machine cannot exceed its reference; faster requests cap at
+    100 % instead of being scaled by a wrong factor."""
+    clear_cache()
+    src = NodeRequest(
+        key="src",
+        generation_id=1,
+        stage=StageSpec.Compute(
+            part=_square_part(),
+            params=ComputePayload(
+                assembler=Assembler(ContourSpec()), power=0.5,
+                cut_speed=12000,
+            ),
+        ),
+    )
+    enc = NodeRequest(
+        key="enc",
+        generation_id=1,
+        stage=EncodeSpec(
+            source_key="src", encoder=Encoder(EpilogSpec(_ctx()))
+        ),
+    )
+    node = _collect([src, enc])["enc"]
+    assert node.error is None, node.error
+    assert "ZS100;" in node.output.text
+
+
+def test_header_lines_belong_to_no_op():
+    """Job header and footer lines are not attributed to op 0."""
+    out = _encode_part(_square_part(), ContourSpec())
+    line_ops = np.frombuffer(out.machine_code_to_op, dtype=np.int32)
+    assert line_ops[0] == -1
+    assert line_ops[-1] == -1

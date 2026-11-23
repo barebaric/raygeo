@@ -1,14 +1,22 @@
 //! Encode machine-space Ops as an Epilog laser print job.
 //!
 //! Epilog laser cutters (Zing 16 / Zing 24-6030) do not speak G-code.
-//! They accept a print job: a PJL envelope wrapping a PCL raster part
-//! and an HPGL vector part, submitted to the machine's print queue.
+//! They accept a print job: a PCL5 body (PJL-style envelope, raster
+//! part, HPGL vector part) submitted to the machine's print queue.
 //! This encoder produces both the human-readable representation that
 //! Rayforge shows and exports, and the exact byte stream the driver
 //! uploads.
 //!
-//! The wire format follows LibLaserCut's `EpilogCutter`, the
-//! reverse-engineered reference for these machines:
+//! The wire format follows LibLaserCut's `EpilogCutter`, the only
+//! known-working reverse-engineered reference for these machines;
+//! Epilog does not document it.  In particular the `@PJL` text is
+//! what that reference emits, not a documented Epilog framing:
+//!
+//! Deliberately not emitted, because the reference never does and no
+//! documentation covers them for these models: autofocus (the header
+//! selects manual focus with `&y0A`), and vector software focus (`WF`
+//! other than the `WF0` reset).  A step that requests air assist is
+//! rejected rather than silently ignored.
 //!
 //! ```text
 //! \e%-12345X@PJL JOB NAME=<title>
@@ -23,9 +31,11 @@
 //! ```
 //!
 //! Raster engraving uses 1-bit rows for dithered or thresholded
-//! rasters (`*b2M` PackBits rows), and 8-bit rows carrying per-dot
-//! power for power-modulated rasters (the driver's "3D mode"),
-//! matching how the step's depth mode presents the image.
+//! rasters (`*b2M`, one bit per dot, most significant bit first), and
+//! one byte of per-dot power per dot for power-modulated rasters (the
+//! driver's "3D mode", `*b7MLT`), matching how the step's depth mode
+//! presents the image.  Rows are padded to a multiple of eight bytes
+//! with `0x80`, as the reference driver does.
 
 use std::fmt::Write as _;
 
@@ -61,7 +71,7 @@ const PJL_START: &[u8] = b"\x1b%-12345X@PJL JOB NAME=";
 const PJL_ENTER_PCL: &[u8] = b"\x1bE@PJL ENTER LANGUAGE=PCL\r\n";
 const PJL_FOOTER: &[u8] = b"\x1bE\x1b%-12345X@PJL EOJ \r\n";
 
-/// Power percent from which a move burns (`PD` instead of `PU`).
+/// Power percent below which a cutting move would not fire the beam.
 const MIN_BURN_PERCENT: u32 = 1;
 
 /// JSON-serialised job configuration.
@@ -81,8 +91,14 @@ pub struct EpilogContext {
     pub frequency: i32,
     /// Machine bed `(width, height)` in millimetres.
     pub bed_mm: (f64, f64),
-    /// Speed that corresponds to 100 % on the machine, in mm/min.
-    pub max_cut_speed: f64,
+    /// Cutting speed that the machine reaches at 100 %, in mm/min.
+    ///
+    /// Calibration value: the machine's speed control is a percentage
+    /// of its own reference, which is a property of the model (the
+    /// reference driver calibrates a Helix at 21.3 mm/s).  It is not
+    /// the machine's maximum travel speed and not derived from it, or
+    /// every job would be scaled by the wrong factor.
+    pub speed_reference_mm_min: f64,
     /// Whether the machine uses a top-left origin (Y down).
     ///
     /// The job language only addresses a top-left page, so the
@@ -175,6 +191,8 @@ struct JobEncoder<'a> {
     settings: MachineSettings,
     /// Position in device dots, once a move has been emitted.
     position_dots: Option<(i64, i64)>,
+    /// Machine-space end of the last moving op, the start of the next.
+    last_end: Point3D,
     /// Laser power (0..=1) of the op being encoded.
     state_power: f64,
     /// Feed rate (mm/min) of the op being encoded, if any.
@@ -189,8 +207,9 @@ struct JobEncoder<'a> {
     raster_mode: Option<RasterMode>,
     /// Rows collected in the current raster section.
     rows: Vec<RasterRow>,
-    /// Op index currently being encoded.
-    current_op: usize,
+    /// Op index currently being encoded; `None` outside the op loop
+    /// (job header and footer).
+    current_op: Option<usize>,
     /// Display-line cursor for the current op.
     op_line_start: u32,
 }
@@ -224,10 +243,9 @@ impl<'a> JobEncoder<'a> {
         if !bed_valid {
             return Err("Epilog bed dimensions must be positive".to_string());
         }
-        let speed_valid =
-            ctx.max_cut_speed.is_finite() && ctx.max_cut_speed > 0.0;
-        if !speed_valid {
-            return Err("Epilog maximum cut speed must be positive".to_string());
+        let reference = ctx.speed_reference_mm_min;
+        if !reference.is_finite() || reference <= 0.0 {
+            return Err("Epilog speed reference must be positive".to_string());
         }
         if ctx.rotary {
             return Err("Epilog supports flat XY jobs only".to_string());
@@ -241,6 +259,7 @@ impl<'a> JobEncoder<'a> {
             line_ops: Vec::new(),
             settings: MachineSettings::new(ctx.frequency),
             position_dots: None,
+            last_end: Point3D::ZERO,
             state_power: 0.0,
             feed_rate: None,
             air_assist_requested: false,
@@ -248,7 +267,7 @@ impl<'a> JobEncoder<'a> {
             has_raster: false,
             raster_mode: None,
             rows: Vec::new(),
-            current_op: 0,
+            current_op: None,
             op_line_start: 0,
         })
     }
@@ -268,12 +287,20 @@ impl<'a> JobEncoder<'a> {
         self.push_line(&line);
     }
 
+    /// Append a listing line owned by the op being encoded.
+    ///
+    /// Lines emitted outside any op (job header and footer) belong to
+    /// no op, so they map to the sentinel and highlighting skips them.
     fn push_line(&mut self, readable: &str) {
+        self.push_line_for(readable, self.current_op);
+    }
+
+    fn push_line_for(&mut self, readable: &str, op: Option<usize>) {
         if self.line_count > 0 {
             self.listing.push('\n');
         }
         self.listing.push_str(readable);
-        self.line_ops.push(self.current_op);
+        self.line_ops.push(op.unwrap_or(MACHINE_CODE_TO_OP_NONE));
         self.line_count += 1;
     }
 
@@ -306,11 +333,15 @@ impl<'a> JobEncoder<'a> {
             if i % 1000 == 0 && callbacks.is_cancelled() {
                 return Err("cancelled".to_string());
             }
-            self.current_op = i;
+            self.current_op = Some(i);
+            if let OpCategory::Moving { end, .. } = &ops.commands[i].category {
+                self.last_end = *end;
+            }
             self.op_line_start = self.line_count;
             self.handle(ops, i)?;
             self.finish_op_span();
         }
+        self.current_op = None;
         self.finish()
     }
 
@@ -333,14 +364,10 @@ impl<'a> JobEncoder<'a> {
         self.emit(PJL_ENTER_PCL);
 
         let dpi = self.ctx.resolution;
-        let (width_dots, height_dots) = self.bed_dots();
+        // Media handling only; each raster part sets its own
+        // resolution, power, speed, size and start (see begin_raster).
         self.emit(b"\x1b&y0A\x1b&y0C\x1b&y0Z\x1b&l0U\x1b&l0Z");
         self.emit(format!("\x1b&u{dpi}D\x1b*p0X\x1b*p0Y").as_bytes());
-        let setup = format!(
-            "\x1b*t{dpi}R\x1b*r0F\x1b&y0P\x1b&z1S\x1b&y0A\
-             \x1b*r{height_dots}T\x1b*r{width_dots}S\x1b&y0O\x1b*r1A"
-        );
-        self.emit(setup.as_bytes());
     }
 
     // ----------------------------------------------------------------
@@ -374,7 +401,7 @@ impl<'a> JobEncoder<'a> {
             CommandType::OpsSectionStart => {
                 self.raster_mode = section_raster_mode(ops, idx);
                 if self.raster_mode.is_some() {
-                    self.begin_raster();
+                    self.begin_raster()?;
                 }
                 Ok(())
             }
@@ -398,7 +425,7 @@ impl<'a> JobEncoder<'a> {
             CommandType::ArcTo
             | CommandType::BezierTo
             | CommandType::QuadraticBezierTo => {
-                let start = previous_end(ops, idx);
+                let start = self.last_end;
                 let linear = ops.linearize(idx, start);
                 for sub in 0..linear.len() {
                     let sub_kind = linear.command_type(sub);
@@ -467,7 +494,17 @@ impl<'a> JobEncoder<'a> {
             ));
         }
 
-        let burning = cut && power >= MIN_BURN_PERCENT;
+        // A cutting move at effectively zero power would travel as a
+        // pen-up move, silently dropping the line the user asked to
+        // cut; refuse it instead, consistent with rejecting a job that
+        // has no powered paths at all.
+        if cut && power < MIN_BURN_PERCENT {
+            return Err(format!(
+                "Epilog cannot cut at {power} % power; the machine's \
+                 smallest step is 1 %"
+            ));
+        }
+        let burning = cut;
         if burning {
             self.has_cut = true;
         }
@@ -503,23 +540,20 @@ impl<'a> JobEncoder<'a> {
         Ok(())
     }
 
+    /// Speed as the machine's percentage of its calibrated reference.
+    ///
+    /// Faster requests are clamped to 100 %: the machine cannot run a
+    /// vector job faster than its reference, and silently exceeding it
+    /// is worse than capping.  Ops without a feed rate use the
+    /// reference itself.
     fn speed_percent(&self) -> Result<u32, String> {
-        // Ops without an explicit feed run at the machine's reference
-        // speed (100 %); everything else maps to 1..=100 % of it.
-        let reference = self.ctx.max_cut_speed;
+        let reference = self.ctx.speed_reference_mm_min;
         let rate = self.feed_rate.map(f64::from).unwrap_or(reference);
-        if !rate.is_finite() || rate <= 0.0 || rate > reference {
-            return Err(
-                "Epilog cut speed must be within machine limits".to_string()
-            );
+        if !rate.is_finite() || rate <= 0.0 {
+            return Err("Epilog cut speed must be positive".to_string());
         }
         let percent = (rate * 100.0 / reference + 0.5) as u32;
-        if !(1..=100).contains(&percent) {
-            return Err(
-                "Epilog minimum speed is 1% of maximum speed".to_string()
-            );
-        }
-        Ok(percent)
+        Ok(percent.clamp(1, 100))
     }
 
     // ----------------------------------------------------------------
@@ -546,9 +580,9 @@ impl<'a> JobEncoder<'a> {
             } => (power_values, *end),
             _ => return Err("expected a scan line".to_string()),
         };
-        let start = previous_end(ops, idx);
+        let start = self.last_end;
         let dpm = self.dots_per_mm();
-        let y_from = (start.y * dpm).round() as f64;
+        let y_from = (start.y * dpm).round();
         let y_to = (end.y * dpm).round();
         if (y_from - y_to).abs() > 1.0 {
             return Err("Epilog raster rows must be horizontal (scan angle 0)"
@@ -611,30 +645,44 @@ impl<'a> JobEncoder<'a> {
         })
     }
 
-    /// Emit the PCL raster mode header for the current section.
-    fn begin_raster(&mut self) {
-        let power = self.current_power_percent();
-        let speed = self.speed_percent();
-        if let (Ok(power), Ok(speed)) = (power, speed) {
-            self.emit(format!("\x1b&y{power}P\x1b&z{speed}S").as_bytes());
-        }
-        let eight_bit = matches!(
+    /// Open the PCL raster part for the current section.
+    ///
+    /// Follows the reference driver's order: resolution, compression,
+    /// power, speed, canvas size, direction, then start.  The 3D mode
+    /// uses the `*b<7>MLT` compression selector, which the machine
+    /// reads as one byte per dot.
+    fn begin_raster(&mut self) -> Result<(), String> {
+        let power = self.current_power_percent()?;
+        let speed = self.speed_percent()?;
+        let dpi = self.ctx.resolution;
+        let (width_dots, height_dots) = self.bed_dots();
+        // 2 is uncompressed: the 1-bit path writes plain packed bits.
+        let compression = if self.raster_eight_bit() {
+            "\x1b*b7MLT"
+        } else {
+            "\x1b*b2M"
+        };
+        let setup = format!(
+            "\x1b*t{dpi}R\x1b*r0F\x1b&y{power}P\x1b&z{speed}S\
+             {compression}\x1b*r{height_dots}T\x1b*r{width_dots}S\
+             \x1b&y0O\x1b*r1A"
+        );
+        self.emit(setup.as_bytes());
+        Ok(())
+    }
+
+    /// Whether the current raster section uses the 3D (per-dot power)
+    /// mode rather than 1-bit dithering.
+    fn raster_eight_bit(&self) -> bool {
+        matches!(
             self.raster_mode,
             Some(RasterMode::VariablePower | RasterMode::DepthMap)
-        );
-        if eight_bit {
-            self.emit(b"\x1b*b1M\x1b*b7W");
-        } else {
-            self.emit(b"\x1b*b2M");
-        }
+        )
     }
 
     /// Write the collected rows and leave the raster part.
     fn flush_raster(&mut self) -> Result<(), String> {
-        let eight_bit = matches!(
-            self.raster_mode,
-            Some(RasterMode::VariablePower | RasterMode::DepthMap)
-        );
+        let eight_bit = self.raster_eight_bit();
         let mut rows = std::mem::take(&mut self.rows);
         rows.sort_by_key(|r| r.row);
         for row in rows {
@@ -652,27 +700,29 @@ impl<'a> JobEncoder<'a> {
         Ok(())
     }
 
+    /// Write one raster row.
+    ///
+    /// `*b#W` carries the row length rounded up to a multiple of 8
+    /// (the reference driver's `pcks * 8`), and the row is padded to
+    /// that length with `0x80` fill bytes.
     fn write_raster_row(&mut self, row: &RasterRow, eight_bit: bool) {
-        let row_count = if eight_bit {
-            row.dots.len()
+        let dots = if eight_bit {
+            let power = self.current_power_percent().unwrap_or(0);
+            scale_3d(&row.dots, power)
         } else {
-            row.dots.len().div_ceil(8)
+            pack_1bit(&row.dots)
         };
-        // Raster rows are written top-to-bottom in screen order; the
-        // machine's y=0 is the top edge for a top-left origin.
+        let len = dots.len();
+        let padded = len.div_ceil(8) * 8;
         self.emit(
             format!(
-                "\x1b*p{}X\x1b*p{}Y\x1b*b{row_count}A\x1b*b{}W",
-                row.start_dot, row.row, row_count
+                "\x1b*p{}X\x1b*p{}Y\x1b*b{padded}A\x1b*b{padded}W",
+                row.start_dot, row.row
             )
             .as_bytes(),
         );
-        let bytes = if eight_bit {
-            encode_asebd(&row.dots)
-        } else {
-            encode_packbits(&pack_1bit(&row.dots))
-        };
-        self.emit(&bytes);
+        self.emit(&dots);
+        self.emit(&vec![ROW_FILL_BYTE; padded - len]);
     }
 
     fn current_power_percent(&self) -> Result<u32, String> {
@@ -687,12 +737,18 @@ impl<'a> JobEncoder<'a> {
         if !self.has_raster && !self.has_cut {
             return Err("the Epilog job has no powered paths".to_string());
         }
+        // The job language offers no documented air-assist command, so
+        // a step that asks for it cannot be honoured.  Dropping it
+        // silently would leave the user believing the setting applied.
+        if self.air_assist_requested {
+            return Err(
+                "Epilog jobs cannot switch air assist; enable it at the \
+                 machine and clear the step's Air Assist setting"
+                    .to_string(),
+            );
+        }
         self.emit(b"PU;YP000;WF0;");
         self.emit(PJL_FOOTER);
-        if self.air_assist_requested {
-            // The print protocol cannot switch air assist; it is set
-            // at the machine.  Nothing to emit.
-        }
         let padding = vec![0u8; TRAILING_PADDING_BYTES];
         self.payload.extend_from_slice(&padding);
         Ok(())
@@ -704,14 +760,6 @@ struct RasterRow {
     row: u32,
     start_dot: u32,
     dots: Vec<u8>,
-}
-
-/// The end point of the op preceding `idx`, or the origin.
-fn previous_end(ops: &Ops, idx: usize) -> Point3D {
-    (0..idx)
-        .rev()
-        .find_map(|i| ops.commands[i].as_moving().map(|(end, _)| *end))
-        .unwrap_or(Point3D::ZERO)
 }
 
 /// The raster mode of the raster section starting at `idx`, if any.
@@ -737,65 +785,19 @@ fn pack_1bit(dots: &[u8]) -> Vec<u8> {
     out
 }
 
-/// TIFF PackBits run-length compression.
-fn encode_packbits(data: &[u8]) -> Vec<u8> {
-    let mut out = Vec::with_capacity(data.len());
-    let mut i = 0;
-    while i < data.len() {
-        let run = 1 + data[i..]
-            .iter()
-            .skip(1)
-            .take_while(|&&b| b == data[i])
-            .count();
-        if run >= 2 {
-            let count = run.min(128) as u8;
-            out.push(0u8.wrapping_sub(count).wrapping_add(1));
-            out.push(data[i]);
-            i += count as usize;
-        } else {
-            let mut j = i;
-            while j < data.len() && j - i < 128 {
-                let next_run = 1 + data[j..]
-                    .iter()
-                    .skip(1)
-                    .take_while(|&&b| b == data[j])
-                    .count();
-                if next_run >= 2 {
-                    break;
-                }
-                j += 1;
-            }
-            let count = (j - i) as u8;
-            out.push(count - 1);
-            out.extend_from_slice(&data[i..j]);
-            i = j;
-        }
-    }
-    out
+/// Scale dots to the 3D-mode byte range.
+///
+/// 3D mode reads one byte per dot as an absolute power, so the value
+/// written is the dot's brightness scaled by the step power, exactly
+/// as the reference driver computes `x * power / 100`.
+fn scale_3d(dots: &[u8], power_percent: u32) -> Vec<u8> {
+    dots.iter()
+        .map(|&dot| ((u32::from(dot) * power_percent) / 100).min(127) as u8)
+        .collect()
 }
 
-/// Adaptive run-length encode the 8-bit ("3D mode") dot power bytes.
-///
-/// Mode 1 rows carry one byte per dot; runs are encoded as a count
-/// byte followed by the value, which is what the Zing accepts for
-/// per-dot power rows.
-fn encode_asebd(data: &[u8]) -> Vec<u8> {
-    let mut out = Vec::with_capacity(data.len());
-    let mut i = 0;
-    while i < data.len() {
-        let value = data[i];
-        let run = 1 + data[i..]
-            .iter()
-            .skip(1)
-            .take_while(|&&b| b == value)
-            .count();
-        let run = run.min(255);
-        out.push(run as u8);
-        out.push(value);
-        i += run;
-    }
-    out
-}
+/// Fill byte the reference appends to pad a row to a multiple of 8.
+const ROW_FILL_BYTE: u8 = 128;
 
 fn sanitize_title(title: &str) -> String {
     let mut out = String::with_capacity(title.len().min(64));
