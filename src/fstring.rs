@@ -116,11 +116,16 @@ pub fn render_named_into(out: &mut String, template: &str, vars: &NamedVars) {
     out.push_str(rest);
 }
 
-/// Apply a Python-style format spec (`.Nf`, `.Ns`, `.N`, `d`, etc.)
-/// to a value that was looked up as a string. Currently supports the
-/// most common specs used in G-code dialects: `.Nf` (float precision)
-/// and `.N` (general precision). The value is parsed as f64 first.
+/// Apply a Python-style format spec (`.Nf`, `.Ns`, `.N`, `d`, `04d`,
+/// etc.) to a value that was looked up as a string. Supports the most
+/// common specs used in G-code dialects: float precision (`.Nf`),
+/// general precision (`.N`), and integer formatting with optional
+/// width, zero padding, sign and alignment flags. The value is parsed
+/// as a number first; a non-numeric value is returned unchanged.
 pub fn apply_format_spec(value: &str, spec: &str) -> String {
+    if let Some(formatted) = apply_int_spec(value, spec) {
+        return formatted;
+    }
     let parsed: f64 = match value.parse() {
         Ok(v) => v,
         Err(_) => return value.to_string(),
@@ -144,9 +149,59 @@ pub fn apply_format_spec(value: &str, spec: &str) -> String {
     format!("{}", parsed)
 }
 
-/// Resolve path-style placeholders (`{machine.name}`,
+/// Apply an integer format spec (`d`, `04d`, `+4d`, `<4d`, ...) to a
+/// numeric string. Returns `None` when the spec is not an integer spec
+/// or the value is not an integer.
+fn apply_int_spec(value: &str, spec: &str) -> Option<String> {
+    let mut flags = String::new();
+    let mut width = String::new();
+    let mut kind = None;
+    for ch in spec.chars() {
+        if kind.is_some() {
+            return None;
+        }
+        match ch {
+            '+' | '-' | '0' | ' ' => {
+                if !width.is_empty() {
+                    return None;
+                }
+                flags.push(ch);
+            }
+            '0'..='9' => width.push(ch),
+            'd' | 'i' => kind = Some(ch),
+            _ => return None,
+        }
+    }
+    kind?;
+    let number: i64 = value.trim().parse().ok()?;
+    let width: usize = width.parse().unwrap_or(0);
+    let negative = number < 0;
+    let magnitude = number.unsigned_abs().to_string();
+    let sign = if negative {
+        "-"
+    } else if flags.contains('+') {
+        "+"
+    } else {
+        ""
+    };
+    let body = format!("{sign}{magnitude}");
+    let padding = width.saturating_sub(body.len());
+    if padding == 0 {
+        return Some(body);
+    }
+    if flags.contains('-') {
+        return Some(format!("{body}{}", " ".repeat(padding)));
+    }
+    if flags.contains('0') {
+        return Some(format!("{sign}{}{magnitude}", "0".repeat(padding)));
+    }
+    Some(format!("{}{body}", " ".repeat(padding)))
+}
+
+/// Resolve placeholders (`{counter}`, `{machine.name}`,
 /// `{job.extents[0]}`, etc.) using a flat dictionary provided by the
-/// caller. Placeholders are looked up by exact full-path match only.
+/// caller. Placeholders are looked up by exact name; an optional
+/// format spec after the first colon is applied to the value.
 /// Unresolved placeholders are left verbatim.
 pub fn resolve_path_vars(
     line: &str,
@@ -168,14 +223,15 @@ pub fn resolve_path_vars(
             return out;
         };
         let inner = &rest[1..1 + close_rel];
+        let (name, spec) = match inner.split_once(':') {
+            Some((n, s)) => (n, Some(s)),
+            None => (inner, None),
+        };
 
-        if inner.contains('.') || inner.contains('[') {
-            if let Some(value) = path_vars.get(inner) {
-                out.push_str(value);
-            } else {
-                out.push('{');
-                out.push_str(inner);
-                out.push('}');
+        if let Some(value) = path_vars.get(name) {
+            match spec {
+                Some(spec) => out.push_str(&apply_format_spec(value, spec)),
+                None => out.push_str(value),
             }
         } else {
             out.push('{');
