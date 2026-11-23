@@ -30,7 +30,9 @@ def test_resolves_host_function():
 
 def test_reuses_unchanged_placeholder():
     functions = {"uuid8": lambda: "abc12345"}
-    first, entry, _ = _resolve("ID {uuid8()} No. {counter}", {"counter": 1}, functions)
+    first, entry, _ = _resolve(
+        "ID {uuid8()} No. {counter}", {"counter": 1}, functions
+    )
     second, entry, _ = _resolve(
         "ID {uuid8()} No. {counter}", {"counter": 2}, functions, entry
     )
