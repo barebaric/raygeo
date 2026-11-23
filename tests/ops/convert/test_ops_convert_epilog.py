@@ -4,9 +4,8 @@ The encoder turns machine-space Ops into a PJL/PCL/HPGL job. It
 returns the exact device byte stream as ``payload`` and a printable
 ``text`` listing for the UI, with an op-to-line map over the listing.
 
-The wire layout follows LibLaserCut's ``EpilogCutter``: a PJL envelope,
-an optional PCL raster part, an HPGL vector part, and 4096 zero bytes
-of trailing padding.
+The wire layout is a PJL envelope, an optional PCL raster part, an
+HPGL vector part, and 4096 zero bytes of trailing padding.
 """
 
 import json

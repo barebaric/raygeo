@@ -1,4 +1,5 @@
 # ruff: noqa: F401
+from .formats_svg import page_svg
 from .geo import page_geometry
 from .geo_algo_analysis import page_analysis
 from .geo_algo_hull import page_concave_hull
@@ -22,4 +23,3 @@ from .ops_transform_merge_lines import page_merge_lines
 from .ops_transform_optimize import page_ops_optimize_travel
 from .ops_transform_overscan import page_overscan
 from .ops_transform_tabs import page_tabs
-from .svg import page_svg

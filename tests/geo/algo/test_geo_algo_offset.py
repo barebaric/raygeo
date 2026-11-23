@@ -380,7 +380,7 @@ def test_inset_join_style_round_corners():
 
 def test_grow_overlapping_solids_offset_separately():
     """
-    Regression test (rayforge issue #456): overlapping solids must be
+    Regression test (issue #456): overlapping solids must be
     offset as separate outlines. The old containment probe classified
     one figure as a hole of the other, so grow() subtracted it instead
     of growing both outlines.

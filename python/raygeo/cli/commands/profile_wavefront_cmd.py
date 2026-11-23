@@ -6,6 +6,7 @@ from raygeo.cli.scenarios import (
     build_scenario,
 )
 from raygeo.cnc.execution.specs import ComputePayload
+from raygeo.formats.svg import svg_string_to_geometries
 from raygeo.geo import Geometry
 from raygeo.ops.assembly import Assembler
 from raygeo.ops.assembly.wavefront import AdaptiveWavefrontSpec
@@ -13,7 +14,6 @@ from raygeo.ops.part import Part
 from raygeo.pipeline.execute import clear_cache, execute_stages
 from raygeo.pipeline.request import NodeRequest
 from raygeo.pipeline.stage import StageSpec
-from raygeo.svg import svg_string_to_geometries
 
 
 def _add_scenario_args(p):

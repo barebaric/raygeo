@@ -3,8 +3,8 @@ import numpy as np
 import streamlit as st
 from matplotlib.colors import to_hex
 
+from raygeo.formats.svg import svg_string_to_geometries
 from raygeo.geo.algo import hull
-from raygeo.svg import svg_string_to_geometries
 from tools.plot import (
     auto_limits,
     fill_rounded_rect,

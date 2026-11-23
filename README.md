@@ -263,8 +263,8 @@ Full API reference documentation is generated from the source type stubs.
 Run `make docs` to build it locally — this produces Markdown pages in
 `docs/api/` with inline visual examples.
 
-The docs are also published online with the
-[RayForge Developer Docs](https://rayforge.org/docs/developer/raygeo-api/raygeo).
+The docs are also published online as part of the
+[developer documentation](https://rayforge.org/docs/developer/raygeo-api/raygeo).
 
 ## Development
 

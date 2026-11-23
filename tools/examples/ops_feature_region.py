@@ -6,9 +6,9 @@ multi-face ``Part`` via ``Part.from_geometry_multi_face``, and
 marks every region that ``find_regions`` detects on each face.
 
 The SVG is loaded from the test assets at
-``tests/svg/barebaric-text-as-path-joined.svg`` (the path is taken from
-the ``RAYGEO_SVG`` environment variable when set).  When the file is not
-found the generator returns ``None`` so the docs build stays green; a
+``tests/formats/svg/assets/barebaric-text-as-path-joined.svg`` (the path is
+taken from the ``RAYGEO_SVG`` environment variable when set).  When the file is
+not found the generator returns ``None`` so the docs build stays green; a
 synthetic H-shape pocket is provided as a second, self-contained image.
 """
 
@@ -20,11 +20,11 @@ from matplotlib.lines import Line2D
 from matplotlib.patches import Circle as CirclePatch
 from matplotlib.patches import Polygon as PolygonPatch
 
+from raygeo.formats.svg import svg_string_to_geometries
 from raygeo.geo import Geometry, Matrix
 from raygeo.ops.feature import region as _region
 from raygeo.ops.feature.narrow import analyze_pocket
 from raygeo.ops.part import Part
-from raygeo.svg import svg_string_to_geometries
 
 find_regions = _region.find_regions
 
@@ -43,7 +43,14 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 
 
 def _default_svg_path():
-    return _REPO_ROOT / "tests" / "svg" / "barebaric-text-as-path-joined.svg"
+    return (
+        _REPO_ROOT
+        / "tests"
+        / "formats"
+        / "svg"
+        / "assets"
+        / "barebaric-text-as-path-joined.svg"
+    )
 
 
 def _svg_path():

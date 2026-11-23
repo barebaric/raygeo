@@ -228,7 +228,7 @@ class TestOvercutImport:
 
 
 class TestOvercutArcFitting:
-    """Regression tests for rayforge#357.
+    """Regression tests for issue #357.
 
     Applying an overcut to a closed contour extends it past its start
     point, producing a path that wraps a full revolution around the
@@ -295,7 +295,7 @@ class TestOvercutArcFitting:
         )
 
     def test_overcut_doughnut_inner_contour_survives(self):
-        """Both contours of a doughnut must survive arc fitting (rayforge#357).
+        """Both contours of a doughnut must survive arc fitting (issue #357).
 
         The inner (hole) contour collapses to a tiny arc when an overcut is
         applied; the outer contour used to survive while the inner one

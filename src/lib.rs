@@ -95,10 +95,9 @@ pub mod barcode;
 pub mod cnc;
 pub mod compressed_array;
 pub mod constants;
-pub mod dxf;
 pub mod error;
+pub mod formats;
 pub mod fstring;
-pub mod gcode;
 pub mod geo;
 pub mod image;
 pub mod log;
@@ -107,7 +106,6 @@ pub mod ops;
 pub mod pipeline;
 pub mod prof;
 pub mod sketch;
-pub mod svg;
 pub mod template;
 // The tracing machinery is only driven from the Python bindings; the
 // pure Rust core compiles it but has no caller.
@@ -208,6 +206,7 @@ pub(crate) const MODULE_DOC: &str = concat!(
     "----------\n",
     "- raygeo.geo — Geometry and path/shape/algo operations\n",
     "- raygeo.ops — Command sequence (Ops) manipulation and motion assembly\n",
+    "- raygeo.formats — File-format import and export (SVG, G-code, DXF)\n",
     "- raygeo.cnc — CNC orchestration (Plans, Intents, pipeline glue)\n",
     "- raygeo.pipeline — Generic runtime intent-tree executor\n",
     "- raygeo.template — Job counter and template placeholder scanning\n",
@@ -242,16 +241,14 @@ pub(crate) const MODULE_DOC: &str = concat!(
 fn raygeo(m: &Bound<'_, PyModule>) -> PyResult<()> {
     python::barcode::register(m)?;
     python::compressed_array::register(m)?;
-    python::dxf::register(m)?;
     python::cnc::register(m)?;
     python::fstring::register(m)?;
-    python::gcode::register(m)?;
+    python::formats::register(m)?;
     python::geo::register(m)?;
     python::image::register(m)?;
     python::mesh::register(m)?;
     python::ops::register(m)?;
     python::sketch::register(m)?;
-    python::svg::register(m)?;
     python::template::register(m)?;
     python::trace::register(m)?;
     python::pipeline::register(m)?;

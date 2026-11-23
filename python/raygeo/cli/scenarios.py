@@ -167,7 +167,7 @@ def scenario_from_svg(
     For SVG with multiple contours, the **first** outer contour is used
     as the pocket boundary; its holes become islands.
     """
-    import raygeo.svg as _svg
+    import raygeo.formats.svg as _svg
 
     p = pathlib.Path(svg_source)
     if p.exists():

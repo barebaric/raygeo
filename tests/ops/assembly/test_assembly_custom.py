@@ -2,7 +2,7 @@
 
 The spec emits one ``Ops.custom`` command per input line, in order,
 with no coordinate interpretation. These tests exercise it through
-the pipeline compute stage (the way Rayforge drives it) and check
+the pipeline compute stage (the way callers drive it) and check
 the emitted ops.
 """
 

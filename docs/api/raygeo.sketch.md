@@ -12,6 +12,234 @@ PointDef entries and constraint objects (see the raygeo.sketch.constraints submo
 solved positions, per-point constrained (fully-determined) flags, and per-constraint conflict
 indices.
 
+## ArrayList
+
+A list-like collection of sketch arrays backed by the core store.
+
+### `append()`
+
+```python
+append(value: arrays.Array) -> None
+```
+
+| Parameter | Type           | Description |
+| --------- | -------------- | ----------- |
+| `value`   | `arrays.Array` |             |
+| _Returns_ | `None`         |             |
+
+### `clear()`
+
+```python
+clear() -> None
+```
+
+| Parameter | Type   | Description |
+| --------- | ------ | ----------- |
+| _Returns_ | `None` |             |
+
+### `copy()`
+
+```python
+copy() -> ArrayList
+```
+
+| Parameter | Type        | Description |
+| --------- | ----------- | ----------- |
+| _Returns_ | `ArrayList` |             |
+
+### `count()`
+
+```python
+count(value: Any) -> int
+```
+
+| Parameter | Type  | Description |
+| --------- | ----- | ----------- |
+| `value`   | `Any` |             |
+| _Returns_ | `int` |             |
+
+### `extend()`
+
+```python
+extend(values: Any) -> None
+```
+
+| Parameter | Type   | Description |
+| --------- | ------ | ----------- |
+| `values`  | `Any`  |             |
+| _Returns_ | `None` |             |
+
+### `index()`
+
+```python
+index(value: Any, start: int = 0, stop: Optional[int] = None) -> int
+```
+
+| Parameter | Type                   | Description |
+| --------- | ---------------------- | ----------- |
+| `value`   | `Any`                  |             |
+| `start`   | `int = 0`              |             |
+| `stop`    | `Optional[int] = None` |             |
+| _Returns_ | `int`                  |             |
+
+### `insert()`
+
+```python
+insert(index: int, value: arrays.Array) -> None
+```
+
+| Parameter | Type           | Description |
+| --------- | -------------- | ----------- |
+| `index`   | `int`          |             |
+| `value`   | `arrays.Array` |             |
+| _Returns_ | `None`         |             |
+
+### `pop()`
+
+```python
+pop(index: int = -1) -> arrays.Array
+```
+
+| Parameter | Type           | Description |
+| --------- | -------------- | ----------- |
+| `index`   | `int = -1`     |             |
+| _Returns_ | `arrays.Array` |             |
+
+### `remove()`
+
+```python
+remove(value: Any) -> None
+```
+
+| Parameter | Type   | Description |
+| --------- | ------ | ----------- |
+| `value`   | `Any`  |             |
+| _Returns_ | `None` |             |
+
+### `reverse()`
+
+```python
+reverse() -> None
+```
+
+| Parameter | Type   | Description |
+| --------- | ------ | ----------- |
+| _Returns_ | `None` |             |
+
+## ConstraintList
+
+A list-like collection of sketch constraints backed by the core store.
+
+### `append()`
+
+```python
+append(value: constraints.Constraint) -> None
+```
+
+| Parameter | Type                     | Description |
+| --------- | ------------------------ | ----------- |
+| `value`   | `constraints.Constraint` |             |
+| _Returns_ | `None`                   |             |
+
+### `clear()`
+
+```python
+clear() -> None
+```
+
+| Parameter | Type   | Description |
+| --------- | ------ | ----------- |
+| _Returns_ | `None` |             |
+
+### `copy()`
+
+```python
+copy() -> ConstraintList
+```
+
+| Parameter | Type             | Description |
+| --------- | ---------------- | ----------- |
+| _Returns_ | `ConstraintList` |             |
+
+### `count()`
+
+```python
+count(value: Any) -> int
+```
+
+| Parameter | Type  | Description |
+| --------- | ----- | ----------- |
+| `value`   | `Any` |             |
+| _Returns_ | `int` |             |
+
+### `extend()`
+
+```python
+extend(values: Any) -> None
+```
+
+| Parameter | Type   | Description |
+| --------- | ------ | ----------- |
+| `values`  | `Any`  |             |
+| _Returns_ | `None` |             |
+
+### `index()`
+
+```python
+index(value: Any, start: int = 0, stop: Optional[int] = None) -> int
+```
+
+| Parameter | Type                   | Description |
+| --------- | ---------------------- | ----------- |
+| `value`   | `Any`                  |             |
+| `start`   | `int = 0`              |             |
+| `stop`    | `Optional[int] = None` |             |
+| _Returns_ | `int`                  |             |
+
+### `insert()`
+
+```python
+insert(index: int, value: constraints.Constraint) -> None
+```
+
+| Parameter | Type                     | Description |
+| --------- | ------------------------ | ----------- |
+| `index`   | `int`                    |             |
+| `value`   | `constraints.Constraint` |             |
+| _Returns_ | `None`                   |             |
+
+### `pop()`
+
+```python
+pop(index: int = -1) -> constraints.Constraint
+```
+
+| Parameter | Type                     | Description |
+| --------- | ------------------------ | ----------- |
+| `index`   | `int = -1`               |             |
+| _Returns_ | `constraints.Constraint` |             |
+
+### `remove()`
+
+```python
+remove(value: Any) -> None
+```
+
+| Parameter | Type   | Description |
+| --------- | ------ | ----------- |
+| `value`   | `Any`  |             |
+| _Returns_ | `None` |             |
+
+### `reverse()`
+
+```python
+reverse() -> None
+```
+
+| Parameter | Type   | Description |
+| --------- | ------ | ----------- |
+| _Returns_ | `None` |             |
+
 ## PointDef
 
 Definition of one sketch point.
@@ -55,13 +283,13 @@ A complete host-agnostic sketch document.
 ### `arrays`
 
 ```python
-arrays: list
+arrays: ArrayList
 ```
 
 ### `constraints`
 
 ```python
-constraints: list
+constraints: ConstraintList
 ```
 
 ### `fills`
