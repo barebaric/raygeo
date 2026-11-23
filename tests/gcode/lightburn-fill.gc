@@ -1,0 +1,16 @@
+(LightBurn Fill mode, GRBL profile: travel and overscan are G1 moves at S0)
+G21
+G90
+M8
+M4
+G0 X0 Y0
+G91
+G1 X10 Y0 S200 F3000
+G1 Y0.2 S0
+G1 X-10 Y0 S200
+G1 Y0.2 S0
+G1 X10 Y0 S200
+G90
+G0 X0 Y0
+M5
+M9

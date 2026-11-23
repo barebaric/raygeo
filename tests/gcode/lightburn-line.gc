@@ -1,0 +1,13 @@
+(LightBurn Line mode, GRBL profile, typical shape)
+G21
+G90
+M8
+M4
+G0X0Y0
+G1X10Y0S200F600
+G1Y10
+G1X0
+G1Y0
+M5
+M9
+G0X0Y0

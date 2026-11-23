@@ -84,6 +84,7 @@ from . import barcode
 from . import cnc
 from . import compressed_array
 from . import fstring
+from . import gcode
 from . import geo
 from . import image
 from . import mesh
@@ -98,6 +99,7 @@ __all__ = [
     "cnc",
     "compressed_array",
     "fstring",
+    "gcode",
     "geo",
     "image",
     "mesh",
