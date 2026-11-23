@@ -89,6 +89,7 @@ from . import ops
 from . import pipeline
 from . import sketch
 from . import svg
+from . import template
 from . import trace
 __all__ = [
     "cnc",
@@ -101,6 +102,7 @@ __all__ = [
     "pipeline",
     "sketch",
     "svg",
+    "template",
     "trace",
 ]
 

@@ -105,6 +105,7 @@ pub mod pipeline;
 pub mod prof;
 pub mod sketch;
 pub mod svg;
+pub mod template;
 // The tracing machinery is only driven from the Python bindings; the
 // pure Rust core compiles it but has no caller.
 #[cfg_attr(not(feature = "python"), allow(dead_code))]
@@ -206,6 +207,7 @@ pub(crate) const MODULE_DOC: &str = concat!(
     "- raygeo.ops — Command sequence (Ops) manipulation and motion assembly\n",
     "- raygeo.cnc — CNC orchestration (Plans, Intents, pipeline glue)\n",
     "- raygeo.pipeline — Generic runtime intent-tree executor\n",
+    "- raygeo.template — Job counter and template placeholder scanning\n",
     "\n",
     "Examples\n",
     "--------\n",
@@ -244,6 +246,7 @@ fn raygeo(m: &Bound<'_, PyModule>) -> PyResult<()> {
     python::ops::register(m)?;
     python::sketch::register(m)?;
     python::svg::register(m)?;
+    python::template::register(m)?;
     python::trace::register(m)?;
     python::pipeline::register(m)?;
 

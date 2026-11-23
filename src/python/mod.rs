@@ -9,4 +9,5 @@ pub(crate) mod ops;
 pub(crate) mod pipeline;
 pub(crate) mod sketch;
 pub(crate) mod svg;
+pub(crate) mod template;
 pub(crate) mod trace;
