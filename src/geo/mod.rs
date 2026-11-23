@@ -10,5 +10,6 @@ pub mod math;
 pub mod matrix;
 pub use matrix::Matrix;
 pub mod query;
+pub mod read_output;
 pub mod shape;
 pub mod types;

@@ -83,6 +83,7 @@ Examples
 from . import barcode
 from . import cnc
 from . import compressed_array
+from . import dxf
 from . import fstring
 from . import gcode
 from . import geo
@@ -98,6 +99,7 @@ __all__ = [
     "barcode",
     "cnc",
     "compressed_array",
+    "dxf",
     "fstring",
     "gcode",
     "geo",

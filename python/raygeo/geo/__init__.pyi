@@ -32,6 +32,7 @@ __all__ = [
     "Line",
     "Matrix",
     "Move",
+    "RepairReport",
     "algo",
     "shape",
     "types",
@@ -459,6 +460,27 @@ class Geometry:
         :returns: Tuple of the new geometry and the number of closed
             contours.
         :complexity: O(n) time, O(n) space
+        """
+    def repair_outlines(self, tolerance: builtins.float) -> tuple[Geometry, RepairReport]:
+        r"""
+        Repair outlines that were meant to form closed contours but
+        arrived as loose segments.
+        
+        Joins open contours whose end points meet within the tolerance,
+        bridges any remaining gap between a contour's own start and end,
+        then drops contours that duplicate an earlier one. Existing
+        points are never moved: every join is bridged with a straight
+        segment, so the drawn shape grows by at most ``tolerance`` at
+        each joining point.
+        
+        This is what makes fragmented CAD exports usable: a drawing whose
+        outline was exported as dozens of separate lines and arcs becomes
+        a set of closed contours that can be offset and split.
+        
+        :param tolerance: The largest gap that is joined or closed.
+        :returns: Tuple of the new geometry and a `RepairReport` counting
+            the joins, closings and removals that were made.
+        :complexity: O(n log n) average time, O(n) space
         """
     def contour_info(self, index: builtins.int) -> tuple[builtins.int, builtins.int, builtins.bool]:
         r"""
@@ -1093,4 +1115,35 @@ class Move:
         r"""
         Endpoint of the move in 3D space.
         """
+
+@typing.final
+class RepairReport:
+    r"""
+    What :meth:`Geometry.repair_outlines` changed.
+    """
+    @property
+    def joins(self) -> builtins.int:
+        r"""
+        Contours that were merged into a neighbouring contour.
+        """
+    @property
+    def closed(self) -> builtins.int:
+        r"""
+        Contours whose ends were bridged to form a closed loop.
+        """
+    @property
+    def duplicates_removed(self) -> builtins.int:
+        r"""
+        Contours dropped as duplicates of an earlier contour.
+        """
+    @property
+    def open_remaining(self) -> builtins.int:
+        r"""
+        Outlines that are still open after the repair.
+        """
+    def is_unchanged(self) -> builtins.bool:
+        r"""
+        True when the repair left the geometry exactly as it found it.
+        """
+    def __repr__(self) -> builtins.str: ...
 

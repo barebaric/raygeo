@@ -3,7 +3,6 @@
 //! Provides parsers for path data and transforms, shape conversion,
 //! color resolution, and layer/color-aware geometry extraction.
 
-pub mod arc;
 pub mod color;
 pub mod length;
 pub mod metadata;

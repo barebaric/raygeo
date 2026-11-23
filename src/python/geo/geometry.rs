@@ -193,6 +193,56 @@ impl<'a, 'py> FromPyObject<'a, 'py> for FlexPoint {
     }
 }
 
+/// What :meth:`Geometry.repair_outlines` changed.
+#[gen_stub_pyclass(module = "raygeo.geo")]
+#[pyclass(name = "RepairReport", skip_from_py_object, module = "raygeo.geo")]
+#[derive(Clone)]
+pub struct PyRepairReport {
+    /// Contours that were merged into a neighbouring contour.
+    #[pyo3(get)]
+    pub joins: usize,
+    /// Contours whose ends were bridged to form a closed loop.
+    #[pyo3(get)]
+    pub closed: usize,
+    /// Contours dropped as duplicates of an earlier contour.
+    #[pyo3(get)]
+    pub duplicates_removed: usize,
+    /// Outlines that are still open after the repair.
+    #[pyo3(get)]
+    pub open_remaining: usize,
+}
+
+impl From<crate::geo::algo::cleanup::RepairReport> for PyRepairReport {
+    fn from(report: crate::geo::algo::cleanup::RepairReport) -> Self {
+        PyRepairReport {
+            joins: report.joins,
+            closed: report.closed,
+            duplicates_removed: report.duplicates_removed,
+            open_remaining: report.open_remaining,
+        }
+    }
+}
+
+#[gen_stub_pymethods]
+#[pymethods]
+impl PyRepairReport {
+    /// True when the repair left the geometry exactly as it found it.
+    fn is_unchanged(&self) -> bool {
+        self.joins == 0 && self.closed == 0 && self.duplicates_removed == 0
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "RepairReport(joins={}, closed={}, duplicates_removed={}, \
+             open_remaining={})",
+            self.joins,
+            self.closed,
+            self.duplicates_removed,
+            self.open_remaining
+        )
+    }
+}
+
 /// A sequence of geometric commands (Move, Line, Arc, Bezier).
 ///
 /// The primary building block for vector geometry in raygeo.
@@ -1232,6 +1282,31 @@ impl Geometry {
             tolerance,
         );
         (Geometry { inner: geo }, count)
+    }
+
+    /// Repair outlines that were meant to form closed contours but
+    /// arrived as loose segments.
+    ///
+    /// Joins open contours whose end points meet within the tolerance,
+    /// bridges any remaining gap between a contour's own start and end,
+    /// then drops contours that duplicate an earlier one. Existing
+    /// points are never moved: every join is bridged with a straight
+    /// segment, so the drawn shape grows by at most ``tolerance`` at
+    /// each joining point.
+    ///
+    /// This is what makes fragmented CAD exports usable: a drawing whose
+    /// outline was exported as dozens of separate lines and arcs becomes
+    /// a set of closed contours that can be offset and split.
+    ///
+    /// :param tolerance: The largest gap that is joined or closed.
+    /// :returns: Tuple of the new geometry and a `RepairReport` counting
+    ///     the joins, closings and removals that were made.
+    /// :complexity: O(n log n) average time, O(n) space
+    #[pyo3(signature = (tolerance))]
+    fn repair_outlines(&self, tolerance: f64) -> (Geometry, PyRepairReport) {
+        let (geo, report) =
+            crate::geo::algo::cleanup::repair_outlines(&self.inner, tolerance);
+        (Geometry { inner: geo }, PyRepairReport::from(report))
     }
 
     /// The contour holding a command index: the index of its Move, the

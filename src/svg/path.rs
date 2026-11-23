@@ -2,9 +2,9 @@ use std::f64::consts::PI;
 
 use crate::geo::geometry::Geometry;
 use crate::geo::matrix::Matrix;
+use crate::geo::shape::arc::{convert_arc_to_beziers, get_arc_center};
 use crate::geo::shape::bezier::evaluate_cubic;
 use crate::geo::types::Point3D;
-use crate::svg::arc::{convert_arc_to_beziers, get_arc_center};
 
 /// Apply the affine transform + scale to a single SVG coordinate.
 fn txfm_pt(px: f64, py: f64, m: &Matrix, sx: f64, sy: f64) -> (f64, f64) {

@@ -21,6 +21,63 @@ use crate::geo::types::{
     CubicBezier, Point, Point3D, Polygon, Polygon3D, Rect,
 };
 
+/// The tangent length factor that makes one cubic bezier approximate an
+/// arc of the given signed sweep: `4/3 · tan(sweep / 4)`.
+///
+/// Multiplying a unit tangent by this factor gives the control point
+/// distance for a single bezier segment, which is exact for sweeps up to
+/// about 90° and degrades beyond that — hence arcs are split into
+/// segments of at most a quarter circle before conversion.
+pub fn get_bezier_arc_constant(sweep: f64) -> f64 {
+    4.0 / 3.0 * (sweep / 4.0).tan()
+}
+
+/// Fits a chain of cubic beziers through a densely sampled polyline.
+///
+/// The polyline is cut into pieces of [`BEZIER_FIT_WINDOW`] samples, each
+/// of which is fitted by [`fit_cubic_bezier`]. Consecutive pieces share
+/// their boundary sample, so the resulting curve is continuous. Returns
+/// no curve for fewer than two points.
+///
+/// `samples` supplies the Z coordinate for each point in `points`; the
+/// fit itself is done in XY, and Z is interpolated linearly along each
+/// piece. Both slices must have the same length.
+pub fn fit_polyline_as_beziers(
+    points: &[Point],
+    samples: &[DVec3],
+) -> Vec<[DVec3; 4]> {
+    assert_eq!(points.len(), samples.len());
+    if points.len() < 2 {
+        return Vec::new();
+    }
+    let mut curves = Vec::new();
+    for start in (0..points.len() - 1).step_by(BEZIER_FIT_WINDOW - 1) {
+        let end = (start + BEZIER_FIT_WINDOW).min(points.len());
+        if end - start < 2 {
+            break;
+        }
+        let Some(curve) = fit_cubic_bezier(&points[start..end]) else {
+            continue;
+        };
+        let z0 = samples[start].z;
+        let z3 = samples[end - 1].z;
+        let lift = |p: Point, z: f64| DVec3::new(p.x, p.y, z);
+        curves.push([
+            lift(curve.0, z0),
+            lift(curve.1, z0 * 2.0 / 3.0 + z3 / 3.0),
+            lift(curve.2, z0 / 3.0 + z3 * 2.0 / 3.0),
+            lift(curve.3, z3),
+        ]);
+        if end == points.len() {
+            break;
+        }
+    }
+    curves
+}
+
+/// Number of samples fitted into one cubic bezier.
+pub const BEZIER_FIT_WINDOW: usize = 8;
+
 /// Evaluates a cubic Bezier curve at parameter t [0, 1] using the Bernstein polynomial.
 pub fn get_bezier_point_at(
     p0: Point,

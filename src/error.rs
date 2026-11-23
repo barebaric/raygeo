@@ -28,6 +28,21 @@ pub enum RaygeoError {
     #[error("SVG path data is empty")]
     SvgEmptyPath,
 
+    // ── DXF / Input ──────────────────────────────────────────────
+    /// The DXF file is not a well-formed sequence of group codes.
+    #[error("failed to parse DXF: {0}")]
+    DxfParseError(String),
+
+    /// A DXF group code value could not be interpreted as the type its
+    /// group code requires.
+    #[error("invalid DXF value for group code {code}: {value}")]
+    DxfInvalidValue {
+        /// The group code whose value is malformed.
+        code: i32,
+        /// The offending raw value.
+        value: String,
+    },
+
     // ── Geometry ─────────────────────────────────────────────────
     /// Operation requires at least one command but the geometry is empty.
     #[error("geometry is empty")]
@@ -136,6 +151,10 @@ impl From<RaygeoError> for pyo3::PyErr {
             RaygeoError::SvgParseError(_)
             | RaygeoError::SvgInvalidPath(_)
             | RaygeoError::SvgEmptyPath => {
+                PyValueError::new_err(err.to_string())
+            }
+            RaygeoError::DxfParseError(_)
+            | RaygeoError::DxfInvalidValue { .. } => {
                 PyValueError::new_err(err.to_string())
             }
             RaygeoError::EmptyGeometry | RaygeoError::DegenerateGeometry(_) => {

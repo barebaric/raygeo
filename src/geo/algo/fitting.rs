@@ -3,7 +3,9 @@ use std::f64::consts::PI;
 use crate::geo::algo::simplify::simplify_polyline_3d;
 use crate::geo::shape::arc::is_arc_clockwise;
 use crate::geo::shape::arc::{get_arc_angles, linearize_arc};
-use crate::geo::shape::bezier::linearize_bezier_from_params;
+use crate::geo::shape::bezier::{
+    get_bezier_arc_constant, linearize_bezier_from_params,
+};
 use crate::geo::types::{Command, Point, Point3D};
 
 /// Converts all arc commands in a geometry data array into cubic bezier approximations.
@@ -463,7 +465,7 @@ pub fn convert_arc_to_beziers_from_array(
 
     let num_segments = 1.max((total_sweep.abs() / (PI / 2.0)).ceil() as usize);
     let segment_sweep = total_sweep / num_segments as f64;
-    let kappa = (4.0 / 3.0) * (segment_sweep.abs() / 4.0).tan();
+    let kappa = get_bezier_arc_constant(segment_sweep.abs());
 
     let mut bezier_cmds: Vec<Command> = Vec::new();
     let mut current_p0 = start_point;
