@@ -97,6 +97,7 @@ pub mod compressed_array;
 pub mod constants;
 pub mod error;
 pub mod fstring;
+pub mod gcode;
 pub mod geo;
 pub mod image;
 pub mod log;
@@ -242,6 +243,7 @@ fn raygeo(m: &Bound<'_, PyModule>) -> PyResult<()> {
     python::compressed_array::register(m)?;
     python::cnc::register(m)?;
     python::fstring::register(m)?;
+    python::gcode::register(m)?;
     python::geo::register(m)?;
     python::image::register(m)?;
     python::mesh::register(m)?;

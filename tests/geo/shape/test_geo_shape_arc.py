@@ -259,8 +259,8 @@ def test_get_arc_bounding_box_large_arc_crossing_three_axes():
     assert bbox == pytest.approx(expected_bbox)
 
 
-def test_get_arc_bounding_box_zero_length_arc():
-    """Test a zero-length arc."""
+def test_get_arc_bounding_box_full_circle():
+    """Test an arc whose endpoints coincide, which describes a full circle."""
     center, radius = (100, 200), 50
     start_angle, end_angle = math.pi / 4, math.pi / 4
     start_pos, end_pos, center_offset = get_arc_params(
@@ -268,7 +268,12 @@ def test_get_arc_bounding_box_zero_length_arc():
     )
 
     bbox = get_arc_bounds(start_pos, end_pos, center_offset, False)
-    expected_bbox = (start_pos[0], start_pos[1], end_pos[0], end_pos[1])
+    expected_bbox = (
+        center[0] - radius,
+        center[1] - radius,
+        center[0] + radius,
+        center[1] + radius,
+    )
     assert bbox == pytest.approx(expected_bbox)
 
 

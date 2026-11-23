@@ -1,0 +1,31 @@
+(rs274ngc-arcs.ngc)
+(Arc dialect: centre format and radius format, composed to NIST RS274/NGC rules.)
+(NOT captured from any application. See the README.)
+G17 G21 G90 G94 F1000 (XY plane, millimetres, absolute distance, feed per minute)
+
+(centre format, clockwise: start 0,0 centre 10,0 end 10,10)
+G0 X0 Y0
+G2 X10 Y10 I10 J0
+
+(centre format, counter-clockwise, back to the origin: start 10,10 centre 10,0)
+G3 X0 Y0 I0 J-10
+
+(full circle: end point identical to the start point, so no axis words, only offsets)
+G2 I10 J0
+
+(radius format, positive R: the arc turns through less than 180 degrees)
+G2 X10 Y10 R10
+
+(radius format, negative R: the arc turns through more than 180 degrees)
+G3 X0 Y0 R-10
+
+(I and J are offsets from the ARC START, not from the origin. The arc distance mode is a)
+(separate modal group from the distance mode, so G91 below makes the axis words relative)
+(but leaves I and J relative to the arc start.)
+G0 X10 Y10
+G91
+G2 X5 Y5 I5 J0
+G90
+
+G0 X0 Y0
+M2

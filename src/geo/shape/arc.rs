@@ -192,6 +192,16 @@ pub fn get_arc_bounds(
     let center_y = start_pos.y + center_offset.y;
     let radius = center_offset.length();
 
+    // An arc whose endpoints coincide is a full circle.
+    if start_pos.distance(end_pos) < EPSILON_COLLINEAR {
+        return Rect::new(
+            center_x - radius,
+            center_y - radius,
+            center_x + radius,
+            center_y + radius,
+        );
+    }
+
     let mut min_x = start_pos.x.min(end_pos.x);
     let mut min_y = start_pos.y.min(end_pos.y);
     let mut max_x = start_pos.x.max(end_pos.x);

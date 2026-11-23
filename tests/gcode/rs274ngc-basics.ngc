@@ -1,0 +1,19 @@
+%
+(rs274ngc-basics.ngc)
+(Structure and modal behaviour. Composed to the line format of NIST RS274/NGC and its)
+(LinuxCNC descendant - NOT captured from any application. See the README.)
+(preamble: XY plane, inches, cutter comp off, tool length offset off, work offset 1,)
+(canned cycles off, absolute distance mode, feed per minute)
+N10 G17 G20 G40 G49 G54 G80 G90 G94
+N15 G0 X0 Y0 ; a semicolon comments out the rest of the line
+N20 M3 S800 (spindle on; parens comment out to the matching paren)
+N30 G1 X1.250 Y0 F60 (establishes motion mode G1 and the feed rate)
+N40 Y1.250 (modal motion: axis words only, the G word is omitted)
+N50 X0.000 (modal motion)
+N60 Y0 (modal motion - square closed)
+N70 G4 P0.25 (dwell in seconds; non-modal, so it does not change the motion mode)
+N80 X0.625 Y0.625 (still modal G1, at the feed set on N30)
+N90 G0 X0 Y0 (rapid; the motion mode is now G0)
+N100 M5 (spindle/laser off)
+N110 M2 (program end: plane, units, distance mode, feed mode, spindle and motion mode all reset)
+%

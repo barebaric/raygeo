@@ -1,0 +1,23 @@
+%
+(rs274ngc-quirks.ngc)
+(Structural and lexical edge cases, composed to the NIST RS274/NGC line format: optional)
+(block delete, optional line number, words/parameters/comments in any order, case)
+(insensitive and whitespace-insignificant outside comments. NOT captured from any)
+(application. Line endings are CRLF, which is a legal end-of-line marker.)
+
+/N10 G21 G90 (block delete: this line is skipped when block-delete mode is on)
+N10 G17 G21 G90 G94 (line numbers may be skipped and need not be in order)
+N40 G0 X0 Y0
+N50 g1 x10 y0 f1000 (input is case insensitive outside comments)
+n55 x0 y10 (lowercase line number, and modal motion with no G word at all)
+N60 x0 y0 (modal motion continues)
+N70 S100(set speed)F200(feed) (a comment may sit between two words)
+N80 (a semicolon inside parentheses does not start a comment ;) G0 X1 Y1
+N90 (first comment) G4 P0.1 (second comment: only the last comment on a line is used)
+N100 G0X +0. 12 34Y 7 (whitespace may appear inside a number: this is exactly G0 X+0.1234 Y7)
+N120 G0 X.5 Y-.5 (no leading zero, negative, no trailing zeros)
+N130 G1 X00.7500 Y+1 (leading and trailing zeros are not significant)
+N140 M2 (program end: no line after this one is read at all)
+N150 G0 X999 Y999 (must NOT be executed - it is past the program end)
+%
+this text follows the second percent sign and is not evaluated
