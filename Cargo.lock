@@ -1051,6 +1051,7 @@ dependencies = [
  "getrandom 0.4.3",
  "glam 0.34.3",
  "libc",
+ "libm",
  "nalgebra",
  "nalgebra-sparse",
  "nanoexpr",

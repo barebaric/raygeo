@@ -123,3 +123,28 @@ def test_parse_include_directive_empty_macro_name():
 
 def test_parse_include_directive_nested_parens():
     assert parse_include_directive("@include(foo(bar))") == "foo(bar)"
+
+
+def test_resolve_plain_name_is_resolved():
+    assert resolve_path_vars("{counter}", {"counter": "7"}) == "7"
+
+
+def test_resolve_plain_name_with_padding():
+    assert resolve_path_vars("{counter:04d}", {"counter": "7"}) == "0007"
+
+
+def test_resolve_plain_name_with_sign():
+    assert resolve_path_vars("{counter:+04d}", {"counter": "7"}) == "+007"
+
+
+def test_resolve_path_name_with_spec():
+    assert (
+        resolve_path_vars(
+            "{workpiece.counter:03d}", {"workpiece.counter": "12"}
+        )
+        == "012"
+    )
+
+
+def test_resolve_unknown_plain_name_left_verbatim():
+    assert resolve_path_vars("{counter}", {}) == "{counter}"

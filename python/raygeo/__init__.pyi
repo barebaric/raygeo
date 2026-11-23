@@ -54,6 +54,7 @@ Submodules
 - raygeo.ops — Command sequence (Ops) manipulation and motion assembly
 - raygeo.cnc — CNC orchestration (Plans, Intents, pipeline glue)
 - raygeo.pipeline — Generic runtime intent-tree executor
+- raygeo.template — Job counter and template placeholder scanning
 
 Examples
 --------
@@ -89,6 +90,7 @@ from . import ops
 from . import pipeline
 from . import sketch
 from . import svg
+from . import template
 from . import trace
 __all__ = [
     "cnc",
@@ -101,6 +103,7 @@ __all__ = [
     "pipeline",
     "sketch",
     "svg",
+    "template",
     "trace",
 ]
 
