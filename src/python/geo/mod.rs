@@ -27,7 +27,9 @@ sums for toolpath generation.
 
 use pyo3::prelude::*;
 
-use self::geometry::{Geometry, PyArc, PyBezier, PyLine, PyMove};
+use self::geometry::{
+    Geometry, PyArc, PyBezier, PyLine, PyMove, PyRepairReport,
+};
 use self::matrix::Matrix;
 
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -38,7 +40,14 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     geo_mod.add(
         "__all__",
         vec![
-            "Geometry", "Matrix", "Move", "Line", "Arc", "Bezier", "types",
+            "Geometry",
+            "Matrix",
+            "Move",
+            "Line",
+            "Arc",
+            "Bezier",
+            "RepairReport",
+            "types",
         ],
     )?;
 
@@ -71,5 +80,6 @@ fn add_functions(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyLine>()?;
     m.add_class::<PyArc>()?;
     m.add_class::<PyBezier>()?;
+    m.add_class::<PyRepairReport>()?;
     Ok(())
 }

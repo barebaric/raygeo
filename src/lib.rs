@@ -95,6 +95,7 @@ pub mod barcode;
 pub mod cnc;
 pub mod compressed_array;
 pub mod constants;
+pub mod dxf;
 pub mod error;
 pub mod fstring;
 pub mod gcode;
@@ -241,6 +242,7 @@ pub(crate) const MODULE_DOC: &str = concat!(
 fn raygeo(m: &Bound<'_, PyModule>) -> PyResult<()> {
     python::barcode::register(m)?;
     python::compressed_array::register(m)?;
+    python::dxf::register(m)?;
     python::cnc::register(m)?;
     python::fstring::register(m)?;
     python::gcode::register(m)?;

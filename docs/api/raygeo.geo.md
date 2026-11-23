@@ -979,6 +979,28 @@ Remove inner edges (shared between contours).
 | _Returns_    | `Geometry` | The geometry (for method chaining). |
 | _Complexity_ |            | O(n) time, O(n) space               |
 
+### `repair_outlines()`
+
+```python
+repair_outlines(tolerance: float) -> tuple[Geometry, RepairReport]
+```
+
+Repair outlines that were meant to form closed contours but arrived as loose segments.
+
+Joins open contours whose end points meet within the tolerance, bridges any remaining gap between a
+contour's own start and end, then drops contours that duplicate an earlier one. Existing points are
+never moved: every join is bridged with a straight segment, so the drawn shape grows by at most
+`tolerance` at each joining point.
+
+This is what makes fragmented CAD exports usable: a drawing whose outline was exported as dozens of
+separate lines and arcs becomes a set of closed contours that can be offset and split.
+
+| Parameter    | Type                            | Description                                                                                              |
+| ------------ | ------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `tolerance`  | `float`                         | The largest gap that is joined or closed.                                                                |
+| _Returns_    | `tuple[Geometry, RepairReport]` | Tuple of the new geometry and a `RepairReport` counting the joins, closings and removals that were made. |
+| _Complexity_ |                                 | O(n log n) average time, O(n) space                                                                      |
+
 ### `reverse_contour()`
 
 ```python
@@ -1839,3 +1861,51 @@ end: tuple[float, float, float]
 ```
 
 Endpoint of the move in 3D space.
+
+## RepairReport
+
+What **Geometry.repair_outlines** changed.
+
+### `closed`
+
+```python
+closed: int
+```
+
+Contours whose ends were bridged to form a closed loop.
+
+### `duplicates_removed`
+
+```python
+duplicates_removed: int
+```
+
+Contours dropped as duplicates of an earlier contour.
+
+### `joins`
+
+```python
+joins: int
+```
+
+Contours that were merged into a neighbouring contour.
+
+### `open_remaining`
+
+```python
+open_remaining: int
+```
+
+Outlines that are still open after the repair.
+
+### `is_unchanged()`
+
+```python
+is_unchanged() -> bool
+```
+
+True when the repair left the geometry exactly as it found it.
+
+| Parameter | Type   | Description |
+| --------- | ------ | ----------- |
+| _Returns_ | `bool` |             |

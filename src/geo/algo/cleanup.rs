@@ -625,3 +625,83 @@ pub fn geometries_match(a: &Geometry, b: &Geometry, tolerance: f64) -> bool {
 pub fn split_drawn_contours(geo: &Geometry) -> Vec<Geometry> {
     drawn_contours(geo)
 }
+
+/// What [`repair_outlines`] changed, reported for user feedback.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct RepairReport {
+    /// Contours that were merged into a neighbouring contour.
+    pub joins: usize,
+    /// Contours whose ends were bridged to form a closed loop.
+    pub closed: usize,
+    /// Contours dropped as duplicates of an earlier contour.
+    pub duplicates_removed: usize,
+    /// Outlines that are still open after the repair.
+    pub open_remaining: usize,
+}
+
+impl RepairReport {
+    /// True when the repair left the geometry exactly as it found it.
+    pub fn is_unchanged(&self) -> bool {
+        self.joins == 0 && self.closed == 0 && self.duplicates_removed == 0
+    }
+}
+
+/// Repairs the outlines of a drawing whose separate segments are meant to
+/// form continuous, closed contours.
+///
+/// Exporters frequently split a single outline into many small segments
+/// whose end points only nearly meet, and sometimes emit the same contour
+/// twice. This repairs that in three passes, in order:
+///
+/// 1. Join open contours whose end points lie within `tolerance`, which
+///    reconnects fragmented outlines and closes those whose ends then meet.
+/// 2. Bridge any remaining gap between a contour's own start and end.
+/// 3. Drop contours that duplicate an earlier one.
+///
+/// Existing points are never moved. A join or close is bridged with a
+/// straight segment, so the drawn shape grows by at most `tolerance` at
+/// each joining point. A tolerance of zero disables joining and closing,
+/// and the geometry is returned with an all-zero report.
+pub fn repair_outlines(
+    geo: &Geometry,
+    tolerance: f64,
+) -> (Geometry, RepairReport) {
+    if geo.is_empty() {
+        return (Geometry::new(), RepairReport::default());
+    }
+    if tolerance <= 0.0 {
+        let report = RepairReport {
+            open_remaining: count_open(geo),
+            ..RepairReport::default()
+        };
+        return (geo.copy(), report);
+    }
+    let mut repaired = geo.copy();
+    let mut joins = 0;
+    if has_open_contours(&repaired) {
+        let (joined, n) = join_open_contours(&repaired, tolerance);
+        repaired = joined;
+        joins = n;
+    }
+    let (mut repaired, closed) = close_open_contours(&repaired, tolerance);
+    let (deduped, duplicates_removed) =
+        remove_duplicate_contours(&repaired, tolerance);
+    repaired = deduped;
+    let report = RepairReport {
+        joins,
+        closed,
+        duplicates_removed,
+        open_remaining: count_open(&repaired),
+    };
+    (repaired, report)
+}
+
+/// True when at least one contour draws something but is not closed.
+fn has_open_contours(geo: &Geometry) -> bool {
+    drawn_contours(geo).iter().any(is_open)
+}
+
+/// Number of contours that draw something but are not closed.
+fn count_open(geo: &Geometry) -> usize {
+    drawn_contours(geo).iter().filter(|c| is_open(c)).count()
+}
