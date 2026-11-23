@@ -80,6 +80,7 @@ Examples
     100.0
 """
 
+from . import barcode
 from . import cnc
 from . import compressed_array
 from . import fstring
@@ -93,6 +94,7 @@ from . import svg
 from . import template
 from . import trace
 __all__ = [
+    "barcode",
     "cnc",
     "compressed_array",
     "fstring",
