@@ -83,8 +83,12 @@ pub struct EpilogContext {
     pub bed_mm: (f64, f64),
     /// Speed that corresponds to 100 % on the machine, in mm/min.
     pub max_cut_speed: f64,
-    /// Whether the machine uses a top-left origin (Y down).  The print
-    /// protocol only supports this layout.
+    /// Whether the machine uses a top-left origin (Y down).
+    ///
+    /// The job language only addresses a top-left page, so the
+    /// embedding application constrains the machine's origin to match;
+    /// a `false` here therefore indicates a configuration that the
+    /// application should not allow, not a user choice to report.
     #[serde(default = "default_true")]
     pub origin_top_left: bool,
     /// The document has a rotary layer, which the machine cannot drive.
@@ -194,7 +198,11 @@ struct JobEncoder<'a> {
 impl<'a> JobEncoder<'a> {
     fn new(ctx: &'a EpilogContext) -> Result<Self, String> {
         if !ctx.origin_top_left {
-            return Err("Epilog requires a top-left machine origin".to_string());
+            // Unreachable when the machine constrains its origin to the
+            // driver's supported layout; kept as an invariant check so a
+            // caller that bypasses that constraint fails loudly.
+            return Err("internal error: the machine origin must be top-left"
+                .to_string());
         }
         if !RESOLUTIONS.contains(&ctx.resolution) {
             return Err(format!(

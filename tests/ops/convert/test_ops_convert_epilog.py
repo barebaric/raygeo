@@ -303,7 +303,11 @@ def test_rejects_unsupported_resolution():
     assert "resolution" in node.error
 
 
-def test_rejects_bottom_origin():
+def test_rejects_bottom_origin_as_an_invariant_violation():
+    """The embedding application constrains the machine origin to the
+    driver's layout, so a bottom-left origin reaching the encoder is a
+    caller bug. It still fails loudly instead of emitting a job whose
+    coordinates would be wrong."""
     clear_cache()
     src = NodeRequest(
         key="src",
@@ -325,4 +329,4 @@ def test_rejects_bottom_origin():
     )
     node = _collect([src, enc])["enc"]
     assert node.error is not None
-    assert "top-left" in node.error
+    assert "internal error" in node.error
