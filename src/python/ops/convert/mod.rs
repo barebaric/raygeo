@@ -30,6 +30,9 @@ pub fn extract_encoder(
     if let Ok(s) = ob.extract::<PyGcodeSpec>() {
         return Ok(Box::new(s.into_core(py)));
     }
+    if let Ok(s) = ob.extract::<PyEpilogSpec>() {
+        return Ok(Box::new(s.to_core()));
+    }
     if let Ok(s) = ob.extract::<PyVertexSpec>() {
         return Ok(Box::new(s.into_core()));
     }
@@ -185,6 +188,42 @@ impl PyGcodeSpec {
             dialect,
             context_json,
         }
+    }
+}
+
+/// Parameters for the Epilog print-job encoder.
+///
+/// `context_json` is a JSON-serialised
+/// [`EpilogContext`](crate::ops::convert::epilog::EpilogContext):
+/// job title, resolution, frequency, bed size, speed reference, origin
+/// layout and the rotary flag.
+#[gen_stub_pyclass(module = "raygeo.ops.convert")]
+#[pyclass(
+    name = "EpilogSpec",
+    module = "raygeo.ops.convert",
+    frozen,
+    from_py_object
+)]
+#[derive(Clone)]
+pub struct PyEpilogSpec {
+    #[pyo3(get)]
+    pub context_json: String,
+}
+
+impl PyEpilogSpec {
+    pub fn to_core(&self) -> crate::ops::convert::epilog::EpilogSpec {
+        crate::ops::convert::epilog::EpilogSpec {
+            context_json: self.context_json.clone(),
+        }
+    }
+}
+
+#[gen_stub_pymethods]
+#[pymethods]
+impl PyEpilogSpec {
+    #[new]
+    fn new(context_json: String) -> Self {
+        PyEpilogSpec { context_json }
     }
 }
 
@@ -542,14 +581,39 @@ impl PyEncodeOutput {
 impl PyEncodeOutput {
     #[classmethod]
     #[allow(non_snake_case)]
+    #[pyo3(signature = (
+        text,
+        op_to_machine_code,
+        machine_code_to_op,
+        payload=None,
+    ))]
     fn MachineCode(
         _cls: &Bound<'_, PyType>,
         text: String,
         op_to_machine_code: &Bound<'_, PyAny>,
         machine_code_to_op: &Bound<'_, PyAny>,
+        payload: Option<&Bound<'_, PyAny>>,
     ) -> PyResult<Self> {
         use crate::ops::convert::gcode_types::{
             OpLineRange, MACHINE_CODE_TO_OP_NONE,
+        };
+
+        // payload: the device byte stream for binary machine
+        // languages (e.g. Epilog PJL/PCL/HPGL), as bytes or
+        // bytearray. Omitted or None for text-only languages.
+        let payload: Vec<u8> = match payload {
+            Some(value) if !value.is_none() => {
+                if let Ok(ba) = value.cast::<PyByteArray>() {
+                    ba.to_vec()
+                } else if let Ok(b) = value.extract::<Vec<u8>>() {
+                    b
+                } else {
+                    return Err(PyErr::new::<PyTypeError, _>(
+                        "payload must be bytes or bytearray",
+                    ));
+                }
+            }
+            _ => Vec::new(),
         };
 
         // op_to_machine_code: bytearray of interleaved i32 (start,
@@ -638,6 +702,7 @@ impl PyEncodeOutput {
             text,
             op_to_machine_code: spans,
             machine_code_to_op: mc_to_op,
+            payload,
         }))
     }
 
@@ -755,6 +820,19 @@ impl PyEncodeOutput {
                     })
                     .expect("machine code to op bytearray");
                 Some(buf.unbind())
+            }
+            _ => None,
+        }
+    }
+
+    /// The device byte stream for binary machine languages (empty for
+    /// text-only languages such as G-code). Returns ``None`` unless
+    /// this is the ``MachineCode`` variant.
+    #[getter]
+    fn payload<'py>(&self, py: Python<'py>) -> Option<Bound<'py, PyByteArray>> {
+        match self.enc() {
+            EncodeOutput::MachineCode { payload, .. } => {
+                Some(PyByteArray::new(py, payload))
             }
             _ => None,
         }
@@ -882,6 +960,7 @@ pub(crate) fn register(ops_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     convert_mod.add_class::<PyGcodeDialectSpec>()?;
     convert_mod.add_class::<PyEncoder>()?;
     convert_mod.add_class::<PyGcodeSpec>()?;
+    convert_mod.add_class::<PyEpilogSpec>()?;
     convert_mod.add_class::<PyVertexSpec>()?;
     convert_mod.add_class::<PySceneSpec>()?;
     convert_mod.add_class::<PyLayerConfig>()?;

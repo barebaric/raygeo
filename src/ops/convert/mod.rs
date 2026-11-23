@@ -22,6 +22,7 @@ use crate::ops::convert::scene::CompiledSceneData;
 use crate::ops::convert::vertex_arrays::VertexArrays;
 
 pub mod dump;
+pub mod epilog;
 pub mod gcode;
 pub mod gcode_types;
 pub mod geometry;
@@ -49,6 +50,12 @@ pub enum EncodeOutput {
         op_to_machine_code: Vec<OpLineRange>,
         /// Emitted line index → op index (``usize::MAX`` = no op).
         machine_code_to_op: Vec<usize>,
+        /// The exact byte stream the device consumes, when it differs
+        /// from (or cannot be represented by) ``text``.  Encoders for
+        /// binary machine languages (e.g. Epilog PJL/PCL/HPGL) keep a
+        /// printable rendering in ``text`` and the real payload here.
+        /// Empty for text-only languages such as G-code.
+        payload: Vec<u8>,
     },
     /// GPU-friendly flat vertex buffers.
     VertexArrays(VertexArrays),
@@ -87,11 +94,13 @@ impl EncodeOutput {
                 text,
                 op_to_machine_code,
                 machine_code_to_op,
+                payload,
             } => {
                 text.len()
                     + op_to_machine_code.len()
                         * std::mem::size_of::<OpLineRange>()
                     + machine_code_to_op.len() * std::mem::size_of::<usize>()
+                    + payload.len()
             }
             EncodeOutput::VertexArrays(va) => {
                 let f32_size = std::mem::size_of::<f32>();

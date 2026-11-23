@@ -7,6 +7,7 @@ from . import view
 __all__ = [
     "EncodeOutput",
     "Encoder",
+    "EpilogSpec",
     "GcodeDialectSpec",
     "GcodeSpec",
     "LayerConfig",
@@ -58,6 +59,13 @@ class EncodeOutput:
         Decode with ``np.frombuffer(ba, dtype=np.int32)``.
         """
     @property
+    def payload(self) -> typing.Optional[bytearray]:
+        r"""
+        The device byte stream for binary machine languages (empty for
+        text-only languages such as G-code). Returns ``None`` unless
+        this is the ``MachineCode`` variant.
+        """
+    @property
     def repr(self) -> typing.Optional[builtins.str]:
         r"""
         The vertex-array or scene debug repr. Returns ``None``
@@ -82,7 +90,7 @@ class EncodeOutput:
         ``Texture`` variant.
         """
     @classmethod
-    def MachineCode(cls, text: builtins.str, op_to_machine_code: typing.Any, machine_code_to_op: typing.Any) -> EncodeOutput: ...
+    def MachineCode(cls, text: builtins.str, op_to_machine_code: typing.Any, machine_code_to_op: typing.Any, payload: typing.Optional[typing.Any] = None) -> EncodeOutput: ...
     def __repr__(self) -> builtins.str: ...
 
 @typing.final
@@ -110,6 +118,20 @@ class Encoder:
             :class:`~raygeo.ops.convert.GcodeSpec`).
         """
     def __repr__(self) -> builtins.str: ...
+
+@typing.final
+class EpilogSpec:
+    r"""
+    Parameters for the Epilog print-job encoder.
+    
+    `context_json` is a JSON-serialised
+    [`EpilogContext`](crate::ops::convert::epilog::EpilogContext):
+    job title, resolution, frequency, bed size, speed reference, origin
+    layout and the rotary flag.
+    """
+    @property
+    def context_json(self) -> builtins.str: ...
+    def __new__(cls, context_json: builtins.str) -> EpilogSpec: ...
 
 @typing.final
 class GcodeDialectSpec:
