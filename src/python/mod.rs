@@ -1,3 +1,4 @@
+pub(crate) mod barcode;
 pub(crate) mod cnc;
 pub(crate) mod compressed_array;
 pub(crate) mod errors;
