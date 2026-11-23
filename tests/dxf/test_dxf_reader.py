@@ -5,7 +5,7 @@ import math
 import pytest
 from conftest import arc, asset, document, ends, line, rectangle, types
 
-from raygeo.dxf import read
+from raygeo.dxf.reader import read
 
 
 class TestRealFiles:
@@ -23,8 +23,9 @@ class TestRealFiles:
 
         min_x, min_y, max_x, max_y = output.layers[0][1].rect()
         assert (min_x, min_y, max_x, max_y) == (-50.0, -50.0, 50.0, 50.0)
-        assert output.bounds.width == pytest.approx(100.0)
-        assert output.bounds.height == pytest.approx(100.0)
+        min_x, min_y, max_x, max_y = output.bounds
+        assert max_x - min_x == pytest.approx(100.0)
+        assert max_y - min_y == pytest.approx(100.0)
 
     def test_circle_is_arc_commands_not_lines(self):
         geometry = read(asset("circle.dxf")).layers[0][1]

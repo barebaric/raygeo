@@ -4,7 +4,8 @@ import math
 
 import matplotlib.pyplot as plt
 
-from raygeo.dxf import read, write
+from raygeo.dxf.reader import read
+from raygeo.dxf.writer import write
 from raygeo.geo import Geometry
 from tools.plot import plot_geometry
 
@@ -123,11 +124,12 @@ def generate_shapes():
         )
         ax.plot([], [], color=colors.get(name, "gray"), label=f"Layer {name}")
 
+    min_x, min_y, max_x, max_y = output.bounds
     ax.add_patch(
         plt.Rectangle(
-            (output.bounds.min_x, output.bounds.min_y),
-            output.bounds.width,
-            output.bounds.height,
+            (min_x, min_y),
+            max_x - min_x,
+            max_y - min_y,
             fill=False,
             edgecolor="gray",
             linestyle="--",
@@ -135,12 +137,7 @@ def generate_shapes():
             label="Bounds",
         )
     )
-    xmin, ymin, xmax, ymax = (
-        output.bounds.min_x,
-        output.bounds.min_y,
-        output.bounds.max_x,
-        output.bounds.max_y,
-    )
+    xmin, ymin, xmax, ymax = min_x, min_y, max_x, max_y
     ax.set_xlim(xmin - 5, xmax + 5)
     ax.set_ylim(ymin - 5, ymax + 5)
     ax.set_aspect("equal")
@@ -222,17 +219,17 @@ def generate_arc_accuracy():
 __docs_target__ = ["raygeo.dxf.md"]
 __images__ = [
     {
-        "heading": "read",
+        "heading": None,
         "caption": "Lines, arcs, circles and bulges grouped by layer",
         "function": generate_shapes,
     },
     {
-        "heading": "write",
+        "heading": None,
         "caption": "Geometry written as DXF and read back",
         "function": generate_write_roundtrip,
     },
     {
-        "heading": "write",
+        "heading": None,
         "caption": "Arcs stay as ARC entities, so a round trip is lossless",
         "function": generate_arc_accuracy,
     },

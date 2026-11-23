@@ -2,7 +2,8 @@
 
 import pytest
 
-from raygeo.dxf import read, write
+from raygeo.dxf.reader import read
+from raygeo.dxf.writer import write
 from raygeo.geo import Geometry
 
 

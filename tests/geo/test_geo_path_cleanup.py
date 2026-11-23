@@ -326,3 +326,119 @@ class TestSplitDrawnContours:
         geo = _concat(_polyline(SQUARE, close=True), _polyline([(5, 5)]))
         parts = geo.split_drawn_contours()
         assert len(parts) == 1
+
+
+def _loose_rectangle(gap=0.02) -> Geometry:
+    """A rectangle as four separate segments whose ends do not meet.
+
+    This is the shape of the Onshape exports in rayforge issue #668: each
+    side is its own entity and no two corners coincide.
+    """
+    geo = Geometry()
+    for start, end in [
+        ((gap, 0), (100, 0)),
+        ((100 + gap, gap), (100 + gap, 60)),
+        ((100, 60 + gap), (0, 60 + gap)),
+        ((-gap, 60), (-gap, 0)),
+    ]:
+        geo.move_to(*start)
+        geo.line_to(*end)
+    return geo
+
+
+class TestRepairOutlines:
+    """Joining, closing and de-duplicating in one pass."""
+
+    def test_fragments_become_one_closed_contour(self):
+        geometry = _loose_rectangle()
+        assert len(geometry.split_into_contours()) == 4
+
+        repaired, report = geometry.repair_outlines(0.05)
+
+        contours = repaired.split_into_contours()
+        assert len(contours) == 1
+        assert contours[0].is_closed(1e-6)
+        assert report.joins == 3
+        assert report.open_remaining == 0
+
+    def test_area_is_preserved(self):
+        geometry = _loose_rectangle()
+
+        repaired, _ = geometry.repair_outlines(0.05)
+
+        assert repaired.area() == pytest.approx(100 * 60, rel=0.01)
+
+    def test_report_is_not_unchanged(self):
+        geometry = _loose_rectangle()
+
+        _, report = geometry.repair_outlines(0.05)
+
+        assert report.is_unchanged() is False
+
+    def test_tolerance_below_the_gap_does_nothing(self):
+        geometry = _loose_rectangle(gap=1.0)
+        before = len(geometry.split_into_contours())
+
+        repaired, report = geometry.repair_outlines(0.05)
+
+        assert len(repaired.split_into_contours()) == before
+        assert report.joins == 0
+        assert report.closed == 0
+
+    def test_larger_tolerance_closes_the_gap(self):
+        geometry = _loose_rectangle(gap=1.0)
+
+        repaired, report = geometry.repair_outlines(2.0)
+
+        assert len(repaired.split_into_contours()) == 1
+        assert report.joins > 0
+
+    def test_closed_contours_are_left_alone(self):
+        geometry = Geometry()
+        geometry.move_to(0, 0)
+        geometry.line_to(10, 0)
+        geometry.line_to(10, 10)
+        geometry.close_path()
+
+        repaired, report = geometry.repair_outlines(0.1)
+
+        assert report.closed == 0
+        assert repaired.area() == pytest.approx(50.0)
+
+    def test_duplicates_are_removed(self):
+        geometry = Geometry()
+        for _ in range(2):
+            geometry.move_to(0, 0)
+            geometry.line_to(10, 0)
+            geometry.line_to(10, 10)
+            geometry.close_path()
+
+        repaired, report = geometry.repair_outlines(0.01)
+
+        assert report.duplicates_removed == 1
+        assert len(repaired.split_into_contours()) == 1
+
+    def test_zero_tolerance_disables_repair(self):
+        geometry = _loose_rectangle()
+
+        repaired, report = geometry.repair_outlines(0.0)
+
+        assert report.joins == 0
+        assert report.closed == 0
+        assert report.open_remaining == 4
+        assert len(repaired.split_into_contours()) == 4
+
+    def test_empty_geometry(self):
+        repaired, report = Geometry().repair_outlines(0.1)
+
+        assert repaired.is_empty()
+        assert report.is_unchanged()
+
+    def test_existing_points_are_not_moved(self):
+        geometry = _loose_rectangle()
+        before = {tuple(round(v, 6) for v in cmd.end) for cmd in geometry.data}
+
+        repaired, _ = geometry.repair_outlines(0.05)
+        after = {tuple(round(v, 6) for v in cmd.end) for cmd in repaired.data}
+
+        assert before <= after
