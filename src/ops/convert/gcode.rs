@@ -1320,6 +1320,7 @@ impl Encoder for GcodeSpec {
             text: result.text,
             op_to_machine_code: result.op_to_machine_code,
             machine_code_to_op: result.machine_code_to_op,
+            payload: Vec::new(),
         })
     }
 
