@@ -4,6 +4,7 @@ use pyo3::prelude::*;
 
 pub(crate) mod counter;
 pub(crate) mod placeholders;
+pub(crate) mod text;
 
 /// Registers the `raygeo.template` module.
 pub(crate) fn register(parent: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -13,13 +14,18 @@ pub(crate) fn register(parent: &Bound<'_, PyModule>) -> PyResult<()> {
         "__all__",
         vec![
             "CounterSettings",
+            "evaluate",
+            "evaluate_number",
+            "format_value",
             "names_in_expression",
             "placeholder_names",
             "referenced_names",
+            "resolve_text",
         ],
     )?;
     counter::add_to(&m)?;
     placeholders::add_to(&m)?;
+    text::add_to(&m)?;
     parent.add_submodule(&m)?;
 
     let sys_modules = py.import("sys")?.getattr("modules")?;

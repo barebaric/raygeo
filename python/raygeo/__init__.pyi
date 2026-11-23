@@ -54,6 +54,7 @@ Submodules
 - raygeo.ops — Command sequence (Ops) manipulation and motion assembly
 - raygeo.cnc — CNC orchestration (Plans, Intents, pipeline glue)
 - raygeo.pipeline — Generic runtime intent-tree executor
+- raygeo.template — Job counter and template placeholder scanning
 
 Examples
 --------

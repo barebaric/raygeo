@@ -15,4 +15,6 @@
 //! this module.
 
 pub mod counter;
+pub mod expr;
 pub mod placeholders;
+pub mod text;

@@ -5,9 +5,13 @@ import builtins
 import typing
 __all__ = [
     "CounterSettings",
+    "evaluate",
+    "evaluate_number",
+    "format_value",
     "names_in_expression",
     "placeholder_names",
     "referenced_names",
+    "resolve_text",
 ]
 
 @typing.final
@@ -78,6 +82,21 @@ class CounterSettings:
     def __eq__(self, other: typing.Any) -> builtins.bool: ...
     def __repr__(self) -> builtins.str: ...
 
+def evaluate(expression: str, values: dict, functions: dict | None = None) -> object:
+    r"""
+    Evaluate an expression with host variables and functions.
+    """
+
+def evaluate_number(expression: str, values: dict, functions: dict | None = None) -> float:
+    r"""
+    Evaluate an expression and return a float.
+    """
+
+def format_value(value: object, spec: str) -> str:
+    r"""
+    Format a value with a Python-style format spec.
+    """
+
 def names_in_expression(expression: str) -> set[str]:
     r"""
     Return the variable names an expression reads.
@@ -101,5 +120,14 @@ def referenced_names(template: str) -> set[str]:
     
     A format spec after the first colon is ignored. String literals,
     keywords and attribute names are not reported.
+    """
+
+def resolve_text(template: str, values: dict, functions: dict, previous: tuple | None = None) -> tuple[str | None, tuple, bool]:
+    r"""
+    Resolve a text template.
+    
+    ``values`` are the variables, ``functions`` the host's zero-argument
+    template functions, and ``previous`` the entry returned by an earlier
+    call. Returns ``(resolved, entry, volatile)``.
     """
 
