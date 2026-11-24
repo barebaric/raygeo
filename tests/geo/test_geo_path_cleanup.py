@@ -173,6 +173,22 @@ class TestJoinOpenContours:
         result, _joins = geo.join_open_contours(0.1)
         assert result.rect() == pytest.approx(geo.rect())
 
+    def test_leaves_junction_with_several_ends_open(self):
+        """Four rays meet at the origin, so no continuation is
+        unambiguous. Chaining them used to trace one path that crosses
+        itself; its windings cancel, leaving zero area, which downstream
+        offsetting and inner/outer classification drop.
+        """
+        geo = _concat(
+            _polyline([(0, 0), (10, 0)]),
+            _polyline([(0, 0), (0, 10)]),
+            _polyline([(0, 0), (-10, 0)]),
+            _polyline([(0, 0), (0, -10)]),
+        )
+        result, joins = geo.join_open_contours(0.1)
+        assert joins == 0
+        assert len(_contours(result)) == 4
+
     def test_many_segments_form_one_closed_outline(self):
         pts = [
             (10 * math.cos(a), 10 * math.sin(a))
