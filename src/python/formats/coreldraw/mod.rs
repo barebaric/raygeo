@@ -15,9 +15,10 @@ CorelDRAW (``.cdr``) import.
 
 Parses the drawing natively: RIFF and ZIP containers, compressed chunk
 lists, object records and their transforms are all read in Rust, so no
-external tool or C library is needed. Text, bitmaps and object kinds the
-reader does not know are reported in :attr:`CdrDocument.issues` instead
-of being converted.
+external tool or C library is needed. Text is drawn as glyph outlines
+with the system's closest font; bitmaps and object kinds the reader does
+not know are reported in :attr:`CdrDocument.issues` instead of being
+converted.
 ";
 
 /// The kind of Corel document a byte stream holds.
@@ -173,11 +174,12 @@ fn py_detect_format(data: &[u8]) -> Option<PyCdrFormat> {
         """Read a CorelDRAW drawing into the geometry of its first page.
 
         The whole file is parsed in Rust: RIFF and ZIP containers,
-        compressed chunk lists, object records and their transforms. Only
-        drawing geometry is extracted; text, bitmaps and unknown object
-        kinds are listed in ``issues``. The layers of the first page come
-        bottom to top, their geometry in inches with the page origin at
-        the bottom-left corner.
+        compressed chunk lists, object records and their transforms.
+        Drawing geometry and text are extracted; text becomes glyph
+        outlines of the system's closest font, since CorelDRAW's embedded
+        fonts are not used. Bitmaps and unknown object kinds are listed in
+        ``issues``. The layers of the first page come bottom to top, their
+        geometry in inches with the page origin at the bottom-left corner.
 
         :param data: The document's bytes.
         :returns: The page size, its layers and the conversion issues.

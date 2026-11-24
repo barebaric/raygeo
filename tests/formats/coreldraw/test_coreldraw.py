@@ -114,13 +114,19 @@ class TestParse:
         assert kinds == {"Move", "Line"}
         assert geometry.rect() == pytest.approx(SQUARE_BOUNDS, abs=0.001)
 
-    def test_text_only_pages(self):
+    def test_text_is_converted_to_outlines(self):
         document = parse((ASSETS / "pages.cdr").read_bytes())
 
         assert document.page_count == 2
-        assert document.layers == []
-        assert len(document.issues) == 1
-        assert "text object(s)" in document.issues[0]
+        assert document.issues == []
+        assert len(document.layers) == 1
+        name, geometry = document.layers[0]
+        assert name == "Layer 1"
+        assert len(geometry) > 100
+        kinds = {type(command).__name__ for command in geometry.data}
+        assert kinds == {"Move", "Line", "Bezier"}
+        bounds = geometry.rect()
+        assert bounds == pytest.approx((0.84, 10.17, 1.81, 10.48), abs=0.15)
 
     def test_zip_and_riff_agree(self, tmp_path):
         data = (ASSETS / "circle.cdr").read_bytes()

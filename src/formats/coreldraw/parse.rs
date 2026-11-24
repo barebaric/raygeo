@@ -13,12 +13,14 @@
 //! The chunk layout and record encodings are the ones documented in
 //! TraceDraw's clean-room `docs/cdr-format.md`.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap};
 
 use crate::formats::coreldraw::container;
 use crate::formats::coreldraw::error::{Error, Result};
 use crate::formats::coreldraw::loda;
 use crate::formats::coreldraw::riff::{self, Chunk, Tree};
+use crate::formats::coreldraw::stlt;
+use crate::formats::coreldraw::text;
 use crate::formats::coreldraw::CdrDocument;
 use crate::geo::geometry::Geometry;
 use crate::geo::types::Point3D;
@@ -169,6 +171,8 @@ struct Reader<'a> {
     tree: &'a Tree,
     main: &'a [u8],
     skipped: Skipped,
+    styles: HashMap<u32, stlt::Style>,
+    fonts: HashMap<u16, String>,
 }
 
 /// Reads a CorelDRAW file into one page of geometry.
@@ -193,7 +197,11 @@ pub(crate) fn parse(data: &[u8]) -> Result<CdrDocument> {
         tree: &tree,
         main: &riff,
         skipped: Skipped::default(),
+        styles: HashMap::new(),
+        fonts: HashMap::new(),
     };
+    reader.styles = reader.read_styles();
+    reader.fonts = reader.read_fonts();
     reader.read_document()
 }
 
@@ -279,17 +287,21 @@ impl<'a> Reader<'a> {
 
     fn issues(&self) -> Vec<String> {
         let mut issues = Vec::new();
-        if self.skipped.text > 0 {
-            issues.push(format!(
-                "{} text object(s) are not converted to outlines",
-                self.skipped.text
-            ));
+        match self.skipped.text {
+            0 => {}
+            1 => {
+                issues.push("1 text object is not converted to outlines".into())
+            }
+            count => issues.push(format!(
+                "{count} text objects are not converted to outlines"
+            )),
         }
-        if self.skipped.bitmaps > 0 {
-            issues.push(format!(
-                "{} bitmap object(s) are not imported",
-                self.skipped.bitmaps
-            ));
+        match self.skipped.bitmaps {
+            0 => {}
+            1 => issues.push("1 bitmap object is not imported".into()),
+            count => {
+                issues.push(format!("{count} bitmap objects are not imported"))
+            }
         }
         for kind in &self.skipped.kinds {
             issues.push(format!("object type 0x{kind:02x} is not read"));
@@ -474,8 +486,12 @@ impl<'a> Reader<'a> {
             KIND_CURVE | KIND_MESH => self.read_curve(coords, &mut geometry),
             KIND_PATH => self.read_path(coords, &mut geometry),
             KIND_ARTISTIC_TEXT | KIND_PARAGRAPH_TEXT => {
-                self.skipped.text += 1;
-                return;
+                let Some(glyphs) = self.read_text(object, coords, table.kind)
+                else {
+                    self.skipped.text += 1;
+                    return;
+                };
+                geometry = glyphs;
             }
             KIND_BITMAP => {
                 self.skipped.bitmaps += 1;
@@ -496,6 +512,65 @@ impl<'a> Reader<'a> {
         let object_transform = transform.then(self.read_transform(object));
         object_transform.apply(&mut geometry);
         out.extend(&geometry);
+    }
+
+    /// Reads the `stlt` style table of the document.
+    fn read_styles(&self) -> HashMap<u32, stlt::Style> {
+        let mut styles = None;
+        self.tree.root.walk(&mut |chunk, _| {
+            if styles.is_none() && chunk.list_type == Some(*b"stlt") {
+                styles = Some(stlt::read_styles(
+                    self.data(chunk),
+                    self.format.version,
+                ));
+            }
+        });
+        styles.unwrap_or_default()
+    }
+
+    /// The font records of the document: id to family name.
+    fn read_fonts(&self) -> HashMap<u16, String> {
+        let mut fonts = HashMap::new();
+        self.tree.root.walk(&mut |chunk, _| {
+            if &chunk.id != b"font" {
+                return;
+            }
+            let data = self.data(chunk);
+            let Some(id) = self.format.u16(data, 0) else {
+                return;
+            };
+            if let Some(name) = decode_font_name(data, self.format.version) {
+                fonts.entry(id).or_insert(name);
+            }
+        });
+        fonts
+    }
+
+    /// Converts a text object to glyph outlines in its own space.
+    fn read_text(
+        &self,
+        object: &Chunk,
+        coords: &[u8],
+        kind: u32,
+    ) -> Option<Geometry> {
+        let txsm = find_named(object, b"txsm", 4)?;
+        let text = text::read_text(self.data(txsm), self.format.version)?;
+        let origin = if kind == KIND_ARTISTIC_TEXT {
+            let x = self.format.coord(coords, 0)?;
+            let y = self.format.coord(coords, self.format.step)?;
+            // Version 15 stores a record id instead of a place in some
+            // files; a point farther than 10 m is taken for that.
+            if x.abs() > 10.0 || y.abs() > 10.0 {
+                (0.0, 0.0)
+            } else {
+                (x, y)
+            }
+        } else {
+            (0.0, 0.0)
+        };
+        let geometry =
+            text::text_geometry(&text, &self.styles, &self.fonts, origin);
+        (!geometry.is_empty()).then_some(geometry)
     }
 
     fn object_hidden(&self, object: &Chunk) -> bool {
@@ -926,6 +1001,22 @@ fn find_named<'a>(
         .children
         .iter()
         .find_map(|child| find_named(child, name, depth - 1))
+}
+
+/// The first name of a font record: id u16, encoding u16, style flags
+/// u32, 10 unknown bytes, then the names.
+fn decode_font_name(data: &[u8], version: u16) -> Option<String> {
+    let name = data.get(18..)?;
+    let text = if version >= 12 {
+        let (pairs, _) = name.as_chunks::<2>();
+        let units: Vec<u16> =
+            pairs.iter().map(|pair| u16::from_le_bytes(*pair)).collect();
+        String::from_utf16_lossy(&units)
+    } else {
+        name.iter().map(|byte| char::from(*byte)).collect()
+    };
+    let first = text.split('\u{0}').next().unwrap_or("").trim();
+    (!first.is_empty()).then(|| first.to_string())
 }
 
 /// Decodes a layer or page name: single-byte text before version 12,

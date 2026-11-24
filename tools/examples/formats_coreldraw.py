@@ -142,7 +142,7 @@ def generate_detect_format():
 
 
 def generate_parse():
-    """The first page is returned; the rest is counted and noted."""
+    """The first page is returned, its text converted to outlines."""
     document = parse((ASSETS / "pages.cdr").read_bytes())
     fig, axes = plt.subplots(1, 2, figsize=(10, 6.6))
     for index, axes_item in enumerate(axes):
@@ -163,18 +163,13 @@ def generate_parse():
             )
         )
         axes_item.set_title(
-            "page 1 — returned" if returned else "page 2 — not read"
+            "page 1 — glyph outlines" if returned else "page 2 — not read"
         )
-    axes[0].text(
-        document.page_width / 2,
-        document.page_height / 2,
-        "\n".join(document.issues) or "no issues",
-        ha="center",
-        va="center",
-        fontsize=10,
-        color="#C44E52",
-        wrap=True,
-    )
+    for layer_name, geometry in document.layers:
+        plot_geometry(
+            axes[0], geometry, color=LAYER_COLORS[0], label=layer_name
+        )
+    axes[0].legend(loc="upper right", fontsize=8)
     axes[1].text(
         document.page_width / 2,
         document.page_height / 2,
@@ -210,8 +205,8 @@ __images__ = [
         "heading": "parse",
         "function": generate_parse,
         "caption": (
-            "A two-page document: page one is returned, the text is noted "
-            "as an issue"
+            "A two-page document: page one is returned, its text drawn as "
+            "glyph outlines"
         ),
     },
 ]

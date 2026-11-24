@@ -10,10 +10,13 @@
 //! with the 16-bit encodings but are not verified; CMX and the
 //! CorelDRAW 1/2 (`WL`) format are rejected with an error.
 //!
-//! Only drawing geometry is extracted, flattened into layers in inches
-//! with the page origin at the bottom-left corner. Text, bitmaps and
-//! object kinds the reader does not know are reported in
-//! [`CdrDocument::issues`] instead of being converted.
+//! Drawing geometry and text are extracted, flattened into layers in
+//! inches with the page origin at the bottom-left corner. Text is drawn
+//! as glyph outlines with the system's closest font: CorelDRAW's embedded
+//! fonts are not used, so glyph shapes follow the installed fonts.
+//! Bitmaps, fills, outlines and object kinds the reader does not know are
+//! not converted; what cannot be read is reported in
+//! [`CdrDocument::issues`].
 //!
 //! - `container`: detects a bare RIFF file or a ZIP package
 //! - `riff`: walks the chunk tree, including compressed lists and
@@ -29,6 +32,8 @@ pub(crate) mod error;
 pub(crate) mod loda;
 pub(crate) mod parse;
 pub(crate) mod riff;
+pub(crate) mod stlt;
+pub(crate) mod text;
 pub(crate) mod zip;
 
 use crate::error::{RaygeoError, RaygeoResult};
