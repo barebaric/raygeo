@@ -14,13 +14,14 @@ import numpy as np
 import pytest
 
 from raygeo.cnc.execution.specs import ComputePayload, EncodeSpec
+from raygeo.geo import Geometry
 from raygeo.ops.assembly import Assembler
 from raygeo.ops.assembly.contour import ContourSpec
 from raygeo.ops.assembly.raster import RasterSpec
 from raygeo.ops.convert import EncodeOutput, Encoder, EpilogSpec
 from raygeo.ops.part import Part
 from raygeo.ops.state import AirAssistMode, PowerMode
-from raygeo.pipeline.execute import clear_cache
+from raygeo.pipeline.execute import clear_cache, execute_stages
 from raygeo.pipeline.request import NodeRequest
 from raygeo.pipeline.stage import StageSpec
 
@@ -49,8 +50,6 @@ def _collect(nodes):
     def _batch(frac: float, msg: str) -> None:
         pass
 
-    from raygeo.pipeline.execute import execute_stages
-
     try:
         execute_stages(nodes, completed.append, _batch)
     except RuntimeError:
@@ -59,8 +58,6 @@ def _collect(nodes):
 
 
 def _square_part() -> Part:
-    from raygeo.geo import Geometry
-
     g = Geometry()
     g.move_to(0, 0)
     g.line_to(10, 0)
@@ -211,6 +208,28 @@ def test_power_mode_op_is_accepted():
     node = _collect([src, enc])["enc"]
     assert node.error is None, node.error
     assert isinstance(node.output, EncodeOutput)
+
+
+def _arc_part() -> Part:
+    """An arc whose I/J offset points up from the arc start.
+
+    I/J are offsets from the arc *start*: the centre is (5, 5).
+    Taking the offset from the arc end instead would put the centre at
+    (8, 8) and swing the arc out of the bed.
+    """
+    g = Geometry()
+    g.move_to(5.0, 2.0)
+    g.arc_to(8.0, 5.0, 0.0, 3.0, True)
+    return Part(geometry=g, size_mm=(10.0, 10.0))
+
+
+def test_arc_is_linearized_from_the_previous_endpoint():
+    """I/J offsets are relative to the arc start, so the encoder must
+    linearize an arc from the end of the previous move rather than
+    from its own end."""
+    out = _encode_part(_arc_part(), ContourSpec(), _ctx(bed_mm=[10.0, 10.0]))
+    # The arc ends at (8, 5), which is 157,98 dots at 500 DPI.
+    assert "PD157,98;" in out.text
 
 
 def test_dither_raster_uses_packbits_one_bit_rows():
