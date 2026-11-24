@@ -218,9 +218,9 @@ class EntityRegistry:
         r"""
         Whether the point is solver-constrained.
         """
-    def waypoint_type(self, id: types.EntityID) -> typing.Optional[builtins.str]:
+    def waypoint_type(self, id: types.EntityID) -> typing.Optional[types.WaypointType]:
         r"""
-        Waypoint type string of a point ("sharp"/"smooth"/"symmetric").
+        Waypoint role of a point.
         """
     def get_point(self, idx: types.EntityID) -> point.SketchPoint:
         r"""
@@ -231,7 +231,7 @@ class EntityRegistry:
         r"""
         The point object for an id (with id/coords/flags), or None.
         """
-    def set_point_waypoint_type(self, id: types.EntityID, value: builtins.str) -> builtins.bool:
+    def set_point_waypoint_type(self, id: types.EntityID, value: types.WaypointType | builtins.str) -> builtins.bool:
         r"""
         Sets a point's waypoint role.
         """

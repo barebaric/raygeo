@@ -37,10 +37,10 @@ Unique point id, stable across solves.
 ### `waypoint_type`
 
 ```python
-waypoint_type: str
+waypoint_type: types.WaypointType
 ```
 
-Waypoint type string ("sharp"/"smooth"/"symmetric").
+The role of this point where segments meet.
 
 ### `x`
 

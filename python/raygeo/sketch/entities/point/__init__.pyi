@@ -25,12 +25,12 @@ class SketchPoint:
     @id.setter
     def id(self, value: types.EntityID) -> None: ...
     @property
-    def waypoint_type(self) -> builtins.str:
+    def waypoint_type(self) -> types.WaypointType:
         r"""
-        Waypoint type string ("sharp"/"smooth"/"symmetric").
+        The role of this point where segments meet.
         """
     @waypoint_type.setter
-    def waypoint_type(self, value: builtins.str) -> None: ...
+    def waypoint_type(self, value: types.WaypointType | builtins.str) -> None: ...
     @property
     def x(self) -> builtins.float:
         r"""

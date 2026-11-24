@@ -81,19 +81,93 @@ gen_type_alias_from_python!(
     "#
 );
 
+/// The role a point plays where two sketch segments meet.
+///
+/// The constants are the only supported values. They compare equal to
+/// their serialized string form and hash like it, so dictionaries keyed
+/// by strings keep working.
 #[pyo3_stub_gen::derive::gen_stub_pyclass]
-#[pyclass(frozen, module = "raygeo.sketch.types", name = "WaypointType")]
-pub struct PyWaypointType;
+#[pyclass(
+    frozen,
+    skip_from_py_object,
+    module = "raygeo.sketch.types",
+    name = "WaypointType"
+)]
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub struct PyWaypointType(pub crate::sketch::entities::point::WaypointType);
 
 #[pyo3_stub_gen::derive::gen_stub_pymethods]
 #[pymethods]
 impl PyWaypointType {
     #[classattr]
-    pub const SHARP: &'static str = "sharp";
+    pub const SHARP: PyWaypointType =
+        PyWaypointType(crate::sketch::entities::point::WaypointType::Sharp);
     #[classattr]
-    pub const SMOOTH: &'static str = "smooth";
+    pub const SMOOTH: PyWaypointType =
+        PyWaypointType(crate::sketch::entities::point::WaypointType::Smooth);
     #[classattr]
-    pub const SYMMETRIC: &'static str = "symmetric";
+    pub const SYMMETRIC: PyWaypointType =
+        PyWaypointType(crate::sketch::entities::point::WaypointType::Symmetric);
+
+    /// The serialized form (``"sharp"``, ``"smooth"``, ``"symmetric"``).
+    #[getter]
+    fn value(&self) -> &'static str {
+        self.0.as_str()
+    }
+
+    /// The constant name (``"SHARP"``, ``"SMOOTH"``, ``"SYMMETRIC"``).
+    #[getter]
+    fn name(&self) -> &'static str {
+        match self.0 {
+            crate::sketch::entities::point::WaypointType::Sharp => "SHARP",
+            crate::sketch::entities::point::WaypointType::Smooth => "SMOOTH",
+            crate::sketch::entities::point::WaypointType::Symmetric => {
+                "SYMMETRIC"
+            }
+        }
+    }
+
+    /// The serialized form, like ``str(WaypointType.SHARP)``.
+    fn __str__(&self) -> &'static str {
+        self.0.as_str()
+    }
+
+    /// String representation like ``WaypointType.SHARP``.
+    fn __repr__(&self) -> String {
+        format!("WaypointType.{}", self.name())
+    }
+
+    /// Compares equal to constants and to their serialized string form.
+    fn __eq__(&self, other: &Bound<'_, PyAny>) -> bool {
+        if let Ok(typed) = other.extract::<PyRef<'_, PyWaypointType>>() {
+            return self.0 == typed.0;
+        }
+        if let Ok(text) = other.extract::<String>() {
+            return self.0.as_str() == text;
+        }
+        false
+    }
+
+    /// Hashes like the serialized string, matching ``__eq__``.
+    fn __hash__(&self, py: Python<'_>) -> PyResult<isize> {
+        pyo3::types::PyString::new(py, self.0.as_str()).hash()
+    }
+}
+
+/// The waypoint role as a `WaypointType` or its serialized string form.
+pub(crate) fn extract_waypoint_type(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<crate::sketch::entities::point::WaypointType> {
+    if let Ok(typed) = value.extract::<PyRef<'_, PyWaypointType>>() {
+        return Ok(typed.0);
+    }
+    if let Ok(text) = value.extract::<String>() {
+        return Ok(crate::sketch::entities::point::WaypointType::parse(&text)
+            .unwrap_or(crate::sketch::entities::point::WaypointType::Sharp));
+    }
+    Err(pyo3::exceptions::PyTypeError::new_err(
+        "expected WaypointType or str",
+    ))
 }
 
 pub(crate) fn register_types(module: &Bound<'_, PyModule>) -> PyResult<()> {

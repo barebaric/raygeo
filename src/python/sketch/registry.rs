@@ -6,7 +6,7 @@ use pyo3::types::PyDict;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 use serde_json::Value;
 
-use super::types::EntityId;
+use super::types::{extract_waypoint_type, EntityId, PyWaypointType};
 use crate::geo::types::Rect;
 use crate::python::geo::geometry::Geometry as PyGeometry;
 use crate::python::sketch::entities::{
@@ -597,12 +597,12 @@ impl PyEntityRegistry {
             .unwrap_or(false)
     }
 
-    /// Waypoint type string of a point ("sharp"/"smooth"/"symmetric").
-    fn waypoint_type(&self, id: EntityId) -> Option<String> {
+    /// Waypoint role of a point.
+    fn waypoint_type(&self, id: EntityId) -> Option<PyWaypointType> {
         let id = id.0;
         self.inner
             .get_point(id)
-            .map(|p| p.waypoint_type.as_str().to_string())
+            .map(|p| PyWaypointType(p.waypoint_type))
     }
 
     /// Coordinates of a point as ``(x, y)``; raises ``IndexError``
@@ -634,11 +634,17 @@ impl PyEntityRegistry {
     }
 
     /// Sets a point's waypoint role.
-    fn set_point_waypoint_type(&mut self, id: EntityId, value: String) -> bool {
-        let waypoint_type =
-            crate::sketch::entities::point::WaypointType::parse(&value)
-                .unwrap_or(crate::sketch::entities::point::WaypointType::Sharp);
-        self.inner.set_point_waypoint_type(id.0, waypoint_type)
+    fn set_point_waypoint_type(
+        &mut self,
+        id: EntityId,
+        #[gen_stub(override_type(
+            type_repr = "types.WaypointType | builtins.str",
+            imports = ("builtins",)
+        ))]
+        value: &Bound<'_, PyAny>,
+    ) -> PyResult<bool> {
+        let waypoint_type = extract_waypoint_type(value)?;
+        Ok(self.inner.set_point_waypoint_type(id.0, waypoint_type))
     }
 
     /// Whether a point carries the fixed flag.
