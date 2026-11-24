@@ -10,7 +10,9 @@ use pyo3::exceptions::{
 use pyo3::PyErr;
 
 #[cfg(feature = "python")]
-use crate::python::errors::{ResumePointNotFoundError, RoutingError};
+use crate::python::errors::{
+    CdrParseError, CdrUnsupportedFormat, ResumePointNotFoundError, RoutingError,
+};
 
 /// Error type for all RayGeo operations.
 #[derive(Error, Debug)]
@@ -42,6 +44,16 @@ pub enum RaygeoError {
         /// The offending raw value.
         value: String,
     },
+
+    // ── CorelDRAW / Input ────────────────────────────────────────
+    /// The data is not a CorelDRAW or CMX document.
+    #[error("not a CorelDRAW or CMX document")]
+    CdrUnsupportedFormat,
+
+    /// A CorelDRAW container, record or argument table is damaged, or
+    /// the file uses a feature the reader does not support.
+    #[error("could not read the CorelDRAW file: {0}")]
+    CdrParseError(String),
 
     // ── Geometry ─────────────────────────────────────────────────
     /// Operation requires at least one command but the geometry is empty.
@@ -184,6 +196,12 @@ impl From<RaygeoError> for pyo3::PyErr {
             }
             RaygeoError::ResumePointNotFound(_) => {
                 PyErr::new::<ResumePointNotFoundError, _>(err.to_string())
+            }
+            RaygeoError::CdrUnsupportedFormat => {
+                PyErr::new::<CdrUnsupportedFormat, _>(err.to_string())
+            }
+            RaygeoError::CdrParseError(_) => {
+                PyErr::new::<CdrParseError, _>(err.to_string())
             }
             RaygeoError::NestingError(_)
             | RaygeoError::ImageError(_)

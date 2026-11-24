@@ -206,7 +206,7 @@ pub(crate) const MODULE_DOC: &str = concat!(
     "----------\n",
     "- raygeo.geo — Geometry and path/shape/algo operations\n",
     "- raygeo.ops — Command sequence (Ops) manipulation and motion assembly\n",
-    "- raygeo.formats — File-format import and export (SVG, G-code, DXF)\n",
+    "- raygeo.formats — File-format import and export (CorelDRAW, SVG, G-code, DXF)\n",
     "- raygeo.cnc — CNC orchestration (Plans, Intents, pipeline glue)\n",
     "- raygeo.pipeline — Generic runtime intent-tree executor\n",
     "- raygeo.template — Job counter and template placeholder scanning\n",

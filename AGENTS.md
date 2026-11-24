@@ -56,7 +56,7 @@ Never import upward.
 | `ops`      | CNC and laser building blocks: clearing strategies, linking, classification, and Ops emission.                            | plans, intents, `pipeline` runtime            |
 | `pipeline` | Generic runtime to execute machining agnostic intents in a rayon thread pool.                                             | geometry, machining, `Ops`, tools, any domain |
 | `cnc`      | Plan-time orchestration: build descriptive `Plan`s (sequences of `PlanStep`s) and convert them into executable `Intent`s. | geometry algorithms                           |
-| `formats`  | File-format import and export (`svg`, `gcode`, `dxf`); depends only on `geo` and the shared error type.                   | `ops`, `cnc`, `sketch`, `pipeline`, machining |
+| `formats`  | File-format import and export (`coreldraw`, `svg`, `gcode`, `dxf`); depends only on `geo`, sibling format modules and the shared error type. | `ops`, `cnc`, `sketch`, `pipeline`, machining |
 
 # File Formats
 
