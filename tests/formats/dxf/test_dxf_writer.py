@@ -136,3 +136,39 @@ class TestDegenerate:
 
         back = read(text)
         assert back.is_empty()
+
+
+class TestElevation:
+    """A polyline has one elevation, so 3D content needs LINE entities."""
+
+    def _z_geometry(self) -> Geometry:
+        geometry = Geometry()
+        geometry.move_to(0, 0, 0)
+        geometry.line_to(100, 0, 0)
+        geometry.move_to(0, 0, -10)
+        geometry.line_to(100, 0, -10)
+        return geometry
+
+    def test_z_survives_the_round_trip(self):
+        back = read(write(self._z_geometry()))
+
+        assert back.min_z == pytest.approx(-10.0)
+        assert back.max_z == pytest.approx(0.0)
+        assert back.has_z_variation()
+
+    def test_z_varying_lines_become_line_entities(self):
+        text = write(self._z_geometry())
+
+        assert "\nLINE\n" in text
+        assert "LWPOLYLINE" not in text
+
+    def test_flat_drawing_stays_a_polyline(self):
+        geometry = Geometry()
+        geometry.move_to(0, 0, 5)
+        geometry.line_to(100, 0, 5)
+        geometry.line_to(100, 50, 5)
+
+        text = write(geometry)
+
+        assert "LWPOLYLINE" in text
+        assert "\nLINE\n" not in text
