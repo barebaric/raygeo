@@ -75,6 +75,57 @@ def generate_shapes():
             ),
             ("CIRCLE", "holes", [(10, 18), (20, 34), (40, 4)]),
             (
+                "SPLINE",
+                "curves",
+                # A smooth curve written the way CAD exporters write one:
+                # a piecewise-bezier spline whose interior knot carries
+                # full multiplicity, so each span owns four control
+                # points and reading it must advance by four.
+                [
+                    (70, 8),
+                    (71, 3),
+                    (72, 12),
+                    (73, 8),
+                    (74, 0),
+                    (40, 0.0),
+                    (40, 0.0),
+                    (40, 0.0),
+                    (40, 0.0),
+                    (40, 0.5),
+                    (40, 0.5),
+                    (40, 0.5),
+                    (40, 0.5),
+                    (40, 1.0),
+                    (40, 1.0),
+                    (40, 1.0),
+                    (40, 1.0),
+                    (10, 60.0),
+                    (20, 10.0),
+                    (30, 0.0),
+                    (10, 70.0),
+                    (20, 40.0),
+                    (30, 0.0),
+                    (10, 85.0),
+                    (20, 40.0),
+                    (30, 0.0),
+                    (10, 95.0),
+                    (20, 10.0),
+                    (30, 0.0),
+                    (10, 100.0),
+                    (20, 10.0),
+                    (30, 0.0),
+                    (10, 105.0),
+                    (20, -20.0),
+                    (30, 0.0),
+                    (10, 120.0),
+                    (20, -20.0),
+                    (30, 0.0),
+                    (10, 125.0),
+                    (20, 10.0),
+                    (30, 0.0),
+                ],
+            ),
+            (
                 "LWPOLYLINE",
                 "slots",
                 # A rounded rectangle: straight edges with a quarter-turn
@@ -117,6 +168,7 @@ def generate_shapes():
         "outline": "steelblue",
         "holes": "tomato",
         "slots": "forestgreen",
+        "curves": "darkorange",
     }
     for name, geometry in output.layers:
         plot_geometry(
