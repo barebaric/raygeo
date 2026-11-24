@@ -6,8 +6,8 @@
 
 use glam::{DMat3, DMat4, DVec2, DVec3, DVec4};
 
+use crate::geo::algo::fitting::convert_arc_to_beziers_from_array;
 use crate::geo::geometry::Geometry;
-use crate::geo::shape::arc::linearize_arc;
 use crate::geo::shape::point::transform_point_3d;
 use crate::geo::types::{Command, Point, Point3D};
 
@@ -84,7 +84,6 @@ fn transform_array_non_uniform(
 ) -> Vec<Command> {
     let mut result: Vec<Command> = Vec::new();
     let mut last_pos: Point3D = Point3D::new(0.0, 0.0, 0.0);
-    let mut arc_buf = Vec::new();
 
     for cmd in data {
         let original_end = cmd.end_point();
@@ -96,18 +95,36 @@ fn transform_array_non_uniform(
                 normal,
                 ..
             } => {
-                let start_pt = last_pos;
-                linearize_arc(
+                // A non-uniform scale turns a circular arc into an
+                // ellipse, which an Arc command cannot represent. Convert
+                // it to cubic beziers first, which transform exactly,
+                // rather than flattening it into a dense polyline.
+                let beziers = convert_arc_to_beziers_from_array(
+                    last_pos,
                     *end,
-                    *center_offset,
-                    *normal,
-                    start_pt,
-                    0.1,
-                    &mut arc_buf,
+                    Point::new(center_offset.x, center_offset.y),
+                    normal.z < 0.0,
                 );
-                for (_, p2) in arc_buf.drain(..) {
-                    let pt = transform_point_3d(matrix, p2);
-                    result.push(Command::Line { end: pt });
+                for command in beziers {
+                    match command {
+                        Command::Bezier {
+                            end,
+                            control1,
+                            control2,
+                        } => result.push(Command::Bezier {
+                            end: transform_point_3d(matrix, end),
+                            control1: transform_point_3d(matrix, control1),
+                            control2: transform_point_3d(matrix, control2),
+                        }),
+                        other => {
+                            result.push(Command::Line {
+                                end: transform_point_3d(
+                                    matrix,
+                                    other.end_point(),
+                                ),
+                            });
+                        }
+                    }
                 }
             }
             Command::Bezier {

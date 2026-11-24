@@ -58,6 +58,9 @@ impl PySnapLineProducer {
 }
 
 /// Stable identity of the geometry a snap index depends on.
+#[pyo3_stub_gen::derive::gen_stub_pyfunction(
+    module = "raygeo.sketch.snap.engine"
+)]
 #[pyfunction]
 #[pyo3(signature = (registry, drag_context=None, include_construction=true, include_points=true))]
 pub(crate) fn geometry_key(

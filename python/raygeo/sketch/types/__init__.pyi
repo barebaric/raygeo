@@ -3,9 +3,26 @@
 
 import builtins
 import typing
+from typing import TypeAlias
 __all__ = [
+    "ConstraintStatus",
+    "EntityID",
     "WaypointType",
 ]
+
+EntityID: TypeAlias = int
+@typing.final
+class ConstraintStatus:
+    r"""
+    The status of a sketch constraint.
+    
+    The runtime object is an `IntEnum` built in [`register_types`]; this
+    declaration exists so the stub generator emits its members.
+    """
+    VALID: builtins.int = 1
+    EXPRESSION_BASED: builtins.int = 2
+    ERROR: builtins.int = 3
+    CONFLICTING: builtins.int = 4
 
 @typing.final
 class WaypointType:

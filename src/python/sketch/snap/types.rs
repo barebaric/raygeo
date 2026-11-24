@@ -773,6 +773,18 @@ fn style_for(kind: PySnapLineType) -> PySnapLineStyle {
     style(core::style_for(core::SnapLineType(kind.0)))
 }
 
+/// The line style used for each kind of snap line.
+///
+/// Exposed as a function rather than a module-level dict because a plain
+/// assignment cannot be described in a stub.
+#[pyo3_stub_gen::derive::gen_stub_pyfunction(
+    module = "raygeo.sketch.snap.types"
+)]
+#[pyfunction(name = "snap_line_styles")]
+pub(crate) fn snap_line_styles(py: Python<'_>) -> PyResult<Bound<'_, PyDict>> {
+    build_line_styles(py)
+}
+
 pub(crate) fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<PySnapLineType>()?;
     module.add_class::<PySnapLineStyle>()?;
@@ -781,5 +793,6 @@ pub(crate) fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<PySnapResult>()?;
     module.add_class::<PyDragContext>()?;
     module.add("SNAP_LINE_STYLES", build_line_styles(module.py())?)?;
+    module.add_function(wrap_pyfunction!(snap_line_styles, module)?)?;
     Ok(())
 }
