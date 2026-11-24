@@ -160,15 +160,14 @@ fn append_ellipse(
     if major_axis.length_squared() < 1e-18 {
         return;
     }
-    let (start_param, sweep) = ellipse_sweep(start_param, end_param);
-    let steps = ((sweep.abs() / (TAU / 16.0)).ceil() as usize).clamp(4, 128);
-    let first = ellipse_point(center, major_axis, minor_ratio, start_param);
-    geo.move_to(first.x, first.y, first.z);
-    for step in 1..=steps {
-        let parameter = start_param + sweep * step as f64 / steps as f64;
-        let point = ellipse_point(center, major_axis, minor_ratio, parameter);
-        geo.line_to(point.x, point.y, point.z);
-    }
+    let segments = ellipse_beziers(
+        center,
+        major_axis,
+        minor_ratio,
+        start_param,
+        end_param,
+    );
+    append_beziers(geo, &segments);
 }
 
 fn append_polyline(geo: &mut Geometry, vertices: &[Vertex], closed: bool) {

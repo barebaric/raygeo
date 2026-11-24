@@ -569,13 +569,23 @@ fn split_into_beziers(
             }
         }
     }
-    let span_count = points.len().saturating_sub(degree);
-    if span_count == 0 {
+    // The insertion pass leaves every distinct interior knot at full
+    // multiplicity, so the control array is the concatenation of the
+    // spans' bezier polygons: span k owns points[(d+1)k .. (d+1)k + d + 1].
+    // Advancing by one point instead blends control points from two
+    // spans and renders as zig-zag. A leftover that is not a multiple of
+    // d + 1 means the file's knot vector and control count disagree; the
+    // caller falls back to sampling in that case.
+    if !points.len().is_multiple_of(degree + 1) {
         return None;
     }
-    let mut segments = Vec::with_capacity(span_count);
-    for span in 0..span_count {
-        let from = span;
+    let segment_count = points.len() / (degree + 1);
+    if segment_count == 0 {
+        return None;
+    }
+    let mut segments = Vec::with_capacity(segment_count);
+    for span in 0..segment_count {
+        let from = span * (degree + 1);
         let window = &points[from..from + degree + 1];
         let mut segment = [DVec3::ZERO; 4];
         for (slot, point) in segment.iter_mut().zip(window.iter()) {

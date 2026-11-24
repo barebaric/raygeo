@@ -329,3 +329,20 @@ from_snap_point(
 | ---------- | --------------------- | ----------- |
 | `position` | `tuple[float, float]` |             |
 | _Returns_  | `SnapResult`          |             |
+
+## Functions
+
+### `snap_line_styles()`
+
+```python
+snap_line_styles() -> dict
+```
+
+The line style used for each kind of snap line.
+
+Exposed as a function rather than a module-level dict because a plain assignment cannot be described
+in a stub.
+
+| Parameter | Type   | Description |
+| --------- | ------ | ----------- |
+| _Returns_ | `dict` |             |
