@@ -557,6 +557,59 @@ class TestSplineSpans:
         xs = [c.end[0] for c in curves]
         assert xs == sorted(xs), "segments must advance along the curve"
 
+    # A smoothly exported spline: nine control points with a clamped knot
+    # vector whose five interior knots each have multiplicity one. Every
+    # span is cubic, so the curve must split into six exact bezier
+    # segments. Dropping interior knots used to make the insertion pass
+    # fall back to sampled fitting, which emitted control points far
+    # outside the control polygon.
+    CONTROL_SMOOTH = [
+        (499.5215204169139, 273.4515044987481),
+        (499.9932659807569, 273.4891789611759),
+        (500.9485143844753, 273.5654668435713),
+        (502.3897908343616, 274.1036289032998),
+        (504.9409087635065, 275.8074123164537),
+        (508.4954315557188, 280.672808730019),
+        (512.9564574831799, 291.5334438699177),
+        (513.9438942021492, 305.3620876943978),
+        (514.5215204169139, 313.4515044987481),
+    ]
+    KNOTS_SMOOTH = [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.08105394958607,
+        0.1641280001160383,
+        0.2800278960888437,
+        0.4436051444910396,
+        0.674522682691375,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+    ]
+
+    def test_simple_interior_knots_split_into_exact_spans(self):
+        geometry = self._spline(self.CONTROL_SMOOTH, self.KNOTS_SMOOTH)
+        curves = self._curves(geometry)
+
+        assert len(curves) == 6
+        assert curves[-1].end[:2] == pytest.approx(self.CONTROL_SMOOTH[-1])
+
+    def test_simple_interior_knots_stay_inside_control_polygon(self):
+        geometry = self._spline(self.CONTROL_SMOOTH, self.KNOTS_SMOOTH)
+
+        min_x = min(x for x, _ in self.CONTROL_SMOOTH)
+        max_x = max(x for x, _ in self.CONTROL_SMOOTH)
+        min_y = min(y for _, y in self.CONTROL_SMOOTH)
+        max_y = max(y for _, y in self.CONTROL_SMOOTH)
+        left, bottom, right, top = geometry.rect()
+        assert left >= min_x - 1e-6
+        assert right <= max_x + 1e-6
+        assert bottom >= min_y - 1e-6
+        assert top <= max_y + 1e-6
+
 
 class TestEllipse:
     """An ELLIPSE entity must become bezier segments, not a polygon:
