@@ -5,12 +5,16 @@ sidebar_label: raygeo.formats.coreldraw
 
 ![Two drawings parsed natively: page frame, layers and geometry](images/formats-coreldraw-pages.png)
 
-*Two drawings parsed natively: page frame, layers and geometry* CorelDRAW (`.cdr`) import.
+*Two drawings parsed natively: page frame, layers and geometry* CorelDRAW (`.cdr`) import and
+export.
 
 Parses the drawing natively: RIFF and ZIP containers, compressed chunk lists, object records and
 their transforms are all read in Rust, so no external tool or C library is needed. Text is drawn as
 glyph outlines with the system's closest font; bitmaps and object kinds the reader does not know are
 reported in **CdrDocument.issues** instead of being converted.
+
+**write** creates a version 12 drawing from a geometry, so a result can be opened in CorelDRAW and
+other vector editors.
 
 ## CdrDocument
 
@@ -144,3 +148,27 @@ table cannot be read, or when the file is a CMX file.
 ![A two-page document: page one is returned, its text drawn as glyph outlines](images/formats-coreldraw-parse.png)
 
 *A two-page document: page one is returned, its text drawn as glyph outlines*
+
+### `write()`
+
+```python
+write(geometry: geo.Geometry) -> bytes
+```
+
+Write geometry as a CorelDRAW version 12 drawing.
+
+The page is the geometry's bounding box in millimetres, and the drawing is moved to the page's
+bottom-left corner. It goes into one object on one layer, drawn with a black hairline outline and no
+fill, so the file opens in CorelDRAW and other vector editors.
+
+**Raises:** `RuntimeError` — When the geometry is empty.
+
+| Parameter    | Type           | Description                            |
+| ------------ | -------------- | -------------------------------------- |
+| `geometry`   | `geo.Geometry` | The geometry to write, in millimetres. |
+| _Returns_    | `bytes`        | The document's bytes.                  |
+| _Complexity_ |                | O(n) where n = number of commands      |
+
+![A geometry written to a version 12 file and read back](images/formats-coreldraw-write.png)
+
+*A geometry written to a version 12 file and read back*

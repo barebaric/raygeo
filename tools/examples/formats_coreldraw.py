@@ -7,7 +7,8 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 
-from raygeo.formats.coreldraw import detect_format, parse
+from raygeo.formats.coreldraw import detect_format, parse, write
+from raygeo.geo import Geometry, Matrix
 from tools.plot import plot_geometry
 
 ASSETS = (
@@ -187,6 +188,75 @@ def generate_parse():
     return fig
 
 
+def _written_geometry() -> Geometry:
+    geometry = Geometry()
+    for corner in [(5, 5), (35, 5), (35, 35), (5, 35), (5, 5)]:
+        if corner == (5, 5):
+            geometry.move_to(corner[0], corner[1], 0)
+        else:
+            geometry.line_to(corner[0], corner[1], 0)
+    geometry.move_to(48, 6, 0)
+    for end, offset in [
+        ((54, 12), (0, 6)),
+        ((48, 18), (-6, 0)),
+        ((42, 12), (0, -6)),
+        ((48, 6), (6, 0)),
+    ]:
+        geometry.arc_to(end[0], end[1], offset[0], offset[1], False)
+    for corner in [(40, 24), (55, 38), (55, 24), (40, 24)]:
+        if corner == (40, 24):
+            geometry.move_to(corner[0], corner[1], 0)
+        else:
+            geometry.line_to(corner[0], corner[1], 0)
+    geometry.move_to(10, 26, 0)
+    geometry.bezier_to(30, 26, 16, 36, 24, 16)
+    return geometry
+
+
+def generate_write():
+    """A geometry written to a version 12 file and read back."""
+    geometry = _written_geometry()
+    min_x, min_y, max_x, max_y = geometry.rect()
+    width = max_x - min_x
+    height = max_y - min_y
+    prepared = geometry.transform(Matrix.translation(-min_x, -min_y))
+    document = parse(write(geometry))
+    read_back = document.layers[0][1].transform(Matrix.scale(25.4, 25.4))
+    fig, axes = plt.subplots(1, 2, figsize=(10, 5.4))
+    for axes_item, (title, item) in zip(
+        axes,
+        [
+            ("written", prepared),
+            ("read back", read_back),
+        ],
+    ):
+        axes_item.add_patch(
+            Rectangle(
+                (0, 0),
+                width,
+                height,
+                fill=False,
+                edgecolor=PAGE_FRAME,
+                linewidth=1.5,
+                linestyle="--",
+            )
+        )
+        plot_geometry(axes_item, item, color=LAYER_COLORS[0])
+        axes_item.set_xlim(-2, width + 2)
+        axes_item.set_ylim(-2, height + 2)
+        axes_item.set_aspect("equal")
+        axes_item.set_axis_off()
+        axes_item.set_title(f"{title} · {len(item)} commands")
+    fig.suptitle(
+        "page "
+        f"{document.page_width * 25.4:g} × "
+        f"{document.page_height * 25.4:g} mm · "
+        f"issues: {len(document.issues)}"
+    )
+    fig.tight_layout()
+    return fig
+
+
 __docs_target__ = ["raygeo.formats.coreldraw.md"]
 __images__ = [
     {
@@ -208,5 +278,10 @@ __images__ = [
             "A two-page document: page one is returned, its text drawn as "
             "glyph outlines"
         ),
+    },
+    {
+        "heading": "write",
+        "function": generate_write,
+        "caption": ("A geometry written to a version 12 file and read back"),
     },
 ]
