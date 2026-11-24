@@ -26,7 +26,40 @@ class ConstraintStatus:
 
 @typing.final
 class WaypointType:
-    SHARP: builtins.str = 'sharp'
-    SMOOTH: builtins.str = 'smooth'
-    SYMMETRIC: builtins.str = 'symmetric'
+    r"""
+    The role a point plays where two sketch segments meet.
+    
+    The constants are the only supported values. They compare equal to
+    their serialized string form and hash like it, so dictionaries keyed
+    by strings keep working.
+    """
+    SHARP: WaypointType = WaypointType.SHARP
+    SMOOTH: WaypointType = WaypointType.SMOOTH
+    SYMMETRIC: WaypointType = WaypointType.SYMMETRIC
+    @property
+    def value(self) -> builtins.str:
+        r"""
+        The serialized form (``"sharp"``, ``"smooth"``, ``"symmetric"``).
+        """
+    @property
+    def name(self) -> builtins.str:
+        r"""
+        The constant name (``"SHARP"``, ``"SMOOTH"``, ``"SYMMETRIC"``).
+        """
+    def __str__(self) -> builtins.str:
+        r"""
+        The serialized form, like ``str(WaypointType.SHARP)``.
+        """
+    def __repr__(self) -> builtins.str:
+        r"""
+        String representation like ``WaypointType.SHARP``.
+        """
+    def __eq__(self, other: typing.Any) -> builtins.bool:
+        r"""
+        Compares equal to constants and to their serialized string form.
+        """
+    def __hash__(self) -> builtins.int:
+        r"""
+        Hashes like the serialized string, matching ``__eq__``.
+        """
 

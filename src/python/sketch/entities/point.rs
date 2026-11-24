@@ -9,7 +9,9 @@ use crate::sketch::constraint::PointContext;
 use pyo3::types::PyTuple;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
-use crate::python::sketch::types::EntityId;
+use crate::python::sketch::types::{
+    extract_waypoint_type, EntityId, PyWaypointType,
+};
 
 /// A sketch point: coordinates and solver flags.
 ///
@@ -101,26 +103,32 @@ impl PySketchPoint {
         self.inner.id = value.0;
     }
 
-    /// Waypoint type string ("sharp"/"smooth"/"symmetric").
+    /// The role of this point where segments meet.
     #[getter]
-    fn waypoint_type(&self) -> String {
-        self.current().waypoint_type.as_str().to_string()
+    fn waypoint_type(&self) -> PyWaypointType {
+        PyWaypointType(self.current().waypoint_type)
     }
 
     #[setter]
-    fn set_waypoint_type(&mut self, value: String) {
-        let waypoint_type =
-            crate::sketch::entities::point::WaypointType::parse(&value)
-                .unwrap_or(crate::sketch::entities::point::WaypointType::Sharp);
+    fn set_waypoint_type(
+        &mut self,
+        #[gen_stub(override_type(
+            type_repr = "types.WaypointType | builtins.str",
+            imports = ("builtins",)
+        ))]
+        value: &Bound<'_, PyAny>,
+    ) -> PyResult<()> {
+        let waypoint_type = extract_waypoint_type(value)?;
         self.inner.waypoint_type = waypoint_type;
         if let Some(registry) = &self.registry {
             Python::attach(|py| {
                 let _ = registry.bind(py).call_method1(
                     "set_point_waypoint_type",
-                    (self.inner.id, value),
+                    (self.inner.id, waypoint_type.as_str()),
                 );
             });
         }
+        Ok(())
     }
 
     /// The point position as a ``(x, y)`` tuple.

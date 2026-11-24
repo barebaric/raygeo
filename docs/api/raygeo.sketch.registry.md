@@ -1033,16 +1033,19 @@ Sets a point's coordinates.
 ### `set_point_waypoint_type()`
 
 ```python
-set_point_waypoint_type(id: types.EntityID, value: str) -> bool
+set_point_waypoint_type(
+    id: types.EntityID,
+    value: types.WaypointType | str,
+) -> bool
 ```
 
 Sets a point's waypoint role.
 
-| Parameter | Type             | Description |
-| --------- | ---------------- | ----------- |
-| `id`      | `types.EntityID` |             |
-| `value`   | `str`            |             |
-| _Returns_ | `bool`           |             |
+| Parameter | Type                            | Description |
+| --------- | ------------------------------- | ----------- |
+| `id`      | `types.EntityID`                |             |
+| `value`   | `types.WaypointType &#124; str` |             |
+| _Returns_ | `bool`                          |             |
 
 ### `set_points()`
 
@@ -1209,12 +1212,12 @@ Re-computes constrained flags. Entities whose radius is explicitly dimensioned a
 ### `waypoint_type()`
 
 ```python
-waypoint_type(id: types.EntityID) -> Optional[str]
+waypoint_type(id: types.EntityID) -> Optional[types.WaypointType]
 ```
 
-Waypoint type string of a point ("sharp"/"smooth"/"symmetric").
+Waypoint role of a point.
 
-| Parameter | Type             | Description |
-| --------- | ---------------- | ----------- |
-| `id`      | `types.EntityID` |             |
-| _Returns_ | `Optional[str]`  |             |
+| Parameter | Type                           | Description |
+| --------- | ------------------------------ | ----------- |
+| `id`      | `types.EntityID`               |             |
+| _Returns_ | `Optional[types.WaypointType]` |             |
