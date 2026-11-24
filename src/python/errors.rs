@@ -19,6 +19,16 @@ pyo3::create_exception!(
     PyRuntimeError
 );
 
+pyo3::create_exception!("raygeo.formats.coreldraw", CdrError, PyRuntimeError);
+
+pyo3::create_exception!(
+    "raygeo.formats.coreldraw",
+    CdrUnsupportedFormat,
+    CdrError
+);
+
+pyo3::create_exception!("raygeo.formats.coreldraw", CdrParseError, CdrError);
+
 // pyo3_stub_gen::create_exception! has a bug: it uses stringify!($module)
 // which embeds the surrounding quotes into the module string, causing the
 // stub generator to reject it.  Instead we manually implement PyStubType
@@ -91,6 +101,76 @@ inventory::submit! {
         doc: "Raised when pipeline execution was cancelled (normal \
               during rapid rebuilds).",
         bases: &[|| <PyRuntimeError as PyStubType>::type_output()],
+        has_eq: false,
+        has_ord: false,
+        has_hash: false,
+        has_str: false,
+        subclass: true,
+    }
+}
+
+impl PyStubType for CdrError {
+    fn type_output() -> TypeInfo {
+        TypeInfo::builtin("CdrError")
+    }
+}
+impl_py_runtime_type!(CdrError);
+inventory::submit! {
+    PyClassInfo {
+        pyclass_name: "CdrError",
+        struct_id: std::any::TypeId::of::<CdrError>,
+        getters: &[],
+        setters: &[],
+        module: Some("raygeo.formats.coreldraw"),
+        doc: "Base class of the CorelDRAW reader errors.",
+        bases: &[|| <PyRuntimeError as PyStubType>::type_output()],
+        has_eq: false,
+        has_ord: false,
+        has_hash: false,
+        has_str: false,
+        subclass: true,
+    }
+}
+
+impl PyStubType for CdrUnsupportedFormat {
+    fn type_output() -> TypeInfo {
+        TypeInfo::builtin("CdrUnsupportedFormat")
+    }
+}
+impl_py_runtime_type!(CdrUnsupportedFormat);
+inventory::submit! {
+    PyClassInfo {
+        pyclass_name: "CdrUnsupportedFormat",
+        struct_id: std::any::TypeId::of::<CdrUnsupportedFormat>,
+        getters: &[],
+        setters: &[],
+        module: Some("raygeo.formats.coreldraw"),
+        doc: "Raised when the data is not a CorelDRAW or CMX document.",
+        bases: &[|| <CdrError as PyStubType>::type_output()],
+        has_eq: false,
+        has_ord: false,
+        has_hash: false,
+        has_str: false,
+        subclass: true,
+    }
+}
+
+impl PyStubType for CdrParseError {
+    fn type_output() -> TypeInfo {
+        TypeInfo::builtin("CdrParseError")
+    }
+}
+impl_py_runtime_type!(CdrParseError);
+inventory::submit! {
+    PyClassInfo {
+        pyclass_name: "CdrParseError",
+        struct_id: std::any::TypeId::of::<CdrParseError>,
+        getters: &[],
+        setters: &[],
+        module: Some("raygeo.formats.coreldraw"),
+        doc: "Raised when a CorelDRAW container, record or argument table \
+              cannot be read.",
+        bases: &[|| <CdrError as PyStubType>::type_output()],
         has_eq: false,
         has_ord: false,
         has_hash: false,
