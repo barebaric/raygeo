@@ -242,6 +242,12 @@ impl Part {
     /// Single-pocket geometry produces a single face `""` — backward
     /// compatible with [`Part::new`].
     ///
+    /// Contours that are classified closed but are too small to form a
+    /// valid polygon (for example dash strokes shrunken below the
+    /// closure tolerance on a scaled-down workpiece) are treated as cut
+    /// strokes and preserved on the default face alongside the open
+    /// contours, so no geometry is silently dropped.
+    ///
     /// Each face's [`StockRegion`] is set directly from its outer +
     /// islands and `ClearedArea` starts empty. When `geometry` is empty
     /// or has no contours, a single empty default face is produced
@@ -295,14 +301,39 @@ impl Part {
             None
         };
 
-        let outers: Vec<Polygon> = outer_indices
-            .iter()
-            .filter_map(|&i| contour_to_poly(i))
-            .collect();
-        let inners: Vec<Polygon> = inner_indices
-            .iter()
-            .filter_map(|&i| contour_to_poly(i))
-            .collect();
+        // Contours that the nesting classifier cannot place (e.g. dash
+        // strokes shrunken below the closure tolerance on a
+        // scaled-down workpiece) and contours classified closed but
+        // too small to form a valid polygon are cut strokes, not
+        // pockets. Collect them so they are preserved on the default
+        // face instead of being dropped.
+        let mut classified = vec![false; closed.len()];
+        for &i in &inner_indices {
+            classified[i] = true;
+        }
+        for &i in &outer_indices {
+            classified[i] = true;
+        }
+        let mut degenerate: Vec<Geometry> = Vec::new();
+        for (i, contour) in closed.iter().enumerate() {
+            if !classified[i] {
+                degenerate.push(contour.copy());
+            }
+        }
+        let mut outers: Vec<Polygon> = Vec::new();
+        for &i in &outer_indices {
+            match contour_to_poly(i) {
+                Some(poly) => outers.push(poly),
+                None => degenerate.push(closed[i].copy()),
+            }
+        }
+        let mut inners: Vec<Polygon> = Vec::new();
+        for &i in &inner_indices {
+            match contour_to_poly(i) {
+                Some(poly) => inners.push(poly),
+                None => degenerate.push(closed[i].copy()),
+            }
+        }
 
         if outers.is_empty() {
             return Part::new(Some(geometry), size_mm);
@@ -364,9 +395,13 @@ impl Part {
 
             // 5. Re-append open contours so cut lines are not lost.
             //    Open paths are not part of any pocket, so they are
-            //    attached to the default (largest) face.
+            //    attached to the default (largest) face. Degenerate
+            //    closed contours (see above) are preserved the same way.
             if face_id.is_empty() {
                 for contour in &open {
+                    face_geo.extend(&contour.copy());
+                }
+                for contour in &degenerate {
                     face_geo.extend(&contour.copy());
                 }
             }

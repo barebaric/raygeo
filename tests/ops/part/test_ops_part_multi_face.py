@@ -9,6 +9,9 @@ Verifies that:
   their centroid, and do not leak into other faces.
 * Empty geometry yields a single empty default face ``""`` (no panic),
   matching the single-face ``Part(...)`` constructor.
+* Open contours are preserved on the default face.
+* Contours classified closed but too small to form a polygon (tiny
+  dashes on scaled-down workpieces) are preserved, not dropped.
 * ``face_ids`` exposes every face id.
 """
 
@@ -189,6 +192,75 @@ def test_open_contours_kept_when_pockets_split_into_faces():
     rect = default.geometry.rect()
     assert rect[0] <= 30.0 <= rect[2]
     assert rect[3] >= 4.0
+
+
+# ── Degenerate closed contours are preserved ────────────────────
+
+
+def _outer_with_tiny_dashes_geo() -> Geometry:
+    """A closed rectangle plus dash strokes shorter than 0.1 mm.
+
+    Each dash's endpoints are closer together than the closure
+    tolerance (EPSILON_BOUNDARY), so they are classified as closed
+    contours, yet they are cut strokes that must survive.
+    """
+    g = Geometry()
+    g.extend(_rect(0, 0, 10, 10))
+    x = 12.0
+    for _ in range(5):
+        g.move_to(x, 0.0)
+        g.line_to(x + 0.05, 0.0)
+        x += 1.0
+    return g
+
+
+def test_tiny_dashes_are_kept_on_default_face():
+    """Regression: dash strokes shrunken below the closure tolerance
+    used to be misclassified as closed contours and silently dropped
+    when they failed polygon conversion, which made dotted lines lose
+    their dots on scaled-down workpieces."""
+    p = Part.from_geometry_multi_face(
+        _outer_with_tiny_dashes_geo(), size_mm=(20.0, 10.0)
+    )
+    assert p.face_ids == [""]
+    f = p.face("")
+    assert f is not None
+    assert f.geometry is not None
+    rect = f.geometry.rect()
+    assert rect[2] > 15.0
+    n_lines = sum(
+        1 for c in f.geometry.iter_commands() if type(c).__name__ == "Line"
+    )
+    assert n_lines == 5 + 4  # five dashes plus the rectangle
+
+
+def test_tiny_dashes_do_not_become_islands():
+    p = Part.from_geometry_multi_face(
+        _outer_with_tiny_dashes_geo(), size_mm=(20.0, 10.0)
+    )
+    f = p.face("")
+    assert f is not None
+    assert f.stock_region.islands == []
+
+
+def test_all_degenerate_geometry_is_preserved():
+    """Geometry consisting only of sub-tolerance strokes (no valid
+    pocket) must come back unchanged."""
+    g = Geometry()
+    x = 0.0
+    for _ in range(3):
+        g.move_to(x, 0.0)
+        g.line_to(x + 0.05, 0.0)
+        x += 1.0
+    p = Part.from_geometry_multi_face(g, size_mm=(5.0, 1.0))
+    assert p.face_ids == [""]
+    f = p.face("")
+    assert f is not None
+    assert f.geometry is not None
+    n_lines = sum(
+        1 for c in f.geometry.iter_commands() if type(c).__name__ == "Line"
+    )
+    assert n_lines == 3
 
 
 # ── face_ids getter ──────────────────────────────────────────────
