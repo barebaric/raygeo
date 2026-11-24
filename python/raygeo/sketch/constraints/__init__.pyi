@@ -3,6 +3,8 @@
 
 import builtins
 import collections.abc
+import numpy
+import numpy.typing
 from raygeo.sketch import protocols
 import typing
 from raygeo.sketch.constraints.angle import AngleConstraint
@@ -67,6 +69,7 @@ __all__ = [
     "VerticalConstraint",
     "angle",
     "aspect_ratio",
+    "check_grad",
     "coincident",
     "collinear",
     "diameter",
@@ -255,4 +258,22 @@ class Constraint:
         shape, rebuilding via the concrete subclass's `from_dict`.
         """
     def __copy__(self) -> typing.Any: ...
+
+def check_grad(func: collections.abc.Callable[[numpy.typing.NDArray[numpy.float64]], float], grad: collections.abc.Callable[[numpy.typing.NDArray[numpy.float64]], numpy.typing.NDArray[numpy.float64]], x0: numpy.typing.ArrayLike, epsilon: float = 0.000001) -> float:
+    r"""
+    Compare an analytical gradient with forward differences.
+    
+    Mirrors ``scipy.optimize.check_grad``: the analytical gradient is
+    evaluated at ``x0``, each coordinate is then perturbed by
+    ``epsilon`` and ``func`` is re-evaluated, and the L2 norm of the
+    difference between the analytical and numerical gradients is
+    returned.
+    
+    :param func: Scalar function of a 1-D float64 array.
+    :param grad: Analytical gradient of ``func``.
+    :param x0: Point at which to check the gradient.
+    :param epsilon: Forward-difference step size.
+    :returns: L2 norm of the gradient difference.
+    :complexity: O(n) function and gradient evaluations
+    """
 

@@ -388,3 +388,31 @@ Re-evaluates the expression (if present) using the provided context and updates 
 | --------- | ------ | ----------- |
 | `context` | `dict` |             |
 | _Returns_ | `None` |             |
+
+## Functions
+
+### `check_grad()`
+
+```python
+check_grad(
+    func: Callable[[numpy.NDArray[numpy.float64]], float],
+    grad: Callable[[numpy.NDArray[numpy.float64]], numpy.NDArray[numpy.float64]],
+    x0: numpy.ArrayLike,
+    epsilon: float = 1e-06,
+) -> float
+```
+
+Compare an analytical gradient with forward differences.
+
+Mirrors `scipy.optimize.check_grad`: the analytical gradient is evaluated at `x0`, each coordinate
+is then perturbed by `epsilon` and `func` is re-evaluated, and the L2 norm of the difference between
+the analytical and numerical gradients is returned.
+
+| Parameter    | Type                                                                     | Description                             |
+| ------------ | ------------------------------------------------------------------------ | --------------------------------------- |
+| `func`       | `Callable[[numpy.NDArray[numpy.float64]], float]`                        | Scalar function of a 1-D float64 array. |
+| `grad`       | `Callable[[numpy.NDArray[numpy.float64]], numpy.NDArray[numpy.float64]]` | Analytical gradient of `func`.          |
+| `x0`         | `numpy.ArrayLike`                                                        | Point at which to check the gradient.   |
+| `epsilon`    | `float = 1e-06`                                                          | Forward-difference step size.           |
+| _Returns_    | `float`                                                                  | L2 norm of the gradient difference.     |
+| _Complexity_ |                                                                          | O(n) function and gradient evaluations  |
