@@ -12,21 +12,19 @@ pub(crate) fn register(sketch: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = sketch.py();
     let snap = PyModule::new(py, "snap")?;
 
+    // Each sub-module is registered on its own module only. Names live at
+    // their leaf path; the package does not re-export them.
     let types_mod = PyModule::new(py, "types")?;
     types::register(&types_mod)?;
-    types::register(&snap)?;
 
     let spatial_mod = PyModule::new(py, "spatial")?;
     spatial::register(&spatial_mod)?;
-    spatial::register(&snap)?;
 
     let engine_mod = PyModule::new(py, "engine")?;
     engine::register(&engine_mod)?;
-    engine::register(&snap)?;
 
     let producers_mod = PyModule::new(py, "producers")?;
     producers::register(&producers_mod)?;
-    producers::register(&snap)?;
 
     let spec_cls = py.import("importlib.machinery")?.getattr("ModuleSpec")?;
     for (name, module) in [
@@ -45,18 +43,6 @@ pub(crate) fn register(sketch: &Bound<'_, PyModule>) -> PyResult<()> {
     let snap_spec = spec_cls.call1(("raygeo.sketch.snap", py.None()))?;
     snap.setattr("__spec__", snap_spec)?;
     snap.setattr("__package__", "raygeo.sketch")?;
-
-    // Re-export producer classes at the package root.
-    for name in [
-        "CentersProducer",
-        "EntityPointsProducer",
-        "EquidistantLinesProducer",
-        "IntersectionsProducer",
-        "MidpointsProducer",
-        "OnEntityProducer",
-    ] {
-        snap.setattr(name, producers_mod.getattr(name)?)?;
-    }
 
     sketch.add_submodule(&snap)?;
     sketch.setattr("snap", &snap)?;

@@ -600,8 +600,13 @@ fn unique_interior_knots(
     if knots.len() < control_count + degree + 1 {
         return Vec::new();
     }
+    // The knot vector is clamped: the last `degree + 1` entries repeat the
+    // end value and start no span. Treating them as interior knots makes
+    // the insertion pass append degenerate control points, which render
+    // as zig-zag geometry.
+    let end = control_count.saturating_sub(degree).max(degree + 1);
     let mut unique: Vec<f64> = Vec::new();
-    for &knot in &knots[degree..control_count] {
+    for &knot in &knots[degree..end] {
         if unique
             .last()
             .is_none_or(|last| (*last - knot).abs() > 1e-12)

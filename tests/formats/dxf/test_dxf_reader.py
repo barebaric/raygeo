@@ -499,3 +499,60 @@ class TestBulges:
         arc = geometry.data[1]
 
         assert 12.0 + arc.center_offset[1] == pytest.approx(2.55, abs=1e-6)
+
+
+class TestSplineSpans:
+    """Exporters write splines whose interior knots already carry full
+    multiplicity, with a control-point count that does not match the
+    knot vector. The trailing clamped knots must not be treated as span
+    boundaries; doing so appends degenerate control points, which render
+    as zig-zag geometry."""
+
+    def _spline(self, control, knots, degree=3):
+        values = [
+            (70, 8),
+            (71, degree),
+            (72, len(knots)),
+            (73, len(control)),
+            (74, 0),
+        ]
+        values += [(40, knot) for knot in knots]
+        for x, y in control:
+            values += [(10, x), (20, y), (30, 0.0)]
+        return read(document([("SPLINE", "0", values)])).layers[0][1]
+
+    # 8 control points with a 12-knot clamped vector whose interior knot
+    # has full multiplicity: the shape of a spline exported as bezier
+    # spans. The count is one point more than the spans need, which is
+    # the inconsistency real exporters produce.
+    CONTROL = [
+        (0.0, 0.0),
+        (10.0, 30.0),
+        (10.0, 30.0),
+        (20.0, 30.0),
+        (20.0, 30.0),
+        (30.0, 0.0),
+        (40.0, -30.0),
+        (50.0, -30.0),
+    ]
+    KNOTS = [0.0, 0.0, 0.0, 0.0, 0.5, 0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 1.0]
+
+    def _curves(self, geometry):
+        return [c for c in geometry.data if type(c).__name__ == "Bezier"]
+
+    def test_produces_curves_without_degenerate_runs(self):
+        curves = self._curves(self._spline(self.CONTROL, self.KNOTS))
+
+        assert curves, "the spline must produce bezier segments"
+        degenerate = sum(
+            1
+            for a, b in zip(curves, curves[1:])
+            if a.end == b.end and a.control1 == b.control1
+        )
+        assert degenerate <= len(curves) / 2
+
+    def test_segments_advance_along_the_curve(self):
+        curves = self._curves(self._spline(self.CONTROL, self.KNOTS))
+
+        xs = [c.end[0] for c in curves]
+        assert xs == sorted(xs), "segments must advance along the curve"

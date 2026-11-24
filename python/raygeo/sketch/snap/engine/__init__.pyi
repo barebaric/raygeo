@@ -8,6 +8,7 @@ import typing
 __all__ = [
     "SnapEngine",
     "SnapLineProducer",
+    "geometry_key",
 ]
 
 @typing.final
@@ -42,4 +43,9 @@ class SnapLineProducer:
     def __new__(cls, *_args: typing.Any, **_kwargs: typing.Any) -> SnapLineProducer: ...
     def produce(self, _registry: typing.Any, _drag_position: tuple[builtins.float, builtins.float], _drag_context: typing.Any, _threshold: builtins.float) -> builtins.list[types.SnapLine]: ...
     def produce_points(self, _registry: typing.Any, _drag_position: tuple[builtins.float, builtins.float], _drag_context: typing.Any, _threshold: builtins.float) -> builtins.list[types.SnapPoint]: ...
+
+def geometry_key(registry: typing.Any, drag_context: typing.Optional[typing.Any] = None, include_construction: builtins.bool = True, include_points: builtins.bool = True) -> typing.Any:
+    r"""
+    Stable identity of the geometry a snap index depends on.
+    """
 

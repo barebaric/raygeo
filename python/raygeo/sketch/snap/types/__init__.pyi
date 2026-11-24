@@ -10,6 +10,7 @@ __all__ = [
     "SnapLineType",
     "SnapPoint",
     "SnapResult",
+    "snap_line_styles",
 ]
 
 @typing.final
@@ -138,4 +139,12 @@ class SnapResult:
     def from_snap_line(cls, snap_line: SnapLine, original_pos: tuple[builtins.float, builtins.float], distance: builtins.float) -> SnapResult: ...
     @classmethod
     def from_snap_point(cls, snap_point: SnapPoint, distance: builtins.float, snap_lines: typing.Optional[typing.Sequence[SnapLine]] = None) -> SnapResult: ...
+
+def snap_line_styles() -> dict:
+    r"""
+    The line style used for each kind of snap line.
+    
+    Exposed as a function rather than a module-level dict because a plain
+    assignment cannot be described in a stub.
+    """
 

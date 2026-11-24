@@ -5,6 +5,7 @@ use std::collections::{HashMap, HashSet};
 
 use pyo3::prelude::*;
 use pyo3::types::PyAny;
+use pyo3_stub_gen::derive::gen_type_alias_from_python;
 use pyo3_stub_gen::{ImportKind, ImportRef, ModuleRef, PyStubType, TypeInfo};
 
 /// An entity or point id from the registry's id space.
@@ -51,6 +52,34 @@ impl PyStubType for EntityId {
         }
     }
 }
+
+/// The status of a sketch constraint.
+///
+/// The runtime object is an `IntEnum` built in [`register_types`]; this
+/// declaration exists so the stub generator emits its members.
+#[pyo3_stub_gen::derive::gen_stub_pyclass]
+#[pyclass(module = "raygeo.sketch.types", name = "ConstraintStatus")]
+pub struct PyConstraintStatus;
+
+#[pyo3_stub_gen::derive::gen_stub_pymethods]
+#[pymethods]
+impl PyConstraintStatus {
+    #[classattr]
+    pub const VALID: i64 = 1;
+    #[classattr]
+    pub const EXPRESSION_BASED: i64 = 2;
+    #[classattr]
+    pub const ERROR: i64 = 3;
+    #[classattr]
+    pub const CONFLICTING: i64 = 4;
+}
+
+gen_type_alias_from_python!(
+    "raygeo.sketch.types",
+    r#"
+    type EntityID = int
+    "#
+);
 
 #[pyo3_stub_gen::derive::gen_stub_pyclass]
 #[pyclass(frozen, module = "raygeo.sketch.types", name = "WaypointType")]

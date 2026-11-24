@@ -33,11 +33,18 @@ pub struct DxfHeader {
     pub extents: Option<Rect>,
 }
 
+/// The scale assumed for a drawing that states no units.
+pub const DEFAULT_UNITS_TO_MM: f64 = 1000.0;
+
 /// Converts a `$INSUNITS` code to the factor that brings a coordinate to
 /// millimetres.
 ///
 /// Returns `None` for unitless drawings (`0`) and for codes raygeo does
 /// not know, so the caller can decide on a default.
+///
+/// A drawing with no `$INSUNITS` at all is treated as metres, which is
+/// the default AutoCAD and other writers assume. Resolving it as
+/// millimetres would shrink such files by a factor of a thousand.
 pub fn insunits_to_mm(insunits: i64) -> Option<f64> {
     match insunits {
         1 => Some(25.4),
@@ -69,6 +76,7 @@ pub fn read(data: &str) -> RaygeoResult<ReadOutput> {
     let sections = collect_sections(&items);
     let empty = Vec::new();
     let header = parse_header(sections.get("HEADER").unwrap_or(&empty));
+    let has_header_section = sections.contains_key("HEADER");
     let blocks = parse_blocks(sections.get("BLOCKS").unwrap_or(&empty));
     let mut issues = Vec::new();
     // The section's own SECTION record is metadata; only the records
@@ -83,7 +91,7 @@ pub fn read(data: &str) -> RaygeoResult<ReadOutput> {
         &mut issues,
     );
     let entities = resolve_blocks(content, &blocks, &mut issues);
-    Ok(build_output(entities, &header, issues))
+    Ok(build_output(entities, &header, has_header_section, issues))
 }
 
 /// Splits the file into sections, keyed by section name, each holding
@@ -293,6 +301,7 @@ fn push_issue(issues: &mut Vec<String>, message: String) {
 fn build_output(
     entities: Vec<Entity>,
     header: &DxfHeader,
+    has_header_section: bool,
     issues: Vec<String>,
 ) -> ReadOutput {
     let mut by_layer: HashMap<String, Geometry> = HashMap::new();
@@ -348,7 +357,15 @@ fn build_output(
     ReadOutput {
         layers,
         bounds,
-        units_to_mm: insunits_to_mm(header.insunits).unwrap_or(1.0),
+        units_to_mm: match insunits_to_mm(header.insunits) {
+            Some(scale) => scale,
+            // A file with no HEADER section at all was written by
+            // something that omits units entirely, and those drawings
+            // are conventionally in metres. A file that has a header
+            // but leaves $INSUNITS out is read as its native units.
+            None if !has_header_section => DEFAULT_UNITS_TO_MM,
+            None => 1.0,
+        },
         is_y_down: false,
         z_range: (min_z, max_z),
         issues,
