@@ -8,6 +8,7 @@ import numpy as np
 from raygeo.image.preprocess import (
     compute_adaptive_threshold,
     denoise_binary,
+    dilate_binary,
     filter_components,
     get_component_areas,
     grayscale_to_binary,
@@ -168,6 +169,30 @@ def generate_adaptive_threshold():
     return fig5
 
 
+def generate_dilate_binary():
+    """Dilate binary."""
+    w, h = 128, 96
+    binary = np.zeros((h, w), dtype=bool)
+    fill_rounded_rect(binary, (18, 22), (58, 70), 6)
+    fill_rounded_rect(binary, (76, 18), (104, 46), 3)
+    binary[70:78, 88:100] = True
+    source = binary.astype(np.uint8)
+
+    figures = [
+        (source, "Original"),
+        (dilate_binary(source, 2), "2 iterations"),
+        (dilate_binary(source, 6), "6 iterations"),
+    ]
+
+    fig6, axes6 = plt.subplots(1, 3, figsize=(12, 3.5))
+    for axis, (image, title) in zip(axes6, figures):
+        axis.imshow(image, cmap="gray", vmin=0, vmax=1)
+        axis.set_title(title)
+        axis.axis("off")
+    plt.tight_layout()
+    return fig6
+
+
 __docs_target__ = ["raygeo.image.preprocess.md"]
 __images__ = [
     {
@@ -194,5 +219,10 @@ __images__ = [
         "heading": "compute_adaptive_threshold",
         "caption": "Adaptive threshold from component area distribution",
         "function": generate_adaptive_threshold,
+    },
+    {
+        "heading": "dilate_binary",
+        "caption": "Cross-shaped dilation after 2 and 6 iterations",
+        "function": generate_dilate_binary,
     },
 ]

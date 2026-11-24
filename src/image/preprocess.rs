@@ -176,6 +176,61 @@ fn connected_components_8(
     (labels, area_map)
 }
 
+pub fn dilate_binary(
+    binary: &[u8],
+    width: usize,
+    height: usize,
+    iterations: usize,
+) -> Vec<u8> {
+    let size = width * height;
+    assert_eq!(binary.len(), size, "binary buffer size mismatch");
+
+    if iterations == 0 || size == 0 {
+        return binary.iter().map(|&v| (v != 0) as u8).collect();
+    }
+
+    let infinity = usize::MAX / 4;
+    let mut distance = vec![infinity; size];
+    for (index, &value) in binary.iter().enumerate() {
+        if value != 0 {
+            distance[index] = 0;
+        }
+    }
+
+    for y in 0..height {
+        for x in 0..width {
+            let index = y * width + x;
+            let mut value = distance[index];
+            if x > 0 {
+                value = value.min(distance[index - 1].saturating_add(1));
+            }
+            if y > 0 {
+                value = value.min(distance[index - width].saturating_add(1));
+            }
+            distance[index] = value;
+        }
+    }
+
+    for y in (0..height).rev() {
+        for x in (0..width).rev() {
+            let index = y * width + x;
+            let mut value = distance[index];
+            if x + 1 < width {
+                value = value.min(distance[index + 1].saturating_add(1));
+            }
+            if y + 1 < height {
+                value = value.min(distance[index + width].saturating_add(1));
+            }
+            distance[index] = value;
+        }
+    }
+
+    distance
+        .into_iter()
+        .map(|value| (value <= iterations) as u8)
+        .collect()
+}
+
 pub fn get_component_areas(
     binary: &[u8],
     width: usize,

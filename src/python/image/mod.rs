@@ -4,6 +4,7 @@ mod composite;
 mod convert;
 mod dither;
 mod grayscale;
+mod pack;
 mod pbr;
 mod preprocess;
 mod ramp;
@@ -23,7 +24,9 @@ conversions with alpha unpremultiplication, grayscale normalization \
 with auto-levels, dithering algorithms (error diffusion with \
 serpentine scan, Bayer, newsprint and halftone screens, minimum run \
 length) for converting grayscale images to binary output, edge ramps \
-for sloped relief edges, and scanline rasterization for converting Ops scanlines into pixel buffers.
+for sloped relief edges, scanline rasterization for converting Ops \
+scanlines into pixel buffers, binary dilation, and greedy first-fit \
+packing of binary footprints on a canvas.
 ";
 
 pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -37,6 +40,7 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
             "convert",
             "dither",
             "grayscale",
+            "pack",
             "pbr",
             "preprocess",
             "ramp",
@@ -53,6 +57,7 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     srgb::register(&image_mod)?;
     grayscale::register(&image_mod)?;
     dither::register(&image_mod)?;
+    pack::register(&image_mod)?;
     pbr::register(&image_mod)?;
     preprocess::register(&image_mod)?;
     ramp::register(&image_mod)?;

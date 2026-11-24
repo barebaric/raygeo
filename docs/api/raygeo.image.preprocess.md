@@ -49,6 +49,31 @@ noise from content, and removes small components.
 
 *Binary image denoised via adaptive thresholding*
 
+### `dilate_binary()`
+
+```python
+dilate_binary(
+    binary: numpy.NDArray[numpy.uint8],
+    iterations: int,
+) -> numpy.NDArray[numpy.uint8]
+```
+
+Dilate a binary image with a 3x3 cross structuring element.
+
+Repeats the dilation `iterations` times. Pixels outside the image are treated as background,
+matching `scipy.ndimage.binary_dilation` with its default cross structure.
+
+| Parameter    | Type                         | Description                                          |
+| ------------ | ---------------------------- | ---------------------------------------------------- |
+| `binary`     | `numpy.NDArray[numpy.uint8]` | 2D uint8 array (nonzero pixels are foreground).      |
+| `iterations` | `int`                        | Number of dilation steps.                            |
+| _Returns_    | `numpy.NDArray[numpy.uint8]` | 2D uint8 array of the same shape with values 0 or 1. |
+| _Complexity_ |                              | O(w\*h), independent of the iteration count          |
+
+![Cross-shaped dilation after 2 and 6 iterations](images/image-preprocess-dilate-binary.png)
+
+*Cross-shaped dilation after 2 and 6 iterations*
+
 ### `filter_components()`
 
 ```python

@@ -3,6 +3,7 @@ import numpy as np
 from raygeo.image.preprocess import (
     compute_adaptive_threshold,
     denoise_binary,
+    dilate_binary,
     filter_components,
     get_component_areas,
     grayscale_to_binary,
@@ -59,6 +60,98 @@ class TestGrayscaleToBinary:
         gray = np.full((10, 10), 128, dtype=np.uint8)
         result = grayscale_to_binary(gray, auto_threshold=True)
         assert result.shape == (10, 10)
+
+
+# ---------------------------------------------------------------------------
+# dilate_binary
+# ---------------------------------------------------------------------------
+
+
+def _dilate_reference(binary: np.ndarray, iterations: int) -> np.ndarray:
+    """Repeated 4-neighbour dilation with a background border."""
+    result = binary != 0
+    for _ in range(iterations):
+        padded = np.pad(result, 1, constant_values=False)
+        result = (
+            result
+            | padded[:-2, 1:-1]
+            | padded[2:, 1:-1]
+            | padded[1:-1, :-2]
+            | padded[1:-1, 2:]
+        )
+    return result
+
+
+class TestDilateBinary:
+    def test_single_pixel_grows_to_a_cross(self):
+        binary = np.zeros((5, 5), dtype=np.uint8)
+        binary[2, 2] = 1
+        result = dilate_binary(binary, 1)
+
+        assert result.sum() == 5
+        assert result[2, 2] == 1
+        assert result[1, 2] == 1
+        assert result[3, 2] == 1
+        assert result[2, 1] == 1
+        assert result[2, 3] == 1
+        assert result[1, 1] == 0
+
+    def test_two_iterations_grow_to_a_diamond(self):
+        binary = np.zeros((7, 7), dtype=np.uint8)
+        binary[3, 3] = 1
+        result = dilate_binary(binary, 2)
+
+        assert result.sum() == 13
+        assert result[3, 1] == 1
+        assert result[1, 3] == 1
+
+    def test_zero_iterations_is_identity(self):
+        binary = np.array([[0, 2], [3, 0]], dtype=np.uint8)
+        result = dilate_binary(binary, 0)
+
+        np.testing.assert_array_equal(result, [[0, 1], [1, 0]])
+
+    def test_empty_input_stays_empty(self):
+        binary = np.zeros((4, 6), dtype=np.uint8)
+        result = dilate_binary(binary, 3)
+
+        assert not result.any()
+        assert result.shape == (4, 6)
+
+    def test_full_input_stays_full(self):
+        binary = np.ones((4, 6), dtype=np.uint8)
+        result = dilate_binary(binary, 3)
+
+        assert result.all()
+
+    def test_dilation_is_clipped_at_the_border(self):
+        binary = np.zeros((5, 5), dtype=np.uint8)
+        binary[0, 0] = 1
+        result = dilate_binary(binary, 2)
+
+        assert int(result.sum()) == 6
+        assert result[0, 2] == 1
+        assert result[2, 0] == 1
+        assert result[2, 2] == 0
+        assert result[3, 0] == 0
+
+    def test_output_is_binary(self):
+        rng = np.random.default_rng(7)
+        binary = rng.integers(0, 256, (9, 11), dtype=np.uint8)
+        result = dilate_binary(binary, 2)
+
+        assert set(np.unique(result)).issubset({0, 1})
+
+    def test_matches_reference_dilation(self):
+        rng = np.random.default_rng(11)
+        for _ in range(20):
+            height = int(rng.integers(1, 12))
+            width = int(rng.integers(1, 12))
+            binary = rng.integers(0, 2, (height, width), dtype=np.uint8)
+            for iterations in range(5):
+                expected = _dilate_reference(binary, iterations)
+                result = dilate_binary(binary, iterations)
+                np.testing.assert_array_equal(result, expected)
 
 
 # ---------------------------------------------------------------------------
