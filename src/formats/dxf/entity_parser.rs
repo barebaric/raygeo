@@ -599,9 +599,10 @@ fn split_into_beziers(
 
 /// The distinct interior knot values, in order.
 ///
-/// The first `degree` and last `degree` knots clamp the curve to its end
-/// points and are excluded, as is the final knot, which ends the last
-/// span rather than starting a new one.
+/// A clamped knot vector for `control_count` control points of the given
+/// degree has length `control_count + degree + 1`. The first `degree + 1`
+/// entries are the start value and the last `degree + 1` repeat the end
+/// value; a value in between starts a new span.
 fn unique_interior_knots(
     knots: &[f64],
     control_count: usize,
@@ -610,13 +611,12 @@ fn unique_interior_knots(
     if knots.len() < control_count + degree + 1 {
         return Vec::new();
     }
-    // The knot vector is clamped: the last `degree + 1` entries repeat the
-    // end value and start no span. Treating them as interior knots makes
-    // the insertion pass append degenerate control points, which render
-    // as zig-zag geometry.
-    let end = control_count.saturating_sub(degree).max(degree + 1);
+    // The curve runs from knots[degree] to knots[control_count]; only the
+    // values strictly inside that range start a span. The clamped ends
+    // already carry full multiplicity and must not be inserted again.
+    let start = (degree + 1).min(control_count);
     let mut unique: Vec<f64> = Vec::new();
-    for &knot in &knots[degree..end] {
+    for &knot in &knots[start..control_count] {
         if unique
             .last()
             .is_none_or(|last| (*last - knot).abs() > 1e-12)
@@ -629,9 +629,13 @@ fn unique_interior_knots(
 
 /// Inserts one knot by the Boehm algorithm.
 ///
-/// Returns false when the knot cannot be inserted. New control points are
-/// computed into a scratch buffer first, then written back, so the
-/// shifted indices cannot read points that were already overwritten.
+/// The `degree` control points that follow the span's first point are
+/// blended between their two neighbours, exactly as the knot vector
+/// requires. The old last control point of the span moves one index up,
+/// because the new polygon has one more point. Returns false when the
+/// knot cannot be inserted. New control points are computed into a
+/// scratch buffer first, then written back, so the shifted indices cannot
+/// read points that were already overwritten.
 fn insert_knot(
     points: &mut Vec<glam::DVec4>,
     knots: &mut Vec<f64>,
@@ -660,25 +664,23 @@ fn insert_knot(
         }
         low
     };
-    let mut scratch: Vec<glam::DVec4> =
-        (0..=degree).map(|i| points[span - degree + i]).collect();
-    for r in 1..=degree {
-        for i in (r..=degree).rev() {
-            let index = span - degree + i;
-            let denominator = knots[index + degree + 1 - r] - knots[index];
+    let first = span - degree + 1;
+    let scratch: Vec<glam::DVec4> = (first..=span)
+        .map(|i| {
+            let denominator = knots[i + degree] - knots[i];
             let alpha = if denominator.abs() < 1e-12 {
                 0.0
             } else {
-                (knot - knots[index]) / denominator
+                (knot - knots[i]) / denominator
             };
-            scratch[i] = scratch[i - 1] * (1.0 - alpha) + scratch[i] * alpha;
-        }
+            points[i - 1] * (1.0 - alpha) + points[i] * alpha
+        })
+        .collect();
+    let shifted = points[span];
+    for (offset, point) in scratch.iter().enumerate() {
+        points[first + offset] = *point;
     }
-    let new_point = scratch[degree];
-    for (i, point) in scratch.iter().enumerate() {
-        points[span - degree + i] = *point;
-    }
-    points.insert(span + 1, new_point);
+    points.insert(span + 1, shifted);
     knots.insert(span + 1, knot);
     true
 }

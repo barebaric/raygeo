@@ -340,30 +340,44 @@ impl EndpointGrid {
         }
     }
 
-    /// The stored entry closest to `p`, within the tolerance.
-    fn nearest(&self, p: Point, tolerance: f64) -> Option<(usize, usize)> {
+    fn point_of(&self, index: usize, end: usize) -> Option<Point> {
+        self.points.get(&(index, end)).copied()
+    }
+
+    /// All stored ends within the tolerance of `p`.
+    fn near(&self, p: Point, tolerance: f64) -> Vec<(usize, usize)> {
         let (kx, ky) = self.key(p);
-        let mut entries: Vec<(usize, usize)> = Vec::new();
+        let mut found: Vec<(usize, usize)> = Vec::new();
         for dx in [-1_i64, 0, 1] {
             for dy in [-1_i64, 0, 1] {
                 if let Some(cell) = self.cells.get(&(kx + dx, ky + dy)) {
-                    entries.extend(cell.iter().copied());
+                    for &entry in cell {
+                        if let Some(&q) = self.points.get(&entry) {
+                            if p.distance(q) <= tolerance {
+                                found.push(entry);
+                            }
+                        }
+                    }
                 }
             }
         }
-        entries.sort_unstable();
-        let mut best: Option<(usize, usize)> = None;
-        let mut best_dist = tolerance;
-        for entry in entries {
-            if let Some(&q) = self.points.get(&entry) {
-                let d = p.distance(q);
-                if d <= best_dist {
-                    best = Some(entry);
-                    best_dist = d;
-                }
-            }
+        found
+    }
+
+    /// The single stored entry within the tolerance of `p`.
+    fn unique(&self, p: Point, tolerance: f64) -> Option<(usize, usize)> {
+        let found = self.near(p, tolerance);
+        if found.len() == 1 {
+            Some(found[0])
+        } else {
+            None
         }
-        best
+    }
+
+    /// How many stored ends lie within the tolerance of `p`, including
+    /// the entry at `p` itself.
+    fn count_near(&self, p: Point, tolerance: f64) -> usize {
+        self.near(p, tolerance).len()
     }
 }
 
@@ -382,17 +396,31 @@ fn append_contour(chain: &mut Geometry, piece: &Geometry) {
     }
 }
 
-/// Keeps appending the nearest open contour to the chain's end, and
-/// records the appended contours in `consumed`.
+/// Keeps appending the only open contour whose end meets the chain's
+/// end, and records the appended contours in `consumed`. Stops at
+/// junctions where several contours meet, because there is no way to
+/// tell which one continues the chain.
+///
+/// `tail` identifies the chain end being grown as `(contour, end)`.
+/// Returns the number of joins and the new tail identity.
 fn grow_tail(
     chain: &mut Geometry,
     contours: &[Geometry],
     grid: &mut EndpointGrid,
     tolerance: f64,
+    blocked: &HashSet<(usize, usize)>,
     consumed: &mut HashSet<usize>,
-) -> usize {
+    mut tail: (usize, usize),
+) -> (usize, (usize, usize)) {
     let mut joins = 0;
-    while let Some((index, end)) = grid.nearest(end_point(chain), tolerance) {
+    while !blocked.contains(&tail) {
+        let Some((index, end)) = grid.unique(end_point(chain), tolerance)
+        else {
+            break;
+        };
+        if blocked.contains(&(index, end)) {
+            break;
+        }
         grid.remove_contour(index);
         consumed.insert(index);
         let piece = if end == 1 {
@@ -401,15 +429,20 @@ fn grow_tail(
             contours[index].copy()
         };
         append_contour(chain, &piece);
+        tail = (index, 1 - end);
         joins += 1;
     }
-    joins
+    (joins, tail)
 }
 
 /// Joins open contours whose end points meet within the tolerance into
 /// longer contours, reversing contours where needed. A joined contour
 /// whose own ends then meet within the tolerance is closed. Closed
 /// contours are left untouched.
+///
+/// A junction where more than two contour ends meet is skipped: picking
+/// one of several possible continuations would trace a route the drawing
+/// does not contain. Those contours stay open.
 ///
 /// Returns the new geometry and the number of joins made.
 pub fn join_open_contours(geo: &Geometry, tolerance: f64) -> (Geometry, usize) {
@@ -426,6 +459,21 @@ pub fn join_open_contours(geo: &Geometry, tolerance: f64) -> (Geometry, usize) {
         grid.add(i, 1, end_point(&contours[i]));
     }
 
+    // Decide which ends are ambiguous before joining anything. A join
+    // consumes contours, which removes their opposite ends from the
+    // grid; testing only the current grid would let a junction that
+    // started out with four ends look like a single candidate later.
+    let mut blocked: HashSet<(usize, usize)> = HashSet::new();
+    for &i in &open_indices {
+        for end in [0, 1] {
+            if let Some(p) = grid.point_of(i, end) {
+                if grid.count_near(p, tolerance) != 2 {
+                    blocked.insert((i, end));
+                }
+            }
+        }
+    }
+
     let mut chains: HashMap<usize, Geometry> = HashMap::new();
     let mut consumed: HashSet<usize> = HashSet::new();
     let mut joins = 0;
@@ -435,21 +483,27 @@ pub fn join_open_contours(geo: &Geometry, tolerance: f64) -> (Geometry, usize) {
         }
         grid.remove_contour(i);
         let mut chain = contours[i].copy();
-        joins += grow_tail(
+        let (start_joins, _) = grow_tail(
             &mut chain,
             &contours,
             &mut grid,
             tolerance,
+            &blocked,
             &mut consumed,
+            (i, 1),
         );
+        joins += start_joins;
         chain = reverse_contour(&chain);
-        joins += grow_tail(
+        let (end_joins, _) = grow_tail(
             &mut chain,
             &contours,
             &mut grid,
             tolerance,
+            &blocked,
             &mut consumed,
+            (i, 0),
         );
+        joins += end_joins;
         chain = reverse_contour(&chain);
         close_if_near(&mut chain, tolerance);
         chains.insert(i, chain);

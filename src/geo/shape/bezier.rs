@@ -980,8 +980,15 @@ pub fn fit_cubic_bezier(points: &[Point]) -> Option<CubicBezier> {
     }
 
     // Solve the 2×2 system [a11 a12; a12 a22] * [c1; c2] = [b1; b2].
+    // The determinant is compared against the scale of the matrix entries,
+    // not an absolute epsilon: when consecutive samples coincide, the
+    // chord parameters collapse, both sides of the system go to zero and
+    // an absolute test lets the division through. The resulting control
+    // points then lie far outside the data and the fitted curve loops
+    // across the drawing.
     let det = a11 * a22 - a12 * a12;
-    if det.abs() < 1e-18 {
+    let scale = a11 * a22;
+    if scale <= 0.0 || det <= scale * 1e-12 {
         // Degenerate — place control points evenly along the chord.
         return Some(CubicBezier(
             p0,
