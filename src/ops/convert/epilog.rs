@@ -331,11 +331,13 @@ impl<'a> JobEncoder<'a> {
                 return Err("cancelled".to_string());
             }
             self.current_op = Some(i);
+            self.op_line_start = self.line_count;
+            // `last_end` is the start point of the current op, so the
+            // op must be handled before it advances to the op's end.
+            self.handle(ops, i)?;
             if let OpCategory::Moving { end, .. } = &ops.commands[i].category {
                 self.last_end = *end;
             }
-            self.op_line_start = self.line_count;
-            self.handle(ops, i)?;
             self.finish_op_span();
         }
         self.current_op = None;
