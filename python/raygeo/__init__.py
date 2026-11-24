@@ -36,7 +36,7 @@ Submodules
 ----------
 - raygeo.geo — Geometry and path/shape/algo operations
 - raygeo.ops — Command sequence (Ops) manipulation and motion assembly
-- raygeo.formats — File-format import and export (SVG, G-code, DXF)
+- raygeo.formats — File-format import and export (CorelDRAW, SVG, G-code, DXF)
 
 Examples
 --------

@@ -4,15 +4,18 @@ r"""
 File-format import and export.
 
 Each sub-module translates between one external drawing format and
-geometry: ``raygeo.formats.dxf`` reads and writes DXF,
+geometry: ``raygeo.formats.coreldraw`` reads CorelDRAW
+documents, ``raygeo.formats.dxf`` reads and writes DXF,
 ``raygeo.formats.gcode`` extracts geometry from G-code, and
 ``raygeo.formats.svg`` parses SVG and exports path data.
 """
 
+from . import coreldraw
 from . import dxf
 from . import gcode
 from . import svg
 __all__ = [
+    "coreldraw",
     "dxf",
     "gcode",
     "svg",

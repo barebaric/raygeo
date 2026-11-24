@@ -1,5 +1,6 @@
 use pyo3::prelude::*;
 
+pub(crate) mod coreldraw;
 pub(crate) mod dxf;
 pub(crate) mod gcode;
 pub(crate) mod svg;
@@ -10,7 +11,8 @@ pub(crate) const MODULE_DOC: &str = "\
 File-format import and export.
 
 Each sub-module translates between one external drawing format and
-geometry: ``raygeo.formats.dxf`` reads and writes DXF,
+geometry: ``raygeo.formats.coreldraw`` reads CorelDRAW
+documents, ``raygeo.formats.dxf`` reads and writes DXF,
 ``raygeo.formats.gcode`` extracts geometry from G-code, and
 ``raygeo.formats.svg`` parses SVG and exports path data.
 ";
@@ -21,6 +23,7 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     formats_mod.setattr("__doc__", MODULE_DOC)?;
 
+    coreldraw::register(&formats_mod)?;
     dxf::register(&formats_mod)?;
     gcode::register(&formats_mod)?;
     svg::register(&formats_mod)?;
