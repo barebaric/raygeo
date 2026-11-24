@@ -625,6 +625,33 @@ class TestFitCubicBezier:
         for p in [bz[0], bz[1], bz[2], bz[3]]:
             assert p == approx_pt((3.0, 3.0))
 
+    def test_collapsed_parameters_stay_near_samples(self):
+        """Most samples of this window coincide, which collapses the
+        chord-length parameters and leaves the least-squares system
+        singular to floating-point precision. Solving it anyway used to
+        return control points thousands of units outside the data and
+        draw a loop across the drawing.
+        """
+        pts = [
+            (500.6111480537532, 273.5602669185019),
+            (500.65988423170757, 273.5691589641044),
+            (500.6846727519029, 273.574260584079),
+            (500.6846727519029, 273.574260584079),
+            (500.68467275190295, 273.574260584079),
+            (500.6846727519029, 273.574260584079),
+            (500.6846727519029, 273.574260584079),
+            (500.6846727519029, 273.574260584079),
+        ]
+        bz = fit_cubic_bezier(pts)
+        assert bz is not None
+        min_x = min(p[0] for p in pts)
+        max_x = max(p[0] for p in pts)
+        min_y = min(p[1] for p in pts)
+        max_y = max(p[1] for p in pts)
+        for p in bz:
+            assert min_x - 1e-6 <= p[0] <= max_x + 1e-6
+            assert min_y - 1e-6 <= p[1] <= max_y + 1e-6
+
 
 class TestNearestTangentCircleOnBezier:
     def _eval(self, bz, t):
