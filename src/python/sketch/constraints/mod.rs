@@ -3,6 +3,7 @@
 
 pub(crate) mod angle;
 pub(crate) mod aspect_ratio;
+pub(crate) mod check;
 pub(crate) mod coincident;
 pub(crate) mod collinear;
 pub(crate) mod diameter;
@@ -142,7 +143,9 @@ One leaf module per constraint type, mirroring the core
 sketch::constraints hierarchy: raygeo.sketch.constraints.horizontal,
 .distance, .perpendicular, and so on.  Constraint objects carry the
 resolved point ids and dimension values of one constraint of a
-sketch problem and are passed to raygeo.sketch.Solver.
+sketch problem and are passed to raygeo.sketch.Solver.  The module
+also provides check_grad for validating an analytical gradient
+against forward differences.
 ";
 
 /// Converts a serde JSON value into a Python object (mapping objects
@@ -954,6 +957,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     constraints_mod.add_class::<PyConstraintBase>()?;
     constraints_mod.add("ANGLE_WEIGHT", ANGLE_WEIGHT)?;
+    check::register(&constraints_mod)?;
 
     let leaves: [(&str, LeafRegister); 19] = [
         ("angle", angle::register),
