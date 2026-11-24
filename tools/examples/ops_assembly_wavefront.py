@@ -7,6 +7,7 @@ import numpy as np
 from matplotlib.colors import Normalize
 
 from raygeo.cnc.execution.specs import ComputePayload
+from raygeo.formats.svg import svg_string_to_geometries
 from raygeo.geo import Geometry
 from raygeo.geo.algo.polylabel import find_largest_circle
 from raygeo.geo.shape.polygon import (
@@ -23,7 +24,6 @@ from raygeo.ops.part import Part
 from raygeo.pipeline.execute import clear_cache, execute_stages
 from raygeo.pipeline.request import NodeRequest
 from raygeo.pipeline.stage import StageSpec
-from raygeo.svg import svg_string_to_geometries
 
 
 def _ops_to_points(ops):
@@ -182,7 +182,9 @@ def generate_wavefront_svg():
     svg_path = (
         pathlib.Path(__file__).resolve().parent.parent.parent
         / "tests"
+        / "formats"
         / "svg"
+        / "assets"
         / "raygeo.svg"
     )
     svg_str = svg_path.read_text()

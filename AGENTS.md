@@ -43,6 +43,8 @@ geo → ops \
             → cnc
 geo → sketch
 pipeline -/
+
+geo → formats   (leaf: no other layer imports it)
 ```
 
 Never import upward.
@@ -54,6 +56,20 @@ Never import upward.
 | `ops`      | CNC and laser building blocks: clearing strategies, linking, classification, and Ops emission.                            | plans, intents, `pipeline` runtime            |
 | `pipeline` | Generic runtime to execute machining agnostic intents in a rayon thread pool.                                             | geometry, machining, `Ops`, tools, any domain |
 | `cnc`      | Plan-time orchestration: build descriptive `Plan`s (sequences of `PlanStep`s) and convert them into executable `Intent`s. | geometry algorithms                           |
+| `formats`  | File-format import and export (`svg`, `gcode`, `dxf`); depends only on `geo` and the shared error type.                   | `ops`, `cnc`, `sketch`, `pipeline`, machining |
+
+# File Formats
+
+Readers and writers for external file formats live under `formats`, one
+module per format, with the same name at every level:
+
+- Rust core: `src/formats/<format>/`
+- PyO3 bindings: `src/python/formats/<format>/`, registered in
+  `src/python/formats/mod.rs` as `raygeo.formats.<format>`
+- Tests: `tests/formats/<format>/test_<format>*.py`, fixtures in
+  `tests/formats/<format>/assets/`
+- Example generators: `tools/examples/formats_<format>*.py`
+- API docs are generated from the stubs as `docs/api/raygeo.formats.<format>.md`
 
 # Export Policy: Explicit Paths
 

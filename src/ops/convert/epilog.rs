@@ -3,20 +3,17 @@
 //! Epilog laser cutters (Zing 16 / Zing 24-6030) do not speak G-code.
 //! They accept a print job: a PCL5 body (PJL-style envelope, raster
 //! part, HPGL vector part) submitted to the machine's print queue.
-//! This encoder produces both the human-readable representation that
-//! Rayforge shows and exports, and the exact byte stream the driver
-//! uploads.
+//! This encoder produces both a human-readable listing that callers
+//! can show and export, and the exact byte stream the driver uploads.
 //!
-//! The wire format follows LibLaserCut's `EpilogCutter`, the only
-//! known-working reverse-engineered reference for these machines;
-//! Epilog does not document it.  In particular the `@PJL` text is
-//! what that reference emits, not a documented Epilog framing:
+//! Epilog does not document the wire format.  The `@PJL` text is the
+//! framing these machines accept, not a documented one:
 //!
-//! Deliberately not emitted, because the reference never does and no
-//! documentation covers them for these models: autofocus (the header
-//! selects manual focus with `&y0A`), and vector software focus (`WF`
-//! other than the `WF0` reset).  A step that requests air assist is
-//! rejected rather than silently ignored.
+//! Deliberately not emitted, because no documentation covers them for
+//! these models: autofocus (the header selects manual focus with
+//! `&y0A`), and vector software focus (`WF` other than the `WF0`
+//! reset).  A step that requests air assist is rejected rather than
+//! silently ignored.
 //!
 //! ```text
 //! \e%-12345X@PJL JOB NAME=<title>
@@ -35,7 +32,7 @@
 //! one byte of per-dot power per dot for power-modulated rasters (the
 //! driver's "3D mode", `*b7MLT`), matching how the step's depth mode
 //! presents the image.  Rows are padded to a multiple of eight bytes
-//! with `0x80`, as the reference driver does.
+//! with `0x80`.
 
 use std::fmt::Write as _;
 
@@ -77,7 +74,7 @@ const MIN_BURN_PERCENT: u32 = 1;
 /// JSON-serialised job configuration.
 ///
 /// The spec stays plain data so it can cross the Python boundary; the
-/// Rayforge side fills it from the machine and document models.
+/// caller fills it from the machine and document models.
 #[derive(Clone, Debug, Deserialize)]
 pub struct EpilogContext {
     /// Job title shown on the machine's job list.

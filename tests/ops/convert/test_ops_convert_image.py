@@ -364,7 +364,7 @@ def _hourglass_mask(size=21):
 
 class TestFullSweepPerLineExtent:
     """Full sweep spans each raster line's own content extent instead of
-    the artwork's bounding box (rayforge#565)."""
+    the artwork's bounding box (issue #565)."""
 
     def test_mask_lines_narrows_with_content(self):
         mask = _hourglass_mask()

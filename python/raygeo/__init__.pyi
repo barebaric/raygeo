@@ -52,6 +52,7 @@ Submodules
 ----------
 - raygeo.geo — Geometry and path/shape/algo operations
 - raygeo.ops — Command sequence (Ops) manipulation and motion assembly
+- raygeo.formats — File-format import and export (SVG, G-code, DXF)
 - raygeo.cnc — CNC orchestration (Plans, Intents, pipeline glue)
 - raygeo.pipeline — Generic runtime intent-tree executor
 - raygeo.template — Job counter and template placeholder scanning
@@ -83,32 +84,28 @@ Examples
 from . import barcode
 from . import cnc
 from . import compressed_array
-from . import dxf
+from . import formats
 from . import fstring
-from . import gcode
 from . import geo
 from . import image
 from . import mesh
 from . import ops
 from . import pipeline
 from . import sketch
-from . import svg
 from . import template
 from . import trace
 __all__ = [
     "barcode",
     "cnc",
     "compressed_array",
-    "dxf",
+    "formats",
     "fstring",
-    "gcode",
     "geo",
     "image",
     "mesh",
     "ops",
     "pipeline",
     "sketch",
-    "svg",
     "template",
     "trace",
 ]

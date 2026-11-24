@@ -472,7 +472,7 @@ class TestConstantPowerLines:
         The bridge emits a zero-power power switch; the state tracker
         must follow it, or the next sync sees no power change and
         every later cut in the unit runs with the laser off
-        (barebaric/rayforge#639).
+        (issue #639).
         """
         ops = Ops()
         ops.set_power(0.8)

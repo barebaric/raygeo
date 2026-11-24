@@ -15,7 +15,7 @@ def _surface_to_flat(surface):
     buf = surface.get_data()
     # Cairo ARGB32 stores native-endian 0xAARRGGBB pixels; the conversion
     # functions accept exactly this layout, so no byte-order translation
-    # happens here (matching how rayforge feeds surface data in).
+    # happens here (matching how callers feed surface data in).
     data_with_padding = np.ndarray(
         shape=(height, stride, 4), dtype=np.uint8, buffer=buf
     )

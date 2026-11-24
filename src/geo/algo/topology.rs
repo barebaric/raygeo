@@ -17,7 +17,7 @@ use crate::geo::types::{Command, Point, Point3D, Polygon, Rect};
 
 /// Fraction of a candidate child's area that must be covered by the
 /// candidate parent for containment to be accepted.  Genuine containment
-/// yields ~1.0; shapes that merely overlap each other (rayforge #456)
+/// yields ~1.0; shapes that merely overlap each other (issue #456)
 /// yield far less.
 const CONTAINMENT_COVERAGE: f64 = 0.999;
 

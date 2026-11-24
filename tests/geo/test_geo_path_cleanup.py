@@ -331,7 +331,7 @@ class TestSplitDrawnContours:
 def _loose_rectangle(gap=0.02) -> Geometry:
     """A rectangle as four separate segments whose ends do not meet.
 
-    This is the shape of the Onshape exports in rayforge issue #668: each
+    This is the shape of the Onshape exports in issue #668: each
     side is its own entity and no two corners coincide.
     """
     geo = Geometry()

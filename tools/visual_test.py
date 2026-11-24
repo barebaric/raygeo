@@ -10,6 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import streamlit as st
 
+from tools.visual_test.formats_svg import page_svg
 from tools.visual_test.geo import page_geometry
 from tools.visual_test.geo_algo_analysis import page_analysis
 from tools.visual_test.geo_algo_hull import page_concave_hull
@@ -34,7 +35,6 @@ from tools.visual_test.ops_transform_merge_lines import page_merge_lines
 from tools.visual_test.ops_transform_optimize import page_ops_optimize_travel
 from tools.visual_test.ops_transform_overscan import page_overscan
 from tools.visual_test.ops_transform_tabs import page_tabs
-from tools.visual_test.svg import page_svg
 
 st.set_page_config(layout="wide", page_title="raygeo visual test")
 st.title("raygeo Visual Test")

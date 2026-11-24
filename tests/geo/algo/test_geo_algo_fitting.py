@@ -665,7 +665,7 @@ def test_fit_points_recursive_large_open_arc_still_single():
 
 def test_fit_points_recursive_wrapped_arc_does_not_collapse():
     """
-    Regression test for the overcut bug (rayforge#357): a closed circle
+    Regression test for the overcut bug (issue #357): a closed circle
     extended past its start point (start and end no longer coincident, but
     the path still traverses a full revolution around the center) must NOT
     be fitted as a single tiny arc between the nearby endpoints.

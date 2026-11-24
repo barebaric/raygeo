@@ -1,16 +1,14 @@
 pub(crate) mod barcode;
 pub(crate) mod cnc;
 pub(crate) mod compressed_array;
-pub(crate) mod dxf;
 pub(crate) mod errors;
+pub(crate) mod formats;
 pub(crate) mod fstring;
-pub(crate) mod gcode;
 pub(crate) mod geo;
 pub(crate) mod image;
 pub(crate) mod mesh;
 pub(crate) mod ops;
 pub(crate) mod pipeline;
 pub(crate) mod sketch;
-pub(crate) mod svg;
 pub(crate) mod template;
 pub(crate) mod trace;

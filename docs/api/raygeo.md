@@ -47,8 +47,10 @@ command level.
 
 - raygeo.geo — Geometry and path/shape/algo operations
 - raygeo.ops — Command sequence (Ops) manipulation and motion assembly
+- raygeo.formats — File-format import and export (SVG, G-code, DXF)
 - raygeo.cnc — CNC orchestration (Plans, Intents, pipeline glue)
 - raygeo.pipeline — Generic runtime intent-tree executor
+- raygeo.template — Job counter and template placeholder scanning
 
 ## Examples
 

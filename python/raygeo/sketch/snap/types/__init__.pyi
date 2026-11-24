@@ -4,7 +4,6 @@
 import builtins
 import typing
 __all__ = [
-    "SNAP_LINE_STYLES",
     "DragContext",
     "SnapLine",
     "SnapLineStyle",
@@ -12,8 +11,6 @@ __all__ = [
     "SnapPoint",
     "SnapResult",
 ]
-
-SNAP_LINE_STYLES: builtins.dict[SnapLineType, SnapLineStyle]
 
 @typing.final
 class DragContext:

@@ -119,7 +119,7 @@ def test_split_inner_and_outer_contours_two_letter_b_shapes():
 
 def test_split_inner_and_outer_overlapping_solids():
     """
-    Regression test (rayforge issue #456): two solid figures that
+    Regression test (issue #456): two solid figures that
     overlap slightly must both remain external contours.
 
     The old containment probe used the first vertex of each contour as
@@ -150,7 +150,7 @@ def _signed_area(points):
 
 def test_normalize_winding_overlapping_solids_not_flipped():
     """
-    Regression test (rayforge issue #456): winding normalisation must
+    Regression test (issue #456): winding normalisation must
     not flip a slightly overlapping solid to CW (hole) just because its
     first vertex happens to lie inside the neighbouring figure.
     """

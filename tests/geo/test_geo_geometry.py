@@ -3,9 +3,9 @@ import math
 import numpy as np
 import pytest
 
+from raygeo.formats.svg import geometry_to_svg_path, parse_svg_path_data
 from raygeo.geo import Arc, Bezier, Geometry, Line, Move
 from raygeo.geo.shape.rect import get_combined_rect
-from raygeo.svg import geometry_to_svg_path, parse_svg_path_data
 
 
 @pytest.fixture
