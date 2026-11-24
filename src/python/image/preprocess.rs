@@ -1,4 +1,4 @@
-use numpy::IntoPyArray;
+use numpy::{IntoPyArray, PyReadonlyArray2};
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
@@ -101,6 +101,47 @@ fn py_get_component_areas(
         .extract()?;
 
     Ok(preprocess::get_component_areas(&flat, width, height))
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import numpy
+    import numpy.typing
+
+    def dilate_binary(
+        binary: numpy.typing.NDArray[numpy.uint8],
+        iterations: int,
+    ) -> numpy.typing.NDArray[numpy.uint8]:
+        """Dilate a binary image with a 3x3 cross structuring element.
+
+        Repeats the dilation ``iterations`` times. Pixels outside the
+        image are treated as background, matching
+        ``scipy.ndimage.binary_dilation`` with its default cross
+        structure.
+
+        :param binary: 2D uint8 array (nonzero pixels are foreground).
+        :param iterations: Number of dilation steps.
+        :returns: 2D uint8 array of the same shape with values 0 or 1.
+        :complexity: O(w*h), independent of the iteration count
+        """
+"#,
+    module = "raygeo.image.preprocess"
+)]
+#[pyfunction(name = "dilate_binary")]
+#[pyo3(signature = (binary, iterations))]
+fn py_dilate_binary<'py>(
+    py: Python<'py>,
+    binary: PyReadonlyArray2<'py, u8>,
+    iterations: usize,
+) -> PyResult<Bound<'py, PyAny>> {
+    let array = binary.as_array();
+    let height = array.shape()[0];
+    let width = array.shape()[1];
+    let flat: Vec<u8> = array.iter().copied().collect();
+
+    let output = preprocess::dilate_binary(&flat, width, height, iterations);
+    let array = output.into_pyarray(py);
+    array.call_method1("reshape", (height, width))
 }
 
 #[gen_stub_pyfunction(
@@ -218,6 +259,8 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
         py_grayscale_to_binary,
         sub_mod.clone()
     )?)?;
+    sub_mod
+        .add_function(wrap_pyfunction!(py_dilate_binary, sub_mod.clone())?)?;
     sub_mod.add_function(wrap_pyfunction!(
         py_get_component_areas,
         sub_mod.clone()

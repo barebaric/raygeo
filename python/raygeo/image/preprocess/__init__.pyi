@@ -6,6 +6,7 @@ import numpy.typing
 __all__ = [
     "compute_adaptive_threshold",
     "denoise_binary",
+    "dilate_binary",
     "filter_components",
     "get_component_areas",
     "grayscale_to_binary",
@@ -34,6 +35,21 @@ def denoise_binary(binary: numpy.typing.NDArray[numpy.uint8]) -> numpy.typing.ND
     :param binary: 2D binary uint8 array (values 0 or 1).
     :returns: 2D binary uint8 array with noise removed.
     :complexity: O(w*h)
+    """
+
+def dilate_binary(binary: numpy.typing.NDArray[numpy.uint8], iterations: int) -> numpy.typing.NDArray[numpy.uint8]:
+    r"""
+    Dilate a binary image with a 3x3 cross structuring element.
+    
+    Repeats the dilation ``iterations`` times. Pixels outside the
+    image are treated as background, matching
+    ``scipy.ndimage.binary_dilation`` with its default cross
+    structure.
+    
+    :param binary: 2D uint8 array (nonzero pixels are foreground).
+    :param iterations: Number of dilation steps.
+    :returns: 2D uint8 array of the same shape with values 0 or 1.
+    :complexity: O(w*h), independent of the iteration count
     """
 
 def filter_components(binary: numpy.typing.NDArray[numpy.uint8], min_area: int) -> numpy.typing.NDArray[numpy.uint8]:
