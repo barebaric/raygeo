@@ -5,9 +5,9 @@ TraceDraw
 ---------
 
 Parts of src/formats/coreldraw (the container, RIFF chunk tree and loda
-argument table readers of crates/cdr-format, and the style table and text
-record readers of crates/cdr) are adapted from the TraceDraw project,
-https://github.com/tracedraw/tracedraw.
+argument table readers of crates/cdr-format, and the style table, text
+record and file writer of crates/cdr) are adapted from the TraceDraw
+project, https://github.com/tracedraw/tracedraw.
 
   MIT License
 

@@ -4,14 +4,14 @@ use pyo3_stub_gen::derive::{
 };
 
 use crate::formats::coreldraw::detect::{detect_format, CdrFormat};
-use crate::formats::coreldraw::{parse, CdrDocument};
+use crate::formats::coreldraw::{parse, write, CdrDocument};
 use crate::python::errors::{CdrError, CdrParseError, CdrUnsupportedFormat};
 use crate::python::geo::geometry::Geometry;
 
 pyo3_stub_gen::module_doc!("raygeo.formats.coreldraw", "{}", MODULE_DOC);
 
 pub(crate) const MODULE_DOC: &str = "\
-CorelDRAW (``.cdr``) import.
+CorelDRAW (``.cdr``) import and export.
 
 Parses the drawing natively: RIFF and ZIP containers, compressed chunk
 lists, object records and their transforms are all read in Rust, so no
@@ -19,6 +19,9 @@ external tool or C library is needed. Text is drawn as glyph outlines
 with the system's closest font; bitmaps and object kinds the reader does
 not know are reported in :attr:`CdrDocument.issues` instead of being
 converted.
+
+:func:`write` creates a version 12 drawing from a geometry, so a
+result can be opened in CorelDRAW and other vector editors.
 ";
 
 /// The kind of Corel document a byte stream holds.
@@ -168,6 +171,32 @@ fn py_detect_format(data: &[u8]) -> Option<PyCdrFormat> {
 #[gen_stub_pyfunction(
     python = r#"
     import raygeo
+    import raygeo.geo
+
+    def write(geometry: raygeo.geo.Geometry) -> bytes:
+        """Write geometry as a CorelDRAW version 12 drawing.
+
+        The page is the geometry's bounding box in millimetres, and the
+        drawing is moved to the page's bottom-left corner. It goes into one
+        object on one layer, drawn with a black hairline outline and no
+        fill, so the file opens in CorelDRAW and other vector editors.
+
+        :param geometry: The geometry to write, in millimetres.
+        :returns: The document's bytes.
+        :raises RuntimeError: When the geometry is empty.
+        :complexity: O(n) where n = number of commands
+        """
+"#,
+    module = "raygeo.formats.coreldraw"
+)]
+#[pyfunction(name = "write")]
+fn py_write(geometry: &Geometry) -> PyResult<Vec<u8>> {
+    Ok(write(&geometry.inner)?)
+}
+
+#[gen_stub_pyfunction(
+    python = r#"
+    import raygeo
     import raygeo.formats.coreldraw
 
     def parse(data: bytes) -> raygeo.formats.coreldraw.CdrDocument:
@@ -212,6 +241,7 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
             "CdrUnsupportedFormat",
             "detect_format",
             "parse",
+            "write",
         ],
     )?;
     sub.add_class::<PyCdrFormat>()?;
@@ -224,6 +254,7 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     sub.add("CdrParseError", py.get_type::<CdrParseError>())?;
     sub.add_function(wrap_pyfunction!(py_detect_format, &sub)?)?;
     sub.add_function(wrap_pyfunction!(py_parse, &sub)?)?;
+    sub.add_function(wrap_pyfunction!(py_write, &sub)?)?;
     m.add_submodule(&sub)?;
     let sys_modules = py.import("sys")?.getattr("modules")?;
     sys_modules.set_item("raygeo.formats.coreldraw", &sub)?;

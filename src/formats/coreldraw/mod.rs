@@ -1,8 +1,10 @@
-//! CorelDRAW (`.cdr`) import.
+//! CorelDRAW (`.cdr`) import and export.
 //!
 //! The file is parsed natively: RIFF and ZIP containers, compressed chunk
 //! lists, object records and their transforms are all read in Rust, so the
 //! reader needs no external tool and no C library, and builds for wasm.
+//! [`write`] emits the version 12 record format, which every release
+//! since CorelDRAW 12 opens.
 //!
 //! Supported are the record format of CorelDRAW 7 through X7 (versions 7
 //! to 17) in a plain RIFF file and in a ZIP package, including the
@@ -24,6 +26,7 @@
 //! - `loda`: the argument table of an object record
 //! - `zip`: reads members of a ZIP package
 //! - `parse`: extracts the page geometry
+//! - `write`: writes geometry as a version 12 file
 
 pub mod detect;
 
@@ -34,6 +37,7 @@ pub(crate) mod parse;
 pub(crate) mod riff;
 pub(crate) mod stlt;
 pub(crate) mod text;
+pub(crate) mod write;
 pub(crate) mod zip;
 
 use crate::error::{RaygeoError, RaygeoResult};
@@ -59,6 +63,18 @@ pub struct CdrDocument {
 impl CdrDocument {
     /// Multiplier converting the native unit (inches) to millimetres.
     pub const UNITS_TO_MM: f64 = 25.4;
+}
+
+/// Writes geometry as a CorelDRAW version 12 file.
+///
+/// The page is the geometry's bounding box in millimetres, and the
+/// drawing sits on its bottom-left corner. The geometry goes into one
+/// object on one layer with a black hairline outline and no fill.
+///
+/// Errors are [`RaygeoError::EmptyGeometry`] when the geometry holds no
+/// command.
+pub fn write(geometry: &Geometry) -> RaygeoResult<Vec<u8>> {
+    write::write(geometry)
 }
 
 /// Reads a CorelDRAW drawing into the geometry of its first page.
