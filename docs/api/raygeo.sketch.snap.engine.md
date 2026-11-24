@@ -160,3 +160,26 @@ produce_points(
 | `_drag_context`  | `Any`                   |             |
 | `_threshold`     | `float`                 |             |
 | _Returns_        | `list[types.SnapPoint]` |             |
+
+## Functions
+
+### `geometry_key()`
+
+```python
+geometry_key(
+    registry: Any,
+    drag_context: Optional[Any] = None,
+    include_construction: bool = True,
+    include_points: bool = True,
+) -> Any
+```
+
+Stable identity of the geometry a snap index depends on.
+
+| Parameter              | Type                   | Description |
+| ---------------------- | ---------------------- | ----------- |
+| `registry`             | `Any`                  |             |
+| `drag_context`         | `Optional[Any] = None` |             |
+| `include_construction` | `bool = True`          |             |
+| `include_points`       | `bool = True`          |             |
+| _Returns_              | `Any`                  |             |

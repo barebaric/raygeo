@@ -556,3 +556,44 @@ class TestSplineSpans:
 
         xs = [c.end[0] for c in curves]
         assert xs == sorted(xs), "segments must advance along the curve"
+
+
+class TestEllipse:
+    """An ELLIPSE entity must become bezier segments, not a polygon:
+    flattening it to straight lines renders visible corners on every
+    curved edge."""
+
+    def _ellipse(self):
+        values = [
+            (10, 0),
+            (20, 0),
+            (30, 0),
+            (11, 40),
+            (21, 0),
+            (31, 0),
+            (40, 0.5),
+            (41, 0.0),
+            (42, 6.283185307179586),
+        ]
+        return read(document([("ELLIPSE", "0", values)])).layers[0][1]
+
+    def test_ellipse_produces_curves_not_lines(self):
+        geometry = self._ellipse()
+
+        kinds = {type(c).__name__ for c in geometry.data}
+        assert "Bezier" in kinds
+        assert "Line" not in kinds
+
+    def test_ellipse_is_closed(self):
+        geometry = self._ellipse()
+
+        assert geometry.is_closed(1e-6)
+
+    def test_ellipse_extent_matches_radii(self):
+        geometry = self._ellipse()
+
+        min_x, min_y, max_x, max_y = geometry.rect()
+        assert max_x == pytest.approx(40.0, abs=1e-6)
+        assert min_x == pytest.approx(-40.0, abs=1e-6)
+        assert max_y == pytest.approx(20.0, abs=1e-6)
+        assert min_y == pytest.approx(-20.0, abs=1e-6)
