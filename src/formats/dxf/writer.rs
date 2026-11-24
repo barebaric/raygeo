@@ -33,18 +33,98 @@ pub fn write(geometry: &Geometry) -> String {
 
 /// One entity ready to be written.
 enum OutEntity {
+    /// A 2D polyline. `LWPOLYLINE` carries a single elevation for the
+    /// whole entity, so this is only used for flat content.
     Polyline(Vec<(f64, f64)>),
+    /// A single 3D line segment, used when the geometry varies in Z and
+    /// a polyline could not express it.
+    Segment3D(DVec3, DVec3),
     Arc {
         center: (f64, f64),
         radius: f64,
         start_degrees: f64,
         end_degrees: f64,
+        /// Elevation of the arc's plane.
+        elevation: f64,
     },
     Spline(Vec<[DVec3; 4]>),
 }
 
+/// Z difference below which two points count as lying in one plane.
+const Z_EPS: f64 = 1e-9;
+
 /// Groups a geometry's commands into writable entities.
+///
+/// Polylines have exactly one elevation, so a drawing that spans more
+/// than one Z level cannot be written as polylines without losing data.
+/// In that case every line becomes its own 3D `LINE` entity instead.
 fn entities_of(geometry: &Geometry) -> Vec<OutEntity> {
+    if spans_multiple_z(geometry) {
+        return entities_of_3d(geometry);
+    }
+    entities_of_planar(geometry)
+}
+
+/// True when the geometry does not lie in a single Z plane.
+fn spans_multiple_z(geometry: &Geometry) -> bool {
+    let mut z: Option<f64> = None;
+    for command in geometry.iter_commands() {
+        let command_z = command.end_point().z;
+        match z {
+            Some(known) if (known - command_z).abs() > Z_EPS => return true,
+            None => z = Some(command_z),
+            _ => {}
+        }
+    }
+    false
+}
+
+/// Writes every drawable command as its own 3D entity.
+fn entities_of_3d(geometry: &Geometry) -> Vec<OutEntity> {
+    let mut entities = Vec::new();
+    let mut cursor = DVec3::ZERO;
+    for command in geometry.iter_commands() {
+        let end = command.end_point();
+        match command {
+            Command::Move { .. } => {}
+            Command::Line { .. } => {
+                entities.push(OutEntity::Segment3D(cursor, end));
+            }
+            Command::Arc {
+                center_offset,
+                normal,
+                ..
+            } => {
+                let center = cursor + *center_offset;
+                let radius = center_offset.truncate().length();
+                let clockwise = normal.z < 0.0;
+                if radius > 1e-12 {
+                    let (start_deg, end_deg) =
+                        arc_degrees(cursor, end, center, clockwise);
+                    entities.push(OutEntity::Arc {
+                        center: (center.x, center.y),
+                        radius,
+                        start_degrees: start_deg,
+                        end_degrees: end_deg,
+                        elevation: cursor.z,
+                    });
+                }
+            }
+            Command::Bezier {
+                control1, control2, ..
+            } => {
+                entities.push(OutEntity::Spline(vec![[
+                    cursor, *control1, *control2, end,
+                ]]));
+            }
+        }
+        cursor = end;
+    }
+    entities
+}
+
+/// The planar path: consecutive lines collapse into one polyline.
+fn entities_of_planar(geometry: &Geometry) -> Vec<OutEntity> {
     let mut entities = Vec::new();
     let mut polyline: Vec<(f64, f64)> = Vec::new();
     let mut cursor = DVec3::ZERO;
@@ -73,26 +153,15 @@ fn entities_of(geometry: &Geometry) -> Vec<OutEntity> {
                 let center = cursor + *center_offset;
                 let radius = center_offset.truncate().length();
                 let clockwise = normal.z < 0.0;
-                let (start, end_angle, _) = get_arc_angles(
-                    cursor.truncate(),
-                    end.truncate(),
-                    center.truncate(),
-                    clockwise,
-                );
-                let mut start_deg = start.to_degrees().rem_euclid(360.0);
-                let mut end_deg = end_angle.to_degrees().rem_euclid(360.0);
-                if clockwise {
-                    std::mem::swap(&mut start_deg, &mut end_deg);
-                }
-                if end_deg <= start_deg {
-                    end_deg += 360.0;
-                }
                 if radius > 1e-12 {
+                    let (start_deg, end_deg) =
+                        arc_degrees(cursor, end, center, clockwise);
                     entities.push(OutEntity::Arc {
                         center: (center.x, center.y),
                         radius,
                         start_degrees: start_deg,
                         end_degrees: end_deg,
+                        elevation: cursor.z,
                     });
                 }
             }
@@ -109,6 +178,31 @@ fn entities_of(geometry: &Geometry) -> Vec<OutEntity> {
     }
     flush_polyline(&mut polyline, &mut entities);
     entities
+}
+
+/// The start and end angles of an arc, in degrees, normalised so the end
+/// is counter-clockwise of the start.
+fn arc_degrees(
+    start: DVec3,
+    end: DVec3,
+    center: DVec3,
+    clockwise: bool,
+) -> (f64, f64) {
+    let (start_angle, end_angle, _) = get_arc_angles(
+        start.truncate(),
+        end.truncate(),
+        center.truncate(),
+        clockwise,
+    );
+    let mut start_deg = start_angle.to_degrees().rem_euclid(360.0);
+    let mut end_deg = end_angle.to_degrees().rem_euclid(360.0);
+    if clockwise {
+        std::mem::swap(&mut start_deg, &mut end_deg);
+    }
+    if end_deg <= start_deg {
+        end_deg += 360.0;
+    }
+    (start_deg, end_deg)
 }
 
 fn flush_polyline(
@@ -211,6 +305,18 @@ impl DxfFile {
 
     fn entity(&mut self, entity: OutEntity) {
         match entity {
+            OutEntity::Segment3D(start, end) => {
+                self.pair(0, "LINE");
+                self.pair(8, "0");
+                self.pair(100, "AcDbEntity");
+                self.pair(100, "AcDbLine");
+                self.number(10, start.x);
+                self.number(20, start.y);
+                self.number(30, start.z);
+                self.number(11, end.x);
+                self.number(21, end.y);
+                self.number(31, end.z);
+            }
             OutEntity::Polyline(points) => {
                 self.pair(0, "LWPOLYLINE");
                 self.pair(8, "0");
@@ -228,6 +334,7 @@ impl DxfFile {
                 radius,
                 start_degrees,
                 end_degrees,
+                elevation,
             } => {
                 self.pair(0, "ARC");
                 self.pair(8, "0");
@@ -235,7 +342,7 @@ impl DxfFile {
                 self.pair(100, "AcDbCircle");
                 self.number(10, center.0);
                 self.number(20, center.1);
-                self.number(30, 0.0);
+                self.number(30, elevation);
                 self.number(40, radius);
                 self.pair(100, "AcDbArc");
                 self.number(50, start_degrees);
