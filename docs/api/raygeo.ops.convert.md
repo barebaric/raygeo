@@ -114,9 +114,9 @@ MachineCode(
 
 Python-visible wrapper around an encoder spec.
 
-Construct as `Encoder(spec)` where `spec` is an instance of one of the encoder spec classes under
-`raygeo.ops.convert` (e.g. **~raygeo.ops.convert.GcodeSpec**). Callers that drive the `Encoder`
-trait hold an `Encoder` instance.
+Construct as `Encoder(spec)` where `spec` is an encoder spec: one of the classes under
+`raygeo.ops.convert` (e.g. **~raygeo.ops.convert.VertexSpec**) or a spec from another extension
+module. Callers that drive the `Encoder` trait hold an `Encoder` instance.
 
 ### `spec`
 
@@ -126,42 +126,6 @@ spec: Any
 
 The wrapped Python-side spec object. Type-erased here; dispatched to a concrete `Box<dyn Encoder>`
 by \[`PyEncoder::into_core`\].
-
-## EpilogSpec
-
-Parameters for the Epilog print-job encoder.
-
-`context_json` is a JSON-serialised [`EpilogContext`](crate::ops::convert::epilog::EpilogContext):
-job title, resolution, frequency, bed size, speed reference, origin layout and the rotary flag.
-
-### `context_json`
-
-```python
-context_json: str
-```
-
-## GcodeDialectSpec
-
-Typed Python wrapper around the Rust `GcodeDialectSpec`.
-
-Constructed in Python with keyword arguments; the inner Rust struct is passed directly to the
-encoder without a serde round-trip.
-
-## GcodeSpec
-
-Parameters for the G-code encoder.
-
-### `context_json`
-
-```python
-context_json: str
-```
-
-### `dialect`
-
-```python
-dialect: GcodeDialectSpec
-```
 
 ## LayerConfig
 

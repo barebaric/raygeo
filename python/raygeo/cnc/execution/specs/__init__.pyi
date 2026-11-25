@@ -316,7 +316,7 @@ class EncodeSpec:
     @property
     def encoder(self) -> convert.Encoder:
         r"""
-        The encoder to use (e.g. ``GcodeSpec``, ``VertexSpec``).
+        The encoder to use (e.g. ``VertexSpec`` or a driver spec).
         """
     def __new__(cls, source_key: builtins.str, encoder: convert.Encoder) -> EncodeSpec: ...
 

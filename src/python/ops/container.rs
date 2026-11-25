@@ -1,7 +1,7 @@
 use glam::{DMat4, DVec4};
 use numpy::{PyArray1, PyReadonlyArray2};
 use pyo3::prelude::*;
-use pyo3::types::{PyByteArray, PyBytes, PyDict, PyList, PyType};
+use pyo3::types::{PyBytes, PyDict, PyList, PyType};
 use pyo3::{Bound, Py, PyAny, PyResult};
 use pyo3_stub_gen::derive::{
     gen_methods_from_python, gen_stub_pyclass, gen_stub_pymethods,
@@ -9,7 +9,6 @@ use pyo3_stub_gen::derive::{
 use pyo3_stub_gen::inventory::submit;
 
 use crate::geo::types::{Point, Point3D, Rect};
-use crate::ops::convert::gcode_types::OpLineRange;
 use crate::ops::{
     Axis, CommandType, MarkerCmd, MoveCmd, OpCategory, OpsSection,
     OpsSectionRange, StateCmd,
@@ -32,27 +31,6 @@ use super::types::{
 use crate::python::geo::geometry::Geometry as PyGeometry;
 use crate::python::geo::matrix::Matrix as PyMatrix;
 use crate::python::image::scan::PyScanMode;
-
-/// Convert a Python dict to a JSON string, then deserialise into `T`.
-fn from_pydict<T: serde::de::DeserializeOwned>(
-    py: Python<'_>,
-    dict: &Bound<'_, PyDict>,
-) -> PyResult<T> {
-    let json_mod = py.import("json")?;
-    let json_str: String = json_mod
-        .call_method1("dumps", (dict,))?
-        .extract()
-        .map_err(|_| {
-        pyo3::exceptions::PyValueError::new_err(
-            "Failed to serialise dict to JSON",
-        )
-    })?;
-    serde_json::from_str(&json_str).map_err(|e| {
-        pyo3::exceptions::PyValueError::new_err(format!(
-            "Failed to deserialise JSON into Rust struct: {e}"
-        ))
-    })
-}
 
 // ── Typed PyO3 objects replacing the dict handoff ──────────────
 
@@ -209,55 +187,6 @@ fn py_scene_data_to_object<'py>(
             laser_uid_order: data.laser_uid_order,
         },
     )
-}
-
-/// Convert a Rust op-line span array into a Python bytearray of
-/// interleaved ``i32`` ``(start, len)`` pairs, one per op index.
-/// Decode with ``np.frombuffer(ba, dtype=np.int32).reshape(-1, 2)``.
-fn op_line_ranges_to_pybytes<'py>(
-    py: Python<'py>,
-    ranges: &[OpLineRange],
-) -> PyResult<Bound<'py, PyByteArray>> {
-    let n = ranges.len();
-    let buf = PyByteArray::new_with(py, n * 8, |bytes: &mut [u8]| {
-        let out = unsafe {
-            std::slice::from_raw_parts_mut(
-                bytes.as_mut_ptr().cast::<u32>(),
-                n * 2,
-            )
-        };
-        for (i, r) in ranges.iter().enumerate() {
-            out[i * 2] = r.start;
-            out[i * 2 + 1] = r.len;
-        }
-        Ok(())
-    })?;
-    Ok(buf)
-}
-
-/// Convert a Rust line→op array into a Python bytearray of ``i32``
-/// values, mapping the ``MACHINE_CODE_TO_OP_NONE`` sentinel to ``-1``.
-/// Decode with ``np.frombuffer(ba, dtype=np.int32)``.
-fn machine_code_to_op_to_pybytes<'py>(
-    py: Python<'py>,
-    vec: &[usize],
-) -> PyResult<Bound<'py, PyByteArray>> {
-    use crate::ops::convert::gcode_types::MACHINE_CODE_TO_OP_NONE;
-    let n = vec.len();
-    let buf = PyByteArray::new_with(py, n * 4, |bytes: &mut [u8]| {
-        let out = unsafe {
-            std::slice::from_raw_parts_mut(bytes.as_mut_ptr().cast::<i32>(), n)
-        };
-        for (i, &v) in vec.iter().enumerate() {
-            out[i] = if v == MACHINE_CODE_TO_OP_NONE {
-                -1
-            } else {
-                v as i32
-            };
-        }
-        Ok(())
-    })?;
-    Ok(buf)
 }
 
 /// Normalize a Python-style index (negative = from end) to a usize.
@@ -3612,53 +3541,35 @@ impl PyOps {
         Py::new(py, PyOps { inner: sub })
     }
 
-    /// Encode this Ops sequence into G-code text.
+    /// Encode this Ops sequence with an encoder.
     ///
-    /// Takes a typed dialect specification and an encoding context as a
-    /// plain dict (JSON-serialisable). Returns a dict with the G-code
-    /// text and bidirectional op-to-line index maps.
-    ///
-    /// :param dialect: A :class:`raygeo.ops.convert.GcodeDialectSpec` instance.
-    /// :param context_dict: JSON-serialisable dict matching the Rust
-    ///     ``EncodeContext`` schema.
-    /// :returns: ``{"text": str, "op_to_machine_code": [(int, int)],
-    ///     "machine_code_to_op": [int]}`` — the op map is one
-    ///     ``(start, len)`` span per op index; the line map is indexed
-    ///     by line with ``-1`` for lines owned by no op.
-    /// :raises ValueError: If deserialization fails.
-    fn to_gcode<'py>(
+    /// :param spec: An :class:`raygeo.ops.convert.Encoder` wrapping the
+    ///     spec, whether it is one of raygeo's own specs or one
+    ///     provided by another extension module. The wrapper is the
+    ///     single entry point for both.
+    /// :returns: The encoder's
+    ///     :class:`raygeo.ops.convert.EncodeOutput`.
+    /// :raises RuntimeError: If the encoder fails.
+    fn encode(
         &self,
-        py: Python<'py>,
-        dialect: &super::convert::PyGcodeDialectSpec,
-        context_dict: &Bound<'py, PyDict>,
-    ) -> PyResult<Bound<'py, PyDict>> {
-        use crate::ops::convert::gcode::encode_gcode as encode_gcode_inner;
-        use crate::ops::convert::gcode_types::EncodeContext;
+        py: Python<'_>,
+        spec: &crate::python::ops::convert::PyEncoder,
+    ) -> PyResult<Py<crate::python::ops::convert::PyEncodeOutput>> {
+        use crate::ops::callbacks::NoCallbacks;
+        use crate::ops::convert::EncodeCtx;
 
-        let context: EncodeContext = from_pydict(py, context_dict)?;
-        let ops_clone = self.inner.clone();
-        let dialect_clone = dialect.0.clone();
-        let result = py
-            .detach(move || {
-                encode_gcode_inner(
-                    &ops_clone,
-                    &dialect_clone,
-                    &context,
-                    &crate::ops::callbacks::NoCallbacks,
-                )
-            })
+        let encoder = spec.into_core(py)?;
+        let mut ctx = EncodeCtx {
+            ops: &self.inner,
+            callbacks: &NoCallbacks,
+        };
+        let output = encoder
+            .encode(&mut ctx)
             .map_err(pyo3::exceptions::PyRuntimeError::new_err)?;
-        let dict = PyDict::new(py);
-        dict.set_item("text", &result.text)?;
-        dict.set_item(
-            "op_to_machine_code",
-            op_line_ranges_to_pybytes(py, &result.op_to_machine_code)?,
-        )?;
-        dict.set_item(
-            "machine_code_to_op",
-            machine_code_to_op_to_pybytes(py, &result.machine_code_to_op)?,
-        )?;
-        Ok(dict)
+        Py::new(
+            py,
+            crate::python::ops::convert::PyEncodeOutput::from_core(output),
+        )
     }
 
     /// Rasterise a grayscale image with power-modulated scans.

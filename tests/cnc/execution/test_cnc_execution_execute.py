@@ -39,7 +39,7 @@ from raygeo.geo import Geometry
 from raygeo.ops import Ops
 from raygeo.ops.assembly import Assembler
 from raygeo.ops.assembly.contour import ContourSpec
-from raygeo.ops.convert import Encoder, GcodeDialectSpec, GcodeSpec
+from raygeo.ops.convert import Encoder, VertexSpec
 from raygeo.ops.part import Part
 from raygeo.ops.state import PowerMode
 from raygeo.ops.transform.overscan import OverscanSpec
@@ -352,18 +352,13 @@ def test_encode_on_aggregate_dependency():
         generation_id=1,
         stage=EncodeSpec(
             source_key="agg",
-            encoder=Encoder(
-                GcodeSpec(
-                    dialect=GcodeDialectSpec(),
-                    context_json="{}",
-                )
-            ),
+            encoder=Encoder(VertexSpec()),
         ),
     )
     completed, _ = collect_completions([src, agg, enc])
     by_key = _by_key(completed)
     assert by_key["enc"].error is None
-    assert encode_result(by_key["enc"]).variant == "MachineCode"
+    assert encode_result(by_key["enc"]).variant == "VertexArrays"
 
 
 def test_encode_on_compute_dependency():
@@ -373,16 +368,11 @@ def test_encode_on_compute_dependency():
         generation_id=1,
         stage=EncodeSpec(
             source_key="src",
-            encoder=Encoder(
-                GcodeSpec(
-                    dialect=GcodeDialectSpec(),
-                    context_json="{}",
-                )
-            ),
+            encoder=Encoder(VertexSpec()),
         ),
     )
     completed, _ = collect_completions([src, enc])
-    assert encode_result(_by_key(completed)["enc"]).variant == "MachineCode"
+    assert encode_result(_by_key(completed)["enc"]).variant == "VertexArrays"
 
 
 # ── External (out-of-batch) source keys ───────────────────────────

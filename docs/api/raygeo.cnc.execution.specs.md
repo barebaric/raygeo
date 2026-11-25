@@ -288,7 +288,7 @@ The pipeline's generic `StageSpec` has no `Encode` variant — encoding is a CNC
 encoder: convert.Encoder
 ```
 
-The encoder to use (e.g. `GcodeSpec`, `VertexSpec`).
+The encoder to use (e.g. `VertexSpec` or a driver spec).
 
 ### `source_key`
 

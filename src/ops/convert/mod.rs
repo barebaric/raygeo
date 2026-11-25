@@ -9,22 +9,27 @@
 //! ## The `Encoder` trait
 //!
 //! Each encoder under this module exposes a **spec struct** (e.g.
-//! [`gcode::GcodeSpec`], [`vertex_arrays::VertexSpec`],
-//! [`texture::TextureSpec`], [`view::ViewSpec`]) that implements
-//! [`Encoder`]. Callers drive any encoder through this trait, mirroring
-//! how `ops::assembly` drives assemblers through `Assembler` and
-//! `ops::transform` drives transformers through `Transformer`. All
-//! three traits take their callbacks from [`crate::ops::callbacks`].
+//! [`vertex_arrays::VertexSpec`], [`texture::TextureSpec`],
+//! [`view::ViewSpec`]) that implements [`Encoder`]. Callers drive any
+//! encoder through this trait, mirroring how `ops::assembly` drives
+//! assemblers through `Assembler` and `ops::transform` drives
+//! transformers through `Transformer`. All three traits take their
+//! callbacks from [`crate::ops::callbacks`].
+//!
+//! Machine-code encoders for specific devices (G-code dialects, print
+//! jobs) live outside this crate, in the embedding application's
+//! machine-driver layer. They implement [`Encoder`] and hand
+//! themselves to this module through the [`encoder_capsule_name`]
+//! PyCapsule protocol, so the pipeline runs them without either side
+//! depending on the other's Python types.
+
+use serde::Serialize;
 
 use crate::ops::container::Ops;
-use crate::ops::convert::gcode_types::OpLineRange;
 use crate::ops::convert::scene::CompiledSceneData;
 use crate::ops::convert::vertex_arrays::VertexArrays;
 
 pub mod dump;
-pub mod epilog;
-pub mod gcode;
-pub mod gcode_types;
 pub mod geometry;
 pub mod image;
 pub mod polyline;
@@ -133,6 +138,61 @@ impl EncodeOutput {
     }
 }
 
+/// Contiguous run of emitted machine-code lines for a single op.
+///
+/// Every op's emitted lines form one contiguous span ``[start,
+/// start + len)``, so a per-op ``Vec<usize>`` can be replaced by a
+/// single (``start``, ``len``) pair — one per op index, in order.
+/// ``len == 0`` means the op produced no lines.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub struct OpLineRange {
+    pub start: u32,
+    pub len: u32,
+}
+
+/// Sentinel value for ``machine_code_to_op`` entries that have no
+/// owning op (e.g. the trailing empty line added by the encoder).
+pub const MACHINE_CODE_TO_OP_NONE: usize = usize::MAX;
+
+/// Version of the cross-crate encoder handoff.
+///
+/// Bumped whenever the [`Encoder`] trait or this handoff contract
+/// changes incompatibly.
+pub const ENCODER_ABI: &str = "1";
+
+/// The PyCapsule name used by the cross-crate encoder handoff.
+///
+/// Encoders implemented outside this crate expose a
+/// ``__raygeo_encoder__()`` method returning a capsule with this name.
+/// The name embeds the `raygeo` version the encoder was built against,
+/// so a mismatched pairing fails with a clear error instead of being
+/// misinterpreted.
+pub fn encoder_capsule_name() -> String {
+    format!(
+        "raygeo.encoder.{}.{}",
+        env!("CARGO_PKG_VERSION"),
+        ENCODER_ABI
+    )
+}
+
+/// Object-safe clone support for [`Encoder`].
+///
+/// Implemented automatically for every `Clone` encoder, so encoder
+/// specs need no extra code.
+pub trait EncoderClone {
+    /// Clone this encoder into a new owned trait object.
+    fn clone_box(&self) -> Box<dyn Encoder>;
+}
+
+impl<T> EncoderClone for T
+where
+    T: 'static + Encoder + Clone,
+{
+    fn clone_box(&self) -> Box<dyn Encoder> {
+        Box::new(self.clone())
+    }
+}
+
 /// Per-call context handed to [`Encoder::encode`].
 ///
 /// Bundles the immutable [`Ops`] being encoded with the caller's
@@ -147,8 +207,8 @@ pub struct EncodeCtx<'a> {
 
 /// A typed encoder spec.
 ///
-/// Each encoder under this module (e.g. [`gcode::GcodeSpec`],
-/// [`vertex_arrays::VertexSpec`], [`texture::TextureSpec`]) implements
+/// Each encoder under this module (e.g. [`vertex_arrays::VertexSpec`],
+/// [`texture::TextureSpec`]) implements
 /// this trait so callers can hold a `Box<dyn Encoder>` without
 /// knowing concrete types. Adding a new encoder is purely additive:
 /// define a spec struct, implement [`Encoder`], and pass an instance
@@ -156,7 +216,7 @@ pub struct EncodeCtx<'a> {
 ///
 /// `Send + Sync` is required so a `Box<dyn Encoder>` can be held
 /// across thread boundaries by the caller.
-pub trait Encoder: Send + Sync {
+pub trait Encoder: Send + Sync + EncoderClone {
     /// Run the encoder against the supplied [`EncodeCtx`].
     ///
     /// On success, returns the encoder's [`EncodeOutput`]. On

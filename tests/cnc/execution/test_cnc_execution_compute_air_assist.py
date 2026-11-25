@@ -1,8 +1,7 @@
 """Air assist injection through the pipeline Compute stage.
 
 Verifies that a `ComputePayload` with `air_assist` set injects the
-matching `SetAirAssist` command into the assembled Ops, and that
-G-code encoding turns that command into M8/M9.
+matching `SetAirAssist` command into the assembled Ops.
 
 This covers the regression where step air assist settings never
 reached the ops stream after the encoder pipeline moved into raygeo.
@@ -20,7 +19,6 @@ from raygeo.cnc.execution.specs import ComputePayload
 from raygeo.ops import Ops
 from raygeo.ops.assembly import Assembler
 from raygeo.ops.assembly.frame import FrameSpec
-from raygeo.ops.convert import GcodeDialectSpec
 from raygeo.ops.state import AirAssistMode
 from raygeo.pipeline.request import NodeRequest
 from raygeo.pipeline.stage import StageSpec
@@ -78,25 +76,3 @@ def test_air_assist_property_roundtrip():
     assert payload.air_assist == AirAssistMode.OFF
     payload.air_assist = None
     assert payload.air_assist is None
-
-
-def test_air_assist_on_encodes_m8():
-    ops = _run("n4", AirAssistMode.ON)
-    result = ops.to_gcode(GcodeDialectSpec(), {})
-    assert "M8" in result["text"]
-
-
-def test_air_assist_off_encodes_no_redundant_command():
-    """The encoder starts in the off state, so an initial OFF must not
-    produce a redundant M9."""
-    ops = _run("n5", AirAssistMode.OFF)
-    result = ops.to_gcode(GcodeDialectSpec(), {})
-    assert "M8" not in result["text"]
-    assert "M9" not in result["text"]
-
-
-def test_default_encodes_no_air_assist():
-    ops = _run("n6", None)
-    result = ops.to_gcode(GcodeDialectSpec(), {})
-    assert "M8" not in result["text"]
-    assert "M9" not in result["text"]
