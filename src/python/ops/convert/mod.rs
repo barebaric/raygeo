@@ -24,9 +24,10 @@ pub(crate) use self::view::lut_to_array;
 /// The object may be one of this module's spec classes, a
 /// [`PyPythonEncoder`], or any object exposing the
 /// ``__raygeo_encoder__()`` handoff used by encoders implemented in
-/// another extension module (e.g. ``raydriver.encode``). The handoff
-/// returns a named capsule carrying a ``Box<dyn Encoder>``, which is
-/// cloned here so the capsule keeps ownership until it is collected.
+/// another extension module (for example an embedding application's
+/// machine-driver layer). The handoff returns a named capsule carrying
+/// a ``Box<dyn Encoder>``, which is cloned here so the capsule keeps
+/// ownership until it is collected.
 ///
 /// Returns `PyTypeError` if the object is not a known encoder.
 pub fn extract_encoder(ob: &Bound<'_, PyAny>) -> PyResult<Box<dyn Encoder>> {
@@ -91,8 +92,8 @@ fn extract_foreign_encoder(
 /// Construct as ``Encoder(spec)`` where `spec` is an encoder spec:
 /// one of the classes under `raygeo.ops.convert` (e.g.
 /// :class:`~raygeo.ops.convert.VertexSpec`) or a spec from another
-/// extension module (e.g. ``raydriver.encode``). Callers that drive the
-/// `Encoder` trait hold an `Encoder` instance.
+/// extension module. Callers that drive the `Encoder` trait hold an
+/// `Encoder` instance.
 #[gen_stub_pyclass(module = "raygeo.ops.convert")]
 #[pyclass(name = "Encoder", module = "raygeo.ops.convert", skip_from_py_object)]
 #[derive(Debug)]

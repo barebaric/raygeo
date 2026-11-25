@@ -1700,8 +1700,8 @@ class Ops:
         Encode this Ops sequence with an encoder spec.
         
         The spec is anything accepted by
-        :class:`raygeo.ops.convert.Encoder`, including spec classes of
-        other extension modules (e.g. ``raydriver.encode``).
+        :class:`raygeo.ops.convert.Encoder`, including spec classes
+        provided by other extension modules.
         
         :param spec: An encoder spec instance.
         :returns: The encoder's

@@ -116,7 +116,7 @@ Python-visible wrapper around an encoder spec.
 
 Construct as `Encoder(spec)` where `spec` is an encoder spec: one of the classes under
 `raygeo.ops.convert` (e.g. **~raygeo.ops.convert.VertexSpec**) or a spec from another extension
-module (e.g. `raydriver.encode`). Callers that drive the `Encoder` trait hold an `Encoder` instance.
+module. Callers that drive the `Encoder` trait hold an `Encoder` instance.
 
 ### `spec`
 

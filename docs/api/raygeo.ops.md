@@ -1116,8 +1116,8 @@ encode(spec: Any) -> convert.EncodeOutput
 
 Encode this Ops sequence with an encoder spec.
 
-The spec is anything accepted by **raygeo.ops.convert.Encoder**, including spec classes of other
-extension modules (e.g. `raydriver.encode`).
+The spec is anything accepted by **raygeo.ops.convert.Encoder**, including spec classes provided by
+other extension modules.
 
 **Raises:** `TypeError` — If the object is not a known encoder spec.
 

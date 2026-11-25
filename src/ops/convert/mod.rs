@@ -17,8 +17,9 @@
 //! callbacks from [`crate::ops::callbacks`].
 //!
 //! Machine-code encoders for specific devices (G-code dialects, print
-//! jobs) live in their driver crate. They implement [`Encoder`] and
-//! hand themselves to this module through the [`encoder_capsule_name`]
+//! jobs) live outside this crate, in the embedding application's
+//! machine-driver layer. They implement [`Encoder`] and hand
+//! themselves to this module through the [`encoder_capsule_name`]
 //! PyCapsule protocol, so the pipeline runs them without either side
 //! depending on the other's Python types.
 
