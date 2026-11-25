@@ -691,7 +691,7 @@ pub struct PyEncodeSpec {
     /// Key of the upstream node whose Ops to encode.
     #[pyo3(get)]
     pub source_key: String,
-    /// The encoder to use (e.g. ``GcodeSpec``, ``VertexSpec``).
+    /// The encoder to use (e.g. ``VertexSpec`` or a driver spec).
     #[pyo3(get)]
     pub encoder: Py<PyEncoder>,
 }

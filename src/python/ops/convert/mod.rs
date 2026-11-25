@@ -1,37 +1,37 @@
+use std::ffi::CString;
+
 use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;
-use pyo3::types::{PyAny, PyByteArray, PyDict, PyType};
+use pyo3::types::{
+    PyAny, PyByteArray, PyCapsule, PyCapsuleMethods, PyDict, PyType,
+};
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::ops::convert::{
-    gcode::GcodeSpec, scene::SceneSpec, texture::TextureSpec,
+    encoder_capsule_name, scene::SceneSpec, texture::TextureSpec,
     vertex_arrays::VertexSpec, view::ViewSpec, EncodeCtx, EncodeOutput,
     Encoder,
 };
 
 pub(crate) mod dict;
-pub(crate) mod gcode_spec;
 pub(crate) mod numpy;
 pub(crate) mod view;
 
 pub(crate) use self::view::lut_to_array;
 
-pub(crate) use gcode_spec::PyGcodeDialectSpec;
-
 /// Try to extract an encoder spec from a Python object.
 ///
-/// Returns `PyTypeError` if the object is not one of the known spec
-/// pyclasses. The returned `Box<dyn Encoder>` is consumed by
-/// callers that drive the `Encoder` trait.
-pub fn extract_encoder(
-    py: Python<'_>,
-    ob: &Bound<'_, PyAny>,
-) -> PyResult<Box<dyn Encoder>> {
-    if let Ok(s) = ob.extract::<PyGcodeSpec>() {
-        return Ok(Box::new(s.into_core(py)));
-    }
-    if let Ok(s) = ob.extract::<PyEpilogSpec>() {
-        return Ok(Box::new(s.to_core()));
+/// The object may be one of this module's spec classes, a
+/// [`PyPythonEncoder`], or any object exposing the
+/// ``__raygeo_encoder__()`` handoff used by encoders implemented in
+/// another extension module (e.g. ``raydriver.encode``). The handoff
+/// returns a named capsule carrying a ``Box<dyn Encoder>``, which is
+/// cloned here so the capsule keeps ownership until it is collected.
+///
+/// Returns `PyTypeError` if the object is not a known encoder.
+pub fn extract_encoder(ob: &Bound<'_, PyAny>) -> PyResult<Box<dyn Encoder>> {
+    if ob.hasattr("__raygeo_encoder__")? {
+        return extract_foreign_encoder(ob);
     }
     if let Ok(s) = ob.extract::<PyVertexSpec>() {
         return Ok(Box::new(s.into_core()));
@@ -58,11 +58,40 @@ pub fn extract_encoder(
     )))
 }
 
+/// Extract an [`Encoder`] shared across extension modules.
+///
+/// The capsule name embeds the `raygeo` version the encoder was built
+/// against. A mismatch means the two extensions would disagree about
+/// the [`Encoder`] layout, so it is rejected instead of dereferenced.
+fn extract_foreign_encoder(
+    ob: &Bound<'_, PyAny>,
+) -> PyResult<Box<dyn Encoder>> {
+    let capsule = ob.call_method0("__raygeo_encoder__")?;
+    let capsule = capsule.cast_into::<PyCapsule>()?;
+    let name = CString::new(encoder_capsule_name()).map_err(|_| {
+        PyTypeError::new_err("invalid raygeo encoder capsule name")
+    })?;
+    let pointer =
+        capsule
+            .pointer_checked(Some(name.as_c_str()))
+            .map_err(|_| {
+                PyTypeError::new_err(
+                    "encoder was built against an incompatible raygeo version",
+                )
+            })?;
+    // SAFETY: the capsule name check guarantees the pointer references
+    // a `Box<dyn Encoder>` built against this raygeo version, and the
+    // capsule keeps it alive while `ob` is alive.
+    let encoder = unsafe { pointer.cast::<Box<dyn Encoder>>().as_ref() };
+    Ok(encoder.clone_box())
+}
+
 /// Python-visible wrapper around an encoder spec.
 ///
-/// Construct as ``Encoder(spec)`` where `spec` is an instance of one
-/// of the encoder spec classes under `raygeo.ops.convert` (e.g.
-/// :class:`~raygeo.ops.convert.GcodeSpec`). Callers that drive the
+/// Construct as ``Encoder(spec)`` where `spec` is an encoder spec:
+/// one of the classes under `raygeo.ops.convert` (e.g.
+/// :class:`~raygeo.ops.convert.VertexSpec`) or a spec from another
+/// extension module (e.g. ``raydriver.encode``). Callers that drive the
 /// `Encoder` trait hold an `Encoder` instance.
 #[gen_stub_pyclass(module = "raygeo.ops.convert")]
 #[pyclass(name = "Encoder", module = "raygeo.ops.convert", skip_from_py_object)]
@@ -80,7 +109,7 @@ impl PyEncoder {
     /// on the runtime type of `self.spec`.
     #[allow(clippy::wrong_self_convention)]
     pub fn into_core(&self, py: Python<'_>) -> PyResult<Box<dyn Encoder>> {
-        extract_encoder(py, self.spec.bind(py))
+        extract_encoder(self.spec.bind(py))
     }
 }
 
@@ -90,7 +119,7 @@ impl PyEncoder {
     /// Construct an `Encoder` wrapping a spec object.
     ///
     /// :param spec: An encoder spec instance (e.g.
-    ///     :class:`~raygeo.ops.convert.GcodeSpec`).
+    ///     :class:`~raygeo.ops.convert.VertexSpec`).
     #[new]
     fn new(spec: Py<PyAny>) -> Self {
         PyEncoder { spec }
@@ -150,80 +179,6 @@ impl PyPythonEncoder {
 
     fn __repr__(&self) -> String {
         format!("PythonEncoder({:?})", self.name)
-    }
-}
-
-/// Parameters for the G-code encoder.
-#[gen_stub_pyclass(module = "raygeo.ops.convert")]
-#[pyclass(
-    name = "GcodeSpec",
-    module = "raygeo.ops.convert",
-    frozen,
-    from_py_object
-)]
-#[derive(Clone)]
-pub struct PyGcodeSpec {
-    #[pyo3(get)]
-    pub dialect: Py<PyGcodeDialectSpec>,
-    #[pyo3(get)]
-    pub context_json: String,
-}
-
-impl PyGcodeSpec {
-    pub fn into_core(self, py: Python<'_>) -> GcodeSpec {
-        let dialect = self.dialect.borrow(py).0.clone();
-        GcodeSpec {
-            dialect,
-            context_json: self.context_json,
-        }
-    }
-}
-
-#[gen_stub_pymethods]
-#[pymethods]
-impl PyGcodeSpec {
-    #[new]
-    fn new(dialect: Py<PyGcodeDialectSpec>, context_json: String) -> Self {
-        PyGcodeSpec {
-            dialect,
-            context_json,
-        }
-    }
-}
-
-/// Parameters for the Epilog print-job encoder.
-///
-/// `context_json` is a JSON-serialised
-/// [`EpilogContext`](crate::ops::convert::epilog::EpilogContext):
-/// job title, resolution, frequency, bed size, speed reference, origin
-/// layout and the rotary flag.
-#[gen_stub_pyclass(module = "raygeo.ops.convert")]
-#[pyclass(
-    name = "EpilogSpec",
-    module = "raygeo.ops.convert",
-    frozen,
-    from_py_object
-)]
-#[derive(Clone)]
-pub struct PyEpilogSpec {
-    #[pyo3(get)]
-    pub context_json: String,
-}
-
-impl PyEpilogSpec {
-    pub fn to_core(&self) -> crate::ops::convert::epilog::EpilogSpec {
-        crate::ops::convert::epilog::EpilogSpec {
-            context_json: self.context_json.clone(),
-        }
-    }
-}
-
-#[gen_stub_pymethods]
-#[pymethods]
-impl PyEpilogSpec {
-    #[new]
-    fn new(context_json: String) -> Self {
-        PyEpilogSpec { context_json }
     }
 }
 
@@ -594,9 +549,7 @@ impl PyEncodeOutput {
         machine_code_to_op: &Bound<'_, PyAny>,
         payload: Option<&Bound<'_, PyAny>>,
     ) -> PyResult<Self> {
-        use crate::ops::convert::gcode_types::{
-            OpLineRange, MACHINE_CODE_TO_OP_NONE,
-        };
+        use crate::ops::convert::{OpLineRange, MACHINE_CODE_TO_OP_NONE};
 
         // payload: the device byte stream for binary machine
         // languages (e.g. Epilog PJL/PCL/HPGL), as bytes or
@@ -795,7 +748,7 @@ impl PyEncodeOutput {
     /// Decode with ``np.frombuffer(ba, dtype=np.int32)``.
     #[getter]
     fn machine_code_to_op(&self, py: Python<'_>) -> Option<Py<PyByteArray>> {
-        use crate::ops::convert::gcode_types::MACHINE_CODE_TO_OP_NONE;
+        use crate::ops::convert::MACHINE_CODE_TO_OP_NONE;
         match self.enc() {
             EncodeOutput::MachineCode {
                 machine_code_to_op, ..
@@ -905,13 +858,13 @@ impl From<EncodeOutput> for PyEncodeOutput {
 ///
 /// This lets callers route Python-side encoders through the same
 /// ``EncoderCompute`` stage as native Rust encoders.
+#[derive(Clone)]
 pub struct PythonEncoder {
     /// The Python callable ``(ops) -> EncodeOutput``.
     callable: Py<PyAny>,
     /// Human-readable name used in progress messages.
     name: String,
 }
-
 impl PythonEncoder {
     /// Construct from a Python callable and a display name.
     pub fn new(callable: Py<PyAny>, name: String) -> Self {
@@ -957,10 +910,7 @@ impl Encoder for PythonEncoder {
 pub(crate) fn register(ops_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     let convert_mod = PyModule::new(ops_mod.py(), "convert")?;
     convert_mod.add_class::<PyEncodeOutput>()?;
-    convert_mod.add_class::<PyGcodeDialectSpec>()?;
     convert_mod.add_class::<PyEncoder>()?;
-    convert_mod.add_class::<PyGcodeSpec>()?;
-    convert_mod.add_class::<PyEpilogSpec>()?;
     convert_mod.add_class::<PyVertexSpec>()?;
     convert_mod.add_class::<PySceneSpec>()?;
     convert_mod.add_class::<PyLayerConfig>()?;

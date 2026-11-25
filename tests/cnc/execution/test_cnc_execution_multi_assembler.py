@@ -47,7 +47,7 @@ from raygeo.ops.assembly.shrinkwrap import ShrinkwrapSpec
 from raygeo.ops.assembly.slot import SlotSpec
 from raygeo.ops.assembly.spiral import SpiralSpec
 from raygeo.ops.assembly.toroid import ToroidSpec
-from raygeo.ops.convert import Encoder, GcodeDialectSpec, GcodeSpec
+from raygeo.ops.convert import Encoder, VertexSpec
 from raygeo.ops.part import Part
 from raygeo.pipeline.request import NodeRequest
 from raygeo.pipeline.stage import StageSpec
@@ -136,9 +136,7 @@ def _encode(key: str, source_key: str) -> NodeRequest:
         generation_id=1,
         stage=EncodeSpec(
             source_key=source_key,
-            encoder=Encoder(
-                GcodeSpec(dialect=GcodeDialectSpec(), context_json="{}")
-            ),
+            encoder=Encoder(VertexSpec()),
         ),
     )
 
@@ -268,7 +266,7 @@ def test_aggregate_concatenates_all_leaf_ops():
     assert len(agg_ops) == leaf_total
 
 
-def test_encode_node_produces_machine_code():
+def test_encode_node_produces_vertex_arrays():
     leaves = _build_leaves()
     leaf_keys = [leaf.key for leaf in leaves]
     agg = _aggregate("agg", leaf_keys)
@@ -276,9 +274,8 @@ def test_encode_node_produces_machine_code():
     completed, _ = collect_completions(leaves + [agg, enc])
     by_key = _by_key(completed)
     out = encode_result(by_key["enc"])
-    assert out.variant == "MachineCode"
-    assert out.text is not None
-    assert len(out.text) > 0
+    assert out.variant == "VertexArrays"
+    assert out.repr is not None
 
 
 def test_is_scalable_flag_per_leaf():

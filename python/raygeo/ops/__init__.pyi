@@ -1695,22 +1695,19 @@ class Ops:
         r"""
         Extract commands `[start, end)` into a new Ops.
         """
-    def to_gcode(self, dialect: convert.GcodeDialectSpec, context_dict: dict) -> dict:
+    def encode(self, spec: typing.Any) -> convert.EncodeOutput:
         r"""
-        Encode this Ops sequence into G-code text.
+        Encode this Ops sequence with an encoder spec.
         
-        Takes a typed dialect specification and an encoding context as a
-        plain dict (JSON-serialisable). Returns a dict with the G-code
-        text and bidirectional op-to-line index maps.
+        The spec is anything accepted by
+        :class:`raygeo.ops.convert.Encoder`, including spec classes of
+        other extension modules (e.g. ``raydriver.encode``).
         
-        :param dialect: A :class:`raygeo.ops.convert.GcodeDialectSpec` instance.
-        :param context_dict: JSON-serialisable dict matching the Rust
-            ``EncodeContext`` schema.
-        :returns: ``{"text": str, "op_to_machine_code": [(int, int)],
-            "machine_code_to_op": [int]}`` — the op map is one
-            ``(start, len)`` span per op index; the line map is indexed
-            by line with ``-1`` for lines owned by no op.
-        :raises ValueError: If deserialization fails.
+        :param spec: An encoder spec instance.
+        :returns: The encoder's
+            :class:`raygeo.ops.convert.EncodeOutput`.
+        :raises TypeError: If the object is not a known encoder spec.
+        :raises RuntimeError: If the encoder fails.
         """
     @staticmethod
     def from_power_modulated_image(gray_image: typing.Any, alpha: typing.Any, pixels_per_mm: tuple[builtins.float, builtins.float], offset_x_mm: builtins.float, offset_y_mm: builtins.float, line_interval_mm: builtins.float, sample_interval_mm: builtins.float, min_power: builtins.float = 0.0, max_power: builtins.float = 1.0, step_power: builtins.float = 1.0, num_power_levels: builtins.int = 256, angle: builtins.float = 0.0, scan_mode: scan.ScanMode = scan.ScanMode.SEGMENTED, dot_width_correction_mm: builtins.float = 0.0) -> Ops:

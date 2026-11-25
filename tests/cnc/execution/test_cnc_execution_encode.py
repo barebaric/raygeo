@@ -4,12 +4,14 @@ The Encode stage takes an upstream `Ops` (from a Compute or Aggregate
 node) and produces a non-Ops artifact via the polymorphic `Encoder`
 trait. Three encoder specs are tested here:
 
-- `GcodeSpec` — produces machine-code text with op-index maps.
 - `VertexSpec` — produces a vertex-array repr string.
 - `TextureSpec` — produces a (width x height) uint8 power texture.
+- `SceneSpec` — produces compiled 3D scene data.
 
-All three are exercised through the pipeline as `StageSpec.Encode`
-nodes with `source_key` pointing at an upstream Compute node.
+All are exercised through the pipeline as `StageSpec.Encode` nodes
+with `source_key` pointing at an upstream Compute node. Machine-code
+encoders (G-code, device print jobs) live in the driver crate and join
+through the same `Encoder` trait; `PythonEncoder` covers that shape.
 """
 
 import numpy as np
@@ -33,8 +35,6 @@ from raygeo.ops.assembly.contour import ContourSpec
 from raygeo.ops.convert import (
     EncodeOutput,
     Encoder,
-    GcodeDialectSpec,
-    GcodeSpec,
     PythonEncoder,
     SceneSpec,
     TextureSpec,
@@ -69,93 +69,6 @@ def _encode_node(key: str, source_key: str, encoder: Encoder) -> NodeRequest:
 
 def _by_key(completed):
     return {c.key: c for c in completed}
-
-
-# ── G-code encoder ────────────────────────────────────────────────
-
-
-def test_gcode_encode_succeeds():
-    src = _compute_src()
-    enc = _encode_node(
-        "enc",
-        "src",
-        Encoder(
-            GcodeSpec(
-                dialect=GcodeDialectSpec(),
-                context_json="{}",
-            )
-        ),
-    )
-    completed, _ = collect_completions([src, enc])
-    c = _by_key(completed)["enc"]
-    assert c.error is None
-    assert c.output is not None
-
-
-def test_gcode_encode_carries_machine_code():
-    src = _compute_src()
-    enc = _encode_node(
-        "enc",
-        "src",
-        Encoder(
-            GcodeSpec(
-                dialect=GcodeDialectSpec(),
-                context_json="{}",
-            )
-        ),
-    )
-    completed, _ = collect_completions([src, enc])
-    out = encode_result(_by_key(completed)["enc"])
-    assert type(out).__name__ == "EncodeOutput"
-    assert out.variant == "MachineCode"
-    assert out.text is not None
-    assert len(out.text) > 0
-    assert out.power_texture is None
-    assert out.repr is None
-
-
-def test_gcode_encode_text_contains_g_code_commands():
-    src = _compute_src()
-    enc = _encode_node(
-        "enc",
-        "src",
-        Encoder(
-            GcodeSpec(
-                dialect=GcodeDialectSpec(),
-                context_json="{}",
-            )
-        ),
-    )
-    completed, _ = collect_completions([src, enc])
-    text = encode_result(_by_key(completed)["enc"]).text
-    assert text is not None
-    assert "G1" in text or "G0" in text
-
-
-def test_gcode_encode_op_maps_populated():
-    src = _compute_src()
-    enc = _encode_node(
-        "enc",
-        "src",
-        Encoder(
-            GcodeSpec(
-                dialect=GcodeDialectSpec(),
-                context_json="{}",
-            )
-        ),
-    )
-    completed, _ = collect_completions([src, enc])
-    out = encode_result(_by_key(completed)["enc"])
-    om = out.op_to_machine_code
-    mo = out.machine_code_to_op
-    assert om is not None and mo is not None
-    assert len(om) > 0
-    spans = np.frombuffer(om, dtype=np.int32).reshape(-1, 2)
-    owners = np.frombuffer(mo, dtype=np.int32)
-    for op_idx, (start, count) in enumerate(spans):
-        for mi in range(start, start + count):
-            assert mi < len(owners)
-            assert owners[mi] == op_idx
 
 
 # ── Vertex-array encoder ──────────────────────────────────────────
@@ -289,20 +202,11 @@ def test_encode_can_consume_aggregate():
             )
         ),
     )
-    enc = _encode_node(
-        "enc",
-        "agg",
-        Encoder(
-            GcodeSpec(
-                dialect=GcodeDialectSpec(),
-                context_json="{}",
-            )
-        ),
-    )
+    enc = _encode_node("enc", "agg", Encoder(VertexSpec()))
     completed, _ = collect_completions([src, agg, enc])
     c = _by_key(completed)["enc"]
     assert c.error is None
-    assert encode_result(c).variant == "MachineCode"
+    assert encode_result(c).variant == "VertexArrays"
 
 
 # ── Scene encoder ─────────────────────────────────────────────────
@@ -385,16 +289,7 @@ def test_encode_adds_no_cache_footprint():
     """
     p = Pipeline()
     src = _compute_src()
-    enc = _encode_node(
-        "enc",
-        "src",
-        Encoder(
-            GcodeSpec(
-                dialect=GcodeDialectSpec(),
-                context_json="{}",
-            )
-        ),
-    )
+    enc = _encode_node("enc", "src", Encoder(VertexSpec()))
 
     completed: list = []
     p.execute([src, enc], completed.append, None)
