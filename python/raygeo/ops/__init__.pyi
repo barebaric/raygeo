@@ -1695,18 +1695,16 @@ class Ops:
         r"""
         Extract commands `[start, end)` into a new Ops.
         """
-    def encode(self, spec: typing.Any) -> convert.EncodeOutput:
+    def encode(self, spec: convert.Encoder) -> convert.EncodeOutput:
         r"""
-        Encode this Ops sequence with an encoder spec.
+        Encode this Ops sequence with an encoder.
         
-        The spec is anything accepted by
-        :class:`raygeo.ops.convert.Encoder`, including spec classes
-        provided by other extension modules.
-        
-        :param spec: An encoder spec instance.
+        :param spec: An :class:`raygeo.ops.convert.Encoder` wrapping the
+            spec, whether it is one of raygeo's own specs or one
+            provided by another extension module. The wrapper is the
+            single entry point for both.
         :returns: The encoder's
             :class:`raygeo.ops.convert.EncodeOutput`.
-        :raises TypeError: If the object is not a known encoder spec.
         :raises RuntimeError: If the encoder fails.
         """
     @staticmethod

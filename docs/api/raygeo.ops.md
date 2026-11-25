@@ -1111,22 +1111,17 @@ Get the duration (milliseconds) of a Dwell command.
 ### `encode()`
 
 ```python
-encode(spec: Any) -> convert.EncodeOutput
+encode(spec: convert.Encoder) -> convert.EncodeOutput
 ```
 
-Encode this Ops sequence with an encoder spec.
-
-The spec is anything accepted by **raygeo.ops.convert.Encoder**, including spec classes provided by
-other extension modules.
-
-**Raises:** `TypeError` — If the object is not a known encoder spec.
+Encode this Ops sequence with an encoder.
 
 **Raises:** `RuntimeError` — If the encoder fails.
 
-| Parameter | Type                   | Description                                        |
-| --------- | ---------------------- | -------------------------------------------------- |
-| `spec`    | `Any`                  | An encoder spec instance.                          |
-| _Returns_ | `convert.EncodeOutput` | The encoder's **raygeo.ops.convert.EncodeOutput**. |
+| Parameter | Type                   | Description                                                                                                                                                                               |
+| --------- | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `spec`    | `convert.Encoder`      | An **raygeo.ops.convert.Encoder** wrapping the spec, whether it is one of raygeo's own specs or one provided by another extension module. The wrapper is the single entry point for both. |
+| _Returns_ | `convert.EncodeOutput` | The encoder's **raygeo.ops.convert.EncodeOutput**.                                                                                                                                        |
 
 ### `endpoint()`
 
