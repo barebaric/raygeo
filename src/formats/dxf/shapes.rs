@@ -45,7 +45,12 @@ pub fn transform_shape(shape: &Shape, transform: DMat4) -> Shape {
                 segments:
                     crate::formats::dxf::geometry_builder::shape_to_beziers(
                         shape,
-                    ),
+                    )
+                    .into_iter()
+                    .map(|segment| {
+                        segment.map(|point| transform.transform_point3(point))
+                    })
+                    .collect(),
             }
         }
     }

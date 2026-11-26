@@ -305,6 +305,49 @@ class TestLayers:
 
         assert ends(geometry) == [(100.0, 50.0, 0.0), (110.0, 50.0, 0.0)]
 
+    def test_block_arc_follows_insert_rotation(self):
+        lines = ["0", "SECTION", "2", "BLOCKS"]
+        lines += ["0", "BLOCK", "2", "PART", "10", "0", "20", "0", "30", "0"]
+        lines += [
+            "0",
+            "ARC",
+            "8",
+            "0",
+            "10",
+            "0",
+            "20",
+            "0",
+            "30",
+            "0",
+            "40",
+            "10",
+            "50",
+            "0",
+            "51",
+            "90",
+        ]
+        lines += ["0", "ENDBLK", "0", "ENDSEC"]
+        lines += ["0", "SECTION", "2", "ENTITIES"]
+        lines += [
+            "0",
+            "INSERT",
+            "8",
+            "0",
+            "2",
+            "PART",
+            "10",
+            "100",
+            "20",
+            "50",
+            "50",
+            "90",
+        ]
+        lines += ["0", "ENDSEC", "0", "EOF"]
+        geometry = read("\n".join(lines) + "\n").layers[0][1]
+
+        assert "Bezier" in types(geometry)
+        assert ends(geometry) == [(100.0, 60.0, 0.0), (90.0, 50.0, 0.0)]
+
     def test_missing_block_is_reported(self):
         output = read(
             document([("INSERT", "0", [(2, "NOPE"), (10, 0), (20, 0)])])
