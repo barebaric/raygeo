@@ -19,12 +19,38 @@ def document(entities, header=None) -> str:
     for name, value in (header or {}).items():
         lines += ["9", name, str(value_code(value)), str(value)]
     lines += ["0", "ENDSEC", "0", "SECTION", "2", "ENTITIES"]
+    lines += entity_lines(entities)
+    lines += ["0", "ENDSEC", "0", "EOF"]
+    return "\n".join(lines) + "\n"
+
+
+def block_document(blocks, entities) -> str:
+    """Wrap block definitions and modelspace entities in a document.
+
+    Each block is ``(name, base, contents)``, where ``base`` is an
+    ``(x, y)`` pair and ``contents`` is a list of entities in the same
+    form :func:`document` takes.
+    """
+    lines = ["0", "SECTION", "2", "BLOCKS"]
+    for name, (x, y), contents in blocks:
+        lines += ["0", "BLOCK", "8", "0", "2", name]
+        lines += ["10", str(x), "20", str(y), "30", "0"]
+        lines += entity_lines(contents)
+        lines += ["0", "ENDBLK"]
+    lines += ["0", "ENDSEC", "0", "SECTION", "2", "ENTITIES"]
+    lines += entity_lines(entities)
+    lines += ["0", "ENDSEC", "0", "EOF"]
+    return "\n".join(lines) + "\n"
+
+
+def entity_lines(entities) -> list[str]:
+    """The group-code lines of a list of entity tuples."""
+    lines: list[str] = []
     for kind, layer, values in entities:
         lines += ["0", kind, "8", layer]
         for code, value in values:
             lines += [str(code), str(value)]
-    lines += ["0", "ENDSEC", "0", "EOF"]
-    return "\n".join(lines) + "\n"
+    return lines
 
 
 def value_code(value) -> int:
@@ -44,6 +70,24 @@ def line(x1, y1, x2, y2, layer="0", z1=0.0, z2=0.0):
             (11, x2),
             (21, y2),
             (31, z2),
+        ],
+    )
+
+
+def insert(block, x, y, layer="0", rotation=0.0, x_scale=1.0, y_scale=1.0):
+    """An INSERT entity."""
+    return (
+        "INSERT",
+        layer,
+        [
+            (2, block),
+            (10, x),
+            (20, y),
+            (30, 0.0),
+            (41, x_scale),
+            (42, y_scale),
+            (43, 1.0),
+            (50, rotation),
         ],
     )
 

@@ -214,25 +214,23 @@ fn parse_blocks(records: &[&[Item]]) -> HashMap<String, Block> {
             None,
             &mut nested_issues,
         );
+        let SectionContent { shapes, inserts } = content;
+        let entities = shapes
+            .into_iter()
+            .map(|(layer, shape)| Entity { layer, shape })
+            .collect();
         blocks.insert(
             name.clone(),
             Block {
                 name,
-                entities: content_entities(content),
+                entities,
+                inserts,
                 base_point,
             },
         );
         index = end + 1;
     }
     blocks
-}
-
-fn content_entities(content: SectionContent) -> Vec<Entity> {
-    content
-        .shapes
-        .into_iter()
-        .map(|(layer, shape)| Entity { layer, shape })
-        .collect()
 }
 
 /// Replaces each insertion with the block's entities, transformed into
@@ -247,23 +245,57 @@ fn resolve_blocks(
         out.push(Entity { layer, shape });
     }
     for (insert_layer, insert) in content.inserts {
-        expand_insert(&insert, &insert_layer, blocks, &mut out, issues, 0);
+        let mut stack = Vec::new();
+        expand_insert(
+            &insert,
+            &insert_layer,
+            blocks,
+            DMat4::IDENTITY,
+            &mut stack,
+            &mut out,
+            issues,
+        );
     }
     out
 }
 
+/// The layer an entity inside a block is drawn on.
+///
+/// Entities and nested insertions on layer `0` inherit the layer of the
+/// insertion that brought the block in; everything else keeps its own.
+fn inherited_layer(name: &str, insert_layer: &str) -> String {
+    if name.is_empty() || name == "0" {
+        insert_layer.to_string()
+    } else {
+        name.to_string()
+    }
+}
+
+/// Expands one insertion, recursing into blocks it contains.
+///
+/// `parent_transform` maps the containing block's coordinates into world
+/// space. `stack` holds the blocks currently being expanded, so a block
+/// that (indirectly) inserts itself is reported instead of expanded.
 fn expand_insert(
     insert: &Insert,
     insert_layer: &str,
     blocks: &HashMap<String, Block>,
+    parent_transform: DMat4,
+    stack: &mut Vec<String>,
     out: &mut Vec<Entity>,
     issues: &mut Vec<String>,
-    depth: usize,
 ) {
-    if depth >= MAX_BLOCK_DEPTH {
+    if stack.len() >= MAX_BLOCK_DEPTH {
         push_issue(
             issues,
             format!("block nesting deeper than {MAX_BLOCK_DEPTH} levels"),
+        );
+        return;
+    }
+    if stack.contains(&insert.block_name) {
+        push_issue(
+            issues,
+            format!("block '{}' is inserted circularly", insert.block_name),
         );
         return;
     }
@@ -278,18 +310,20 @@ fn expand_insert(
         return;
     };
     let local_transform = DMat4::from_translation(-block.base_point);
-    let transform = insert.transform * local_transform;
+    let transform = parent_transform * insert.transform * local_transform;
+    stack.push(insert.block_name.clone());
     for entity in &block.entities {
-        let layer = if entity.layer.is_empty() || entity.layer == "0" {
-            insert_layer.to_string()
-        } else {
-            entity.layer.clone()
-        };
+        let layer = inherited_layer(&entity.layer, insert_layer);
         out.push(Entity {
             layer,
             shape: transform_shape(&entity.shape, transform),
         });
     }
+    for (nested_layer, nested) in &block.inserts {
+        let layer = inherited_layer(nested_layer, insert_layer);
+        expand_insert(nested, &layer, blocks, transform, stack, out, issues);
+    }
+    stack.pop();
 }
 
 fn push_issue(issues: &mut Vec<String>, message: String) {

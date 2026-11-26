@@ -3,7 +3,17 @@
 import math
 
 import pytest
-from conftest import arc, asset, document, ends, line, rectangle, types
+from conftest import (
+    arc,
+    asset,
+    block_document,
+    document,
+    ends,
+    insert,
+    line,
+    rectangle,
+    types,
+)
 
 from raygeo.formats.dxf.reader import read
 
@@ -354,6 +364,98 @@ class TestLayers:
         )
 
         assert any("NOPE" in issue for issue in output.issues)
+
+    def test_nested_block_insertion_is_expanded(self):
+        output = read(
+            block_document(
+                [
+                    ("INNER", (0, 0), [line(0, 0, 10, 0)]),
+                    ("OUTER", (0, 0), [insert("INNER", 0, 5)]),
+                ],
+                [insert("OUTER", 100, 0, layer="LAYER_A")],
+            )
+        )
+
+        assert [name for name, _ in output.layers] == ["LAYER_A"]
+        assert ends(output.layers[0][1]) == [
+            (100.0, 5.0, 0.0),
+            (110.0, 5.0, 0.0),
+        ]
+        assert output.issues == []
+
+    def test_nested_block_transforms_accumulate(self):
+        output = read(
+            block_document(
+                [
+                    ("INNER", (1, 0), [line(1, 0, 11, 0)]),
+                    ("OUTER", (2, 5), [insert("INNER", 2, 10, rotation=90)]),
+                ],
+                [insert("OUTER", 100, 0, layer="LAYER_A")],
+            )
+        )
+
+        assert ends(output.layers[0][1]) == [
+            (100.0, 5.0, 0.0),
+            (100.0, 15.0, 0.0),
+        ]
+
+    def test_nested_block_layers_inherit_from_the_outer_insert(self):
+        output = read(
+            block_document(
+                [
+                    (
+                        "INNER",
+                        (0, 0),
+                        [
+                            line(0, 0, 10, 0),
+                            line(0, 1, 10, 1, layer="DETAIL"),
+                        ],
+                    ),
+                    ("OUTER", (0, 0), [insert("INNER", 0, 5)]),
+                ],
+                [insert("OUTER", 100, 0, layer="LAYER_A")],
+            )
+        )
+
+        assert [name for name, _ in output.layers] == ["LAYER_A", "DETAIL"]
+        assert len(output.layers[0][1].data) == 2
+        assert len(output.layers[1][1].data) == 2
+
+    def test_missing_nested_block_is_reported(self):
+        output = read(
+            block_document(
+                [("OUTER", (0, 0), [insert("NOPE", 0, 0)])],
+                [insert("OUTER", 0, 0)],
+            )
+        )
+
+        assert output.is_empty()
+        assert any("NOPE" in issue for issue in output.issues)
+
+    def test_circular_block_insertion_is_reported(self):
+        output = read(
+            block_document(
+                [
+                    ("A", (0, 0), [insert("B", 0, 0)]),
+                    ("B", (0, 0), [insert("A", 0, 0)]),
+                ],
+                [insert("A", 0, 0)],
+            )
+        )
+
+        assert output.is_empty()
+        assert any("circular" in issue for issue in output.issues)
+
+    def test_block_nesting_depth_is_bounded(self):
+        blocks = [
+            (f"B{index}", (0, 0), [insert(f"B{index + 1}", 0, 0)])
+            for index in range(40)
+        ]
+        blocks.append(("B40", (0, 0), []))
+        output = read(block_document(blocks, [insert("B0", 0, 0)]))
+
+        assert output.is_empty()
+        assert any("deeper than" in issue for issue in output.issues)
 
 
 class TestUnitsAndZ:

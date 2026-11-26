@@ -120,6 +120,8 @@ pub struct Block {
     pub name: String,
     /// The drawable entities the block contains.
     pub entities: Vec<Entity>,
+    /// Block insertions the block contains, before resolution.
+    pub inserts: Vec<(String, Insert)>,
     /// The anchor point of the block.
     pub base_point: DVec3,
 }
