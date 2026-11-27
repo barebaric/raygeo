@@ -1,13 +1,13 @@
-## CLI Tools
+# raygeo CLI
 
-raygeo ships a `raygeo` CLI for adaptive clearing development and debugging.
-Install with the optional `cli` dependency group:
+The `raygeo` command provides adaptive-clearing development and
+debugging tools. Install with the optional `cli` dependency group:
 
 ```bash
-pip install -e ".[cli]"
+pip install "raygeo[cli]"
 ```
 
-### `raygeo trace <path>`
+## `raygeo trace <path>`
 
 Run adaptive clearing with per-step tracing and write a binary trace file:
 
@@ -21,7 +21,7 @@ Optional flags: `--scenario`, `--svg`, `--tool-radius`, `--advance`,
 `--step-over`, `--step-length`, `--max-deflection-deg`, `--wall-margin`,
 `--cut-z`, `--safe-z`, `--area-tolerance`.
 
-### `raygeo print <path>`
+## `raygeo print <path>`
 
 Dump all trace records as a grep-friendly event log. Useful for quickly
 scanning strategy outcomes (`strat=` and `rout=` columns).
@@ -30,7 +30,7 @@ scanning strategy outcomes (`strat=` and `rout=` columns).
 raygeo print /tmp/trace.bin
 ```
 
-### `raygeo inspect <path> [step]`
+## `raygeo inspect <path> [step]`
 
 Open an interactive matplotlib viewer for a trace file. Step through
 individual adaptive clearing iterations with keyboard or button controls:
@@ -45,7 +45,7 @@ raygeo inspect /tmp/trace.bin
 raygeo inspect /tmp/trace.bin 500   # start at step 500
 ```
 
-### `raygeo profile`
+## `raygeo profile`
 
 Profile `adaptive_clearing` wall-clock performance for built-in or SVG
 scenarios:

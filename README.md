@@ -3,11 +3,13 @@
 [![PyPI](https://img.shields.io/pypi/v/raygeo.svg)](https://pypi.org/project/raygeo/)
 [![CI](https://github.com/barebaric/raygeo/actions/workflows/ci.yml/badge.svg)](https://github.com/barebaric/raygeo/actions/workflows/ci.yml)
 
-A high-performance 2D/3D geometry library for Python, built in Rust with PyO3.
+A high-performance 2D/3D geometry and CAM library for Python, with
+native machine drivers, built in Rust with PyO3.
 
-raygeo provides vector path construction, polygon boolean operations, curve
-fitting, path transformations, and geometric queries — all backed by a native
-Rust extension.
+raygeo provides vector path construction, polygon boolean operations,
+curve fitting, path transformations, CNC plan execution, file-format
+converters, and machine drivers — all backed by a native Rust
+extension.
 
 ![Showcase](docs/api/images/showcase-showcase.png)
 
@@ -19,7 +21,7 @@ Rust extension.
 pip install raygeo
 ```
 
-Requires Python 3.10+ and a compatible platform (Linux, Windows, macOS Intel,
+Requires Python 3.11+ and a compatible platform (Linux, Windows, macOS Intel,
 or macOS Apple Silicon). Pre-compiled wheels are available on
 [PyPI](https://pypi.org/project/raygeo/).
 
@@ -271,7 +273,7 @@ The docs are also published online as part of the
 ### Prerequisites
 
 - [Rust toolchain](https://rustup.rs) (latest stable)
-- Python 3.10+
+- Python 3.11+
 - [maturin](https://www.maturin.rs) (`pip install maturin`)
 - Node.js (only needed for `make lint-python`, which runs pyright via npx)
 
@@ -322,18 +324,34 @@ make visual
 See [Visual Testing](visual-testing.md) for a full walkthrough of every
 page and its controls.
 
-### CLI Tools
+## Command Line Tools
 
-The `raygeo` command provides subcommands for tracing, inspecting, and
-profiling adaptive clearing runs.
+The package installs two console scripts.
+
+### `raygeo` — adaptive-clearing tools
+
+Install the optional plotting dependencies with
+`pip install "raygeo[cli]"`.
 
 ```bash
-pip install -e ".[cli]"
 raygeo trace /tmp/trace.bin --scenario centre-island
+raygeo print /tmp/trace.bin
 raygeo inspect /tmp/trace.bin
 ```
 
-See [CLI Tools](cli.md) for full usage documentation.
+See [raygeo CLI](docs/raygeo-cli.md) for all subcommands and flags.
+
+### `raydriver` — machine and daemon tools
+
+```bash
+raydriver run job.gcode --port /dev/ttyUSB0
+raydriver status --port /dev/ttyUSB0
+raydriver daemon add /dev/ttyUSB0
+```
+
+See [raydriver CLI](docs/raydriver-cli.md) for job streaming, the
+analyzer, discovery, and daemon management. Daemon configuration is
+covered in the [daemon guide](docs/driver/daemon.md).
 
 ## License
 
