@@ -18,7 +18,7 @@ from raygeo.driver.cli.analyzer import (
 )
 from raygeo.driver.cli.main import build_parser
 
-GOLDEN = Path(__file__).parent / "golden"
+GOLDEN = Path(__file__).parents[1] / "golden"
 
 
 def run_cli(argv):

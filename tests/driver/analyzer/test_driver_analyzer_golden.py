@@ -26,7 +26,7 @@ from raygeo.driver.marlin.emulator import MarlinEmulator
 from raygeo.driver.smoothie import SmoothieDriver
 from raygeo.driver.smoothie.emulator import SmoothieEmulator
 
-GOLDEN_DIR = Path(__file__).parent / "golden"
+GOLDEN_DIR = Path(__file__).parents[1] / "golden"
 
 SMOOTHIE_MARLIN_TIMINGS = {
     "handshake_timeout": 2.0,

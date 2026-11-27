@@ -26,7 +26,7 @@ from raygeo.driver.grbl.emulator import GrblEmulator
 from raygeo.driver.remote import protocol
 from raygeo.driver.remote.daemon import ClientQueue, Daemon, DaemonConfig
 
-CERTS = Path(__file__).parent / "certs"
+CERTS = Path(__file__).parents[1] / "certs"
 CLIENTS: list["DaemonClient"] = []
 
 

@@ -11,7 +11,7 @@ import pytest
 from raygeo.driver.core.discovery import daemon as discovery_daemon
 from raygeo.driver.remote.daemon import Daemon, DaemonConfig
 
-CERTS = Path(__file__).parent / "certs"
+CERTS = Path(__file__).parents[1] / "certs"
 CA = CERTS / "analyzer-test-cert.pem"
 CERT = CERTS / "analyzer-test-server-cert.pem"
 KEY = CERTS / "analyzer-test-server-key.pem"

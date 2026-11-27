@@ -21,7 +21,7 @@ from raygeo.driver.analyzer.listener import (
     validate_bind_policy,
 )
 
-CERTS = Path(__file__).parent / "certs"
+CERTS = Path(__file__).parents[1] / "certs"
 CERT = CERTS / "analyzer-test-cert.pem"
 KEY = CERTS / "analyzer-test-key.pem"
 

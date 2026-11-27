@@ -25,7 +25,7 @@ from raygeo.driver.remote import protocol
 from raygeo.driver.remote.client import RemoteSession, create_session
 from raygeo.driver.remote.daemon import Daemon, DaemonConfig
 
-CERTS = Path(__file__).parent / "certs"
+CERTS = Path(__file__).parents[1] / "certs"
 CA = CERTS / "daemon-test-ca.pem"
 CERT = CERTS / "daemon-test-cert.pem"
 KEY = CERTS / "daemon-test-key.pem"
