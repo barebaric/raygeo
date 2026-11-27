@@ -1,4 +1,4 @@
-.PHONY: build dev stubs format format-rust format-python lint lint-rust lint-python test test-fast test-all test-geometry test-engine test-encode test-driver test-slow check visual doc docs install-test-deps install-visual-deps install-docs-deps venv
+.PHONY: build dev stubs format format-rust format-python lint lint-rust lint-python test test-fast test-all test-geometry test-engine test-encode test-driver test-slow check check-wasm visual doc docs install-test-deps install-visual-deps install-docs-deps venv
 
 # Prefer the rustup toolchain when one exists: distro cargos are
 # often too old for this project's Cargo.lock format (v4), and cargo
@@ -51,6 +51,13 @@ lint-python:
 	ruff check tests/ python/ tools/
 	ruff format --check tests/ python/ tools/
 	npx pyright python/raygeo tests tools
+
+# Embedding applications build the core for wasm32. The second check
+# compiles the browser bundle (currently the Web Serial transport).
+check-wasm:
+	cargo check --lib --target wasm32-unknown-unknown --no-default-features
+	cargo check --lib --target wasm32-unknown-unknown --no-default-features --features browser
+	cargo clippy --lib --target wasm32-unknown-unknown --no-default-features --features browser -- -D warnings
 
 test: test-fast
 

@@ -49,7 +49,7 @@ jobs:
       # The dependency tree is pure Rust, so no C/C++ cross-toolchain is
       # needed for this target.
       - name: Check wasm32
-        run: cargo check --lib --target wasm32-unknown-unknown --no-default-features
+        run: make check-wasm
 
       - name: Rust unit tests
         run: cargo test --lib --no-default-features

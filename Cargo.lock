@@ -1505,6 +1505,7 @@ dependencies = [
  "getrandom 0.4.3",
  "glam 0.34.3",
  "if-addrs",
+ "js-sys",
  "libc",
  "libm",
  "log",
@@ -1543,6 +1544,8 @@ dependencies = [
  "tokio-serial",
  "tokio-tungstenite",
  "uuid",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
  "windows-sys 0.61.2",
  "zbus",
 ]
@@ -2553,6 +2556,16 @@ dependencies = [
  "rustversion",
  "wasm-bindgen-macro",
  "wasm-bindgen-shared",
+]
+
+[[package]]
+name = "wasm-bindgen-futures"
+version = "0.4.71"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "96492d0d3ffba25305a7dc88720d250b1401d7edca02cc3bcd50633b424673b8"
+dependencies = [
+ "js-sys",
+ "wasm-bindgen",
 ]
 
 [[package]]

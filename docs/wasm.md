@@ -11,7 +11,9 @@ cargo check --lib --target wasm32-unknown-unknown --no-default-features
 ```
 
 This target is for Rust embedders. The Python extension is not built
-for wasm.
+for wasm. The optional `browser` feature adds the browser
+integrations; it currently enables the Web Serial transport
+(`web-serial`).
 
 ## What runs on wasm
 
@@ -57,9 +59,40 @@ Concrete browser paths:
 
 | Device path | How it reaches wasm |
 |---|---|
-| USB-serial GRBL controllers | **Web Serial API** — the embedder implements [`Transport`](../src/driver/core/transport/mod.rs) (byte streams from `navigator.serial`) and passes it as `TransportKind::Custom` to a `GrblSession`/`SmoothieSession`/`MarlinSession`. |
+| USB-serial GRBL controllers | **Web Serial API** — enable the `browser` feature (`web-serial` alone is also available) and pass its `WebSerialTransport` as `TransportKind::Custom` to a `GrblSession`/`SmoothieSession`/`MarlinSession`; embedders that do not enable it can implement [`Transport`](../src/driver/core/transport/mod.rs) themselves. |
 | Network devices (ESP3D, OctoPrint, xTool D-series) | A **WebSocket-to-TCP bridge** (e.g. `websockify`) — the browser opens a WebSocket to the bridge, the bridge dials the device. The bridge's byte-pipe semantics are exactly what [`StreamConnector`] provides; the HTTP requests and the WS handshakes then flow over it unchanged. |
 | mTLS/TLS device APIs | TLS terminates in the bridge (or in the browser for `wss://` endpoints); `ring`/rustls are never needed on wasm. |
+
+### Web Serial
+
+The `browser` bundle currently enables the `web-serial` capability,
+which provides
+`driver::core::transport::web_serial::WebSerialTransport`, a
+`Transport` over `navigator.serial`:
+
+```rust
+use raygeo::driver::core::transport::web_serial::WebSerialTransport;
+
+// Call from a click handler: requestPort() needs a user gesture.
+let transport = WebSerialTransport::request_port(115_200).await?;
+let kind = transport.as_transport_kind();
+// Pass `kind` to a session constructor, e.g. SmoothieConfig::new(kind).
+
+// Reuse a previously granted port; no gesture is required.
+let transport = WebSerialTransport::first_granted_port(115_200)
+    .await?
+    .expect("no serial port granted yet");
+```
+
+```sh
+cargo check --lib --target wasm32-unknown-unknown \
+    --no-default-features --features browser
+```
+
+Web Serial is available in secure contexts in Chromium-based browsers.
+`request_port()` must be called from a transient user activation;
+`first_granted_port()` reuses a port the user has already granted.
+The transport is only compiled for `wasm32-unknown-unknown`.
 
 ## What is feature-gated, and why
 
@@ -95,11 +128,12 @@ is a compile-time error.
   with `wasm-bindgen-futures` (e.g. via `tokio_with_wasm::tokio`
   attribute macros, or a manual pump). The geometry, ops and format
   layers are synchronous and need no runtime.
-- **Randomness**: `uuid`/`getrandom` are not compiled on wasm (the
-  features that use them are gated off), so no
-  `getrandom_backend` cfg is required. If you enable `m2` on a
-  wasm-like target, configure
-  `RUSTFLAGS='--cfg getrandom_backend="wasm_js"'`.
-- **JS glue**: the crate is plain Rust (no wasm-bindgen dependency);
-  the embedding crate owns the `wasm-bindgen` exports and implements
-  `Transport` / `StreamConnector` over `web-sys` APIs.
+- **Randomness**: `getrandom` uses its `wasm_js` backend on wasm32
+  (nesting uses `rand`), so the embedder must provide the wasm-bindgen
+  JS glue. No `getrandom_backend` cfg is required.
+- **JS glue**: raygeo exposes no `wasm-bindgen` API; the embedding
+  crate owns the exports and implements `Transport` / `StreamConnector`
+  over `web-sys` APIs. (On wasm32, `getrandom`'s `wasm_js` backend
+  already pulls `wasm-bindgen` for randomness.) The optional `browser`
+  feature (currently `web-serial`) adds a ready-made `Transport` over
+  `navigator.serial` for `wasm32-unknown-unknown`.
