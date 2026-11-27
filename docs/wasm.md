@@ -1,25 +1,42 @@
 # WebAssembly support
 
-`raygeo`, including its driver layer (`src/driver`), compiles for
-`wasm32-unknown-unknown` and — unlike a simple "strip everything"
-port — keeps everything a browser can plausibly drive: the session
-logic, the HTTP and WebSocket clients, the telnet transport and the
-`esp3d`/`octoprint`/`xtool_d1`/`xtool_m2` sessions all compile
-**and run** on wasm. Verify with `make check-wasm`.
+raygeo compiles for `wasm32-unknown-unknown` with
+`--no-default-features`. The core layers are pure Rust and free of
+host-specific requirements; the driver layer keeps the parts a browser
+can plausibly drive.
 
 ```sh
 rustup target add wasm32-unknown-unknown
-cargo check --target wasm32-unknown-unknown --no-default-features
+cargo check --lib --target wasm32-unknown-unknown --no-default-features
 ```
 
-## What runs on wasm, and how
+This target is for Rust embedders. The Python extension is not built
+for wasm.
+
+## What runs on wasm
+
+The platform-independent core compiles unchanged:
+
+- `geo`, `sketch`, `ops` (including `ops.convert`), `cnc`, `pipeline`,
+  `formats`, `barcode`, `template`, `fstring` and `compressed_array`.
+- Driver sessions and their protocol stacks: the line protocol logic,
+  HTTP and WebSocket clients, the telnet transport, and the
+  `esp3d`/`octoprint`/`xtool_d1` sessions.
+- Device I/O dials through the connector seam below; the embedder
+  supplies browser-backed streams.
+
+Host-only functionality is feature-gated rather than stripped: mDNS,
+TCP discovery, OS serial ports, the remote daemon and the xTool M2
+session.
+
+## Device I/O on wasm
 
 Everything device-facing dials through one seam,
-[`core::connector::dial`](../src/core/connector.rs):
+[`driver::core::connector::dial`](../src/driver/core/connector.rs):
 
 ```rust
 // The embedding application installs a connector at startup:
-core::connector::set_stream_connector(Some(Arc::new(MyConnector)));
+driver::core::connector::set_stream_connector(Some(Arc::new(MyConnector)));
 
 pub trait StreamConnector: Send + Sync {
     /// Produce a byte stream connected to (host, port), with raw
@@ -40,7 +57,7 @@ Concrete browser paths:
 
 | Device path | How it reaches wasm |
 |---|---|
-| USB-serial GRBL controllers | **Web Serial API** — the embedder implements [`Transport`](../src/core/transport/mod.rs) (byte streams from `navigator.serial`) and passes it as `TransportKind::Custom` to a `GrblSession`/`SmoothieSession`/`MarlinSession`. |
+| USB-serial GRBL controllers | **Web Serial API** — the embedder implements [`Transport`](../src/driver/core/transport/mod.rs) (byte streams from `navigator.serial`) and passes it as `TransportKind::Custom` to a `GrblSession`/`SmoothieSession`/`MarlinSession`. |
 | Network devices (ESP3D, OctoPrint, xTool D-series) | A **WebSocket-to-TCP bridge** (e.g. `websockify`) — the browser opens a WebSocket to the bridge, the bridge dials the device. The bridge's byte-pipe semantics are exactly what [`StreamConnector`] provides; the HTTP requests and the WS handshakes then flow over it unchanged. |
 | mTLS/TLS device APIs | TLS terminates in the bridge (or in the browser for `wss://` endpoints); `ring`/rustls are never needed on wasm. |
 
@@ -73,12 +90,11 @@ is a compile-time error.
 
 ## Embedder runtime recipe
 
-- **Async runtime**: tokio with `rt`, `macros`, `time`, `sync`,
-  `io-util` (exactly what the crate requests) on a current-thread
-  runtime integrated with `wasm-bindgen-futures` (e.g. via
-  `tokio_with_wasm::tokio` attribute macros, or a manual pump). The
-  crate never spawns OS threads on the wasm path; blocking calls are
-  either cfg'd away or behind platform-gated features.
+- **Async runtime**: driver sessions use tokio with `rt`, `macros`,
+  `time`, `sync` and `io-util` on a current-thread runtime integrated
+  with `wasm-bindgen-futures` (e.g. via `tokio_with_wasm::tokio`
+  attribute macros, or a manual pump). The geometry, ops and format
+  layers are synchronous and need no runtime.
 - **Randomness**: `uuid`/`getrandom` are not compiled on wasm (the
   features that use them are gated off), so no
   `getrandom_backend` cfg is required. If you enable `m2` on a

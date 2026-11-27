@@ -353,8 +353,7 @@ raydriver daemon add /dev/ttyUSB0
 ```
 
 See [raydriver CLI](docs/raydriver-cli.md) for job streaming, the
-analyzer, discovery, and daemon management. Daemon configuration is
-covered in the [daemon guide](docs/driver/daemon.md).
+analyzer, discovery, and daemon management.
 
 ## License
 

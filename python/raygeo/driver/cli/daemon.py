@@ -12,8 +12,8 @@
 Service installation is platform-native: systemd on Linux (user
 unit by default, --system for a system unit), launchd on macOS, a
 logon scheduled task on Windows. The config file is JSON
-(stdlib-parseable on Python 3.10) in the platform's per-user config
-location. See docs/daemon.md for the full reference. Network
+(stdlib-parseable on Python 3.11) in the platform's per-user config
+location. See docs/raydriver-cli.md for the full reference. Network
 endpoints follow the analyzer security policy: loopback by default,
 token and TLS required for exposed listeners.
 """

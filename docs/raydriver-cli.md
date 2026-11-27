@@ -68,8 +68,18 @@ raydriver daemon status
 raydriver daemon uninstall
 ```
 
-See the [daemon guide](driver/daemon.md) for configuration, TLS,
-cameras, and the security policy.
+The config lives in the platform per-user directory
+(`~/.config/raydriver/daemon.json` on Linux,
+`~/Library/Application Support/raydriver/daemon.json` on macOS, and
+`%APPDATA%\raydriver\daemon.json` on Windows). `daemon --setup` writes
+a loopback config with a generated token. A non-loopback bind requires
+both a token and TLS; clients never send a token over an unencrypted
+non-loopback connection.
+
+`daemon install` uses systemd on Linux (a user unit by default, or
+`--system` for a system unit), launchd on macOS, and a logon scheduled
+task on Windows. `daemon status` shows the service state, the token,
+and a live probe of the daemon.
 
 ## Analyze traffic
 
