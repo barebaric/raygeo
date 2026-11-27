@@ -1,0 +1,19 @@
+    #  dir  payload                     decode
+    0   ->  ?                           status report request
+    1   <-  Grbl 1.1h ['$' for help]
+    2   <-  <Idle|MPos:0.000,0.000,0.…  IDLE MPos:0.000,0.000,0.000
+    3   ->  $I                          build info request
+    4   <-  [VER:1.1h.EMULATOR:]        version 1.1h (EMULATOR)
+    5   <-  [OPT:V,15,128]              options V, rx buffer 128
+    6   <-  ok                          ack
+    7   ->  ?                           status report request
+    8   <-  <Idle|MPos:0.000,0.000,0.…  IDLE MPos:0.000,0.000,0.000
+    9   ->  $I                          build info request
+   10   <-  [VER:1.1h.EMULATOR:]        version 1.1h (EMULATOR)
+   11   <-  [OPT:V,15,128]              options V, rx buffer 128
+   12   <-  ok                          ack
+   13   ->  $G                          parser state request
+   14   <-  [G54 G17 G21 G90 G94 M5 M…
+   15   <-  ok                          ack
+   16   ->  G1 X10 F1000
+   17   <-  ok                          ack

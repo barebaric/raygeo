@@ -18,6 +18,7 @@ jobs:
   rust:
     name: Rust
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
 
@@ -41,7 +42,7 @@ jobs:
       - name: Clippy (python feature, as the wheel build)
         run: cargo clippy --lib --features python -- -D warnings
 
-      - name: Clippy (pure Rust core, as embedded consumers build it)
+      - name: Clippy (pure Rust, as embedded consumers and wasm build it)
         run: cargo clippy --lib --no-default-features -- -D warnings
 
       # Embedding applications build the core for wasm32; keep it clean.
@@ -58,6 +59,7 @@ jobs:
   linux-wheel:
     name: Build Linux wheel
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
 
@@ -80,6 +82,7 @@ jobs:
     name: Lint and typecheck
     needs: linux-wheel
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
 
@@ -110,9 +113,14 @@ jobs:
       - name: Validate stubs in wheel
         run: |
           cat > /tmp/test_stubs.py << 'EOF'
-          from raygeo.geo import Geometry; from raygeo.ops import Ops
+          from raygeo.geo import Geometry
+          from raygeo.ops import Ops
+          from raygeo.driver import Driver
+          from raygeo.ops.convert import GcodeSpec
           g: Geometry
           o: Ops
+          d: Driver
+          s: GcodeSpec
           EOF
           npx --yes pyright --pythonpath "$(which python)" /tmp/test_stubs.py
 
@@ -120,6 +128,7 @@ jobs:
     name: Tests (ubuntu-latest)
     needs: linux-wheel
     runs-on: ubuntu-latest
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v7
 
@@ -142,19 +151,28 @@ jobs:
         run: pip install dist/raygeo-*.whl
 
       - name: Install test dependencies
-        run: pip install pytest pycairo
+        run: |
+          pip install pytest pycairo pytest-asyncio pytest-mock \
+            pytest-timeout pytest-xdist zeroconf
 
+      # Fast lane: all tests except the explicitly marked slow, stress
+      # and hardware suites. Slow/stress tests run in the nightly
+      # workflow and before releases.
       - name: Run tests
-        run: pytest -v
+        run: >
+          pytest -v -m "not slow and not stress and not hardware"
+          -n auto --dist loadscope --timeout=180
 
   test:
     name: Tests (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        # ubuntu-latest is covered by the test-linux job above so it can
-        # reuse the shared wheel instead of rebuilding it.
+        # Full coverage is on Linux above. Other platforms build the
+        # wheel and run the smoke test; the nightly workflow runs the
+        # complete suite on this full matrix.
         os:
           [ubuntu-24.04-arm, windows-latest, macos-15-intel, macos-15]
     steps:
@@ -172,9 +190,6 @@ jobs:
           args: --release --out dist
           sccache: true
 
-      # ubuntu-24.04-arm also lands in this matrix (only ubuntu-latest is
-      # served by the shared wheel), so it still needs cairo headers for
-      # building pycairo.
       - name: Install system dependencies (Linux)
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libcairo2-dev
@@ -188,7 +203,11 @@ jobs:
         run: pip install dist/raygeo-*.whl
 
       - name: Install test dependencies
-        run: pip install pytest pycairo
+        shell: bash
+        run: |
+          pip install pytest pycairo pytest-asyncio pytest-mock \
+            pytest-timeout zeroconf
 
-      - name: Run tests
-        run: pytest -v
+      - name: Run smoke tests
+        shell: bash
+        run: pytest -v -m smoke --timeout=120

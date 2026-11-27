@@ -21,7 +21,9 @@ The crate is split into layers that depend only downward::
     Linking, classification (cut vs travel), lead-in/out, overscan,
     raster fill, peeling strategy.  Holds the generic ``State``
     representation (feed_rate, rapid_rate, …) but does NOT decide
-    what values to use — those are passed in by the caller.
+    what values to use — those are passed in by the caller.  Also
+    hosts the format converters under ``ops.convert``, including
+    the G-code, Epilog and Ruida machine-code encoders.
 
 ``cnc`` — Orchestration (Plan → Intent → Execute).
     Plan: descriptive Plans (sequences of PlanSteps, each an
@@ -81,9 +83,12 @@ Examples
     100.0
 """
 
+import builtins
+import typing
 from . import barcode
 from . import cnc
 from . import compressed_array
+from . import driver
 from . import formats
 from . import fstring
 from . import geo
@@ -98,10 +103,12 @@ __all__ = [
     "barcode",
     "cnc",
     "compressed_array",
+    "driver",
     "formats",
     "fstring",
     "geo",
     "image",
+    "init_logging",
     "mesh",
     "ops",
     "pipeline",
@@ -109,4 +116,14 @@ __all__ = [
     "template",
     "trace",
 ]
+
+def init_logging(filter: typing.Optional[builtins.str] = None, path: typing.Optional[builtins.str] = None) -> None:
+    r"""
+    Initialize the Rust-side logger (`log` crate) so session
+    diagnostics reach stderr or, when *path* is given, a dedicated
+    log file (opened in append mode).  The filter defaults to
+    ``warn`` and can be overridden with an ``env_logger`` filter
+    string argument or via ``RUST_LOG`` (which always wins).  Calling
+    again re-targets output and replaces the filter.
+    """
 

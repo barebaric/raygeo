@@ -8,7 +8,10 @@
 - `make format` — auto-format all code (Rust + Python, including PEP8 import ordering)
 - `make format-rust` — format Rust only
 - `make format-python` — format Python only (ruff handles formatting and import sorting)
-- `make test` — run the full test suite. make sure to "make dev" before you test
+- `make test` — fast test lane (no slow/stress/hardware). Make sure to "make dev" before you test
+- `make test-all` — full suite, including slow and stress tests
+- `make test-geometry` / `test-engine` / `test-encode` / `test-driver` — area lanes
+- `make test-slow` — slow and stress tests only
 - `make check` — lint + test
 - `make docs` — re-generate the API docs
 - `make build` — build the wheel (release)
@@ -45,6 +48,7 @@ geo → sketch
 pipeline -/
 
 geo → formats   (leaf: no other layer imports it)
+driver          (leaf: transports and protocol sessions; no ops imports)
 ```
 
 Never import upward.
@@ -53,10 +57,26 @@ Never import upward.
 | ---------- | ------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
 | `geo`      | Primitives & pure geometric algorithms. No "what-to-cut" decisions, no motion verbs, no machining terminology, no `Ops`.  | machining, motion, tools, `Ops`, `pipeline`   |
 | `sketch`   | Sketch constraint solving, entity model and topology; depends only on `geo` primitives.                                   | machining, motion, tools, `Ops`, `pipeline`   |
-| `ops`      | CNC and laser building blocks: clearing strategies, linking, classification, and Ops emission.                            | plans, intents, `pipeline` runtime            |
+| `ops`      | CNC and laser building blocks: clearing strategies, linking, classification, Ops emission, and Ops-to-format converters (`ops::convert`, including the G-code, Epilog and Ruida machine-code encoders). | plans, intents, `pipeline` runtime, device transports/sessions |
 | `pipeline` | Generic runtime to execute machining agnostic intents in a rayon thread pool.                                             | geometry, machining, `Ops`, tools, any domain |
 | `cnc`      | Plan-time orchestration: build descriptive `Plan`s (sequences of `PlanStep`s) and convert them into executable `Intent`s. | geometry algorithms                           |
 | `formats`  | File-format import and export (`coreldraw`, `svg`, `gcode`, `dxf`); depends only on `geo`, sibling format modules and the shared error type. | `ops`, `cnc`, `sketch`, `pipeline`, machining |
+| `driver`   | Device transports and protocol sessions (GRBL, Marlin, Smoothie, ESP3D, OctoPrint, xTool, Epilog, Ruida, simulator, remote daemon). Pure Rust; Python bindings under `raygeo.driver`. | `ops`, `cnc`, `pipeline`, geometry algorithms, encoders |
+
+Machine-code encoders are converters (`Ops` + caller-supplied dialect/job
+config -> text or bytes), not drivers. They live in `ops::convert`; device
+transports, protocol sessions, flow control and reconnect logic live in
+`src/driver` and are exposed as `raygeo.driver.*`.
+
+Driver rules:
+- `src/driver` is pure Rust and must not depend on PyO3; the `python`
+  feature adds the bindings under `src/python/driver`.
+- Protocol modules may use `src/driver/core` freely. Cross-protocol
+  imports need an explicit justification in the importing module.
+- Keep the GRBL protocol byte-for-byte compatible with Rayforge's Python
+  driver; do not change protocol quirks without an explicit request.
+- Driver emulators (`python/raygeo/driver/*/emulator.py`) are real
+  firmware/server models used by tests, not mocks.
 
 # File Formats
 

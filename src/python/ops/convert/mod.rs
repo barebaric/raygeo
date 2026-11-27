@@ -1,19 +1,16 @@
-use std::ffi::CString;
-
 use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;
-use pyo3::types::{
-    PyAny, PyByteArray, PyCapsule, PyCapsuleMethods, PyDict, PyType,
-};
+use pyo3::types::{PyAny, PyByteArray, PyDict, PyType};
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::ops::convert::{
-    encoder_capsule_name, scene::SceneSpec, texture::TextureSpec,
-    vertex_arrays::VertexSpec, view::ViewSpec, EncodeCtx, EncodeOutput,
-    Encoder,
+    scene::SceneSpec, texture::TextureSpec, vertex_arrays::VertexSpec,
+    view::ViewSpec, EncodeCtx, EncodeOutput, Encoder,
 };
 
 pub(crate) mod dict;
+pub(crate) mod gluescript;
+pub(crate) mod machine;
 pub(crate) mod numpy;
 pub(crate) mod view;
 
@@ -21,18 +18,20 @@ pub(crate) use self::view::lut_to_array;
 
 /// Try to extract an encoder spec from a Python object.
 ///
-/// The object may be one of this module's spec classes, a
-/// [`PyPythonEncoder`], or any object exposing the
-/// ``__raygeo_encoder__()`` handoff used by encoders implemented in
-/// another extension module (for example an embedding application's
-/// machine-driver layer). The handoff returns a named capsule carrying
-/// a ``Box<dyn Encoder>``, which is cloned here so the capsule keeps
-/// ownership until it is collected.
+/// The object may be one of this module's spec classes, one of the
+/// machine-code specs (`GcodeSpec`, `EpilogSpec`, `RuidaSpec`), or a
+/// [`PyPythonEncoder`].
 ///
 /// Returns `PyTypeError` if the object is not a known encoder.
 pub fn extract_encoder(ob: &Bound<'_, PyAny>) -> PyResult<Box<dyn Encoder>> {
-    if ob.hasattr("__raygeo_encoder__")? {
-        return extract_foreign_encoder(ob);
+    if let Ok(bound) = ob.cast::<machine::PyGcodeSpec>() {
+        return Ok(Box::new(bound.borrow().to_core(ob.py())));
+    }
+    if let Ok(bound) = ob.cast::<machine::PyEpilogSpec>() {
+        return Ok(Box::new(bound.borrow().to_core()));
+    }
+    if let Ok(bound) = ob.cast::<machine::PyRuidaSpec>() {
+        return Ok(Box::new(bound.borrow().to_core()));
     }
     if let Ok(s) = ob.extract::<PyVertexSpec>() {
         return Ok(Box::new(s.into_core()));
@@ -59,40 +58,13 @@ pub fn extract_encoder(ob: &Bound<'_, PyAny>) -> PyResult<Box<dyn Encoder>> {
     )))
 }
 
-/// Extract an [`Encoder`] shared across extension modules.
-///
-/// The capsule name embeds the `raygeo` version the encoder was built
-/// against. A mismatch means the two extensions would disagree about
-/// the [`Encoder`] layout, so it is rejected instead of dereferenced.
-fn extract_foreign_encoder(
-    ob: &Bound<'_, PyAny>,
-) -> PyResult<Box<dyn Encoder>> {
-    let capsule = ob.call_method0("__raygeo_encoder__")?;
-    let capsule = capsule.cast_into::<PyCapsule>()?;
-    let name = CString::new(encoder_capsule_name()).map_err(|_| {
-        PyTypeError::new_err("invalid raygeo encoder capsule name")
-    })?;
-    let pointer =
-        capsule
-            .pointer_checked(Some(name.as_c_str()))
-            .map_err(|_| {
-                PyTypeError::new_err(
-                    "encoder was built against an incompatible raygeo version",
-                )
-            })?;
-    // SAFETY: the capsule name check guarantees the pointer references
-    // a `Box<dyn Encoder>` built against this raygeo version, and the
-    // capsule keeps it alive while `ob` is alive.
-    let encoder = unsafe { pointer.cast::<Box<dyn Encoder>>().as_ref() };
-    Ok(encoder.clone_box())
-}
-
 /// Python-visible wrapper around an encoder spec.
 ///
 /// Construct as ``Encoder(spec)`` where `spec` is an encoder spec:
 /// one of the classes under `raygeo.ops.convert` (e.g.
-/// :class:`~raygeo.ops.convert.VertexSpec`) or a spec from another
-/// extension module. Callers that drive the `Encoder` trait hold an
+/// :class:`~raygeo.ops.convert.VertexSpec`), a machine-code spec
+/// (`GcodeSpec`, `EpilogSpec`, `RuidaSpec`). Callers that drive the
+/// `Encoder` trait hold an
 /// `Encoder` instance.
 #[gen_stub_pyclass(module = "raygeo.ops.convert")]
 #[pyclass(name = "Encoder", module = "raygeo.ops.convert", skip_from_py_object)]
@@ -918,6 +890,8 @@ pub(crate) fn register(ops_mod: &Bound<'_, PyModule>) -> PyResult<()> {
     convert_mod.add_class::<PyTextureSpec>()?;
     convert_mod.add_class::<PyViewSpec>()?;
     convert_mod.add_class::<PyPythonEncoder>()?;
+    machine::register(&convert_mod)?;
+    convert_mod.add_class::<gluescript::PyGlueScript>()?;
     view::register(&convert_mod)?;
     ops_mod.add_submodule(&convert_mod)?;
 

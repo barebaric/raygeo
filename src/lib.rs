@@ -33,7 +33,9 @@
 //! classification (cut vs travel), lead-in/out, overscan, raster fill,
 //! peeling strategy.  Holds the generic [`State`] representation
 //! (feed_rate, rapid_rate, …) but does NOT decide what values to use —
-//! those are passed in by the caller.
+//! those are passed in by the caller.  Also hosts the format converters
+//! under [`ops::convert`], including the G-code, Epilog and Ruida
+//! machine-code encoders.
 //!
 //! **[`cnc`]** — Orchestration.
 //! Follows a strict three-stage pipeline:
@@ -95,6 +97,7 @@ pub mod barcode;
 pub mod cnc;
 pub mod compressed_array;
 pub mod constants;
+pub mod driver;
 pub mod error;
 pub mod formats;
 pub mod fstring;
@@ -114,6 +117,20 @@ pub(crate) mod trace;
 #[cfg_attr(not(feature = "python"), allow(dead_code))]
 pub(crate) mod trace_types;
 pub mod utils;
+
+// The M2 WebSocket client needs a rustls trust store, selected at
+// build time. Both provider features imply `m2`; this guard catches
+// `--no-default-features --features m2` with an actionable message
+// instead of a cryptic missing-`Connector` variant error.
+#[cfg(all(
+    feature = "m2",
+    not(any(feature = "tls-native-roots", feature = "tls-webpki-roots"))
+))]
+compile_error!(
+    "the `m2` feature requires a TLS root provider: enable \
+     `tls-native-roots` (OS trust store, the default) or \
+     `tls-webpki-roots` (bundled Mozilla roots)"
+);
 
 pub use constants::{
     CLIPPER_SCALE, EPSILON_BOUNDARY, EPSILON_COLLINEAR, EPSILON_GAP_CLOSE,
@@ -175,7 +192,9 @@ pub(crate) const MODULE_DOC: &str = concat!(
     "    Linking, classification (cut vs travel), lead-in/out, overscan,\n",
     "    raster fill, peeling strategy.  Holds the generic ``State``\n",
     "    representation (feed_rate, rapid_rate, …) but does NOT decide\n",
-    "    what values to use — those are passed in by the caller.\n",
+    "    what values to use — those are passed in by the caller.  Also\n",
+    "    hosts the format converters under ``ops.convert``, including\n",
+    "    the G-code, Epilog and Ruida machine-code encoders.\n",
     "\n",
     "``cnc`` — Orchestration (Plan → Intent → Execute).\n",
     "    Plan: descriptive Plans (sequences of PlanSteps, each an\n",
@@ -252,6 +271,8 @@ fn raygeo(m: &Bound<'_, PyModule>) -> PyResult<()> {
     python::template::register(m)?;
     python::trace::register(m)?;
     python::pipeline::register(m)?;
+    python::driver::register(m)?;
+    python::driver::register_root(m)?;
 
     Ok(())
 }

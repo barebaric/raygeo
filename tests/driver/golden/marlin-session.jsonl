@@ -1,0 +1,13 @@
+{"meta": {"format": 1, "protocol": "marlin", "source": "golden scenario: marlin emulator", "started_at": "2026-10-31T21:54:33.751339+00:00", "raydriver": "0.0.0"}}
+{"i": 0, "t": 0.002276, "d": "rx", "s": "start"}
+{"i": 1, "t": 0.003651, "d": "rx", "s": "Marlin 2.1.2"}
+{"i": 2, "t": 0.003684, "d": "rx", "s": "echo:Last Updated: 2024-01-01 | Author: none"}
+{"i": 3, "t": 0.003709, "d": "rx", "s": "echo:Compiled: Jan  1 2024"}
+{"i": 4, "t": 0.166961, "d": "tx", "s": "M115"}
+{"i": 5, "t": 0.169328, "d": "rx", "s": "FIRMWARE_NAME:Marlin 2.1.2 (Github) SOURCE_CODE_URL:github.com"}
+{"i": 6, "t": 0.169382, "d": "rx", "s": "MACHINE_TYPE:3D Printer"}
+{"i": 7, "t": 0.169416, "d": "rx", "s": "ok"}
+{"i": 8, "t": 0.169569, "d": "tx", "s": "G1 X10 F90000"}
+{"i": 9, "t": 0.175957, "d": "rx", "s": "ok"}
+{"i": 10, "t": 0.176, "d": "tx", "s": "G1 Y5 F90000"}
+{"i": 11, "t": 0.180229, "d": "rx", "s": "ok"}

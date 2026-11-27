@@ -1,4 +1,4 @@
-.PHONY: build dev stubs format format-rust format-python lint lint-rust lint-python test check visual doc docs install-test-deps install-visual-deps install-docs-deps venv
+.PHONY: build dev stubs format format-rust format-python lint lint-rust lint-python test test-fast test-all test-geometry test-engine test-encode test-driver test-slow check visual doc docs install-test-deps install-visual-deps install-docs-deps venv
 
 # Prefer the rustup toolchain when one exists: distro cargos are
 # often too old for this project's Cargo.lock format (v4), and cargo
@@ -52,9 +52,35 @@ lint-python:
 	ruff format --check tests/ python/ tools/
 	npx pyright python/raygeo tests tools
 
-test:
+test: test-fast
+
+# Fast lane: no slow/stress/hardware tests, parallel by module. This is
+# the default local and PR target.
+test-fast:
+	cargo test --lib --no-default-features
+	pytest -v -m "not slow and not stress and not hardware" \
+		-n auto --dist loadscope
+
+# Everything, including slow/stress tests. Use before releases/nightly.
+test-all:
 	cargo test
-	pytest -v
+	pytest -v -n auto --dist loadscope
+
+test-geometry:
+	pytest -v tests/geo tests/formats tests/image tests/sketch \
+		tests/mesh tests/barcode tests/template
+
+test-engine:
+	pytest -v tests/ops tests/cnc tests/pipeline tests/transform
+
+test-encode:
+	pytest -v tests/encode
+
+test-driver:
+	pytest -v tests/driver
+
+test-slow:
+	pytest -v -m "slow or stress" -n 0
 
 check: lint test
 

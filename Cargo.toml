@@ -2,7 +2,7 @@
 name = "raygeo"
 version = "0.0.0"
 edition = "2021"
-description = "2D/3D geometry library for CAD/CAM applications with Python bindings"
+description = "Geometry, toolpath and machine-control infrastructure with Python bindings"
 license = "MIT"
 repository = "https://github.com/barebaric/raygeo"
 # The generated API docs (with their PNG galleries) push the package over
@@ -10,46 +10,132 @@ repository = "https://github.com/barebaric/raygeo"
 exclude = ["docs"]
 
 [features]
-# No defaults: embedding applications consume the pure Rust core with
-# `default-features = false`. The Python build enables `python`
-# (see [tool.maturin] in pyproject.toml).
-default = []
-python = ["dep:pyo3", "dep:pyo3-stub-gen", "dep:numpy"]
+# Native desktop consumers get the full driver set via `default`.
+# Embedders that only need the geometry core build with
+# `default-features = false` and opt into what they use. The Python
+# build enables `python` (see [tool.maturin] in pyproject.toml).
+default = [
+    "net",
+    "mdns",
+    "serial",
+    "remote-daemon",
+    "m2",
+    "tls-native-roots",
+]
+python = [
+    "dep:pyo3",
+    "dep:pyo3-stub-gen",
+    "dep:numpy",
+    "dep:env_filter",
+    # The Python bindings run a multi-threaded tokio runtime; wasm
+    # builds never enable this feature (tokio forbids rt-multi-thread
+    # and net on wasm).
+    "tokio/rt-multi-thread",
+    "net",
+    "mdns",
+    "serial",
+    "remote-daemon",
+    "m2",
+    "tls-native-roots",
+]
+# Host-side TCP/IP networking that needs real sockets: the network
+# discovery scanners (probes, subnet scan, TLS control streams) and
+# the remote client. Device-facing HTTP/WS/telnet dialing is NOT
+# gated by this; it goes through the connector seam and compiles
+# everywhere.
+net = [
+    "dep:if-addrs",
+    "dep:rustls",
+    "dep:tokio-rustls",
+    "tokio/net",
+]
+# The xTool M2 session: its tokio-tungstenite stack has no wasm build.
+m2 = [
+    "net",
+    "dep:futures-util",
+    "dep:rustls",
+    "dep:tokio-tungstenite",
+    "dep:uuid",
+]
+# mDNS announcement and browsing (host-side; no UDP sockets on wasm).
+mdns = ["dep:if-addrs", "dep:mdns-sd"]
+# OS serial ports (tokio-serial). Port *enumeration* via the
+# `serialport` crate stays available without this feature.
+serial = ["dep:tokio-serial"]
+# The remote session-host daemon: a host-side TCP/TLS server.
+# Not meaningful on wasm.
+remote-daemon = ["net", "dep:uuid"]
+# TLS trust store for the M2 WebSocket client. `m2` requires exactly
+# one of these providers. Native roots follow the host's trust policy
+# and keep the bundled Mozilla root set out of the dependency graph.
+tls-native-roots = ["m2", "tokio-tungstenite/rustls-tls-native-roots"]
+tls-webpki-roots = ["m2", "tokio-tungstenite/rustls-tls-webpki-roots"]
 
 [dependencies]
 # The version is kept in sync with prof-macros/Cargo.toml by the release
 # workflow (both are stamped from the release tag before publishing).
 prof-macros = { path = "prof-macros", version = "0.1.0" }
-libc = "0.2"
-libm = "0.2"
-nanoexpr = "0.2"
-pyo3 = { version = "0.29", features = ["abi3", "abi3-py311", "py-clone", "multiple-pymethods"], optional = true }
-numpy = { version = "0.29", optional = true }
-rand = "0.10"
-regex = "1"
-rustfft = "6"
-pyo3-stub-gen = { version = "0.23.0", optional = true }
-qrcodegen = "1.8"
+async-trait = "0.1"
+base64 = { version = "0.22", default-features = false, features = ["std"] }
 bitflags = "2"
 clipper2-rs = "0.3"
 earcut = "0.4"
-num_enum = "0.7"
-rstar = "0.13"
-roxmltree = "0.21"
-strum = { version = "0.28", features = ["derive"] }
-thiserror = "2"
+# The crate has a public `log` module (dev tracing); alias the external
+# log facade so driver code can keep using `log_crate::debug!` etc.
+log_crate = { package = "log", version = "0.4" }
+env_filter = { version = "0.1", optional = true }
+flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
+fontdb = "0.24"
+futures-util = { version = "0.3", features = ["sink"], optional = true }
 glam = { version = "0.34", features = ["serde"] }
-svgtypes = "0.16"
-spade = "2"
+if-addrs = { version = "0.15", optional = true }
+libc = "0.2"
+libm = "0.2"
+mdns-sd = { version = "0.21.7", optional = true }
 nalgebra = "0.35"
 nalgebra-sparse = "0.12"
+nanoexpr = "0.2"
+num_enum = "0.7"
+numpy = { version = "0.29", optional = true }
+pyo3 = { version = "0.29", features = ["abi3", "abi3-py311", "py-clone", "multiple-pymethods"], optional = true }
+pyo3-stub-gen = { version = "0.23.0", optional = true }
+qrcodegen = "1.8"
+rand = "0.10"
 rayon = "1"
+regex = "1"
+rmp-serde = "1"
+rstar = "0.13"
+rustfft = "6"
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"], optional = true }
+roxmltree = "0.21"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-rmp-serde = "1"
+serialport = { version = "4.10", default-features = false }
+sha1 = { version = "0.10", default-features = false }
+spade = "2"
+strum = { version = "0.28", features = ["derive"] }
+svgtypes = "0.16"
 swash = { version = "0.2", features = ["scale", "render"] }
-fontdb = "0.24"
-flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
+thiserror = "2"
+tokio-rustls = { version = "0.26", default-features = false, features = [
+    "ring",
+    "tls12",
+], optional = true }
+tokio = { version = "1", default-features = false, features = [
+    "rt",
+    "macros",
+    "time",
+    "sync",
+    "io-util",
+] }
+tokio-serial = { version = "5.4", optional = true }
+# The TLS root provider is chosen by the `tls-native-roots` /
+# `tls-webpki-roots` features.
+tokio-tungstenite = { version = "0.30", default-features = false, features = [
+    "connect",
+    "handshake",
+], optional = true }
+uuid = { version = "1", features = ["v4"], optional = true }
 
 [dev-dependencies]
 approx = "0.5"
@@ -57,6 +143,17 @@ approx = "0.5"
 # rand's getrandom needs the JS backend on wasm32 (nesting uses rand).
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom = { version = "0.4", features = ["wasm_js"] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+zbus = { version = "6.4", default-features = false, features = ["tokio"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+objc2-foundation = "0.3"
+objc2-io-bluetooth = "0.3"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Devices_Bluetooth", "Win32_Foundation", "Win32_Networking_WinSock"] }
 
 [lib]
 name = "raygeo"
