@@ -20,7 +20,8 @@ from . import remote
 from . import ruida
 from . import simulator
 from . import smoothie
-from . import xtool
+from . import xtool_d1
+from . import xtool_m2
 __all__ = [
     "Driver",
     "DriverInfo",
@@ -39,7 +40,8 @@ __all__ = [
     "ruida",
     "simulator",
     "smoothie",
-    "xtool",
+    "xtool_d1",
+    "xtool_m2",
 ]
 
 drivers: builtins.list[type[Driver]]

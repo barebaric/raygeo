@@ -17,8 +17,8 @@ from raygeo.driver.epilog import EpilogDriver
 from raygeo.driver.octoprint import OctoPrintDriver
 from raygeo.driver.ruida import RuidaDriver
 from raygeo.driver.simulator import NoDeviceDriver
-from raygeo.driver.xtool import XtoolNetworkDriver
-from raygeo.driver.xtool.m2 import XtoolM2Driver
+from raygeo.driver.xtool_d1 import XtoolNetworkDriver
+from raygeo.driver.xtool_m2 import XtoolM2Driver
 
 #: Session classes with a direct (non-Mock) constructor.
 NETWORK_DRIVERS = {

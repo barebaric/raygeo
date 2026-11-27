@@ -1,4 +1,4 @@
-//! Protocol sessions for xTool machines.
+//! Protocol session for xTool D-series machines.
 //!
 //! D-series machines are GRBL-derived but their network API is *not*
 //! ESP3D or GRBL-over-TCP: single commands are triggered with
@@ -13,12 +13,6 @@
 //! channel: it carries job-state events (`ok:IDLE`, `ok:WORKING_*`,
 //! `ok:PAUSING`, `WORK_STOPPED`) and safety alarms (`err:*`).
 //!
-//! The M2 uses a separate WS-V2 TLS protocol on port 28900. Its
-//! session supports state monitoring, motion and job control for jobs
-//! already staged on the machine; G-code job upload is not
-//! implemented.  The `m2` session needs the `m2` feature (its
-//! tokio-tungstenite stack has no wasm build).
+//! The M2 WS-V2 session lives in [`crate::driver::xtool_m2`].
 
 pub mod driver;
-#[cfg(feature = "m2")]
-pub mod m2;

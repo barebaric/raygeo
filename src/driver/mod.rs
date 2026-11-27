@@ -10,8 +10,8 @@
 //! - [`registry`]: the built-in driver list (one typed enum, one
 //!   constructor per driver, no string registry).
 //! - [`epilog`], [`esp3d`], [`grbl`], [`marlin`], [`octoprint`],
-//!   [`ruida`], [`simulator`], [`smoothie`], [`xtool`]: the protocol
-//!   drivers.
+//!   [`ruida`], [`simulator`], [`smoothie`], [`xtool_d1`],
+//!   [`xtool_m2`]: the protocol drivers.
 //!
 //! The driver layer is pure Rust and must not depend on PyO3; the
 //! optional `python` feature provides bindings under
@@ -34,4 +34,6 @@ pub mod registry;
 pub mod ruida;
 pub mod simulator;
 pub mod smoothie;
-pub mod xtool;
+pub mod xtool_d1;
+#[cfg(feature = "m2")]
+pub mod xtool_m2;

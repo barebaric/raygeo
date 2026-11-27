@@ -26,7 +26,7 @@ use crate::driver::ruida::driver::{RuidaConfig, RuidaDriver};
 use crate::driver::ruida::transport::TransportKind as RuidaTransportKind;
 use crate::driver::simulator::{NoDeviceConfig, NoDeviceDriver};
 use crate::driver::smoothie::driver::{SmoothieConfig, SmoothieDriver};
-use crate::driver::xtool::driver::{XtoolConfig, XtoolNetworkDriver};
+use crate::driver::xtool_d1::driver::{XtoolConfig, XtoolNetworkDriver};
 
 pub use resources::ResourceGuard;
 
@@ -95,8 +95,8 @@ impl DriverKind {
             Self::MarlinSerial => &crate::driver::marlin::driver::INFO,
             Self::Smoothie => &crate::driver::smoothie::driver::INFO,
             #[cfg(feature = "m2")]
-            Self::XtoolM2 => &crate::driver::xtool::m2::driver::INFO,
-            Self::XtoolNetwork => &crate::driver::xtool::driver::INFO,
+            Self::XtoolM2 => &crate::driver::xtool_m2::driver::INFO,
+            Self::XtoolNetwork => &crate::driver::xtool_d1::driver::INFO,
             Self::OctoPrint => &crate::driver::octoprint::driver::INFO,
             Self::Epilog => &crate::driver::epilog::driver::INFO,
             Self::Ruida => &crate::driver::ruida::driver::INFO,
@@ -261,14 +261,14 @@ impl DriverKind {
             }
             #[cfg(feature = "m2")]
             Self::XtoolM2 => {
-                let mut m2 = crate::driver::xtool::m2::driver::M2Config::new(
+                let mut m2 = crate::driver::xtool_m2::driver::M2Config::new(
                     &string(config, "host").unwrap_or_default(),
                 );
                 m2.port = uint(config, "port").unwrap_or(28900) as u16;
                 if let Some(v) = boolean(config, "tls_allow_invalid_certs") {
                     m2.tls_allow_invalid_certs = v;
                 }
-                Ok(crate::driver::xtool::m2::driver::XtoolM2Driver::new(
+                Ok(crate::driver::xtool_m2::driver::XtoolM2Driver::new(
                     m2, events,
                 ))
             }

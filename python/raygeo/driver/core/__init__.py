@@ -3,7 +3,7 @@ events.
 
 The protocol namespaces (``raygeo.driver.grbl``, ``raygeo.driver.smoothie``,
 ``raygeo.driver.marlin``, ``raygeo.driver.esp3d``, ``raygeo.driver.octoprint``,
-``raygeo.driver.xtool``) build on these.
+``raygeo.driver.xtool_d1``) build on these.
 """
 
 import raygeo.raygeo as _raygeo  # type: ignore[import-untyped]

@@ -1,4 +1,4 @@
-//! The `raydriver.xtool.m2.session` submodule: the `XtoolM2Driver`
+//! The `raygeo.driver.xtool_m2.session` submodule: the `XtoolM2Driver`
 //! pyclass mirroring the Rust `M2Core` surface (config parsing,
 //! asyncio futures, event marshaling).
 
@@ -10,7 +10,7 @@ use pyo3::types::PyDict;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::driver::core::driver::Driver;
-use crate::driver::xtool::m2::driver::{M2Config, XtoolM2Driver};
+use crate::driver::xtool_m2::driver::{M2Config, XtoolM2Driver};
 use crate::python::driver::events::PyEvents;
 use crate::python::driver::grbl::driver::{
     get_bool, get_f64, get_i64, get_str,
@@ -51,7 +51,7 @@ fn build_config(dict: Option<&Bound<'_, PyDict>>) -> PyResult<M2Config> {
 /// This session does not upload G-code jobs. `start` controls a job
 /// that is already staged on the device, such as a job sent by xTool
 /// Studio.
-#[pyclass(name = "XtoolM2Driver", module = "raygeo.driver.xtool.m2", extends = PyDriver)]
+#[pyclass(name = "XtoolM2Driver", module = "raygeo.driver.xtool_m2", extends = PyDriver)]
 pub struct PyXtoolM2Driver {
     core: Arc<XtoolM2Driver>,
 }

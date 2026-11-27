@@ -1,14 +1,15 @@
-"""Shared fixtures: xTool sessions driven against the xTool WiFi
-firmware emulator (raygeo.driver.xtool.emulator)."""
+"""Helpers for the xTool D-series tests.
+
+Kept in a uniquely named module (not ``conftest``) so the driver test
+tree has exactly one ``conftest`` module and bare ``from conftest``
+imports in the flat driver tests stay unambiguous.
+"""
 
 import asyncio
 import time
 
-import pytest
-
-from raygeo.driver.core import DriverEvent
-from raygeo.driver.xtool import XtoolNetworkDriver
-from raygeo.driver.xtool.emulator import XtoolEmulator
+from raygeo.driver.xtool_d1 import XtoolNetworkDriver
+from raygeo.driver.xtool_d1.emulator import XtoolEmulator
 
 FAST_CONFIG = {
     "host": "127.0.0.1",
@@ -78,44 +79,3 @@ async def start_emulator(**kwargs):
     emulator = XtoolEmulator(**kwargs)
     http_port, ws_port = await emulator.start()
     return emulator
-
-
-@pytest.fixture
-def events():
-    return EventRecorder()
-
-
-@pytest.fixture
-async def emulator():
-    emu = XtoolEmulator()
-    http_port, ws_port = await emu.start()
-    try:
-        yield emu
-    finally:
-        await emu.stop()
-
-
-@pytest.fixture
-async def rig(emulator, events):
-    """A connected session running against the firmware emulator.
-
-    Yields ``(session, emulator, events)`` with the connection
-    established and the recorded events cleared.
-    """
-    session = make_session(
-        events,
-        config={
-            "http_port": emulator.http_port,
-            "ws_port": emulator.ws_port,
-        },
-    )
-    await session.connect()
-    await events.wait_for(
-        DriverEvent.ConnectionStatusChanged,
-        lambda event: event.status == "CONNECTED",
-    )
-    events.events.clear()
-    try:
-        yield session, emulator, events
-    finally:
-        await session.disconnect()

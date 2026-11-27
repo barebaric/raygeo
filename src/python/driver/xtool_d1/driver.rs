@@ -14,7 +14,7 @@ use crate::python::driver::events::PyEvents;
 // The config/dialect dict helpers are shared across the protocol
 // bindings and live with the largest consumer (grbl), mirroring how
 // the smoothie and marlin bindings reuse them.
-use crate::driver::xtool::driver::{XtoolConfig, XtoolNetworkDriver};
+use crate::driver::xtool_d1::driver::{XtoolConfig, XtoolNetworkDriver};
 use crate::python::driver::grbl::driver::{
     get_f64, get_i64, get_str, parse_dialect,
 };
@@ -62,7 +62,7 @@ fn build_config(dict: Option<&Bound<'_, PyDict>>) -> PyResult<XtoolConfig> {
 /// All async methods return asyncio futures; a typed `DriverEvent`
 /// is delivered to `event_callback(event)` on the event loop thread.
 #[gen_stub_pyclass]
-#[pyclass(name = "XtoolNetworkDriver", module = "raygeo.driver.xtool", extends = PyDriver)]
+#[pyclass(name = "XtoolNetworkDriver", module = "raygeo.driver.xtool_d1", extends = PyDriver)]
 pub struct PyXtoolNetworkDriver {
     core: Arc<XtoolNetworkDriver>,
 }

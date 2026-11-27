@@ -3,8 +3,8 @@ against the xTool WiFi firmware emulator."""
 
 import pytest
 
-from raygeo.driver.xtool import query_machine_type
-from raygeo.driver.xtool.emulator import MACHINE_TYPE, XtoolEmulator
+from raygeo.driver.xtool_d1 import query_machine_type
+from raygeo.driver.xtool_d1.emulator import MACHINE_TYPE, XtoolEmulator
 
 
 @pytest.fixture

@@ -4,10 +4,56 @@ the xTool WiFi firmware emulator."""
 import asyncio
 
 import pytest
-from conftest import make_session, wait_until
+from xtool_d1_helpers import (
+    EventRecorder,
+    make_session,
+    wait_until,
+)
 
 from raygeo.driver.core import DriverEvent
 from raygeo.driver.core.types import DeviceStatus
+from raygeo.driver.xtool_d1.emulator import XtoolEmulator
+
+
+@pytest.fixture
+def events():
+    return EventRecorder()
+
+
+@pytest.fixture
+async def emulator():
+    emu = XtoolEmulator()
+    http_port, ws_port = await emu.start()
+    try:
+        yield emu
+    finally:
+        await emu.stop()
+
+
+@pytest.fixture
+async def rig(emulator, events):
+    """A connected session running against the firmware emulator.
+
+    Yields ``(session, emulator, events)`` with the connection
+    established and the recorded events cleared.
+    """
+    session = make_session(
+        events,
+        config={
+            "http_port": emulator.http_port,
+            "ws_port": emulator.ws_port,
+        },
+    )
+    await session.connect()
+    await events.wait_for(
+        DriverEvent.ConnectionStatusChanged,
+        lambda event: event.status == "CONNECTED",
+    )
+    events.events.clear()
+    try:
+        yield session, emulator, events
+    finally:
+        await session.disconnect()
 
 
 class TestConnection:
@@ -32,7 +78,7 @@ class TestConnection:
             await session.disconnect()
 
     async def test_connect_fails_on_a_foreign_device(self, events):
-        from raygeo.driver.xtool.emulator import XtoolEmulator
+        from raygeo.driver.xtool_d1.emulator import XtoolEmulator
 
         emulator = XtoolEmulator(machine_type="Some Router Board")
         await emulator.start()
@@ -270,7 +316,7 @@ class TestStartFailure:
     async def test_connect_recovers_when_device_appears(self, events):
         import socket
 
-        from raygeo.driver.xtool.emulator import XtoolEmulator
+        from raygeo.driver.xtool_d1.emulator import XtoolEmulator
 
         with socket.socket() as sock:
             sock.bind(("127.0.0.1", 0))

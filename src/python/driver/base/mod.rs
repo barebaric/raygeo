@@ -29,9 +29,9 @@ use crate::python::driver::octoprint::driver::PyOctoPrintDriver;
 use crate::python::driver::ruida::driver::PyRuidaDriver;
 use crate::python::driver::simulator::PyNoDeviceDriver;
 use crate::python::driver::smoothie::driver::PySmoothieDriver;
-use crate::python::driver::xtool::driver::PyXtoolNetworkDriver;
+use crate::python::driver::xtool_d1::driver::PyXtoolNetworkDriver;
 #[cfg(feature = "m2")]
-use crate::python::driver::xtool::m2::driver::PyXtoolM2Driver;
+use crate::python::driver::xtool_m2::driver::PyXtoolM2Driver;
 
 pub(crate) mod info;
 use crate::python::driver::core::types::DeviceState;

@@ -15,7 +15,9 @@ pub(crate) mod ruida;
 pub(crate) mod runtime;
 pub(crate) mod simulator;
 pub(crate) mod smoothie;
-pub(crate) mod xtool;
+pub(crate) mod xtool_d1;
+#[cfg(feature = "m2")]
+pub(crate) mod xtool_m2;
 
 use std::fs::OpenOptions;
 use std::io::Write;
@@ -179,7 +181,9 @@ pub(crate) fn register(parent: &Bound<'_, PyModule>) -> PyResult<()> {
     smoothie::register(&driver_mod)?;
     octoprint::register(&driver_mod)?;
     epilog::register(&driver_mod)?;
-    xtool::register(&driver_mod)?;
+    xtool_d1::register(&driver_mod)?;
+    #[cfg(feature = "m2")]
+    xtool_m2::register(&driver_mod)?;
     remote::register(&driver_mod)?;
     ruida::register(&driver_mod)?;
     // Mounted at raygeo.raygeo.driver. The public raygeo.driver is the

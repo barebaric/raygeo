@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from raygeo.driver.xtool.m2 import XtoolM2Driver
-from raygeo.driver.xtool.m2.emulator import M2Emulator
+from raygeo.driver.xtool_m2 import XtoolM2Driver
+from raygeo.driver.xtool_m2.emulator import M2Emulator
 
 
 def test_session_exposes_m2_resource_uri_and_state():
