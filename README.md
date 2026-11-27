@@ -321,8 +321,8 @@ pip install -e ".[visual]"
 make visual
 ```
 
-See [Visual Testing](visual-testing.md) for a full walkthrough of every
-page and its controls.
+See [Visual Testing](docs/visual-testing.md) for a full walkthrough of
+every page and its controls.
 
 ## Command Line Tools
 
