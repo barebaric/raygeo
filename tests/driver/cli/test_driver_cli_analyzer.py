@@ -18,7 +18,7 @@ from raygeo.driver.cli.analyzer import (
 )
 from raygeo.driver.cli.main import build_parser
 
-GOLDEN = Path(__file__).parents[1] / "golden"
+GRBL_GOLDEN = Path(__file__).parents[1] / "grbl" / "golden"
 
 
 def run_cli(argv):
@@ -47,7 +47,9 @@ def test_parser_wires_analyzer_subcommands():
 
 
 def test_decode_prints_listing(capsys):
-    code = run_cli(["analyzer", "decode", str(GOLDEN / "grbl-session.jsonl")])
+    code = run_cli(
+        ["analyzer", "decode", str(GRBL_GOLDEN / "grbl-session.jsonl")]
+    )
     assert code == 0
     out = capsys.readouterr().out
     assert "build info request" in out

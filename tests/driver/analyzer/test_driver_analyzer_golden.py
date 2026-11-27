@@ -26,7 +26,10 @@ from raygeo.driver.marlin.emulator import MarlinEmulator
 from raygeo.driver.smoothie import SmoothieDriver
 from raygeo.driver.smoothie.emulator import SmoothieEmulator
 
-GOLDEN_DIR = Path(__file__).parents[1] / "golden"
+GOLDEN_DIRS = {
+    name: Path(__file__).parents[1] / name / "golden"
+    for name in ("grbl", "marlin", "smoothie")
+}
 
 SMOOTHIE_MARLIN_TIMINGS = {
     "handshake_timeout": 2.0,
@@ -167,7 +170,7 @@ async def test_golden_grbl():
     capture = await grbl_scenario()
     assert len(capture.frames) > 10
     assert_capture_matches_golden(
-        "grbl-session", capture, golden_dir=GOLDEN_DIR
+        "grbl-session", capture, golden_dir=GOLDEN_DIRS["grbl"]
     )
 
 
@@ -175,7 +178,7 @@ async def test_golden_smoothie():
     capture = await smoothie_scenario()
     assert len(capture.frames) > 5
     assert_capture_matches_golden(
-        "smoothie-session", capture, golden_dir=GOLDEN_DIR
+        "smoothie-session", capture, golden_dir=GOLDEN_DIRS["smoothie"]
     )
 
 
@@ -183,5 +186,5 @@ async def test_golden_marlin():
     capture = await marlin_scenario()
     assert len(capture.frames) > 5
     assert_capture_matches_golden(
-        "marlin-session", capture, golden_dir=GOLDEN_DIR
+        "marlin-session", capture, golden_dir=GOLDEN_DIRS["marlin"]
     )
