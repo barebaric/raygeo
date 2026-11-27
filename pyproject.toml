@@ -5,9 +5,9 @@ build-backend = "maturin"
 [project]
 name = "raygeo"
 dynamic = ["version"]
-description = "A 2D/3D geometry library for CAD/CAM applications."
+description = "Geometry, toolpath and machine-control infrastructure with Python bindings."
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [
     { name = "Samuel Abels", email = "knipknap@gmail.com" }
@@ -15,7 +15,6 @@ authors = [
 classifiers = [
     "Programming Language :: Rust",
     "Programming Language :: Python :: Implementation :: CPython",
-    "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dependencies = [
     "msgpack",
@@ -26,8 +25,13 @@ dependencies = [
 test = [
     "pycairo",
     "pytest",
+    "pytest-asyncio",
     "pytest-mock",
+    "pytest-split",
+    "pytest-timeout",
+    "pytest-xdist",
     "streamlit",
+    "zeroconf",
 ]
 visual = [
     "streamlit",
@@ -40,7 +44,6 @@ docs = [
     "mdformat-tables",
     "Pillow",
 ]
-
 cli = [
     "matplotlib",
 ]
@@ -48,11 +51,11 @@ cli = [
 [project.scripts]
 raygeo = "raygeo.cli.main:main"
 raygeo-docs = "tools.cli:main"
+raydriver = "raygeo.driver.cli.main:main"
 
 [tool.maturin]
 module-name = "raygeo"
 python-source = "python"
-# The Rust crate has no default features; the Python build opts in.
 features = ["python"]
 
 [tool.pyo3-stub-gen]
@@ -61,8 +64,8 @@ module-name = "raygeo"
 [tool.pyright]
 stubPath = "python"
 reportMissingModuleSource = false
-include = ["tests", "python"]
-exclude = ["python/raygeo/cli"]
+include = ["tests", "python", "tools"]
+exclude = ["python/raygeo/cli", "python/raygeo/driver/cli"]
 reportIncompatibleMethodOverride = false
 reportIncompatibleVariableOverride = false
 reportAttributeAccessIssue = false
@@ -79,6 +82,15 @@ known-first-party = ["raygeo"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+# Fails hung tests instead of stalling a CI job for hours.
+timeout = 180
+timeout_method = "thread"
 markers = [
-    "slow: marks tests as slow (deselect with '-k \"not slow\"')",
+    "slow: heavy golden/render/large-fixture tests",
+    "stress: timing- or teardown-sensitive stress tests",
+    "platform: only meaningful on a specific operating system",
+    "hardware: requires a real device; skipped by default",
+    "smoke: small representative set run on every platform",
 ]

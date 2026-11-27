@@ -33,7 +33,9 @@
 //! classification (cut vs travel), lead-in/out, overscan, raster fill,
 //! peeling strategy.  Holds the generic [`State`] representation
 //! (feed_rate, rapid_rate, …) but does NOT decide what values to use —
-//! those are passed in by the caller.
+//! those are passed in by the caller.  Also hosts the format converters
+//! under [`ops::convert`], including the G-code, Epilog and Ruida
+//! machine-code encoders.
 //!
 //! **[`cnc`]** — Orchestration.
 //! Follows a strict three-stage pipeline:
@@ -95,6 +97,7 @@ pub mod barcode;
 pub mod cnc;
 pub mod compressed_array;
 pub mod constants;
+pub mod driver;
 pub mod error;
 pub mod formats;
 pub mod fstring;
@@ -114,6 +117,20 @@ pub(crate) mod trace;
 #[cfg_attr(not(feature = "python"), allow(dead_code))]
 pub(crate) mod trace_types;
 pub mod utils;
+
+// The M2 WebSocket client needs a rustls trust store, selected at
+// build time. Both provider features imply `m2`; this guard catches
+// `--no-default-features --features m2` with an actionable message
+// instead of a cryptic missing-`Connector` variant error.
+#[cfg(all(
+    feature = "m2",
+    not(any(feature = "tls-native-roots", feature = "tls-webpki-roots"))
+))]
+compile_error!(
+    "the `m2` feature requires a TLS root provider: enable \
+     `tls-native-roots` (OS trust store, the default) or \
+     `tls-webpki-roots` (bundled Mozilla roots)"
+);
 
 pub use constants::{
     CLIPPER_SCALE, EPSILON_BOUNDARY, EPSILON_COLLINEAR, EPSILON_GAP_CLOSE,
@@ -155,14 +172,18 @@ pyo3_stub_gen::module_doc!("raygeo", "{}", MODULE_DOC);
 /// Module documentation string used for Python `__doc__`.
 #[cfg(feature = "python")]
 pub(crate) const MODULE_DOC: &str = concat!(
-    "RayGeo — 2D/3D geometry engine for CAD/CAM applications.\n",
+    "RayGeo — 2D/3D geometry, CAM and machine-driver engine.\n",
     "\n",
     "Layered architecture\n",
     "--------------------\n",
     "\n",
     "The crate is split into layers that depend only downward::\n",
     "\n",
-    "    geo  →  ops  →  cnc   →  pipeline  (runtime)\n",
+    "    geo  →  ops  →  cnc\n",
+    "      └→  sketch\n",
+    "    geo  →  formats\n",
+    "    pipeline  (generic runtime; cnc depends on it)\n",
+    "    driver    (transports and protocol sessions)\n",
     "\n",
     "``geo`` — Pure geometry.\n",
     "    Primitives & geometric algorithms: points, paths, offsets,\n",
@@ -170,12 +191,19 @@ pub(crate) const MODULE_DOC: &str = concat!(
     "    generation.  Knows nothing about machining, motion commands,\n",
     "    tools, or feed rates.\n",
     "\n",
+    "``sketch`` — Sketch constraint solving.\n",
+    "    Moves 2D points until geometric constraints (horizontal,\n",
+    "    distance, tangency, ...) hold, using trust-region-reflective\n",
+    "    least squares.  Depends only on ``geo``; no machining concepts.\n",
+    "\n",
     "``ops`` — Motion assembly.\n",
     "    Turns geometric primitives into ``Ops`` command sequences.\n",
     "    Linking, classification (cut vs travel), lead-in/out, overscan,\n",
     "    raster fill, peeling strategy.  Holds the generic ``State``\n",
     "    representation (feed_rate, rapid_rate, …) but does NOT decide\n",
-    "    what values to use — those are passed in by the caller.\n",
+    "    what values to use — those are passed in by the caller.  Also\n",
+    "    hosts the format converters under ``ops.convert``, including\n",
+    "    the G-code, Epilog and Ruida machine-code encoders.\n",
     "\n",
     "``cnc`` — Orchestration (Plan → Intent → Execute).\n",
     "    Plan: descriptive Plans (sequences of PlanSteps, each an\n",
@@ -186,6 +214,16 @@ pub(crate) const MODULE_DOC: &str = concat!(
     "``pipeline`` — Generic runtime.\n",
     "    Runs an intent tree of nodes on a thread pool. Knows nothing\n",
     "    about CNC or ops — purely generic Compute/Aggregate dispatch.\n",
+    "\n",
+    "``formats`` — File-format import and export.\n",
+    "    CorelDRAW, SVG, G-code and DXF readers/writers; depends only on\n",
+    "    ``geo``.\n",
+    "\n",
+    "``driver`` — Device transports and protocol sessions.\n",
+    "    GRBL, Marlin, Smoothie, ESP3D, OctoPrint, xTool, Epilog, Ruida,\n",
+    "    the simulator and the remote daemon, exposed as\n",
+    "    ``raygeo.driver``.  Pure Rust transports and sessions;\n",
+    "    machine-code encoders live in ``ops.convert``, not here.\n",
     "\n",
     "Key constraint: ops-layer assemblers always produce/consume ``Ops``\n",
     "objects, never raw polygon or polyline lists.  Motion classification\n",
@@ -199,17 +237,29 @@ pub(crate) const MODULE_DOC: &str = concat!(
     "- Path manipulation: offset, clipping, fitting, simplification, smoothing\n",
     "- Minkowski sums for toolpath generation\n",
     "- Command sequence (Ops) for CNC motion control\n",
+    "- Sketch constraint solving and topology\n",
+    "- CNC plans, intents and rayon-threadpool execution\n",
+    "- Machine-code conversion (G-code, Epilog, Ruida)\n",
     "- Serialization to/from industry formats\n",
+    "- Native machine drivers and a remote daemon\n",
     "- Generic intent-tree pipeline (rayon-threadpool execution)\n",
     "\n",
     "Submodules\n",
     "----------\n",
     "- raygeo.geo — Geometry and path/shape/algo operations\n",
     "- raygeo.ops — Command sequence (Ops) manipulation and motion assembly\n",
+    "- raygeo.ops.convert — Format converters and machine-code encoders\n",
+    "- raygeo.sketch — Constraint solving, entities and topology\n",
     "- raygeo.formats — File-format import and export (CorelDRAW, SVG, G-code, DXF)\n",
     "- raygeo.cnc — CNC orchestration (Plans, Intents, pipeline glue)\n",
     "- raygeo.pipeline — Generic runtime intent-tree executor\n",
+    "- raygeo.driver — Machine drivers, discovery and remote daemon\n",
     "- raygeo.template — Job counter and template placeholder scanning\n",
+    "\n",
+    "Command line\n",
+    "------------\n",
+    "The package installs ``raygeo`` for adaptive-clearing tools and\n",
+    "``raydriver`` for machine and daemon tools.\n",
     "\n",
     "Examples\n",
     "--------\n",
@@ -252,6 +302,8 @@ fn raygeo(m: &Bound<'_, PyModule>) -> PyResult<()> {
     python::template::register(m)?;
     python::trace::register(m)?;
     python::pipeline::register(m)?;
+    python::driver::register(m)?;
+    python::driver::register_root(m)?;
 
     Ok(())
 }

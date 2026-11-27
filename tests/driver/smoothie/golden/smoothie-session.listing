@@ -1,0 +1,13 @@
+    #  dir  payload                     decode
+    0   ->  ?
+    1   <-  Smoothie
+    2   <-  <Idle|MPos:0.000,0.000,0.…
+    3   ->  ?
+    4   <-  <Idle|MPos:0.000,0.000,0.…
+    5   ->  version
+    6   <-  Build version: edge-94de1…
+    7   <-  ok
+    8   ->  G1 X10 F6000
+    9   <-  ok
+   10   ->  G1 Y5 F6000
+   11   <-  ok

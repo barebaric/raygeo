@@ -1,0 +1,590 @@
+"""Tests for the Rust Epilog print-job encoder.
+
+The encoder turns machine-space Ops into a PJL/PCL/HPGL job. It
+returns the exact device byte stream as ``payload`` and a printable
+``text`` listing for the UI, with an op-to-line map over the listing.
+
+The wire layout is a PJL envelope, an optional PCL raster part, an
+HPGL vector part, and 4096 zero bytes of trailing padding.
+"""
+
+import json
+
+import numpy as np
+import pytest
+
+from raygeo.cnc.execution.specs import ComputePayload, EncodeSpec
+from raygeo.geo import Geometry
+from raygeo.ops import Ops
+from raygeo.ops.assembly import Assembler
+from raygeo.ops.assembly.contour import ContourSpec
+from raygeo.ops.assembly.raster import RasterSpec
+from raygeo.ops.convert import EncodeOutput, Encoder, EpilogSpec
+from raygeo.ops.part import Part
+from raygeo.ops.state import AirAssistMode, PowerMode
+from raygeo.pipeline.execute import clear_cache, execute_stages
+from raygeo.pipeline.request import NodeRequest
+from raygeo.pipeline.stage import StageSpec
+
+
+def _text(out: EncodeOutput) -> str:
+    """The printable listing (None for non-machine-code variants)."""
+    listing: str | None = out.text
+    assert listing is not None
+    return listing
+
+
+def _payload(out: EncodeOutput) -> bytearray:
+    """The device byte stream (None for non-machine-code variants)."""
+    payload = out.payload
+    assert payload is not None
+    return payload
+
+
+def _spans(out: EncodeOutput) -> bytearray:
+    """Op index -> (start, len) spans (None for other variants)."""
+    spans = out.op_to_machine_code
+    assert spans is not None
+    return spans
+
+
+def _line_ops(out: EncodeOutput) -> bytearray:
+    """Line index -> op index (None for other variants)."""
+    line_ops = out.machine_code_to_op
+    assert line_ops is not None
+    return line_ops
+
+
+JOB_HEADER = b"\x1b%-12345X@PJL JOB NAME="
+JOB_ENTER_PCL = b"\x1bE@PJL ENTER LANGUAGE=PCL\r\n"
+JOB_FOOTER = b"\x1bE\x1b%-12345X@PJL EOJ \r\n"
+
+
+def _ctx(**overrides) -> str:
+    ctx = dict(
+        title="Test Job",
+        resolution=500,
+        frequency=1000,
+        bed_mm=[609.6, 304.8],
+        speed_reference_mm_min=6000.0,
+        origin_top_left=True,
+        rotary=False,
+    )
+    ctx.update(overrides)
+    return json.dumps(ctx)
+
+
+def _collect(nodes):
+    completed = []
+
+    def _batch(frac: float, msg: str) -> None:
+        pass
+
+    try:
+        execute_stages(nodes, completed.append, _batch)
+    except RuntimeError:
+        pass
+    return {n.key: n for n in completed}
+
+
+def _square_part() -> Part:
+    g = Geometry()
+    g.move_to(0, 0)
+    g.line_to(10, 0)
+    g.line_to(10, 10)
+    g.line_to(0, 10)
+    g.line_to(0, 0)
+    return Part(geometry=g, size_mm=(10.0, 10.0))
+
+
+def _raster_part(fill: int) -> Part:
+    part = Part(size_mm=(10.0, 10.0), pixels_per_mm=(10.0, 10.0))
+    part.image = np.full((100, 100), fill, dtype=np.uint8)
+    return part
+
+
+def _encode_part(part, assembler, ctx=None) -> EncodeOutput:
+    clear_cache()
+    src = NodeRequest(
+        key="src",
+        generation_id=1,
+        stage=StageSpec.Compute(
+            part=part,
+            params=ComputePayload(
+                assembler=Assembler(assembler),
+                power=0.5,
+                cut_speed=600,
+            ),
+        ),
+    )
+    enc = NodeRequest(
+        key="enc",
+        generation_id=1,
+        stage=EncodeSpec(
+            source_key="src",
+            encoder=Encoder(EpilogSpec(ctx or _ctx())),
+        ),
+    )
+    node = _collect([src, enc])["enc"]
+    assert node.error is None, node.error
+    assert isinstance(node.output, EncodeOutput)
+    return node.output
+
+
+def _encode_error(ctx) -> str:
+    clear_cache()
+    src = NodeRequest(
+        key="src",
+        generation_id=1,
+        stage=StageSpec.Compute(
+            part=_square_part(),
+            params=ComputePayload(
+                assembler=Assembler(ContourSpec()),
+                power=0.5,
+                cut_speed=600,
+            ),
+        ),
+    )
+    enc = NodeRequest(
+        key="enc",
+        generation_id=1,
+        stage=EncodeSpec(source_key="src", encoder=Encoder(EpilogSpec(ctx))),
+    )
+    node = _collect([src, enc])["enc"]
+    assert node.error is not None
+    return node.error
+
+
+@pytest.fixture(autouse=True)
+def _clear_cache():
+    clear_cache()
+    yield
+    clear_cache()
+
+
+# ── Job envelope ──────────────────────────────────────────────────
+
+
+def test_payload_is_a_pjl_job_with_padding():
+    out = _encode_part(_square_part(), ContourSpec())
+    payload = bytes(_payload(out))
+    assert payload.startswith(JOB_HEADER + b"Test Job\r\n")
+    assert JOB_ENTER_PCL in payload
+    assert payload.rstrip(b"\x00").endswith(JOB_FOOTER)
+    assert payload.endswith(bytes(4096))
+
+
+def test_text_is_printable_and_escaped():
+    out = _encode_part(_square_part(), ContourSpec())
+    assert "\x1b" not in _text(out)
+    assert "\\e%-12345X@PJL JOB NAME=Test Job" in _text(out)
+    assert "@PJL ENTER LANGUAGE=PCL" in _text(out)
+
+
+def test_autofocus_is_off_by_default():
+    out = _encode_part(_square_part(), ContourSpec())
+    payload = bytes(_payload(out))
+    assert JOB_ENTER_PCL + b"\x1b&y0A" in payload
+
+
+def test_autofocus_is_requested():
+    out = _encode_part(_square_part(), ContourSpec(), _ctx(autofocus=True))
+    payload = bytes(_payload(out))
+    assert JOB_ENTER_PCL + b"\x1b&y1A" in payload
+
+
+def test_vector_coordinates_use_device_dots():
+    out = _encode_part(_square_part(), ContourSpec())
+    # 10 mm at 500 DPI is 197 dots.
+    assert "PD197,0;" in _text(out)
+    assert "PD197,197;" in _text(out)
+    assert "PU0,0;" in _text(out)
+
+
+def test_vector_job_starts_with_dummy_raster_and_hpgl_entry():
+    out = _encode_part(_square_part(), ContourSpec())
+    payload = bytes(_payload(out))
+    assert b"\x1b*t500R\x1b*r0F\x1b&y0P\x1b&z1S\x1b&y0A" in payload
+    assert (
+        b"\x1b*b2M\x1b&y0O\x1b*r1A\x1b*rC"
+        b"\x1b%1BIN;WF0;XR1000;YP000;" in payload
+    )
+    assert payload.index(b"\x1b%1B") < payload.index(b"PU0,0;")
+
+
+def test_vector_frequency_is_emitted():
+    out = _encode_part(_square_part(), ContourSpec(), _ctx(frequency=400))
+    assert b"XR0400;" in bytes(_payload(out))
+
+
+def test_raster_job_has_no_startup_raster():
+    spec = RasterSpec(mode="dither", line_interval_mm=1.0, step_power=0.5)
+    out = _encode_part(_raster_part(255), spec)
+    payload = bytes(_payload(out))
+    # The startup block runs at 1 % speed; the real raster runs at 10 %.
+    assert b"\x1b&z1S" not in payload
+    assert b"\x1b%1BIN;WF0;XR1000;YP000;" in payload
+
+
+def test_power_and_speed_percentages():
+    out = _encode_part(_square_part(), ContourSpec())
+    # 0.5 power is 50 %; 600 mm/min of a 6000 reference is 10 %.
+    assert "YP050;" in _text(out)
+    assert "ZS010;" in _text(out)
+
+
+def test_op_map_covers_every_op():
+    out = _encode_part(_square_part(), ContourSpec())
+    spans = np.frombuffer(_spans(out), dtype=np.int32).reshape(-1, 2)
+    line_ops = np.frombuffer(_line_ops(out), dtype=np.int32)
+    assert len(spans) >= 8
+    assert line_ops.max() < len(spans)
+    # The cut lines carry the moves.
+    assert spans[3][1] >= 1
+
+
+def test_zero_power_job_is_allowed():
+    """A cut at 0 % is a beam-off outline trace.  The job must set the
+    power explicitly before the first pen-down move so it cannot
+    inherit the machine's panel power."""
+    clear_cache()
+    src = NodeRequest(
+        key="src",
+        generation_id=1,
+        stage=StageSpec.Compute(
+            part=_square_part(),
+            params=ComputePayload(
+                assembler=Assembler(ContourSpec()), power=0.0, cut_speed=600
+            ),
+        ),
+    )
+    enc = NodeRequest(
+        key="enc",
+        generation_id=1,
+        stage=EncodeSpec(
+            source_key="src", encoder=Encoder(EpilogSpec(_ctx()))
+        ),
+    )
+    node = _collect([src, enc])["enc"]
+    assert node.error is None
+    assert isinstance(node.output, EncodeOutput)
+    text = _text(node.output)
+    assert "PD" in text
+    assert text.index("YP000;") < text.index("PD")
+
+
+def test_job_without_powered_paths_is_rejected():
+    """Moves alone do not form a job; the machine needs at least one
+    cut or raster row to have something to execute."""
+    ops = Ops()
+    ops.move_to(10.0, 10.0, 0.0)
+    with pytest.raises(Exception, match="no powered paths"):
+        ops.encode(Encoder(EpilogSpec(_ctx())))
+
+
+def test_power_mode_op_is_accepted():
+    """Laser steps and framing emit SET_POWER_MODE; the encoder must
+    ignore it instead of rejecting the job (issue #800)."""
+
+    clear_cache()
+    src = NodeRequest(
+        key="src",
+        generation_id=1,
+        stage=StageSpec.Compute(
+            part=_square_part(),
+            params=ComputePayload(
+                assembler=Assembler(ContourSpec()),
+                power=0.5,
+                cut_speed=600,
+                power_mode=PowerMode.CONSTANT,
+            ),
+        ),
+    )
+    enc = NodeRequest(
+        key="enc",
+        generation_id=1,
+        stage=EncodeSpec(
+            source_key="src", encoder=Encoder(EpilogSpec(_ctx()))
+        ),
+    )
+    node = _collect([src, enc])["enc"]
+    assert node.error is None, node.error
+    assert isinstance(node.output, EncodeOutput)
+
+
+def _arc_part() -> Part:
+    """An arc whose I/J offset points up from the arc start.
+
+    I/J are offsets from the arc *start*: the centre is (5, 5).
+    Taking the offset from the arc end instead would put the centre at
+    (8, 8) and swing the arc out of the bed.
+    """
+    g = Geometry()
+    g.move_to(5.0, 2.0)
+    g.arc_to(8.0, 5.0, 0.0, 3.0, True)
+    return Part(geometry=g, size_mm=(10.0, 10.0))
+
+
+def test_arc_is_linearized_from_the_previous_endpoint():
+    """I/J offsets are relative to the arc start, so the encoder must
+    linearize an arc from the end of the previous move rather than
+    from its own end."""
+    out = _encode_part(_arc_part(), ContourSpec(), _ctx(bed_mm=[10.0, 10.0]))
+    # The arc ends at (8, 5), which is 157,98 dots at 500 DPI.
+    assert "PD157,98;" in _text(out)
+
+
+def test_dither_raster_uses_packbits_one_bit_rows():
+    spec = RasterSpec(mode="dither", line_interval_mm=1.0, step_power=0.5)
+    out = _encode_part(_raster_part(255), spec)
+    assert "\\e*b2M" in _text(out)
+    assert "\\e*b1M" not in _text(out)
+    payload = bytes(_payload(out))
+    assert b"\x1b*b2M" in payload
+    assert b"\x1b*rC" in payload
+
+
+def test_power_modulated_raster_uses_3d_mode_rows():
+    """The reference selects 3D mode with *b7MLT, so a row is one byte
+    per dot and must not be run-length encoded."""
+    spec = RasterSpec(
+        mode="power_modulated", line_interval_mm=1.0, step_power=0.5
+    )
+    out = _encode_part(_raster_part(128), spec)
+    assert "\\e*b7MLT" in _text(out)
+    assert "\\e*b1M" not in _text(out)
+    payload = bytes(_payload(out))
+    assert b"\x1b*b7MLT" in payload
+
+
+def test_raster_rows_are_inside_the_raster_part():
+    spec = RasterSpec(mode="dither", line_interval_mm=1.0, step_power=0.5)
+    out = _encode_part(_raster_part(255), spec)
+    payload = bytes(_payload(out))
+    row = payload.find(b"\x1b*p")
+    assert 0 < row < payload.find(b"\x1b*rC")
+
+
+def test_raster_scan_moves_do_not_leak_into_vectors():
+    spec = RasterSpec(mode="dither", line_interval_mm=1.0, step_power=0.5)
+    out = _encode_part(_raster_part(255), spec)
+    # No HPGL pen moves; only the closing pen-up before the footer.
+    vectors = [
+        line
+        for line in _text(out).splitlines()
+        if line.startswith(("PU", "PD"))
+    ]
+    assert vectors == ["PU;YP000;WF0;"]
+
+
+# ── Validation ────────────────────────────────────────────────────
+
+
+def test_rejects_rotary_context():
+    out_ctx = _ctx(rotary=True)
+    clear_cache()
+    src = NodeRequest(
+        key="src",
+        generation_id=1,
+        stage=StageSpec.Compute(
+            part=_square_part(),
+            params=ComputePayload(
+                assembler=Assembler(ContourSpec()), power=0.5, cut_speed=600
+            ),
+        ),
+    )
+    enc = NodeRequest(
+        key="enc",
+        generation_id=1,
+        stage=EncodeSpec(
+            source_key="src", encoder=Encoder(EpilogSpec(out_ctx))
+        ),
+    )
+    node = _collect([src, enc])["enc"]
+    assert node.error is not None
+    assert "flat XY" in node.error
+
+
+def test_rejects_unsupported_resolution():
+    clear_cache()
+    src = NodeRequest(
+        key="src",
+        generation_id=1,
+        stage=StageSpec.Compute(
+            part=_square_part(),
+            params=ComputePayload(
+                assembler=Assembler(ContourSpec()), power=0.5, cut_speed=600
+            ),
+        ),
+    )
+    enc = NodeRequest(
+        key="enc",
+        generation_id=1,
+        stage=EncodeSpec(
+            source_key="src",
+            encoder=Encoder(EpilogSpec(_ctx(resolution=123))),
+        ),
+    )
+    node = _collect([src, enc])["enc"]
+    assert node.error is not None
+    assert "resolution" in node.error
+
+
+@pytest.mark.parametrize("dpi", [75, 150, 200, 300, 400, 600, 1200])
+def test_helix_resolutions_are_accepted(dpi):
+    out = _encode_part(
+        _square_part(),
+        ContourSpec(),
+        _ctx(model="helix", resolution=dpi),
+    )
+    assert _payload(out)
+
+
+@pytest.mark.parametrize("dpi", [250, 500, 1000])
+def test_helix_rejects_zing_only_resolutions(dpi):
+    error = _encode_error(_ctx(model="helix", resolution=dpi))
+    assert "unsupported Epilog Helix resolution" in error
+
+
+def test_zing_rejects_helix_only_resolution():
+    error = _encode_error(_ctx(resolution=75))
+    assert "unsupported Epilog Zing resolution" in error
+
+
+def test_rejects_bottom_origin_as_an_invariant_violation():
+    """The embedding application constrains the machine origin to the
+    driver's layout, so a bottom-left origin reaching the encoder is a
+    caller bug. It still fails loudly instead of emitting a job whose
+    coordinates would be wrong."""
+    clear_cache()
+    src = NodeRequest(
+        key="src",
+        generation_id=1,
+        stage=StageSpec.Compute(
+            part=_square_part(),
+            params=ComputePayload(
+                assembler=Assembler(ContourSpec()), power=0.5, cut_speed=600
+            ),
+        ),
+    )
+    enc = NodeRequest(
+        key="enc",
+        generation_id=1,
+        stage=EncodeSpec(
+            source_key="src",
+            encoder=Encoder(EpilogSpec(_ctx(origin_top_left=False))),
+        ),
+    )
+    node = _collect([src, enc])["enc"]
+    assert node.error is not None
+    assert "internal error" in node.error
+
+
+def test_raster_part_sets_its_own_start_after_compression():
+    """The reference emits the raster setup per part, with *r1A after
+    the compression selector; a single *r1A in the header would start
+    the part before its mode is set."""
+    spec = RasterSpec(mode="dither", line_interval_mm=1.0, step_power=0.5)
+    payload = bytes(_payload(_encode_part(_raster_part(255), spec)))
+    setup = payload.find(b"\x1b*b2M")
+    start = payload.find(b"\x1b*r1A")
+    assert 0 < setup < start
+    assert payload.find(b"\x1b*r1A", setup) == start
+
+
+def test_raster_row_length_is_padded_to_eight_bytes():
+    """*b#W is the transfer length rounded up to a multiple of 8, and
+    the row is padded with 0x80 fill bytes."""
+    spec = RasterSpec(mode="dither", line_interval_mm=1.0, step_power=0.5)
+    out = _encode_part(_raster_part(255), spec)
+    payload = bytes(_payload(out))
+    after_start = payload.find(b"\x1b*r1A")
+    marker = payload.find(b"\x1b*b", after_start)
+    # Skip the direction (*b#A) parameter and read the count (*b#W).
+    marker = payload.find(b"\x1b*b", marker + len(b"\x1b*b"))
+    end = payload.index(b"W", marker)
+    count = int(payload[marker + len(b"\x1b*b") : end])
+    assert count % 8 == 0
+    data = payload[end + 1 : end + 1 + count]
+    # A 100-dot row is 13 packed bytes, padded to 16 with 0x80 fills.
+    assert data[13:] == b"\x80" * 3
+
+
+def test_3d_rows_scale_dots_by_power():
+    """3D mode writes x * power / 100 per dot, one byte per dot."""
+    spec = RasterSpec(
+        mode="power_modulated", line_interval_mm=1.0, step_power=0.5
+    )
+    part = Part(size_mm=(10.0, 10.0), pixels_per_mm=(10.0, 10.0))
+    part.image = np.full((100, 100), 128, dtype=np.uint8)
+    payload = bytes(_payload(_encode_part(part, spec)))
+    start = payload.index(b"\x1b*r1A")
+    data_start = payload.index(b"W", payload.index(b"\x1b*b", start)) + 1
+    dot = payload[data_start]
+    # 128-grey scaled by the 50 % step power.
+    assert 0 < dot < 128
+
+
+def test_air_assist_request_is_rejected():
+    """The protocol cannot switch air assist, so asking for it fails
+    loudly instead of being dropped."""
+    clear_cache()
+    src = NodeRequest(
+        key="src",
+        generation_id=1,
+        stage=StageSpec.Compute(
+            part=_square_part(),
+            params=ComputePayload(
+                assembler=Assembler(ContourSpec()),
+                power=0.5,
+                cut_speed=600,
+                air_assist=AirAssistMode.ON,
+            ),
+        ),
+    )
+    enc = NodeRequest(
+        key="enc",
+        generation_id=1,
+        stage=EncodeSpec(
+            source_key="src", encoder=Encoder(EpilogSpec(_ctx()))
+        ),
+    )
+    node = _collect([src, enc])["enc"]
+    assert node.error is not None
+    assert "air assist" in node.error
+
+
+def test_speed_above_reference_clamps_to_full_speed():
+    """The machine cannot exceed its reference; faster requests cap at
+    100 % instead of being scaled by a wrong factor."""
+    clear_cache()
+    src = NodeRequest(
+        key="src",
+        generation_id=1,
+        stage=StageSpec.Compute(
+            part=_square_part(),
+            params=ComputePayload(
+                assembler=Assembler(ContourSpec()),
+                power=0.5,
+                cut_speed=12000,
+            ),
+        ),
+    )
+    enc = NodeRequest(
+        key="enc",
+        generation_id=1,
+        stage=EncodeSpec(
+            source_key="src", encoder=Encoder(EpilogSpec(_ctx()))
+        ),
+    )
+    node = _collect([src, enc])["enc"]
+    assert node.error is None, node.error
+    assert "ZS100;" in _text(node.output)
+
+
+def test_header_lines_belong_to_no_op():
+    """Job header and footer lines are not attributed to op 0."""
+    out = _encode_part(_square_part(), ContourSpec())
+    line_ops = np.frombuffer(_line_ops(out), dtype=np.int32)
+    assert line_ops[0] == -1
+    assert line_ops[-1] == -1

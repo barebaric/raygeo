@@ -1,6 +1,7 @@
 pub(crate) mod barcode;
 pub(crate) mod cnc;
 pub(crate) mod compressed_array;
+pub(crate) mod driver;
 pub(crate) mod errors;
 pub(crate) mod formats;
 pub(crate) mod fstring;

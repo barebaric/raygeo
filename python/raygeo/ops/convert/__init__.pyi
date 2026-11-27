@@ -7,8 +7,13 @@ from . import view
 __all__ = [
     "EncodeOutput",
     "Encoder",
+    "EpilogSpec",
+    "GcodeDialectSpec",
+    "GcodeSpec",
+    "GlueScript",
     "LayerConfig",
     "PythonEncoder",
+    "RuidaSpec",
     "SceneSpec",
     "TextureSpec",
     "VertexSpec",
@@ -97,8 +102,9 @@ class Encoder:
     
     Construct as ``Encoder(spec)`` where `spec` is an encoder spec:
     one of the classes under `raygeo.ops.convert` (e.g.
-    :class:`~raygeo.ops.convert.VertexSpec`) or a spec from another
-    extension module. Callers that drive the `Encoder` trait hold an
+    :class:`~raygeo.ops.convert.VertexSpec`), a machine-code spec
+    (`GcodeSpec`, `EpilogSpec`, `RuidaSpec`). Callers that drive the
+    `Encoder` trait hold an
     `Encoder` instance.
     """
     @property
@@ -116,6 +122,171 @@ class Encoder:
             :class:`~raygeo.ops.convert.VertexSpec`).
         """
     def __repr__(self) -> builtins.str: ...
+
+@typing.final
+class EpilogSpec:
+    r"""
+    Parameters for the Epilog print-job encoder.
+    
+    `context_json` is a JSON-serialised ``EpilogContext``: model family,
+    job title, resolution, frequency, autofocus, bed size, speed
+    reference, origin layout and the rotary flag.
+    """
+    @property
+    def context_json(self) -> builtins.str: ...
+    def __new__(cls, context_json: builtins.str) -> EpilogSpec: ...
+
+@typing.final
+class GcodeDialectSpec:
+    r"""
+    Typed Python wrapper around the Rust ``GcodeDialectSpec``.
+    
+    Constructed in Python with keyword arguments; the inner Rust
+    struct is passed directly to the encoder without a serde round-trip.
+    """
+    def __new__(cls, laser_on: builtins.str = 'M4 S{power:.0f}', laser_off: builtins.str = 'M5', tool_change: builtins.str = 'T{tool_number}', set_speed: builtins.str = 'G1 F{speed:.0f}', travel_move: builtins.str = 'G0{x_cmd}{y_cmd}{z_cmd}{extra_cmd}{f_command}{s_command}', linear_move: builtins.str = 'G1{x_cmd}{y_cmd}{z_cmd}{extra_cmd}{f_command}{s_command}', arc_cw: builtins.str = 'G2{x_cmd}{y_cmd}{z_cmd} I{i} J{j}{extra_cmd}{f_command}{s_command}', arc_ccw: builtins.str = 'G3{x_cmd}{y_cmd}{z_cmd} I{i} J{j}{extra_cmd}{f_command}{s_command}', air_assist_on: builtins.str = 'M8', air_assist_off: builtins.str = 'M9', bezier_cubic: builtins.str = '', spindle_on_cw: builtins.str = 'M3 S{rpm}', spindle_on_ccw: builtins.str = 'M4 S{rpm}', spindle_off: builtins.str = 'M5', coolant_flood: builtins.str = 'M8', coolant_mist: builtins.str = 'M7', coolant_off: builtins.str = 'M9', dwell: builtins.str = 'G4 P{seconds:.3f}', preamble: typing.Sequence[builtins.str] = ['G90'], postscript: typing.Sequence[builtins.str] = ['M30'], inject_wcs_after_preamble: builtins.bool = False, can_g0_with_speed: builtins.bool = False, omit_unchanged_coords: builtins.bool = True, continuous_laser_mode: builtins.bool = False, modal_feedrate: builtins.bool = False, gcode_precision: builtins.int = 3, focus_laser_on: builtins.str = '') -> GcodeDialectSpec: ...
+    def __repr__(self) -> builtins.str: ...
+
+@typing.final
+class GcodeSpec:
+    r"""
+    Parameters for the G-code encoder.
+    """
+    @property
+    def dialect(self) -> GcodeDialectSpec: ...
+    @property
+    def context_json(self) -> builtins.str: ...
+    def __new__(cls, dialect: GcodeDialectSpec, context_json: builtins.str) -> GcodeSpec: ...
+
+@typing.final
+class GlueScript:
+    r"""
+    The Ruida job authoring and compilation model.
+    
+    Call the authoring methods to build a job, then `stage_gluescript()`
+    compiles it into rpascript. `stage_gluescript(lines)` also replays a
+    persisted transcript.
+    """
+    @property
+    def gluescript(self) -> builtins.list[builtins.str]:
+        r"""
+        The canonical transcript lines.
+        """
+    @property
+    def rpascript(self) -> builtins.list[builtins.str]:
+        r"""
+        The compiled rpascript lines.
+        """
+    @property
+    def job_complete(self) -> builtins.bool:
+        r"""
+        Whether `end_job()` finalized the job.
+        """
+    def __new__(cls) -> GlueScript: ...
+    def new_gluescript(self) -> None:
+        r"""
+        Reset all per-job state.
+        """
+    def comment(self, comments: typing.Sequence[builtins.str]) -> None:
+        r"""
+        Append comment lines to the job header.
+        """
+    def declare_job(self, label: builtins.str, ref_point: builtins.str = 'MACHINE', abs_xy: typing.Optional[typing.Sequence[builtins.float]] = None, columns: builtins.int = 1, rows: builtins.int = 1, xstep: builtins.float = 0.0, ystep: builtins.float = 0.0) -> None:
+        r"""
+        Declare a job.
+        """
+    def end_job(self) -> None:
+        r"""
+        Finalize the job.
+        """
+    def declare_layer(self, label: builtins.str, color: builtins.str, mode: builtins.str = 'VECTOR', overscan: builtins.str = 'NONE', speed: builtins.float = 100.0, frequency: builtins.float = 20.0, min_power_1: builtins.float = 8.0, max_power_1: builtins.float = 70.0) -> None:
+        r"""
+        Declare a layer.
+        """
+    def power(self, percent: typing.Optional[builtins.float]) -> None:
+        r"""
+        Set immediate power for an IMAGE/DEPTHMAP layer.
+        """
+    def power_range(self, min_power: typing.Optional[builtins.float], max_power: typing.Optional[builtins.float]) -> None:
+        r"""
+        Save a power ramp range for the next cut.
+        """
+    def cut_speed(self, speed: builtins.float) -> None:
+        r"""
+        Save the cut speed for the next cut.
+        """
+    def move_speed(self, speed: builtins.float) -> None:
+        r"""
+        Record a move speed (comment-only).
+        """
+    def frequency(self, frequency: builtins.float) -> None:
+        r"""
+        Save the layer frequency for the next flush.
+        """
+    def pwm(self, duration: builtins.float) -> None:
+        r"""
+        Record the pulse width (comment-only).
+        """
+    def select_laser(self, laser: builtins.int) -> None:
+        r"""
+        Select a laser head.
+        """
+    def air_assist_on(self) -> None:
+        r"""
+        Enable air assist.
+        """
+    def air_assist_off(self) -> None:
+        r"""
+        Disable air assist.
+        """
+    def set_mode(self, mode: builtins.str) -> None:
+        r"""
+        Switch the layer mode mid-stream.
+        """
+    def set_overscan(self, overscan: builtins.str) -> None:
+        r"""
+        Set the overscan for the current layer.
+        """
+    def set_max_cut_speed(self, speed: builtins.float) -> None:
+        r"""
+        Set the maximum cut speed used by power scaling.
+        """
+    def set_power_floor(self, floor: builtins.float) -> None:
+        r"""
+        Set the laser's minimum firing power.
+        """
+    def set_power_scaling_enabled(self, enabled: builtins.bool) -> None:
+        r"""
+        Enable or disable effective-min power scaling.
+        """
+    def move_xy_to(self, x: builtins.float, y: builtins.float) -> None:
+        r"""
+        Move to an absolute XY position.
+        """
+    def move_x_to(self, x: builtins.float) -> None:
+        r"""
+        Move to an absolute X position.
+        """
+    def move_y_to(self, y: builtins.float) -> None:
+        r"""
+        Move to an absolute Y position.
+        """
+    def cut_xy_to(self, x: builtins.float, y: builtins.float) -> None:
+        r"""
+        Cut to an absolute XY position.
+        """
+    def cut_x_to(self, x: builtins.float) -> None:
+        r"""
+        Cut to an absolute X position.
+        """
+    def cut_y_to(self, y: builtins.float) -> None:
+        r"""
+        Cut to an absolute Y position.
+        """
+    def stage_gluescript(self, gluescript: typing.Optional[typing.Sequence[builtins.str]] = None, require_complete: builtins.bool = True) -> builtins.str:
+        r"""
+        Compile the job, or replay a transcript and compile it.
+        """
 
 @typing.final
 class LayerConfig:
@@ -156,6 +327,15 @@ class PythonEncoder:
         :param name: Human-readable name for progress messages.
         """
     def __repr__(self) -> builtins.str: ...
+
+@typing.final
+class RuidaSpec:
+    r"""
+    Typed Python wrapper around the Rust ``RuidaSpec``.
+    """
+    @property
+    def context_json(self) -> builtins.str: ...
+    def __new__(cls, context_json: builtins.str) -> RuidaSpec: ...
 
 @typing.final
 class SceneSpec:

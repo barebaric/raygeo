@@ -16,12 +16,11 @@
 //! transformers through `Transformer`. All three traits take their
 //! callbacks from [`crate::ops::callbacks`].
 //!
-//! Machine-code encoders for specific devices (G-code dialects, print
-//! jobs) live outside this crate, in the embedding application's
-//! machine-driver layer. They implement [`Encoder`] and hand
-//! themselves to this module through the [`encoder_capsule_name`]
-//! PyCapsule protocol, so the pipeline runs them without either side
-//! depending on the other's Python types.
+//! Machine-code encoders (G-code dialects, Epilog print jobs, Ruida
+//! rpascript) are converters like the ones above: they consume [`Ops`]
+//! plus caller-supplied configuration and produce a device format.
+//! They live under this module (`gcode`, `epilog`, `ruida`) because
+//! they do not own transports or device sessions.
 
 use serde::Serialize;
 
@@ -30,9 +29,14 @@ use crate::ops::convert::scene::CompiledSceneData;
 use crate::ops::convert::vertex_arrays::VertexArrays;
 
 pub mod dump;
+pub mod epilog;
+pub mod gcode;
+pub mod gcode_types;
 pub mod geometry;
+pub(crate) mod gluescript;
 pub mod image;
 pub mod polyline;
+pub mod ruida;
 pub mod scene;
 pub mod texture;
 pub mod vertex_arrays;
@@ -154,45 +158,6 @@ pub struct OpLineRange {
 /// owning op (e.g. the trailing empty line added by the encoder).
 pub const MACHINE_CODE_TO_OP_NONE: usize = usize::MAX;
 
-/// Version of the cross-crate encoder handoff.
-///
-/// Bumped whenever the [`Encoder`] trait or this handoff contract
-/// changes incompatibly.
-pub const ENCODER_ABI: &str = "1";
-
-/// The PyCapsule name used by the cross-crate encoder handoff.
-///
-/// Encoders implemented outside this crate expose a
-/// ``__raygeo_encoder__()`` method returning a capsule with this name.
-/// The name embeds the `raygeo` version the encoder was built against,
-/// so a mismatched pairing fails with a clear error instead of being
-/// misinterpreted.
-pub fn encoder_capsule_name() -> String {
-    format!(
-        "raygeo.encoder.{}.{}",
-        env!("CARGO_PKG_VERSION"),
-        ENCODER_ABI
-    )
-}
-
-/// Object-safe clone support for [`Encoder`].
-///
-/// Implemented automatically for every `Clone` encoder, so encoder
-/// specs need no extra code.
-pub trait EncoderClone {
-    /// Clone this encoder into a new owned trait object.
-    fn clone_box(&self) -> Box<dyn Encoder>;
-}
-
-impl<T> EncoderClone for T
-where
-    T: 'static + Encoder + Clone,
-{
-    fn clone_box(&self) -> Box<dyn Encoder> {
-        Box::new(self.clone())
-    }
-}
-
 /// Per-call context handed to [`Encoder::encode`].
 ///
 /// Bundles the immutable [`Ops`] being encoded with the caller's
@@ -216,7 +181,7 @@ pub struct EncodeCtx<'a> {
 ///
 /// `Send + Sync` is required so a `Box<dyn Encoder>` can be held
 /// across thread boundaries by the caller.
-pub trait Encoder: Send + Sync + EncoderClone {
+pub trait Encoder: Send + Sync {
     /// Run the encoder against the supplied [`EncodeCtx`].
     ///
     /// On success, returns the encoder's [`EncodeOutput`]. On

@@ -1,0 +1,65 @@
+name: Nightly
+
+on:
+  schedule:
+    # Full platform matrix every night. PRs only run the Linux fast lane
+    # plus a smoke test on the other platforms.
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  full-tests:
+    name: Full tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          [
+            ubuntu-latest,
+            ubuntu-24.04-arm,
+            windows-latest,
+            macos-15-intel,
+            macos-15,
+          ]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - uses: PyO3/maturin-action@v1
+        with:
+          command: build
+          args: --release --out dist
+          sccache: true
+
+      - name: Install system dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libcairo2-dev
+
+      - name: Install system dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: brew install cairo
+
+      - name: Install wheel
+        shell: bash
+        run: pip install dist/raygeo-*.whl
+
+      - name: Install test dependencies
+        shell: bash
+        run: |
+          pip install pytest pycairo pytest-asyncio pytest-mock \
+            pytest-timeout zeroconf
+
+      - name: Run full suite
+        shell: bash
+        run: pytest -v --timeout=300

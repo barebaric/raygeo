@@ -3,24 +3,33 @@ title: raygeo
 sidebar_label: raygeo
 ---
 
-RayGeo — 2D/3D geometry engine for CAD/CAM applications.
+RayGeo — 2D/3D geometry, CAM and machine-driver engine.
 
 ## Layered architecture
 
 The crate is split into layers that depend only downward::
 
 ```
-geo  →  ops  →  cnc   →  pipeline  (runtime)
+geo  →  ops  →  cnc
+  └→  sketch
+geo  →  formats
+pipeline  (generic runtime; cnc depends on it)
+driver    (transports and protocol sessions)
 ```
 
 `geo` — Pure geometry. Primitives & geometric algorithms: points, paths, offsets, medial axes,
 clearing-state tracking, adaptive entry/wavefront generation. Knows nothing about machining, motion
 commands, tools, or feed rates.
 
+`sketch` — Sketch constraint solving. Moves 2D points until geometric constraints (horizontal,
+distance, tangency, ...) hold, using trust-region-reflective least squares. Depends only on `geo`;
+no machining concepts.
+
 `ops` — Motion assembly. Turns geometric primitives into `Ops` command sequences. Linking,
 classification (cut vs travel), lead-in/out, overscan, raster fill, peeling strategy. Holds the
 generic `State` representation (feed_rate, rapid_rate, …) but does NOT decide what values to use —
-those are passed in by the caller.
+those are passed in by the caller. Also hosts the format converters under `ops.convert`, including
+the G-code, Epilog and Ruida machine-code encoders.
 
 `cnc` — Orchestration (Plan → Intent → Execute). Plan: descriptive Plans (sequences of PlanSteps,
 each an Assembler spec). Intent: create_intent() converts a Plan into executable NodeRequests.
@@ -28,6 +37,13 @@ Execute: run_intent() runs the pipeline and returns the final linked Ops.
 
 `pipeline` — Generic runtime. Runs an intent tree of nodes on a thread pool. Knows nothing about CNC
 or ops — purely generic Compute/Aggregate dispatch.
+
+`formats` — File-format import and export. CorelDRAW, SVG, G-code and DXF readers/writers; depends
+only on `geo`.
+
+`driver` — Device transports and protocol sessions. GRBL, Marlin, Smoothie, ESP3D, OctoPrint, xTool,
+Epilog, Ruida, the simulator and the remote daemon, exposed as `raygeo.driver`. Pure Rust transports
+and sessions; machine-code encoders live in `ops.convert`, not here.
 
 Key constraint: ops-layer assemblers always produce/consume `Ops` objects, never raw polygon or
 polyline lists. Motion classification is encoded as `MoveTo` (travel) vs `LineTo` (cut) at the
@@ -40,17 +56,29 @@ command level.
 - Path manipulation: offset, clipping, fitting, simplification, smoothing
 - Minkowski sums for toolpath generation
 - Command sequence (Ops) for CNC motion control
+- Sketch constraint solving and topology
+- CNC plans, intents and rayon-threadpool execution
+- Machine-code conversion (G-code, Epilog, Ruida)
 - Serialization to/from industry formats
+- Native machine drivers and a remote daemon
 - Generic intent-tree pipeline (rayon-threadpool execution)
 
 ## Submodules
 
 - raygeo.geo — Geometry and path/shape/algo operations
 - raygeo.ops — Command sequence (Ops) manipulation and motion assembly
+- raygeo.ops.convert — Format converters and machine-code encoders
+- raygeo.sketch — Constraint solving, entities and topology
 - raygeo.formats — File-format import and export (CorelDRAW, SVG, G-code, DXF)
 - raygeo.cnc — CNC orchestration (Plans, Intents, pipeline glue)
 - raygeo.pipeline — Generic runtime intent-tree executor
+- raygeo.driver — Machine drivers, discovery and remote daemon
 - raygeo.template — Job counter and template placeholder scanning
+
+## Command line
+
+The package installs `raygeo` for adaptive-clearing tools and `raydriver` for machine and daemon
+tools.
 
 ## Examples
 
@@ -76,3 +104,22 @@ Manipulating command sequences:
 >>> ops.distance()
 100.0
 ```
+
+## Functions
+
+### `init_logging()`
+
+```python
+init_logging(filter: Optional[str] = None, path: Optional[str] = None) -> None
+```
+
+Initialize the Rust-side logger (`log` crate) so session diagnostics reach stderr or, when *path* is
+given, a dedicated log file (opened in append mode). The filter defaults to `warn` and can be
+overridden with an `env_logger` filter string argument or via `RUST_LOG` (which always wins).
+Calling again re-targets output and replaces the filter.
+
+| Parameter | Type                   | Description |
+| --------- | ---------------------- | ----------- |
+| `filter`  | `Optional[str] = None` |             |
+| `path`    | `Optional[str] = None` |             |
+| _Returns_ | `None`                 |             |

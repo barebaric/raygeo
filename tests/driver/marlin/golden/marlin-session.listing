@@ -1,0 +1,13 @@
+    #  dir  payload                     decode
+    0   <-  start
+    1   <-  Marlin 2.1.2
+    2   <-  echo:Last Updated: 2024-0…
+    3   <-  echo:Compiled: Jan  1 2024
+    4   ->  M115
+    5   <-  FIRMWARE_NAME:Marlin 2.1.…
+    6   <-  MACHINE_TYPE:3D Printer
+    7   <-  ok
+    8   ->  G1 X10 F90000
+    9   <-  ok
+   10   ->  G1 Y5 F90000
+   11   <-  ok
