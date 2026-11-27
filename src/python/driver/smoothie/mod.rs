@@ -1,4 +1,4 @@
-//! The `raydriver.smoothie` Python submodule.
+//! The `raygeo.driver.smoothie` Python submodule.
 
 pub(crate) mod driver;
 pub(crate) mod probe;

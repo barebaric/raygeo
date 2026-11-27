@@ -1,4 +1,4 @@
-//! The `raydriver.core.discovery.session` submodule: GTK-free state
+//! The `raygeo.driver.core.discovery.session` submodule: GTK-free state
 //! behind a discovery UI.
 //!
 //! A `DiscoverySession` owns everything about an ongoing discovery

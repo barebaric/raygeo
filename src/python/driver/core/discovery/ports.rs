@@ -1,4 +1,4 @@
-//! The `raydriver.core.discovery.ports` submodule: serial port
+//! The `raygeo.driver.core.discovery.ports` submodule: serial port
 //! enumeration for discovery and device pickers.
 
 use pyo3::prelude::*;

@@ -47,7 +47,7 @@ __all__ = [
 drivers: builtins.list[type[Driver]]
 class Driver:
     r"""
-    The base class of every raydriver driver.
+    The base class of every raygeo driver.
     
     Declares the uniform surface once: connection lifecycle, job
     streaming, machine control, probing and settings.  Operations a

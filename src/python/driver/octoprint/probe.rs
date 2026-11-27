@@ -1,4 +1,4 @@
-//! The `raydriver.octoprint.probe` submodule: the device census.
+//! The `raygeo.driver.octoprint.probe` submodule: the device census.
 
 use pyo3::prelude::*;
 use pyo3::types::PyDict;

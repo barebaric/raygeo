@@ -98,7 +98,7 @@ class StartedServer:
 
 def validate_bind_policy(host: builtins.str, token: typing.Optional[builtins.str], tls_cert: typing.Optional[builtins.str]) -> None:
     r"""
-    Raise :class:`raydriver.errors.InsecureListenerError` unless
+    Raise :class:`raygeo.driver.errors.InsecureListenerError` unless
     *host* is loopback or both *token* and *tls_cert* are configured.
     """
 

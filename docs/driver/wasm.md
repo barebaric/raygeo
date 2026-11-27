@@ -1,10 +1,11 @@
 # WebAssembly support
 
-`raydriver` compiles for `wasm32-unknown-unknown` and — unlike a
-simple "strip everything" port — keeps everything a browser can
-plausibly drive: the session logic, the HTTP and WebSocket clients,
-the telnet transport and the `esp3d`/`octoprint`/`xtool` sessions all
-compile **and run** on wasm. Verify with `make check-wasm`.
+`raygeo`, including its driver layer (`src/driver`), compiles for
+`wasm32-unknown-unknown` and — unlike a simple "strip everything"
+port — keeps everything a browser can plausibly drive: the session
+logic, the HTTP and WebSocket clients, the telnet transport and the
+`esp3d`/`octoprint`/`xtool_d1`/`xtool_m2` sessions all compile
+**and run** on wasm. Verify with `make check-wasm`.
 
 ```sh
 rustup target add wasm32-unknown-unknown

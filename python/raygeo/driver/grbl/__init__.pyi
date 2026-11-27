@@ -3,7 +3,7 @@
 r"""
 GRBL device drivers implemented in Rust.
 
-GrblSerialDriver, GrblTelnetDriver, GrblBluetoothDriver and GrblNetworkDriver each own a connection lifecycle (handshake, status polling, reconnect), interactive commands, and job streaming with character-counting flow control, stall detection and deadlock recovery; they differ only in their transport. GrblSerialSimpleDriver (raydriver.grbl.simple) is the minimal alternative: strict ping-pong, for hardware where the full driver misbehaves. Dialects remain data owned by the application: resolved command templates are passed into the driver.
+GrblSerialDriver, GrblTelnetDriver, GrblBluetoothDriver and GrblNetworkDriver each own a connection lifecycle (handshake, status polling, reconnect), interactive commands, and job streaming with character-counting flow control, stall detection and deadlock recovery; they differ only in their transport. GrblSerialSimpleDriver (raygeo.driver.grbl.simple) is the minimal alternative: strict ping-pong, for hardware where the full driver misbehaves. Dialects remain data owned by the application: resolved command templates are passed into the driver.
 """
 
 import builtins

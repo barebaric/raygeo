@@ -1,4 +1,4 @@
-//! The `raydriver.ruida` Python submodule.
+//! The `raygeo.driver.ruida` Python submodule.
 
 pub(crate) mod driver;
 
@@ -28,9 +28,9 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
         .add_function(wrap_pyfunction!(encode_script, ruida_mod.clone())?)?;
 
     m.add_submodule(&ruida_mod)?;
-    // Note: raydriver.ruida is intentionally NOT registered in
+    // Note: raygeo.driver.ruida is intentionally NOT registered in
     // sys.modules — the Python __init__.py at
-    // python/raydriver/ruida/__init__.py serves as the package and
+    // python/raygeo/driver/ruida/__init__.py serves as the package and
     // delegates to this Rust module.
     Ok(())
 }

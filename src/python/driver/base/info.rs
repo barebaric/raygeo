@@ -1,4 +1,4 @@
-//! `raydriver.driver.DriverInfo`: typed driver metadata.
+//! `raygeo.driver.driver.DriverInfo`: typed driver metadata.
 
 use pyo3::prelude::*;
 use pyo3::types::PyDict;

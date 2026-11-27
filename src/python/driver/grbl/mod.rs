@@ -1,4 +1,4 @@
-//! The `raydriver.grbl` Python submodule: GRBL drivers, transports
+//! The `raygeo.driver.grbl` Python submodule: GRBL drivers, transports
 //! and value types.
 
 pub(crate) mod driver;
@@ -16,7 +16,7 @@ GrblNetworkDriver each own a connection lifecycle (handshake, status \
 polling, reconnect), interactive commands, and job streaming with \
 character-counting flow control, stall detection and deadlock \
 recovery; they differ only in their transport. \
-GrblSerialSimpleDriver (raydriver.grbl.simple) is the minimal \
+GrblSerialSimpleDriver (raygeo.driver.grbl.simple) is the minimal \
 alternative: strict ping-pong, for hardware where the full driver \
 misbehaves. Dialects remain data owned by the application: resolved \
 command templates are passed into the driver.
@@ -57,9 +57,9 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     probe::register(&grbl_mod)?;
 
     m.add_submodule(&grbl_mod)?;
-    // Note: raydriver.grbl is intentionally NOT registered in
+    // Note: raygeo.driver.grbl is intentionally NOT registered in
     // sys.modules — the Python __init__.py at
-    // python/raydriver/grbl/__init__.py serves as the package and
+    // python/raygeo/driver/grbl/__init__.py serves as the package and
     // delegates to this Rust module.
 
     Ok(())

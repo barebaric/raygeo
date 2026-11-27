@@ -1,4 +1,4 @@
-//! The `raydriver.core.discovery.mdns_scan` submodule: mDNS network
+//! The `raygeo.driver.core.discovery.mdns_scan` submodule: mDNS network
 //! service scanning.
 //!
 //! The browse runs in the Rust core; this submodule normalizes the

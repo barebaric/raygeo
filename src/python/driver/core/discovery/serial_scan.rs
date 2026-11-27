@@ -1,4 +1,4 @@
-//! The `raydriver.core.discovery.serial_scan` submodule: serial port
+//! The `raygeo.driver.core.discovery.serial_scan` submodule: serial port
 //! scanning.
 //!
 //! The capture probe runs in the Rust core; this submodule selects

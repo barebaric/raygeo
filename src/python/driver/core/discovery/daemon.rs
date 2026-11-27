@@ -1,4 +1,4 @@
-//! The `raydriver.core.discovery.daemon` Python submodule: queries
+//! The `raygeo.driver.core.discovery.daemon` Python submodule: queries
 //! against a running raydriver daemon.
 
 use std::time::Duration;

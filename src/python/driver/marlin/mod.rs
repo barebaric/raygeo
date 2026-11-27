@@ -1,4 +1,4 @@
-//! The `raydriver.marlin` Python submodule.
+//! The `raygeo.driver.marlin` Python submodule.
 
 pub(crate) mod driver;
 pub(crate) mod parser;

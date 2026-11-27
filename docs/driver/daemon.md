@@ -1,8 +1,8 @@
 # raydriver daemon
 
-The daemon hosts raydriver sessions next to the hardware (e.g. on
-a Raspberry Pi in the workshop) while Rayforge — or any raydriver
-consumer — runs elsewhere on the LAN. Jobs run daemon-side and
+The daemon hosts driver sessions next to the hardware (e.g. on
+a Raspberry Pi in the workshop) while Rayforge — or any raygeo
+driver consumer — runs elsewhere on the LAN. Jobs run daemon-side and
 survive client disconnects; reattaching clients resync progress
 exactly. The daemon hosts *sessions*, not machines: device
 connection configs live in `daemon.json`, and clients send the
@@ -16,8 +16,11 @@ the Python modules only adapt them to asyncio and PyO3.
 
 ## Install and first run
 
+The daemon, client and CLI are part of the `raygeo` package; the
+console script is still named `raydriver` for compatibility.
+
 ```sh
-pip install raydriver              # includes network discovery
+pip install raygeo                 # includes network discovery
 raydriver daemon add /dev/ttyUSB0  # config + generated token + device
 raydriver daemon install           # install + start the platform service
 ```
@@ -35,7 +38,7 @@ platform's per-user location:
 | macOS    | `~/Library/Application Support/raydriver/daemon.json` |
 | Windows  | `%APPDATA%\raydriver\daemon.json`                  |
 
-`--config PATH` overrides it everywhere; `python -m raydriver
+`--config PATH` overrides it everywhere; `python -m raygeo.driver
 daemon` works too. To run in the foreground instead of as a
 service: `raydriver daemon`.
 
@@ -88,7 +91,7 @@ Description=raydriver device daemon
 After=network-online.target
 
 [Service]
-ExecStart=/usr/bin/python3 -m raydriver daemon --config /etc/raydriver/daemon.json
+ExecStart=/usr/bin/python3 -m raygeo.driver daemon --config /etc/raydriver/daemon.json
 Restart=on-failure
 RestartSec=2
 
@@ -192,7 +195,7 @@ announce how many cameras the daemon has. Query the full list with
 the Rust-backed camera helper (token and TLS included):
 
 ```python
-from raydriver.core.discovery import daemon as daemon_api
+from raygeo.driver.core.discovery import daemon as daemon_api
 
 cameras = await daemon_api.list_cameras(
     "pi.local",
@@ -222,7 +225,7 @@ client's. A client connects to a *device* and lets the daemon
 resolve the protocol, exposing it as info afterwards:
 
 ```python
-from raydriver.remote.client import list_devices, open_session
+from raygeo.driver.remote.client import list_devices, open_session
 
 endpoint = "raydriver://127.0.0.1:8765#<your token>"
 

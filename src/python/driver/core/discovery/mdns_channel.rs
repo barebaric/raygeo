@@ -1,4 +1,4 @@
-//! The `raydriver.core.discovery.mdns_channel` submodule: network
+//! The `raygeo.driver.core.discovery.mdns_channel` submodule: network
 //! (mDNS) discovery channel.
 //!
 //! Browses the network for every service type declared by a driver's

@@ -1,4 +1,4 @@
-//! The `raydriver.octoprint` Python submodule.
+//! The `raygeo.driver.octoprint` Python submodule.
 
 pub(crate) mod driver;
 pub(crate) mod probe;
@@ -23,9 +23,9 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     octoprint_mod.add_class::<driver::PyOctoPrintDriver>()?;
 
     m.add_submodule(&octoprint_mod)?;
-    // Note: raydriver.octoprint is intentionally NOT registered in
+    // Note: raygeo.driver.octoprint is intentionally NOT registered in
     // sys.modules — the Python __init__.py at
-    // python/raydriver/octoprint/__init__.py serves as the package
+    // python/raygeo/driver/octoprint/__init__.py serves as the package
     // and delegates to this Rust module.
 
     Ok(())

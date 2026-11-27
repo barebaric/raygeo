@@ -1,4 +1,4 @@
-//! The `raydriver.core.discovery.engine` submodule: discovery engine.
+//! The `raygeo.driver.core.discovery.engine` submodule: discovery engine.
 //!
 //! Ties the channels together: `find_all_devices` runs every channel's
 //! scan concurrently and merges the results. Each channel owns its

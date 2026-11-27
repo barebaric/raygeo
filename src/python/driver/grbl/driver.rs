@@ -1,4 +1,4 @@
-//! The `raydriver.grbl` PyO3 module: the four GRBL driver classes,
+//! The `raygeo.driver.grbl` PyO3 module: the four GRBL driver classes,
 //! shared config parsing and the dialect helpers every protocol
 //! binding reuses.
 

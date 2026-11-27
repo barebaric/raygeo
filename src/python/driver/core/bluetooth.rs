@@ -1,4 +1,4 @@
-//! The `raydriver.core.bluetooth` submodule: Bluetooth SPP
+//! The `raygeo.driver.core.bluetooth` submodule: Bluetooth SPP
 //! enumeration and address helpers for device pickers.
 
 use pyo3::exceptions::PyValueError;

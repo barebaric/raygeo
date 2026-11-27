@@ -1,4 +1,4 @@
-//! The `raydriver.marlin.probe` submodule: the device census.
+//! The `raygeo.driver.marlin.probe` submodule: the device census.
 
 use pyo3::prelude::*;
 use pyo3::types::PyDict;

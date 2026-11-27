@@ -1,4 +1,4 @@
-//! The `raydriver.remote` submodule: daemon, client and codec.
+//! The `raygeo.driver.remote` submodule: daemon, client and codec.
 
 pub(crate) mod bridge;
 pub(crate) mod client;

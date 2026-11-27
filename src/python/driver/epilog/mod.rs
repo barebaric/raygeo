@@ -1,4 +1,4 @@
-//! The `raydriver.epilog` Python submodule.
+//! The `raygeo.driver.epilog` Python submodule.
 
 pub(crate) mod driver;
 
@@ -23,9 +23,9 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     epilog_mod.add_class::<driver::PyEpilogDriver>()?;
 
     m.add_submodule(&epilog_mod)?;
-    // Note: raydriver.epilog is intentionally NOT registered in
+    // Note: raygeo.driver.epilog is intentionally NOT registered in
     // sys.modules — the Python __init__.py at
-    // python/raydriver/epilog/__init__.py serves as the package and
+    // python/raygeo/driver/epilog/__init__.py serves as the package and
     // delegates to this Rust module.
     Ok(())
 }

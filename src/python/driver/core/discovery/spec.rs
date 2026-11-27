@@ -1,4 +1,4 @@
-//! The `raydriver.core.discovery.spec` submodule: driver-facing
+//! The `raygeo.driver.core.discovery.spec` submodule: driver-facing
 //! discovery declarations.
 //!
 //! A driver participates in automatic device discovery by declaring

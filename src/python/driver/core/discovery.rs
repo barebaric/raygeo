@@ -1,4 +1,4 @@
-//! The `raydriver.core.discovery` Python submodule: transport-level
+//! The `raygeo.driver.core.discovery` Python submodule: transport-level
 //! device discovery scanners (serial capture, mDNS browse, subnet
 //! TCP scan), the discovery result types, and the driver-facing
 //! discovery subsystem (declarations, channels, engine, session).

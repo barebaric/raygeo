@@ -1,4 +1,4 @@
-//! The `raydriver.core.discovery.fingerprints` submodule:
+//! The `raygeo.driver.core.discovery.fingerprints` submodule:
 //! reusable fingerprint probes for generic mDNS service types.
 //!
 //! A fingerprint is an async callable handed to an `MdnsRecognizer`;

@@ -320,7 +320,7 @@ fn core_error(err: DaemonError) -> PyErr {
     }
 }
 
-/// Raise :class:`raydriver.errors.InsecureListenerError` unless
+/// Raise :class:`raygeo.driver.errors.InsecureListenerError` unless
 /// *host* is loopback or both *token* and *tls_cert* are configured.
 #[gen_stub_pyfunction(module = "raygeo.driver.remote.daemon")]
 #[pyfunction]

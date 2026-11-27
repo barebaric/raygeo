@@ -1,4 +1,4 @@
-//! The typed session configuration pyclasses (`raydriver.config`)
+//! The typed session configuration pyclasses (`raygeo.driver.config`)
 //! and the conversion from typed configs to the mapping form
 //! consumed by the session bindings.
 
@@ -356,7 +356,7 @@ config_pyclass!(
     ],
 );
 
-/// Register the config pyclasses as the `raydriver.config`
+/// Register the config pyclasses as the `raygeo.driver.config`
 /// submodule (stub-only: no Python file shadows it).
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = m.py();

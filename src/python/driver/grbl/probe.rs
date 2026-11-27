@@ -1,4 +1,4 @@
-//! The `raydriver.grbl.probe` submodule: the device census.
+//! The `raygeo.driver.grbl.probe` submodule: the device census.
 
 use pyo3::prelude::*;
 use pyo3::types::PyDict;

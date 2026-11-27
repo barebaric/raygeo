@@ -1,4 +1,4 @@
-//! The `raydriver.core` Python submodule: shared device primitives.
+//! The `raygeo.driver.core` Python submodule: shared device primitives.
 
 pub(crate) mod bluetooth;
 pub(crate) mod discovery;
@@ -11,8 +11,8 @@ use pyo3::prelude::*;
 
 pub(crate) const MODULE_DOC: &str = "\
 Shared device primitives: transports, value types and session \
-events. The protocol namespaces (raydriver.grbl, raydriver.smoothie, \
-raydriver.marlin) build on these.
+events. The protocol namespaces (raygeo.driver.grbl, raygeo.driver.smoothie, \
+raygeo.driver.marlin) build on these.
 ";
 
 pyo3_stub_gen::module_doc!("raygeo.driver.core", "{}", MODULE_DOC);
@@ -56,9 +56,9 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     discovery::register(&core_mod)?;
 
     m.add_submodule(&core_mod)?;
-    // Note: raydriver.core is intentionally NOT registered in
+    // Note: raygeo.driver.core is intentionally NOT registered in
     // sys.modules — the Python __init__.py at
-    // python/raydriver/core/__init__.py serves as the package and
+    // python/raygeo/driver/core/__init__.py serves as the package and
     // delegates to this Rust module.
 
     Ok(())

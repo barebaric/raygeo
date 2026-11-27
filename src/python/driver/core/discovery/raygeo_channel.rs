@@ -1,4 +1,4 @@
-//! The `raydriver.core.discovery.raygeo_channel` submodule:
+//! The `raygeo.driver.core.discovery.raygeo_channel` submodule:
 //! discovery channel for raydriver daemons (`_raydriver._tcp`).
 //!
 //! A daemon is an endpoint, not a firmware: the channel browses the

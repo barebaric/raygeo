@@ -17,7 +17,7 @@ inherited by every driver class. Operations a protocol cannot perform raise NotI
 
 ## Driver
 
-The base class of every raydriver driver.
+The base class of every raygeo driver.
 
 Declares the uniform surface once: connection lifecycle, job streaming, machine control, probing and
 settings. Operations a protocol cannot perform raise `NotImplementedError`; the method is still

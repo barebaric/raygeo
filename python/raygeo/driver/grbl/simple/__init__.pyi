@@ -24,7 +24,7 @@ class GrblSerialSimpleDriver(driver.Driver):
     Sends one G-code line at a time and waits for `ok` before
     proceeding.  No character-counting, no buffer management, no
     deadlock detection — for hardware where the full
-    [`GrblSerialDriver`][raydriver.grbl.GrblSerialDriver] misbehaves.
+    [`GrblSerialDriver`][raygeo.driver.grbl.GrblSerialDriver] misbehaves.
     
     All async methods return asyncio futures; a typed `DriverEvent`
     is delivered to `event_callback(event)` on the event loop thread.

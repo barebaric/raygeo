@@ -1,4 +1,4 @@
-//! The `raydriver.core.discovery.serial_channel` submodule: serial
+//! The `raygeo.driver.core.discovery.serial_channel` submodule: serial
 //! discovery channel.
 //!
 //! Runs one serial scan per discovery run and evaluates the captured

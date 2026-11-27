@@ -14,7 +14,7 @@
 //! the dialect templates, the value types and the [`DriverEvents`]
 //! notification trait.  Behavioural contract difference: interactive
 //! commands return an `error:` line as their last response line
-//! instead of raising (the raydriver contract), while an error
+//! instead of raising (the driver contract), while an error
 //! response during a job halts the stream and triggers the safety
 //! shutdown.
 

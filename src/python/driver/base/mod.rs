@@ -1,4 +1,4 @@
-//! The `raydriver.driver` PyO3 module: the `Driver` base class.
+//! The `raygeo.driver.driver` PyO3 module: the `Driver` base class.
 //!
 //! Every protocol driver class is a real Python subclass of
 //! [`PyDriver`] (PyO3 `extends`), so the uniform surface is declared
@@ -40,7 +40,7 @@ use crate::python::driver::pyfuture::{
     spawn_future, spawn_future_with_cancel, PyAwait,
 };
 
-/// The base class of every raydriver driver.
+/// The base class of every raygeo driver.
 ///
 /// Declares the uniform surface once: connection lifecycle, job
 /// streaming, machine control, probing and settings.  Operations a

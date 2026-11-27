@@ -1,4 +1,4 @@
-//! The `raydriver.simulator` module: a transport-free machine for UI
+//! The `raygeo.driver.simulator` module: a transport-free machine for UI
 //! previews and tests.
 
 use std::sync::Arc;
