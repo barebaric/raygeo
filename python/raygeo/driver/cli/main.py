@@ -28,6 +28,7 @@ import os
 import sys
 import time
 from collections.abc import Awaitable
+from importlib.metadata import PackageNotFoundError, distribution
 
 import raygeo.raygeo as _native
 from raygeo.driver.cli.analyzer import (
@@ -485,7 +486,29 @@ async def amain(argv) -> int:
     return result
 
 
+def _reject_legacy_raydriver() -> None:
+    """Fail when the standalone raydriver distribution is installed.
+
+    Pip has no enforced negative dependency, so the merged package
+    detects the old wheel at startup instead of silently letting one
+    ``raydriver`` console script shadow the other.
+    """
+    try:
+        legacy = distribution("raydriver")
+    except PackageNotFoundError:
+        return
+    print(
+        "error: the standalone 'raydriver' package is installed "
+        f"(version {legacy.version}) and conflicts with the "
+        "'raydriver' command provided by raygeo.\n"
+        "Uninstall it first: pip uninstall raydriver",
+        file=sys.stderr,
+    )
+    raise SystemExit(1)
+
+
 def main() -> None:
+    _reject_legacy_raydriver()
     try:
         # The TUI subcommand owns its event loop (curses needs the
         # main thread), so dispatch outside asyncio.run when the

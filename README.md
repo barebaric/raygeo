@@ -343,6 +343,9 @@ See [raygeo CLI](docs/raygeo-cli.md) for all subcommands and flags.
 
 ### `raydriver` — machine and daemon tools
 
+If upgrading from the standalone `raydriver` package, run
+`pip uninstall raydriver` first to avoid the console-script collision.
+
 ```bash
 raydriver run job.gcode --port /dev/ttyUSB0
 raydriver status --port /dev/ttyUSB0

@@ -1,7 +1,11 @@
 """Tests for the raydriver command line interface."""
 
+import sys
+from importlib.metadata import PackageNotFoundError
+
 import pytest
 
+from raygeo.driver.cli import main as cli_main
 from raygeo.driver.cli.main import amain, build_parser
 
 
@@ -23,6 +27,35 @@ def rpascript_file(tmp_path):
         return str(path)
 
     return write
+
+
+class TestLegacyPackage:
+    def test_main_rejects_installed_raydriver(self, monkeypatch, capsys):
+        class LegacyDistribution:
+            version = "1.23.1"
+
+        monkeypatch.setattr(
+            cli_main,
+            "distribution",
+            lambda name: LegacyDistribution(),
+        )
+        monkeypatch.setattr(sys, "argv", ["raydriver", "--help"])
+        with pytest.raises(SystemExit) as exc:
+            cli_main.main()
+        assert exc.value.code == 1
+        err = capsys.readouterr().err
+        assert "pip uninstall raydriver" in err
+
+    def test_main_runs_without_raydriver(self, monkeypatch, capsys):
+        def missing(name):
+            raise PackageNotFoundError(name)
+
+        monkeypatch.setattr(cli_main, "distribution", missing)
+        monkeypatch.setattr(sys, "argv", ["raydriver", "--help"])
+        with pytest.raises(SystemExit) as exc:
+            cli_main.main()
+        assert exc.value.code == 0
+        capsys.readouterr()
 
 
 class TestRunCommand:

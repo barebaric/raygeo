@@ -12,6 +12,11 @@ raydriver --help
 
 `python -m raygeo.driver` is equivalent to the console script.
 
+If you previously installed the standalone `raydriver` package, remove
+it first with `pip uninstall raydriver`; it would collide with the
+console script provided by raygeo. The command refuses to run while the
+old distribution is present.
+
 ## Run a job
 
 `run` streams G-code to a GRBL device or sends rpascript to a Ruida
