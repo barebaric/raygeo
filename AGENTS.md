@@ -33,6 +33,9 @@
 - Never add Rust tests (`#[cfg(test)]` / `#[test]` blocks in `src/`).
   All tests are Python-based, under `tests/`. Exercise new Rust code
   through PyO3 bindings from Python test code.
+- New geo functions should come with example generators where applicable:
+  `tools/examples/formats_<format>*.py`
+- You must run "make stubs" and "make docs" when APIs change.
 
 # Layering Rules Specification
 
@@ -44,9 +47,8 @@ depend only downward (`geo` → `ops` → `cnc`, and `geo` → `sketch`);
 ```
 geo → ops \
             → cnc
-geo → sketch
 pipeline -/
-
+geo → sketch
 geo → formats   (leaf: no other layer imports it)
 driver          (leaf: transports and protocol sessions; no ops imports)
 ```
@@ -57,39 +59,11 @@ Never import upward.
 | ---------- | ------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
 | `geo`      | Primitives & pure geometric algorithms. No "what-to-cut" decisions, no motion verbs, no machining terminology, no `Ops`.  | machining, motion, tools, `Ops`, `pipeline`   |
 | `sketch`   | Sketch constraint solving, entity model and topology; depends only on `geo` primitives.                                   | machining, motion, tools, `Ops`, `pipeline`   |
-| `ops`      | CNC and laser building blocks: clearing strategies, linking, classification, Ops emission, and Ops-to-format converters (`ops::convert`, including the G-code, Epilog and Ruida machine-code encoders). | plans, intents, `pipeline` runtime, device transports/sessions |
+| `ops`      | CNC and laser building blocks: clearing, linking, classification, Ops emission, and Ops converters (including machine-specific encoders). | plans, intents, `pipeline` runtime, device transports/sessions |
 | `pipeline` | Generic runtime to execute machining agnostic intents in a rayon thread pool.                                             | geometry, machining, `Ops`, tools, any domain |
 | `cnc`      | Plan-time orchestration: build descriptive `Plan`s (sequences of `PlanStep`s) and convert them into executable `Intent`s. | geometry algorithms                           |
-| `formats`  | File-format import and export (`coreldraw`, `svg`, `gcode`, `dxf`); depends only on `geo`, sibling format modules and the shared error type. | `ops`, `cnc`, `sketch`, `pipeline`, machining |
-| `driver`   | Device transports and protocol sessions (GRBL, Marlin, Smoothie, ESP3D, OctoPrint, xTool, Epilog, Ruida, simulator, remote daemon). Pure Rust; Python bindings under `raygeo.driver`. | `ops`, `cnc`, `pipeline`, geometry algorithms, encoders |
-
-Machine-code encoders are converters (`Ops` + caller-supplied dialect/job
-config -> text or bytes), not drivers. They live in `ops::convert`; device
-transports, protocol sessions, flow control and reconnect logic live in
-`src/driver` and are exposed as `raygeo.driver.*`.
-
-Driver rules:
-- `src/driver` is pure Rust and must not depend on PyO3; the `python`
-  feature adds the bindings under `src/python/driver`.
-- Protocol modules may use `src/driver/core` freely. Cross-protocol
-  imports need an explicit justification in the importing module.
-- Keep the GRBL protocol byte-for-byte compatible with Rayforge's Python
-  driver; do not change protocol quirks without an explicit request.
-- Driver emulators (`python/raygeo/driver/*/emulator.py`) are real
-  firmware/server models used by tests, not mocks.
-
-# File Formats
-
-Readers and writers for external file formats live under `formats`, one
-module per format, with the same name at every level:
-
-- Rust core: `src/formats/<format>/`
-- PyO3 bindings: `src/python/formats/<format>/`, registered in
-  `src/python/formats/mod.rs` as `raygeo.formats.<format>`
-- Tests: `tests/formats/<format>/test_<format>*.py`, fixtures in
-  `tests/formats/<format>/assets/`
-- Example generators: `tools/examples/formats_<format>*.py`
-- API docs are generated from the stubs as `docs/api/raygeo.formats.<format>.md`
+| `formats`  | File-format import and export (e.g. `coreldraw`, `svg`, `dxf`, etc.); depends only on `geo`.                              | `ops`, `cnc`, `sketch`, `pipeline`, machining |
+| `driver`   | Device transports and protocol sessions (suche as GRBL, Marlin, Smoothie, etc.).                                          | `ops`, `cnc`, `pipeline`, geometry algorithms, encoders |
 
 # Export Policy: Explicit Paths
 
