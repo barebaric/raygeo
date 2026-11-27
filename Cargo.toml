@@ -71,8 +71,7 @@ remote-daemon = ["net", "dep:uuid"]
 tls-native-roots = ["m2", "tokio-tungstenite/rustls-tls-native-roots"]
 tls-webpki-roots = ["m2", "tokio-tungstenite/rustls-tls-webpki-roots"]
 # Browser Web Serial transport (`driver::core::transport::web_serial`).
-# Only effective on `wasm32-unknown-unknown`; the core stays free of
-# wasm-bindgen unless this feature is selected.
+# Only effective on `wasm32-unknown-unknown`.
 web-serial = [
     "dep:js-sys",
     "dep:wasm-bindgen",

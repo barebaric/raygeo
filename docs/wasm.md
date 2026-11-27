@@ -126,8 +126,9 @@ is a compile-time error.
   `getrandom_backend` cfg is required. If you enable `m2` on a
   wasm-like target, configure
   `RUSTFLAGS='--cfg getrandom_backend="wasm_js"'`.
-- **JS glue**: the crate is plain Rust by default (no wasm-bindgen
-  dependency); the embedding crate owns the `wasm-bindgen` exports and
-  implements `Transport` / `StreamConnector` over `web-sys` APIs. The
-  optional `web-serial` feature is the exception: it adds a ready-made
-  `Transport` over `navigator.serial` for `wasm32-unknown-unknown`.
+- **JS glue**: raygeo exposes no `wasm-bindgen` API; the embedding
+  crate owns the exports and implements `Transport` / `StreamConnector`
+  over `web-sys` APIs. (On wasm32, `getrandom`'s `wasm_js` backend
+  already pulls `wasm-bindgen` for randomness.) The optional
+  `web-serial` feature adds a ready-made `Transport` over
+  `navigator.serial` for `wasm32-unknown-unknown`.
