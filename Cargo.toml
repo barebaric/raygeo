@@ -70,8 +70,13 @@ remote-daemon = ["net", "dep:uuid"]
 # and keep the bundled Mozilla root set out of the dependency graph.
 tls-native-roots = ["m2", "tokio-tungstenite/rustls-tls-native-roots"]
 tls-webpki-roots = ["m2", "tokio-tungstenite/rustls-tls-webpki-roots"]
-# Browser Web Serial transport (`driver::core::transport::web_serial`).
+# Convenience bundle for browser embeddings. Currently enables the
+# Web Serial transport; future browser integrations belong here too.
 # Only effective on `wasm32-unknown-unknown`.
+browser = ["web-serial"]
+# Browser Web Serial transport (`driver::core::transport::web_serial`).
+# Only effective on `wasm32-unknown-unknown`. Use this directly when
+# you want the transport without the rest of the browser bundle.
 web-serial = [
     "dep:js-sys",
     "dep:wasm-bindgen",

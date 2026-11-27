@@ -53,11 +53,11 @@ lint-python:
 	npx pyright python/raygeo tests tools
 
 # Embedding applications build the core for wasm32. The second check
-# compiles the optional Web Serial transport.
+# compiles the browser bundle (currently the Web Serial transport).
 check-wasm:
 	cargo check --lib --target wasm32-unknown-unknown --no-default-features
-	cargo check --lib --target wasm32-unknown-unknown --no-default-features --features web-serial
-	cargo clippy --lib --target wasm32-unknown-unknown --no-default-features --features web-serial -- -D warnings
+	cargo check --lib --target wasm32-unknown-unknown --no-default-features --features browser
+	cargo clippy --lib --target wasm32-unknown-unknown --no-default-features --features browser -- -D warnings
 
 test: test-fast
 
