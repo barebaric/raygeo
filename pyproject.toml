@@ -51,7 +51,7 @@ cli = [
 [project.scripts]
 raygeo = "raygeo.cli.main:main"
 raygeo-docs = "tools.cli:main"
-raygeo-driver = "raygeo.driver.cli.main:main"
+raydriver = "raygeo.driver.cli.main:main"
 
 [tool.maturin]
 module-name = "raygeo"
