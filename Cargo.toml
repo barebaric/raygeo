@@ -70,6 +70,14 @@ remote-daemon = ["net", "dep:uuid"]
 # and keep the bundled Mozilla root set out of the dependency graph.
 tls-native-roots = ["m2", "tokio-tungstenite/rustls-tls-native-roots"]
 tls-webpki-roots = ["m2", "tokio-tungstenite/rustls-tls-webpki-roots"]
+# Browser Web Serial transport (`driver::core::transport::web_serial`).
+# Only effective on `wasm32-unknown-unknown`; the core stays free of
+# wasm-bindgen unless this feature is selected.
+web-serial = [
+    "dep:js-sys",
+    "dep:wasm-bindgen",
+    "dep:wasm-bindgen-futures",
+]
 
 [dependencies]
 # The version is kept in sync with prof-macros/Cargo.toml by the release
@@ -143,6 +151,14 @@ approx = "0.5"
 # rand's getrandom needs the JS backend on wasm32 (nesting uses rand).
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom = { version = "0.4", features = ["wasm_js"] }
+
+# The optional browser transport talks to the Web Serial API through
+# `js-sys` reflection. Keeping these target-specific means native
+# builds never see wasm-bindgen, even with `--all-features`.
+[target.'cfg(all(target_arch = "wasm32", target_os = "unknown"))'.dependencies]
+js-sys = { version = "0.3", optional = true }
+wasm-bindgen = { version = "0.2", optional = true }
+wasm-bindgen-futures = { version = "0.4", optional = true }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 zbus = { version = "6.4", default-features = false, features = ["tokio"] }

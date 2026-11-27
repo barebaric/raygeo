@@ -11,7 +11,8 @@ cargo check --lib --target wasm32-unknown-unknown --no-default-features
 ```
 
 This target is for Rust embedders. The Python extension is not built
-for wasm.
+for wasm. The optional `web-serial` feature adds a ready-made
+transport over the browser's Web Serial API.
 
 ## What runs on wasm
 
@@ -57,9 +58,34 @@ Concrete browser paths:
 
 | Device path | How it reaches wasm |
 |---|---|
-| USB-serial GRBL controllers | **Web Serial API** — the embedder implements [`Transport`](../src/driver/core/transport/mod.rs) (byte streams from `navigator.serial`) and passes it as `TransportKind::Custom` to a `GrblSession`/`SmoothieSession`/`MarlinSession`. |
+| USB-serial GRBL controllers | **Web Serial API** — enable the `web-serial` feature and pass its `WebSerialTransport` as `TransportKind::Custom` to a `GrblSession`/`SmoothieSession`/`MarlinSession`; embedders that do not enable it can implement [`Transport`](../src/driver/core/transport/mod.rs) themselves. |
 | Network devices (ESP3D, OctoPrint, xTool D-series) | A **WebSocket-to-TCP bridge** (e.g. `websockify`) — the browser opens a WebSocket to the bridge, the bridge dials the device. The bridge's byte-pipe semantics are exactly what [`StreamConnector`] provides; the HTTP requests and the WS handshakes then flow over it unchanged. |
 | mTLS/TLS device APIs | TLS terminates in the bridge (or in the browser for `wss://` endpoints); `ring`/rustls are never needed on wasm. |
+
+### Web Serial
+
+The `web-serial` feature provides
+`driver::core::transport::web_serial::WebSerialTransport`, a
+`Transport` over `navigator.serial`:
+
+```rust
+use raygeo::driver::core::transport::web_serial::WebSerialTransport;
+
+// Call from a click handler: requestPort() needs a user gesture.
+let transport = WebSerialTransport::request_port(115_200).await?;
+let kind = transport.as_transport_kind();
+// Pass `kind` to a session constructor, e.g. SmoothieConfig::new(kind).
+
+// Reuse a previously granted port; no gesture is required.
+let transport = WebSerialTransport::first_granted_port(115_200)
+    .await?
+    .expect("no serial port granted yet");
+```
+
+Web Serial is available in secure contexts in Chromium-based browsers.
+`request_port()` must be called from a transient user activation;
+`first_granted_port()` reuses a port the user has already granted.
+The feature is only compiled for `wasm32-unknown-unknown`.
 
 ## What is feature-gated, and why
 
@@ -100,6 +126,8 @@ is a compile-time error.
   `getrandom_backend` cfg is required. If you enable `m2` on a
   wasm-like target, configure
   `RUSTFLAGS='--cfg getrandom_backend="wasm_js"'`.
-- **JS glue**: the crate is plain Rust (no wasm-bindgen dependency);
-  the embedding crate owns the `wasm-bindgen` exports and implements
-  `Transport` / `StreamConnector` over `web-sys` APIs.
+- **JS glue**: the crate is plain Rust by default (no wasm-bindgen
+  dependency); the embedding crate owns the `wasm-bindgen` exports and
+  implements `Transport` / `StreamConnector` over `web-sys` APIs. The
+  optional `web-serial` feature is the exception: it adds a ready-made
+  `Transport` over `navigator.serial` for `wasm32-unknown-unknown`.

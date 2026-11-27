@@ -19,6 +19,13 @@ pub mod serial;
 
 pub mod telnet;
 
+#[cfg(all(
+    target_arch = "wasm32",
+    target_os = "unknown",
+    feature = "web-serial"
+))]
+pub mod web_serial;
+
 pub(crate) mod stream_base;
 
 use std::sync::Arc;
