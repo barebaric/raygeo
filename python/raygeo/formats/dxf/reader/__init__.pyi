@@ -14,8 +14,11 @@ from raygeo import geo
 import typing
 __all__ = [
     "DxfHeader",
+    "Insert",
     "ReadOutput",
+    "ReadStructure",
     "read",
+    "read_with_inserts",
 ]
 
 @typing.final
@@ -38,6 +41,33 @@ class DxfHeader:
         r"""
         The declared drawing extents as ``(x_min, y_min, x_max, y_max)``,
         or ``None`` when the file does not state them.
+        """
+
+@typing.final
+class Insert:
+    r"""
+    One `INSERT`, with the block content it places in world space.
+    """
+    @property
+    def block_name(self) -> builtins.str:
+        r"""
+        The name of the inserted block.
+        """
+    @property
+    def layer(self) -> builtins.str:
+        r"""
+        The layer the `INSERT` is on, after layer-0 inheritance.
+        """
+    @property
+    def transform(self) -> builtins.list[builtins.list[builtins.float]]:
+        r"""
+        The block-to-world transform as a row-major 4x4 list of lists.
+        """
+    @property
+    def layers(self) -> builtins.list[tuple[builtins.str, geo.Geometry]]:
+        r"""
+        The block's geometry per layer, as ``(layer_name, geometry)``
+        pairs in document order, already in world space.
         """
 
 @typing.final
@@ -95,6 +125,30 @@ class ReadOutput:
         """
     def __repr__(self) -> builtins.str: ...
 
+@typing.final
+class ReadStructure:
+    r"""
+    A read that keeps block insertions apart.
+    """
+    @property
+    def output(self) -> ReadOutput:
+        r"""
+        The same flattened result ``read()`` returns.
+        """
+    @property
+    def inserts(self) -> builtins.list[Insert]:
+        r"""
+        One entry per ``INSERT`` in the ENTITIES section, in document
+        order. Insertions nested inside a block are resolved into the
+        entry of the insertion that placed that block.
+        """
+    @property
+    def standalone_layers(self) -> builtins.list[tuple[builtins.str, geo.Geometry]]:
+        r"""
+        Geometry of entities that are not part of any ``INSERT``, as
+        ``(layer_name, geometry)`` pairs in document order.
+        """
+
 def read(data: str) -> raygeo.formats.dxf.reader.ReadOutput:
     r"""
     Read a DXF document into geometry.
@@ -107,6 +161,29 @@ def read(data: str) -> raygeo.formats.dxf.reader.ReadOutput:
     :param data: The DXF file contents as text.
     :returns: Per-layer geometry in native units, Y up, with the
         drawing bounds, the unit conversion factor and any issues.
+    :raises ValueError: When the input is not a group-code stream.
+    :complexity: O(n) where n = size of the document
+    """
+
+def read_with_inserts(data: str) -> raygeo.formats.dxf.reader.ReadStructure:
+    r"""
+    Read a DXF document, keeping each block insertion apart.
+    
+    The returned structure's ``output`` is the same flattened result
+    ``read()`` returns. ``inserts`` holds one entry per ``INSERT`` in
+    the drawing, with the block's name, its layer, its block-to-world
+    transform and its geometry per layer, already in world space.
+    ``standalone_layers`` holds the content that is not part of any
+    block, so a caller can keep blocks as units without duplicating
+    geometry.
+    
+    Insertions nested inside a block are resolved into the entry of
+    the insertion that placed that block; they are not reported
+    separately.
+    
+    :param data: The DXF file contents as text.
+    :returns: The flattened result, the per-INSERT structure and the
+        content outside blocks.
     :raises ValueError: When the input is not a group-code stream.
     :complexity: O(n) where n = size of the document
     """

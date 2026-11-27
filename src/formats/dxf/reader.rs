@@ -22,6 +22,41 @@ pub const DEFAULT_LAYER: &str = "0";
 /// How deep block insertions may nest before the reader stops.
 const MAX_BLOCK_DEPTH: usize = 32;
 
+/// One `INSERT`, with the block content it places resolved into world
+/// space.
+#[derive(Clone, Debug)]
+pub struct InsertOutput {
+    /// The name of the inserted block.
+    pub block_name: String,
+    /// The layer the `INSERT` itself is on, after layer-0 inheritance.
+    pub layer: String,
+    /// The transform mapping the block's local coordinates to world
+    /// space.
+    pub transform: DMat4,
+    /// The block's geometry, grouped by layer, in world space.
+    ///
+    /// An insertion of a block that is not defined has no layers. The
+    /// entry is still reported, with the reason in the output's issues.
+    pub layers: Vec<(String, Geometry)>,
+}
+
+/// The flattened result plus the block structure that produced it.
+#[derive(Clone, Debug)]
+pub struct StructuredOutput {
+    /// The same result [`read`] returns, with every `INSERT` flattened.
+    pub output: ReadOutput,
+    /// One entry per `INSERT` in the ENTITIES section, in document
+    /// order.
+    ///
+    /// Insertions nested inside a block are resolved into the entry of
+    /// the insertion that placed that block, so the entries do not
+    /// overlap.
+    pub inserts: Vec<InsertOutput>,
+    /// Geometry of entities that are not part of any `INSERT`, grouped
+    /// by layer, in world space.
+    pub standalone_layers: Vec<(String, Geometry)>,
+}
+
 /// What the reader learned that is not geometry.
 #[derive(Clone, Debug, Default)]
 pub struct DxfHeader {
@@ -72,6 +107,21 @@ pub fn insunits_to_mm(insunits: i64) -> Option<f64> {
 /// rather than failing the whole document, so a partly unreadable file
 /// still imports.
 pub fn read(data: &str) -> RaygeoResult<ReadOutput> {
+    read_impl(data, false).map(|structured| structured.output)
+}
+
+/// Reads a DXF document, keeping each block insertion apart.
+///
+/// The returned output is the same flattening [`read`] performs. In
+/// addition, every `INSERT` is reported with its block name, layer,
+/// block-to-world transform and per-layer geometry, and the content
+/// outside blocks is reported separately. This lets a caller treat a
+/// block as one unit instead of merging it into the layers.
+pub fn read_with_inserts(data: &str) -> RaygeoResult<StructuredOutput> {
+    read_impl(data, true)
+}
+
+fn read_impl(data: &str, with_inserts: bool) -> RaygeoResult<StructuredOutput> {
     let items = tokenize(data)?;
     let sections = collect_sections(&items);
     let empty = Vec::new();
@@ -90,8 +140,14 @@ pub fn read(data: &str) -> RaygeoResult<ReadOutput> {
         None,
         &mut issues,
     );
-    let entities = resolve_blocks(content, &blocks, &mut issues);
-    Ok(build_output(entities, &header, has_header_section, issues))
+    let resolved = resolve_blocks(content, &blocks, with_inserts, &mut issues);
+    let output =
+        build_output(resolved.entities, &header, has_header_section, issues);
+    Ok(StructuredOutput {
+        output,
+        inserts: resolved.inserts,
+        standalone_layers: resolved.standalone_layers,
+    })
 }
 
 /// Splits the file into sections, keyed by section name, each holding
@@ -233,30 +289,118 @@ fn parse_blocks(records: &[&[Item]]) -> HashMap<String, Block> {
     blocks
 }
 
+/// The entities a drawing resolves to, and optionally the structure that
+/// produced them.
+struct ResolvedContent {
+    /// Every entity, with insertions expanded.
+    entities: Vec<Entity>,
+    /// One entry per top-level insertion, or empty when the caller did
+    /// not ask for the structure.
+    inserts: Vec<InsertOutput>,
+    /// Content outside blocks, grouped by layer, or empty when the
+    /// caller did not ask for the structure.
+    standalone_layers: Vec<(String, Geometry)>,
+}
+
 /// Replaces each insertion with the block's entities, transformed into
 /// world space.
+///
+/// When `with_inserts` is true, each top-level insertion is also kept
+/// apart, so the caller can treat its block's content as one unit.
 fn resolve_blocks(
     content: SectionContent,
     blocks: &HashMap<String, Block>,
+    with_inserts: bool,
     issues: &mut Vec<String>,
-) -> Vec<Entity> {
+) -> ResolvedContent {
     let mut out = Vec::new();
-    for (layer, shape) in content.shapes {
-        out.push(Entity { layer, shape });
-    }
+    let standalone: Vec<Entity> = content
+        .shapes
+        .into_iter()
+        .map(|(layer, shape)| Entity { layer, shape })
+        .collect();
+    let standalone_layers = if with_inserts {
+        group_entities_by_layer(&standalone)
+    } else {
+        Vec::new()
+    };
+    out.extend(standalone);
+    let mut inserts = Vec::new();
     for (insert_layer, insert) in content.inserts {
         let mut stack = Vec::new();
-        expand_insert(
-            &insert,
-            &insert_layer,
-            blocks,
-            DMat4::IDENTITY,
-            &mut stack,
-            &mut out,
-            issues,
-        );
+        if with_inserts {
+            let mut placed = Vec::new();
+            expand_insert(
+                &insert,
+                &insert_layer,
+                blocks,
+                DMat4::IDENTITY,
+                &mut stack,
+                &mut placed,
+                issues,
+            );
+            inserts.push(InsertOutput {
+                block_name: insert.block_name.clone(),
+                layer: normalized_layer_name(&insert_layer),
+                transform: insert.transform,
+                layers: group_entities_by_layer(&placed),
+            });
+            out.extend(placed);
+        } else {
+            expand_insert(
+                &insert,
+                &insert_layer,
+                blocks,
+                DMat4::IDENTITY,
+                &mut stack,
+                &mut out,
+                issues,
+            );
+        }
     }
-    out
+    ResolvedContent {
+        entities: out,
+        inserts,
+        standalone_layers,
+    }
+}
+
+/// Groups world-space entities into one geometry per layer.
+///
+/// Layers keep the order in which they first appear, and layers that
+/// draw nothing are left out.
+fn group_entities_by_layer(entities: &[Entity]) -> Vec<(String, Geometry)> {
+    let mut by_layer: HashMap<String, Geometry> = HashMap::new();
+    let mut order: Vec<String> = Vec::new();
+    for entity in entities {
+        let name = normalized_layer_name(&entity.layer);
+        if !by_layer.contains_key(&name) {
+            order.push(name.clone());
+            by_layer.insert(name.clone(), Geometry::new());
+        }
+        if let Some(geo) = by_layer.get_mut(&name) {
+            append_shape(geo, &entity.shape);
+        }
+    }
+    let mut layers = Vec::new();
+    for name in order {
+        if let Some(geo) = by_layer.remove(&name) {
+            if !geo.is_empty() {
+                layers.push((name, geo));
+            }
+        }
+    }
+    layers
+}
+
+/// The layer name to report for an entity, using the default layer for
+/// content that names none.
+fn normalized_layer_name(name: &str) -> String {
+    if name.is_empty() {
+        DEFAULT_LAYER.to_string()
+    } else {
+        name.to_string()
+    }
 }
 
 /// The layer an entity inside a block is drawn on.
@@ -338,23 +482,9 @@ fn build_output(
     has_header_section: bool,
     issues: Vec<String>,
 ) -> ReadOutput {
-    let mut by_layer: HashMap<String, Geometry> = HashMap::new();
-    let mut order: Vec<String> = Vec::new();
     let mut min_z = f64::INFINITY;
     let mut max_z = f64::NEG_INFINITY;
     for entity in &entities {
-        let name = if entity.layer.is_empty() {
-            DEFAULT_LAYER.to_string()
-        } else {
-            entity.layer.clone()
-        };
-        if !by_layer.contains_key(&name) {
-            order.push(name.clone());
-            by_layer.insert(name.clone(), Geometry::new());
-        }
-        if let Some(geo) = by_layer.get_mut(&name) {
-            append_shape(geo, &entity.shape);
-        }
         let (shape_min, shape_max) =
             crate::formats::dxf::shapes::shape_z_range(&entity.shape);
         min_z = min_z.min(shape_min);
@@ -366,20 +496,13 @@ fn build_output(
         f64::NEG_INFINITY,
         f64::NEG_INFINITY,
     );
-    let mut layers = Vec::new();
-    for name in order {
-        let Some(geo) = by_layer.remove(&name) else {
-            continue;
-        };
-        if geo.is_empty() {
-            continue;
-        }
+    let layers = group_entities_by_layer(&entities);
+    for (_, geo) in &layers {
         let rect = geo.rect();
         bounds.min.x = bounds.min.x.min(rect.min.x);
         bounds.min.y = bounds.min.y.min(rect.min.y);
         bounds.max.x = bounds.max.x.max(rect.max.x);
         bounds.max.y = bounds.max.y.max(rect.max.y);
-        layers.push((name, geo));
     }
     if !bounds.min.x.is_finite() {
         bounds = Rect::new(0.0, 0.0, 0.0, 0.0);

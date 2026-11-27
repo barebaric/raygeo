@@ -1,9 +1,13 @@
+use glam::DMat4;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{
     gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pymethods,
 };
 
-use crate::formats::dxf::reader::{read as read_core, DxfHeader};
+use crate::formats::dxf::reader::{
+    read as read_core, read_with_inserts as read_with_inserts_core, DxfHeader,
+    InsertOutput, StructuredOutput,
+};
 use crate::geo::read_output::ReadOutput;
 use crate::python::geo::geometry::Geometry;
 
@@ -73,6 +77,116 @@ impl PyReadOutput {
             issues: output.issues,
         }
     }
+}
+
+/// One `INSERT`, with the block content it places in world space.
+#[gen_stub_pyclass(module = "raygeo.formats.dxf.reader")]
+#[pyclass(
+    name = "Insert",
+    skip_from_py_object,
+    module = "raygeo.formats.dxf.reader"
+)]
+#[derive(Clone)]
+pub struct PyInsert {
+    /// The name of the inserted block.
+    #[pyo3(get)]
+    pub block_name: String,
+    /// The layer the `INSERT` is on, after layer-0 inheritance.
+    #[pyo3(get)]
+    pub layer: String,
+    /// The block-to-world transform as a row-major 4x4 list of lists.
+    #[pyo3(get)]
+    pub transform: Vec<Vec<f64>>,
+    /// The block's geometry per layer, as ``(layer_name, geometry)``
+    /// pairs in document order, already in world space.
+    #[pyo3(get)]
+    pub layers: Vec<(String, Geometry)>,
+}
+
+impl PyInsert {
+    fn from_core(insert: InsertOutput) -> Self {
+        PyInsert {
+            block_name: insert.block_name,
+            layer: insert.layer,
+            transform: matrix_to_list(insert.transform),
+            layers: insert
+                .layers
+                .into_iter()
+                .map(|(name, geo)| (name, Geometry { inner: geo }))
+                .collect(),
+        }
+    }
+}
+
+/// A read that keeps block insertions apart.
+#[gen_stub_pyclass(module = "raygeo.formats.dxf.reader")]
+#[pyclass(
+    name = "ReadStructure",
+    skip_from_py_object,
+    module = "raygeo.formats.dxf.reader"
+)]
+#[derive(Clone)]
+pub struct PyReadStructure {
+    /// The same flattened result ``read()`` returns.
+    #[pyo3(get)]
+    pub output: PyReadOutput,
+    /// One entry per ``INSERT`` in the ENTITIES section, in document
+    /// order. Insertions nested inside a block are resolved into the
+    /// entry of the insertion that placed that block.
+    #[pyo3(get)]
+    pub inserts: Vec<PyInsert>,
+    /// Geometry of entities that are not part of any ``INSERT``, as
+    /// ``(layer_name, geometry)`` pairs in document order.
+    #[pyo3(get)]
+    pub standalone_layers: Vec<(String, Geometry)>,
+}
+
+impl PyReadStructure {
+    fn from_core(structure: StructuredOutput) -> Self {
+        PyReadStructure {
+            output: PyReadOutput::from_core(structure.output),
+            inserts: structure
+                .inserts
+                .into_iter()
+                .map(PyInsert::from_core)
+                .collect(),
+            standalone_layers: structure
+                .standalone_layers
+                .into_iter()
+                .map(|(name, geo)| (name, Geometry { inner: geo }))
+                .collect(),
+        }
+    }
+}
+
+/// Formats a transform as a row-major 4x4 list of lists.
+fn matrix_to_list(matrix: DMat4) -> Vec<Vec<f64>> {
+    vec![
+        vec![
+            matrix.x_axis.x,
+            matrix.y_axis.x,
+            matrix.z_axis.x,
+            matrix.w_axis.x,
+        ],
+        vec![
+            matrix.x_axis.y,
+            matrix.y_axis.y,
+            matrix.z_axis.y,
+            matrix.w_axis.y,
+        ],
+        vec![
+            matrix.x_axis.z,
+            matrix.y_axis.z,
+            matrix.z_axis.z,
+            matrix.w_axis.z,
+        ],
+        vec![
+            matrix.x_axis.w,
+            matrix.y_axis.w,
+            matrix.z_axis.w,
+            matrix.w_axis.w,
+        ],
+    ]
 }
 
 /// Details of a DXF document that are not geometry.
@@ -162,13 +276,60 @@ fn py_read(data: &str) -> PyResult<PyReadOutput> {
     Ok(PyReadOutput::from_core(output))
 }
 
+#[gen_stub_pyfunction(
+    python = r#"
+    import raygeo
+
+    def read_with_inserts(data: str) -> raygeo.formats.dxf.reader.ReadStructure:
+        """Read a DXF document, keeping each block insertion apart.
+
+        The returned structure's ``output`` is the same flattened result
+        ``read()`` returns. ``inserts`` holds one entry per ``INSERT`` in
+        the drawing, with the block's name, its layer, its block-to-world
+        transform and its geometry per layer, already in world space.
+        ``standalone_layers`` holds the content that is not part of any
+        block, so a caller can keep blocks as units without duplicating
+        geometry.
+
+        Insertions nested inside a block are resolved into the entry of
+        the insertion that placed that block; they are not reported
+        separately.
+
+        :param data: The DXF file contents as text.
+        :returns: The flattened result, the per-INSERT structure and the
+            content outside blocks.
+        :raises ValueError: When the input is not a group-code stream.
+        :complexity: O(n) where n = size of the document
+        """
+"#,
+    module = "raygeo.formats.dxf.reader"
+)]
+#[pyfunction(name = "read_with_inserts")]
+fn py_read_with_inserts(data: &str) -> PyResult<PyReadStructure> {
+    let structure = read_with_inserts_core(data)?;
+    Ok(PyReadStructure::from_core(structure))
+}
+
 pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let sub = PyModule::new(m.py(), "reader")?;
     sub.setattr("__doc__", MODULE_DOC)?;
-    sub.add("__all__", vec!["DxfHeader", "ReadOutput", "read"])?;
+    sub.add(
+        "__all__",
+        vec![
+            "DxfHeader",
+            "Insert",
+            "ReadOutput",
+            "ReadStructure",
+            "read",
+            "read_with_inserts",
+        ],
+    )?;
     sub.add_class::<PyReadOutput>()?;
     sub.add_class::<PyDxfHeader>()?;
+    sub.add_class::<PyInsert>()?;
+    sub.add_class::<PyReadStructure>()?;
     sub.add_function(wrap_pyfunction!(py_read, &sub)?)?;
+    sub.add_function(wrap_pyfunction!(py_read_with_inserts, &sub)?)?;
     m.add_submodule(&sub)?;
     let sys_modules = m.py().import("sys")?.getattr("modules")?;
     sys_modules.set_item("raygeo.formats.dxf.reader", &sub)?;

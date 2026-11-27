@@ -15,7 +15,7 @@ from conftest import (
     types,
 )
 
-from raygeo.formats.dxf.reader import read
+from raygeo.formats.dxf.reader import read, read_with_inserts
 
 
 class TestRealFiles:
@@ -456,6 +456,169 @@ class TestLayers:
 
         assert output.is_empty()
         assert any("deeper than" in issue for issue in output.issues)
+
+
+class TestInsertStructure:
+    """``read_with_inserts`` exposes blocks without changing flattening."""
+
+    def test_flat_result_matches_read(self):
+        text = block_document(
+            [("PART", (0, 0), [line(0, 0, 10, 0)])],
+            [line(0, 5, 5, 5), insert("PART", 100, 0, layer="CUT")],
+        )
+
+        flat = read(text)
+        structure = read_with_inserts(text)
+
+        assert [
+            (name, ends(geo)) for name, geo in structure.output.layers
+        ] == [(name, ends(geo)) for name, geo in flat.layers]
+        assert structure.output.bounds == flat.bounds
+
+    def test_one_entry_per_insert(self):
+        text = block_document(
+            [("PART", (0, 0), [line(0, 0, 10, 0)])],
+            [
+                insert("PART", 0, 0, layer="CUT"),
+                insert("PART", 20, 0, layer="CUT"),
+            ],
+        )
+
+        structure = read_with_inserts(text)
+
+        assert len(structure.inserts) == 2
+        assert [entry.block_name for entry in structure.inserts] == [
+            "PART",
+            "PART",
+        ]
+        assert ends(structure.inserts[0].layers[0][1]) == [
+            (0.0, 0.0, 0.0),
+            (10.0, 0.0, 0.0),
+        ]
+        assert ends(structure.inserts[1].layers[0][1]) == [
+            (20.0, 0.0, 0.0),
+            (30.0, 0.0, 0.0),
+        ]
+
+    def test_entry_layer_inherits_insert_layer(self):
+        text = block_document(
+            [
+                (
+                    "PART",
+                    (0, 0),
+                    [
+                        line(0, 0, 10, 0),
+                        line(0, 1, 10, 1, layer="DETAIL"),
+                    ],
+                )
+            ],
+            [insert("PART", 100, 50, layer="CUT")],
+        )
+
+        entry = read_with_inserts(text).inserts[0]
+
+        assert entry.layer == "CUT"
+        assert [name for name, _ in entry.layers] == ["CUT", "DETAIL"]
+        assert ends(entry.layers[0][1]) == [
+            (100.0, 50.0, 0.0),
+            (110.0, 50.0, 0.0),
+        ]
+        assert ends(entry.layers[1][1]) == [
+            (100.0, 51.0, 0.0),
+            (110.0, 51.0, 0.0),
+        ]
+
+    def test_empty_insert_layer_is_reported_as_default(self):
+        text = block_document(
+            [("PART", (0, 0), [line(0, 0, 10, 0)])],
+            [insert("PART", 0, 0, layer="")],
+        )
+
+        entry = read_with_inserts(text).inserts[0]
+
+        assert entry.layer == "0"
+        assert [name for name, _ in entry.layers] == ["0"]
+
+    def test_transform_maps_block_coordinates_to_world(self):
+        text = block_document(
+            [("PART", (0, 0), [line(0, 0, 10, 0)])],
+            [
+                insert(
+                    "PART",
+                    100,
+                    50,
+                    layer="CUT",
+                    rotation=90,
+                    x_scale=2,
+                    y_scale=2,
+                )
+            ],
+        )
+
+        transform = read_with_inserts(text).inserts[0].transform
+
+        expected = [
+            [0.0, -2.0, 0.0, 100.0],
+            [2.0, 0.0, 0.0, 50.0],
+            [0.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0],
+        ]
+        for row, expected_row in zip(transform, expected):
+            assert row == pytest.approx(expected_row)
+
+    def test_standalone_layers_hold_only_content_outside_blocks(self):
+        text = block_document(
+            [("PART", (0, 0), [line(0, 0, 10, 0)])],
+            [
+                line(0, 5, 5, 5, layer="CUT"),
+                insert("PART", 100, 0, layer="CUT"),
+            ],
+        )
+
+        structure = read_with_inserts(text)
+
+        assert [name for name, _ in structure.standalone_layers] == ["CUT"]
+        assert ends(structure.standalone_layers[0][1]) == [
+            (0.0, 5.0, 0.0),
+            (5.0, 5.0, 0.0),
+        ]
+        assert ends(structure.inserts[0].layers[0][1]) == [
+            (100.0, 0.0, 0.0),
+            (110.0, 0.0, 0.0),
+        ]
+
+    def test_nested_insert_belongs_to_the_outer_entry(self):
+        text = block_document(
+            [
+                ("INNER", (0, 0), [line(0, 0, 10, 0)]),
+                ("OUTER", (0, 0), [insert("INNER", 0, 5)]),
+            ],
+            [insert("OUTER", 100, 0, layer="LAYER_A")],
+        )
+
+        structure = read_with_inserts(text)
+
+        assert [entry.block_name for entry in structure.inserts] == ["OUTER"]
+        assert ends(structure.inserts[0].layers[0][1]) == [
+            (100.0, 5.0, 0.0),
+            (110.0, 5.0, 0.0),
+        ]
+
+    def test_missing_block_is_still_reported(self):
+        structure = read_with_inserts(
+            document([("INSERT", "0", [(2, "NOPE"), (10, 0), (20, 0)])])
+        )
+
+        assert len(structure.inserts) == 1
+        assert structure.inserts[0].block_name == "NOPE"
+        assert structure.inserts[0].layers == []
+        assert any("NOPE" in issue for issue in structure.output.issues)
+
+    def test_drawing_without_inserts_has_no_entries(self):
+        structure = read_with_inserts(document([line(0, 0, 10, 0)]))
+
+        assert structure.inserts == []
+        assert [name for name, _ in structure.standalone_layers] == ["0"]
 
 
 class TestUnitsAndZ:
