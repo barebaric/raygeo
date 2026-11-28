@@ -322,13 +322,14 @@ fn circle_beziers(
     let k = crate::geo::shape::bezier::get_bezier_arc_constant(
         std::f64::consts::FRAC_PI_2,
     ) * radius;
+    let normal = normal.normalize();
     let points = [u, v, -u, -v, u];
     let mut segments = Vec::new();
     for index in 0..4 {
         let from = center + points[index] * radius;
         let to = center + points[index + 1] * radius;
-        let tangent_from = points[index].cross(normal.normalize()) * k;
-        let tangent_to = points[index + 1].cross(normal.normalize()) * k;
+        let tangent_from = normal.cross(points[index]) * k;
+        let tangent_to = normal.cross(points[index + 1]) * k;
         segments.push([from, from + tangent_from, to - tangent_to, to]);
     }
     segments

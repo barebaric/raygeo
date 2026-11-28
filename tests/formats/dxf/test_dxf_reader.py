@@ -7,6 +7,7 @@ from conftest import (
     arc,
     asset,
     block_document,
+    circle,
     document,
     ends,
     insert,
@@ -357,6 +358,20 @@ class TestLayers:
 
         assert "Bezier" in types(geometry)
         assert ends(geometry) == [(100.0, 60.0, 0.0), (90.0, 50.0, 0.0)]
+
+    def test_block_circle_keeps_its_shape(self):
+        output = read(
+            block_document(
+                [("PART", (0, 0), [circle(0, 0, 10)])],
+                [insert("PART", 100, 50, rotation=45)],
+            )
+        )
+        geometry = output.layers[0][1]
+
+        assert "Bezier" in types(geometry)
+        assert geometry.rect() == pytest.approx(
+            (90.0, 40.0, 110.0, 60.0), abs=1e-6
+        )
 
     def test_missing_block_is_reported(self):
         output = read(
